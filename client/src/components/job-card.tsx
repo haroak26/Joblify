@@ -28,13 +28,13 @@ const sourceIcons = {
 const sourceColors = {
   reddit: "text-orange-500",
   x: "text-foreground",
-  facebook: "text-blue-500",
+  facebook: "text-blue-600",
 };
 
 const sourceBgColors = {
   reddit: "bg-orange-500/10",
   x: "bg-muted",
-  facebook: "bg-blue-500/10",
+  facebook: "bg-blue-600/10",
 };
 
 export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {

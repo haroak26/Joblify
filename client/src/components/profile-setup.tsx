@@ -220,10 +220,10 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
           )}
 
           {skills.length === 0 && (
-            <div className="py-6 text-center border border-dashed rounded-lg" data-testid="text-no-skills">
-              <Sparkles className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
-                No skills added yet. Add your first skill above or use AI to suggest skills.
+            <div className="py-4 text-center border border-dashed rounded-lg" data-testid="text-no-skills">
+              <Sparkles className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/50" />
+              <p className="text-xs text-muted-foreground px-2">
+                No skills added yet. Add skills above or use AI.
               </p>
             </div>
           )}

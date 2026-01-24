@@ -62,12 +62,12 @@ export function JobFilters({
               <SelectItem value="x">
                 <div className="flex items-center gap-2">
                   <span className="font-bold">𝕏</span>
-                  X (Twitter)
+                  X
                 </div>
               </SelectItem>
               <SelectItem value="facebook">
                 <div className="flex items-center gap-2">
-                  <SiFacebook className="w-4 h-4 text-blue-500" />
+                  <SiFacebook className="w-4 h-4 text-blue-600" />
                   Facebook
                 </div>
               </SelectItem>

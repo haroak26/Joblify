@@ -33,8 +33,8 @@ const features = [
 
 const platforms = [
   { name: "Reddit", icon: SiReddit, color: "text-orange-500" },
-  { name: "X", icon: () => <span className="font-bold text-lg">𝕏</span>, color: "text-foreground" },
-  { name: "Facebook", icon: SiFacebook, color: "text-blue-500" },
+  { name: "X", icon: () => <span className="font-bold">𝕏</span>, color: "text-foreground" },
+  { name: "Facebook", icon: SiFacebook, color: "text-blue-600" },
 ];
 
 const benefits = [
@@ -82,12 +82,12 @@ export default function Landing() {
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/dashboard">
-                <Button size="lg" className="h-12 px-6">
+                <Button size="lg">
                   Start Free
-                  <ArrowRight className="ml-2 w-4 h-4" />
+                  <ArrowRight className="ml-1.5 w-4 h-4" />
                 </Button>
               </Link>
-              <Button variant="secondary" size="lg" className="h-12 px-6">
+              <Button variant="secondary" size="lg">
                 See How It Works
               </Button>
             </div>
@@ -185,9 +185,9 @@ export default function Landing() {
             Join thousands of freelancers using AI to discover opportunities faster.
           </p>
           <Link href="/dashboard">
-            <Button size="lg" className="h-12 px-8">
+            <Button size="lg">
               Get Started Free
-              <ArrowRight className="ml-2 w-4 h-4" />
+              <ArrowRight className="ml-1.5 w-4 h-4" />
             </Button>
           </Link>
         </div>
