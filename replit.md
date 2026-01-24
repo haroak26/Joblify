@@ -7,7 +7,11 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 
 ### Frontend (React + Vite)
 - **Landing Page** (`/`) - Marketing page with platform overview
-- **Dashboard** (`/dashboard`) - Main application with profile setup and job discovery
+- **Dashboard** with sidebar navigation:
+  - **Home** (`/dashboard`) - Overview with stats, job finder, and profile setup
+  - **My Jobs** (`/dashboard/jobs`) - Browse and manage job opportunities
+  - **Generator** (`/dashboard/generator`) - Standalone AI message generator
+  - **Account** (`/dashboard/account`) - Profile and settings management
 
 ### Backend (Express)
 - In-memory storage for profile and jobs
@@ -15,6 +19,8 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 - OpenAI integration for skill suggestions and message generation
 
 ### Key Components
+- `AppSidebar` - Navigation sidebar with Home, My Jobs, Generator, Account
+- `DashboardLayout` - Wrapper with sidebar and header
 - `ProfileSetup` - Introduction textarea with AI skill suggestions + manual skill management
 - `JobCard` - Display job listings with save and generate message actions
 - `JobFilters` - Search and filter jobs by source/status
@@ -73,6 +79,13 @@ npm run dev
 The app serves on port 5000.
 
 ## Recent Changes
+- January 2026: Added sidebar navigation
+  - New AppSidebar and DashboardLayout components
+  - Split dashboard into 4 pages: Home, My Jobs, Generator, Account
+  - Home shows stats (opportunities, value, saved, applied) and job finder
+  - Standalone message generator page
+  - Consistent input sizes (h-10), normal font weight buttons
+  - Removed "(Twitter)" text, platform logos with proper colors
 - January 2026: Added AI-powered skill suggestions from personal introduction
   - New ProfileSetup component with intro textarea
   - POST /api/suggest-skills endpoint using OpenAI
