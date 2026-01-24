@@ -146,7 +146,7 @@ export function MessageGenerator({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Tone:</span>
               <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
-                <SelectTrigger className="w-40 rounded-lg" data-testid="select-tone">
+                <SelectTrigger className="w-40" data-testid="select-tone">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -159,7 +159,7 @@ export function MessageGenerator({
             <Button
               onClick={handleGenerate}
               disabled={generateMutation.isPending}
-              className="gap-2 rounded-lg"
+              className="gap-2"
               data-testid="button-generate"
             >
               {generateMutation.isPending ? (
@@ -205,9 +205,9 @@ export function MessageGenerator({
           {message && (
             <>
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={handleCopy}
-                className="gap-2 rounded-lg"
+                className="gap-2"
                 data-testid="button-copy-message"
               >
                 {copied ? (
@@ -219,7 +219,6 @@ export function MessageGenerator({
               </Button>
               <Button
                 onClick={handleMarkAsSent}
-                className="rounded-lg"
                 data-testid="button-mark-sent"
               >
                 Mark as Applied

@@ -69,7 +69,7 @@ export default function Landing() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link href="/dashboard">
-              <Button size="lg" className="rounded-lg font-semibold" data-testid="button-get-started">
+              <Button size="lg" className="font-semibold" data-testid="button-get-started">
                 Get Started
               </Button>
             </Link>
@@ -94,11 +94,11 @@ export default function Landing() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/dashboard">
-                <Button size="lg" className="gap-2 rounded-lg h-12 px-8 text-base font-semibold" data-testid="button-start-free">
+                <Button size="lg" className="gap-2 h-12 px-8 text-base font-semibold" data-testid="button-start-free">
                   Start Free <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="rounded-lg h-12 px-8 text-base" data-testid="button-learn-more">
+              <Button variant="secondary" size="lg" className="h-12 px-8 text-base" data-testid="button-learn-more">
                 Learn More
               </Button>
             </div>
@@ -198,7 +198,7 @@ export default function Landing() {
               Join thousands of freelancers who are already landing clients through Joblify.
             </p>
             <Link href="/dashboard">
-              <Button size="lg" className="gap-2 rounded-lg h-12 px-10 text-base font-semibold" data-testid="button-cta-start">
+              <Button size="lg" className="gap-2 h-12 px-10 text-base font-semibold" data-testid="button-cta-start">
                 Get Started Now <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>

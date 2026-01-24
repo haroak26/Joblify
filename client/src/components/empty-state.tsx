@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Search, Sparkles, Briefcase, User } from "lucide-react";
-import { Link } from "wouter";
 
 interface EmptyStateProps {
   type: "no-skills" | "no-jobs" | "no-results";
@@ -18,12 +17,10 @@ export function EmptyState({ type, onAction }: EmptyStateProps) {
         <p className="text-muted-foreground max-w-md mx-auto mb-6 leading-relaxed">
           Add your introduction and skills so we can find freelance opportunities that match your expertise.
         </p>
-        <Link href="/dashboard?tab=profile">
-          <Button className="gap-2 rounded-lg" data-testid="button-go-to-profile">
-            <Sparkles className="w-4 h-4" />
-            Set Up Profile
-          </Button>
-        </Link>
+        <Button className="gap-2" data-testid="button-go-to-profile">
+          <Sparkles className="w-4 h-4" />
+          Set Up Profile
+        </Button>
       </div>
     );
   }
@@ -40,7 +37,7 @@ export function EmptyState({ type, onAction }: EmptyStateProps) {
           Click refresh or try adding more skills.
         </p>
         {onAction && (
-          <Button onClick={onAction} variant="outline" className="gap-2 rounded-lg" data-testid="button-refresh-jobs">
+          <Button onClick={onAction} variant="secondary" className="gap-2" data-testid="button-refresh-jobs">
             <Search className="w-4 h-4" />
             Refresh Jobs
           </Button>

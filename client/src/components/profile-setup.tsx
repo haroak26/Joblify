@@ -141,7 +141,7 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
             <Button
               onClick={handleSuggestSkills}
               disabled={suggestMutation.isPending || intro.length < 10}
-              variant="outline"
+              variant="secondary"
               className="gap-2"
               data-testid="button-suggest-skills"
             >
@@ -223,10 +223,10 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
                 {availableSuggestions.slice(0, 8).map((skill) => (
                   <Button
                     key={skill}
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() => addSkill(skill)}
-                    className="text-sm rounded-lg"
+                    className="text-sm"
                     data-testid={`button-suggest-${skill.toLowerCase().replace(/\s+/g, '-')}`}
                   >
                     <Plus className="w-3 h-3 mr-1" />

@@ -3,15 +3,12 @@ import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Briefcase, 
   RefreshCw, 
-  User,
   LayoutGrid, 
   List,
-  ChevronLeft,
-  Sparkles
+  ChevronLeft
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ProfileSetup } from "@/components/profile-setup";
@@ -145,7 +142,7 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="rounded-lg" data-testid="button-back">
+              <Button variant="ghost" size="icon" data-testid="button-back">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
             </Link>
@@ -158,10 +155,10 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => refreshJobsMutation.mutate()}
               disabled={refreshJobsMutation.isPending || !hasSkills}
-              className="gap-2 rounded-lg"
+              className="gap-2"
               data-testid="button-refresh-jobs"
             >
               <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
@@ -172,59 +169,60 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <Tabs defaultValue="jobs" className="space-y-8">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <TabsList className="h-11 p-1 rounded-lg">
-              <TabsTrigger value="jobs" className="gap-2 rounded-md px-4 h-9" data-testid="tab-jobs">
-                <Briefcase className="w-4 h-4" />
-                Jobs
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+        {isLoading ? (
+          <SkillsSkeleton />
+        ) : (
+          <ProfileSetup
+            intro={profile.intro}
+            skills={profile.skills}
+            onIntroChange={handleIntroChange}
+            onSkillsChange={handleSkillsChange}
+          />
+        )}
+
+        {hasSkills && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h2 className="text-2xl font-bold" data-testid="text-jobs-heading">
+                Matching Jobs
                 {hasJobs && (
-                  <Badge variant="secondary" className="ml-1 text-xs rounded-md">
+                  <Badge variant="secondary" className="ml-3 text-sm">
                     {jobs.length}
                   </Badge>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="profile" className="gap-2 rounded-md px-4 h-9" data-testid="tab-profile">
-                <User className="w-4 h-4" />
-                Profile
-                {hasSkills && (
-                  <Badge variant="secondary" className="ml-1 text-xs rounded-md">
-                    {profile.skills.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
+              </h2>
+              {hasJobs && (
+                <div className="flex items-center gap-1 border rounded-lg p-1">
+                  <Button
+                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setViewMode("list")}
+                    data-testid="button-view-list"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "grid" ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setViewMode("grid")}
+                    data-testid="button-view-grid"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
 
-            {hasJobs && (
-              <div className="flex items-center gap-1 border rounded-lg p-1">
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 rounded-md"
-                  onClick={() => setViewMode("list")}
-                  data-testid="button-view-list"
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "grid" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 rounded-md"
-                  onClick={() => setViewMode("grid")}
-                  data-testid="button-view-grid"
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <TabsContent value="jobs" className="space-y-6">
-            {isLoading ? (
+            {jobsQuery.isLoading ? (
               <JobListSkeleton />
-            ) : !hasSkills ? (
-              <EmptyState type="no-skills" />
+            ) : !hasJobs ? (
+              <EmptyState
+                type="no-jobs"
+                onAction={() => refreshJobsMutation.mutate()}
+              />
             ) : (
               <>
                 <JobFilters
@@ -237,14 +235,7 @@ export default function Dashboard() {
                   jobCount={filteredJobs.length}
                 />
 
-                {jobsQuery.isLoading ? (
-                  <JobListSkeleton />
-                ) : !hasJobs ? (
-                  <EmptyState
-                    type="no-jobs"
-                    onAction={() => refreshJobsMutation.mutate()}
-                  />
-                ) : filteredJobs.length === 0 ? (
+                {filteredJobs.length === 0 ? (
                   <EmptyState type="no-results" />
                 ) : (
                   <div
@@ -267,21 +258,8 @@ export default function Dashboard() {
                 )}
               </>
             )}
-          </TabsContent>
-
-          <TabsContent value="profile">
-            {isLoading ? (
-              <SkillsSkeleton />
-            ) : (
-              <ProfileSetup
-                intro={profile.intro}
-                skills={profile.skills}
-                onIntroChange={handleIntroChange}
-                onSkillsChange={handleSkillsChange}
-              />
-            )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </main>
 
       <MessageGenerator

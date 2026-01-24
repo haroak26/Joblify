@@ -104,7 +104,7 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
       <CardFooter className="pt-4 border-t gap-3 flex-wrap">
         <Button
           variant="default"
-          className="gap-2 rounded-lg"
+          className="gap-2"
           onClick={() => onGenerateMessage(job)}
           data-testid={`button-generate-message-${job.id}`}
         >
@@ -112,7 +112,7 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
           Generate Message
         </Button>
         <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
-          <Button variant="outline" className="gap-2 rounded-lg" data-testid={`button-view-post-${job.id}`}>
+          <Button variant="secondary" className="gap-2" data-testid={`button-view-post-${job.id}`}>
             <ExternalLink className="w-4 h-4" />
             View Post
           </Button>
