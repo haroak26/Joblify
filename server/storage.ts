@@ -1,12 +1,12 @@
-import { type User, type InsertUser, type Skill, type JobPost } from "@shared/schema";
+import { type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  getSkills(): Promise<Skill[]>;
-  setSkills(skills: Skill[]): Promise<Skill[]>;
+  getProfile(): Promise<FreelancerProfile>;
+  setProfile(profile: Partial<FreelancerProfile>): Promise<FreelancerProfile>;
   getJobs(): Promise<JobPost[]>;
   setJobs(jobs: JobPost[]): Promise<void>;
   saveJob(jobId: string): Promise<JobPost | undefined>;
@@ -138,12 +138,15 @@ const sampleJobs: JobPost[] = [
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
-  private skills: Skill[];
+  private profile: FreelancerProfile;
   private jobs: JobPost[];
 
   constructor() {
     this.users = new Map();
-    this.skills = [];
+    this.profile = {
+      intro: "",
+      skills: [],
+    };
     this.jobs = [];
   }
 
@@ -164,13 +167,13 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async getSkills(): Promise<Skill[]> {
-    return this.skills;
+  async getProfile(): Promise<FreelancerProfile> {
+    return this.profile;
   }
 
-  async setSkills(skills: Skill[]): Promise<Skill[]> {
-    this.skills = skills;
-    return this.skills;
+  async setProfile(data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
+    this.profile = { ...this.profile, ...data };
+    return this.profile;
   }
 
   async getJobs(): Promise<JobPost[]> {

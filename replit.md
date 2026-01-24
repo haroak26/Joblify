@@ -7,25 +7,28 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 
 ### Frontend (React + Vite)
 - **Landing Page** (`/`) - Marketing page with platform overview
-- **Dashboard** (`/dashboard`) - Main application with skills management and job discovery
+- **Dashboard** (`/dashboard`) - Main application with profile setup and job discovery
 
 ### Backend (Express)
-- In-memory storage for skills and jobs
+- In-memory storage for profile and jobs
 - API endpoints for CRUD operations
-- Message generation for job applications
+- OpenAI integration for skill suggestions and message generation
 
 ### Key Components
-- `SkillsManager` - Add/remove skills with suggestions
-- `JobCard` - Display job listings with actions
+- `ProfileSetup` - Introduction textarea with AI skill suggestions + manual skill management
+- `JobCard` - Display job listings with save and generate message actions
 - `JobFilters` - Search and filter jobs by source/status
-- `MessageGenerator` - Generate personalized follow-up messages
+- `MessageGenerator` - AI-powered personalized follow-up messages with tone selection
 
 ## API Routes
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/api/profile` | Get user profile (intro + skills) |
+| POST | `/api/profile` | Save profile and trigger job matching |
 | GET | `/api/skills` | Get user's skills |
 | POST | `/api/skills` | Save skills (triggers job matching) |
+| POST | `/api/suggest-skills` | AI suggests skills from intro text |
 | GET | `/api/jobs` | Get matched job listings |
 | POST | `/api/jobs/refresh` | Refresh job listings |
 | POST | `/api/jobs/:id/save` | Toggle save status |
@@ -38,19 +41,30 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 - **Primary**: Green (#1B9C5D) inspired by Fiverr/Upwork
 - **Background**: Clean white/dark mode support
 - **No gradients, no shadows** as per requirements
-- **Medium rounded corners** (rounded-md)
+- **Rounded corners**: 0.75rem (12px) for cards and buttons
 
 ### Typography
 - Font: Inter
 - Clean, professional hierarchy
 
 ## Features
-1. **Skill-Based Matching** - Add skills to see relevant opportunities
-2. **Multi-Platform Discovery** - Jobs from Reddit, X, and Facebook
-3. **Smart Filtering** - Filter by source, status, or search
-4. **Message Generation** - AI-powered personalized messages with tone selection
-5. **Job Tracking** - Save and mark jobs as applied
-6. **Dark Mode** - Full dark mode support
+1. **Personal Introduction** - Write about yourself to help AI understand your background
+2. **AI Skill Suggestions** - Get skill recommendations based on your intro using GPT-4o-mini
+3. **Skill-Based Matching** - Add skills to see relevant opportunities from sample data
+4. **Multi-Platform Discovery** - Simulated jobs from Reddit, X, and Facebook
+5. **Smart Filtering** - Filter by source, status, or search
+6. **AI Message Generation** - Personalized messages with tone selection (professional/friendly/enthusiastic)
+7. **Job Tracking** - Save and mark jobs as applied
+8. **Dark Mode** - Full dark mode support
+
+## OpenAI Integration
+Uses Replit AI Integrations with gpt-4o-mini model for:
+- Suggesting skills from user's introduction
+- Generating personalized follow-up messages
+
+Environment variables (auto-managed by Replit):
+- `AI_INTEGRATIONS_OPENAI_API_KEY`
+- `AI_INTEGRATIONS_OPENAI_BASE_URL`
 
 ## Running the Project
 ```bash
@@ -59,9 +73,9 @@ npm run dev
 The app serves on port 5000.
 
 ## Recent Changes
-- January 2026: Initial build with complete MVP features
-  - Landing page with Fiverr/Upwork inspired design
-  - Dashboard with skills management
-  - Job feed with filtering
-  - Message generator with tone options
-  - Theme toggle (light/dark mode)
+- January 2026: Added AI-powered skill suggestions from personal introduction
+  - New ProfileSetup component with intro textarea
+  - POST /api/suggest-skills endpoint using OpenAI
+  - Enhanced message generator uses user's intro for personalization
+  - Updated UI with more rounded corners (0.75rem)
+  - Fiverr/Upwork inspired design with green primary color

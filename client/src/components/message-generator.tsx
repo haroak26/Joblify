@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 interface MessageGeneratorProps {
   job: JobPost | null;
   skills: string[];
+  intro: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onMessageSent: (jobId: string) => void;
@@ -36,6 +37,7 @@ type Tone = "professional" | "friendly" | "enthusiastic";
 export function MessageGenerator({ 
   job, 
   skills, 
+  intro,
   open, 
   onOpenChange,
   onMessageSent 
@@ -51,6 +53,7 @@ export function MessageGenerator({
       jobDescription: string; 
       skills: string[]; 
       tone: Tone;
+      intro: string;
     }) => {
       const response = await apiRequest("POST", "/api/generate-message", data);
       return response.json();
@@ -74,6 +77,7 @@ export function MessageGenerator({
       jobDescription: job.description,
       skills: skills.filter(s => job.matchedSkills.includes(s)),
       tone,
+      intro,
     });
   };
 
@@ -91,6 +95,7 @@ export function MessageGenerator({
     if (job) {
       onMessageSent(job.id);
       onOpenChange(false);
+      setMessage("");
       toast({
         title: "Success",
         description: "Job marked as applied!",
@@ -98,30 +103,39 @@ export function MessageGenerator({
     }
   };
 
+  const handleClose = (open: boolean) => {
+    if (!open) {
+      setMessage("");
+    }
+    onOpenChange(open);
+  };
+
   if (!job) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="w-5 h-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Wand2 className="w-5 h-5 text-primary" />
+            </div>
             Generate Follow-up Message
           </DialogTitle>
           <DialogDescription>
-            Create a personalized message for this opportunity
+            Create a personalized message for this opportunity using AI
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="p-4 bg-muted rounded-md">
-            <h4 className="font-medium text-sm mb-1">{job.title}</h4>
+        <div className="space-y-5">
+          <div className="p-4 bg-muted rounded-lg">
+            <h4 className="font-semibold mb-1">{job.title}</h4>
             <p className="text-sm text-muted-foreground line-clamp-2">
               {job.description}
             </p>
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="flex flex-wrap gap-2 mt-3">
               {job.matchedSkills.map((skill) => (
-                <Badge key={skill} variant="secondary" className="text-xs">
+                <Badge key={skill} variant="secondary" className="rounded-md text-xs">
                   {skill}
                 </Badge>
               ))}
@@ -132,7 +146,7 @@ export function MessageGenerator({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Tone:</span>
               <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
-                <SelectTrigger className="w-40" data-testid="select-tone">
+                <SelectTrigger className="w-40 rounded-lg" data-testid="select-tone">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -145,12 +159,13 @@ export function MessageGenerator({
             <Button
               onClick={handleGenerate}
               disabled={generateMutation.isPending}
+              className="gap-2 rounded-lg"
               data-testid="button-generate"
             >
               {generateMutation.isPending ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
-                <Wand2 className="w-4 h-4 mr-2" />
+                <Wand2 className="w-4 h-4" />
               )}
               {message ? "Regenerate" : "Generate"}
             </Button>
@@ -161,8 +176,8 @@ export function MessageGenerator({
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                rows={8}
-                className="resize-none"
+                rows={10}
+                className="resize-none text-base leading-relaxed"
                 data-testid="textarea-message"
               />
               <p className="text-xs text-muted-foreground">
@@ -172,16 +187,16 @@ export function MessageGenerator({
           )}
 
           {!message && !generateMutation.isPending && (
-            <div className="py-8 text-center text-muted-foreground">
-              <Wand2 className="w-10 h-10 mx-auto mb-3 opacity-50" />
-              <p>Click Generate to create a personalized message</p>
+            <div className="py-10 text-center border border-dashed rounded-lg">
+              <Wand2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/40" />
+              <p className="text-muted-foreground">Click Generate to create a personalized message</p>
             </div>
           )}
 
           {generateMutation.isPending && (
-            <div className="py-8 text-center text-muted-foreground">
-              <RefreshCw className="w-10 h-10 mx-auto mb-3 animate-spin text-primary" />
-              <p>Generating your message...</p>
+            <div className="py-10 text-center border border-dashed rounded-lg">
+              <RefreshCw className="w-12 h-12 mx-auto mb-3 animate-spin text-primary" />
+              <p className="text-muted-foreground">Generating your personalized message...</p>
             </div>
           )}
         </div>
@@ -192,7 +207,7 @@ export function MessageGenerator({
               <Button
                 variant="outline"
                 onClick={handleCopy}
-                className="gap-2"
+                className="gap-2 rounded-lg"
                 data-testid="button-copy-message"
               >
                 {copied ? (
@@ -204,6 +219,7 @@ export function MessageGenerator({
               </Button>
               <Button
                 onClick={handleMarkAsSent}
+                className="rounded-lg"
                 data-testid="button-mark-sent"
               >
                 Mark as Applied

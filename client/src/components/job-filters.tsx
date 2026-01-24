@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -8,7 +7,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { SiReddit, SiFacebook } from "react-icons/si";
 
 export type SourceFilter = "all" | "reddit" | "x" | "facebook";
@@ -37,19 +36,19 @@ export function JobFilters({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search jobs..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9"
+            className="pl-10 h-11 rounded-lg text-base"
             data-testid="input-search-jobs"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
           <Select value={sourceFilter} onValueChange={(v: SourceFilter) => onSourceChange(v)}>
-            <SelectTrigger className="w-36" data-testid="select-source">
-              <SlidersHorizontal className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-40 h-11 rounded-lg" data-testid="select-source">
+              <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Source" />
             </SelectTrigger>
             <SelectContent>
@@ -75,7 +74,7 @@ export function JobFilters({
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v: StatusFilter) => onStatusChange(v)}>
-            <SelectTrigger className="w-32" data-testid="select-status">
+            <SelectTrigger className="w-36 h-11 rounded-lg" data-testid="select-status">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -87,30 +86,30 @@ export function JobFilters({
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge variant="outline" data-testid="badge-job-count">
+        <Badge variant="outline" className="rounded-md px-3 py-1" data-testid="badge-job-count">
           {jobCount} {jobCount === 1 ? "job" : "jobs"} found
         </Badge>
         {sourceFilter !== "all" && (
           <Badge
             variant="secondary"
-            className="cursor-pointer"
+            className="cursor-pointer rounded-md px-3 py-1"
             onClick={() => onSourceChange("all")}
           >
             {sourceFilter === "reddit" && "Reddit"}
             {sourceFilter === "x" && "X"}
             {sourceFilter === "facebook" && "Facebook"}
-            <span className="ml-1">×</span>
+            <span className="ml-1.5">×</span>
           </Badge>
         )}
         {statusFilter !== "all" && (
           <Badge
             variant="secondary"
-            className="cursor-pointer"
+            className="cursor-pointer rounded-md px-3 py-1"
             onClick={() => onStatusChange("all")}
           >
             {statusFilter === "saved" && "Saved"}
             {statusFilter === "applied" && "Applied"}
-            <span className="ml-1">×</span>
+            <span className="ml-1.5">×</span>
           </Badge>
         )}
       </div>

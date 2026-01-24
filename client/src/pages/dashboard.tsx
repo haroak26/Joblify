@@ -7,19 +7,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Briefcase, 
   RefreshCw, 
-  Settings2, 
+  User,
   LayoutGrid, 
   List,
-  ChevronLeft
+  ChevronLeft,
+  Sparkles
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { SkillsManager } from "@/components/skills-manager";
+import { ProfileSetup } from "@/components/profile-setup";
 import { JobCard } from "@/components/job-card";
 import { JobFilters, type SourceFilter, type StatusFilter } from "@/components/job-filters";
 import { MessageGenerator } from "@/components/message-generator";
 import { EmptyState } from "@/components/empty-state";
 import { JobListSkeleton, SkillsSkeleton } from "@/components/loading-skeleton";
-import type { Skill, JobPost } from "@shared/schema";
+import type { Skill, JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,22 +33,22 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const { toast } = useToast();
 
-  const skillsQuery = useQuery<{ skills: Skill[] }>({
-    queryKey: ["/api/skills"],
+  const profileQuery = useQuery<FreelancerProfile>({
+    queryKey: ["/api/profile"],
   });
 
   const jobsQuery = useQuery<{ jobs: JobPost[] }>({
     queryKey: ["/api/jobs"],
-    enabled: (skillsQuery.data?.skills?.length ?? 0) > 0,
+    enabled: (profileQuery.data?.skills?.length ?? 0) > 0,
   });
 
-  const updateSkillsMutation = useMutation({
-    mutationFn: async (skills: Skill[]) => {
-      const response = await apiRequest("POST", "/api/skills", { skills });
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profile: Partial<FreelancerProfile>) => {
+      const response = await apiRequest("POST", "/api/profile", profile);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
     },
   });
@@ -93,7 +94,7 @@ export default function Dashboard() {
     },
   });
 
-  const skills = skillsQuery.data?.skills ?? [];
+  const profile = profileQuery.data ?? { intro: "", skills: [] };
   const jobs = jobsQuery.data?.jobs ?? [];
 
   const filteredJobs = useMemo(() => {
@@ -113,8 +114,12 @@ export default function Dashboard() {
     });
   }, [jobs, sourceFilter, statusFilter, searchQuery]);
 
-  const handleSkillsChange = (newSkills: Skill[]) => {
-    updateSkillsMutation.mutate(newSkills);
+  const handleIntroChange = (intro: string) => {
+    updateProfileMutation.mutate({ ...profile, intro });
+  };
+
+  const handleSkillsChange = (skills: Skill[]) => {
+    updateProfileMutation.mutate({ ...profile, skills });
   };
 
   const handleSaveJob = (jobId: string) => {
@@ -130,34 +135,33 @@ export default function Dashboard() {
     markAppliedMutation.mutate(jobId);
   };
 
-  const isLoading = skillsQuery.isLoading;
-  const hasSkills = skills.length > 0;
+  const isLoading = profileQuery.isLoading;
+  const hasSkills = profile.skills.length > 0;
   const hasJobs = jobs.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-background sticky top-0 z-50">
+      <header className="border-b bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="icon" data-testid="button-back">
+              <Button variant="ghost" size="icon" className="rounded-lg" data-testid="button-back">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <Briefcase className="w-4 h-4 text-primary-foreground" />
+              <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-lg hidden sm:inline" data-testid="text-dashboard-logo">Joblify</span>
+              <span className="font-bold text-xl hidden sm:inline" data-testid="text-dashboard-logo">Joblify</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => refreshJobsMutation.mutate()}
               disabled={refreshJobsMutation.isPending || !hasSkills}
-              className="gap-2"
+              className="gap-2 rounded-lg"
               data-testid="button-refresh-jobs"
             >
               <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
@@ -168,36 +172,36 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-        <Tabs defaultValue="jobs" className="space-y-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <Tabs defaultValue="jobs" className="space-y-8">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <TabsList>
-              <TabsTrigger value="jobs" className="gap-2" data-testid="tab-jobs">
+            <TabsList className="h-11 p-1 rounded-lg">
+              <TabsTrigger value="jobs" className="gap-2 rounded-md px-4 h-9" data-testid="tab-jobs">
                 <Briefcase className="w-4 h-4" />
                 Jobs
                 {hasJobs && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
+                  <Badge variant="secondary" className="ml-1 text-xs rounded-md">
                     {jobs.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="skills" className="gap-2" data-testid="tab-skills">
-                <Settings2 className="w-4 h-4" />
-                Skills
+              <TabsTrigger value="profile" className="gap-2 rounded-md px-4 h-9" data-testid="tab-profile">
+                <User className="w-4 h-4" />
+                Profile
                 {hasSkills && (
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    {skills.length}
+                  <Badge variant="secondary" className="ml-1 text-xs rounded-md">
+                    {profile.skills.length}
                   </Badge>
                 )}
               </TabsTrigger>
             </TabsList>
 
             {hasJobs && (
-              <div className="flex items-center gap-1 border rounded-md p-1">
+              <div className="flex items-center gap-1 border rounded-lg p-1">
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-8 w-8 rounded-md"
                   onClick={() => setViewMode("list")}
                   data-testid="button-view-list"
                 >
@@ -206,7 +210,7 @@ export default function Dashboard() {
                 <Button
                   variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-8 w-8 rounded-md"
                   onClick={() => setViewMode("grid")}
                   data-testid="button-view-grid"
                 >
@@ -246,8 +250,8 @@ export default function Dashboard() {
                   <div
                     className={
                       viewMode === "grid"
-                        ? "grid sm:grid-cols-2 gap-4"
-                        : "space-y-4"
+                        ? "grid sm:grid-cols-2 gap-5"
+                        : "space-y-5"
                     }
                     data-testid="job-list"
                   >
@@ -265,12 +269,14 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          <TabsContent value="skills">
+          <TabsContent value="profile">
             {isLoading ? (
               <SkillsSkeleton />
             ) : (
-              <SkillsManager
-                skills={skills}
+              <ProfileSetup
+                intro={profile.intro}
+                skills={profile.skills}
+                onIntroChange={handleIntroChange}
                 onSkillsChange={handleSkillsChange}
               />
             )}
@@ -280,7 +286,8 @@ export default function Dashboard() {
 
       <MessageGenerator
         job={selectedJob}
-        skills={skills.map((s) => s.name)}
+        skills={profile.skills.map((s) => s.name)}
+        intro={profile.intro}
         open={messageDialogOpen}
         onOpenChange={setMessageDialogOpen}
         onMessageSent={handleMessageSent}

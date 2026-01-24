@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -46,32 +46,26 @@ export const jobPostSchema = z.object({
 
 export type JobPost = z.infer<typeof jobPostSchema>;
 
-export const messageTemplateSchema = z.object({
-  id: z.string(),
-  jobId: z.string(),
-  message: z.string(),
-  tone: z.enum(["professional", "friendly", "enthusiastic"]),
-});
-
-export type MessageTemplate = z.infer<typeof messageTemplateSchema>;
-
 export const generateMessageSchema = z.object({
-  jobId: z.string(),
   jobTitle: z.string(),
   jobDescription: z.string(),
   skills: z.array(z.string()),
   tone: z.enum(["professional", "friendly", "enthusiastic"]).default("professional"),
+  intro: z.string().optional(),
 });
 
 export type GenerateMessageInput = z.infer<typeof generateMessageSchema>;
 
 export const freelancerProfileSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  title: z.string().min(1, "Professional title is required"),
-  bio: z.string().optional(),
-  skills: z.array(z.string()),
-  hourlyRate: z.number().optional(),
-  availability: z.enum(["available", "busy", "not-available"]).default("available"),
+  name: z.string().optional(),
+  intro: z.string().min(1, "Please write a brief introduction"),
+  skills: z.array(skillSchema),
 });
 
 export type FreelancerProfile = z.infer<typeof freelancerProfileSchema>;
+
+export const suggestSkillsSchema = z.object({
+  intro: z.string().min(10, "Please write at least 10 characters"),
+});
+
+export type SuggestSkillsInput = z.infer<typeof suggestSkillsSchema>;
