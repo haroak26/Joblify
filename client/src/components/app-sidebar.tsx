@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Briefcase, Wand2, Calendar, Settings, CreditCard } from "lucide-react";
+import { Home, Briefcase, Wand2, Calendar, Settings, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,7 @@ import {
   SidebarFooter,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const mainMenuItems = [
   {
@@ -43,32 +44,44 @@ export function AppSidebar() {
     if (url === "/dashboard") {
       return location === "/dashboard";
     }
-    return location.startsWith(url);
+    return location === url || location.startsWith(url + "/");
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4">
+    <Sidebar className="border-r border-sidebar-border bg-sidebar">
+      <SidebarHeader className="p-6">
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer">
-            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-primary-foreground" />
+          <div className="flex items-center gap-3 cursor-pointer group">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center transition-transform group-hover:scale-105">
+              <Briefcase className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg" data-testid="text-sidebar-logo">Joblify</span>
+            <div className="flex flex-col">
+              <span className="font-bold text-xl leading-tight text-sidebar-foreground" data-testid="text-sidebar-logo">Joblify</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Freelance Scout</span>
+            </div>
           </div>
         </Link>
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent className="px-3">
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1.5">
               {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={isActive(item.url)}
+                    className={cn(
+                      "h-11 px-4 rounded-xl transition-all duration-200",
+                      isActive(item.url) 
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm" 
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                  >
                     <Link href={item.url} data-testid={`link-sidebar-${item.title.toLowerCase().replace(' ', '-')}`}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                      <item.icon className={cn("w-5 h-5", isActive(item.url) ? "text-primary-foreground" : "text-muted-foreground")} />
+                      <span className="font-medium">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -78,18 +91,38 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="mt-auto">
-        <SidebarSeparator />
-        <SidebarMenu className="p-2">
+      <SidebarFooter className="p-3 mt-auto">
+        <SidebarSeparator className="mb-4 opacity-50" />
+        <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive("/dashboard/account")}>
+            <SidebarMenuButton 
+              asChild 
+              isActive={isActive("/dashboard/account")}
+              className={cn(
+                "h-11 px-4 rounded-xl transition-all duration-200",
+                isActive("/dashboard/account")
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+            >
               <Link href="/dashboard/account" data-testid="link-sidebar-account">
-                <Settings className="w-4 h-4" />
-                <span>Account</span>
+                <User className={cn("w-5 h-5", isActive("/dashboard/account") ? "text-primary-foreground" : "text-muted-foreground")} />
+                <span className="font-medium">Account</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <div className="px-4 py-4 mt-2">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-sidebar-accent/50 border border-sidebar-border/50">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+              JD
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold truncate">John Doe</span>
+              <span className="text-[10px] text-muted-foreground truncate">Free Plan</span>
+            </div>
+          </div>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
