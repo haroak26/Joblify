@@ -11,7 +11,10 @@ import {
   Users,
   TrendingUp,
   CheckCircle2,
-  Star
+  Star,
+  Globe,
+  Rocket,
+  ShieldCheck
 } from "lucide-react";
 import { SiReddit, SiFacebook } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -19,18 +22,18 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const features = [
   {
     icon: Search,
-    title: "Smart Discovery",
-    description: "Our platform scans Reddit, X, and Facebook to find freelance opportunities that match your skills automatically."
+    title: "Real-time Scanning",
+    description: "Our proprietary engine monitors Reddit, X, and Facebook 24/7 to catch high-intent hiring posts seconds after they're live."
   },
   {
     icon: Zap,
-    title: "Real-Time Matching",
-    description: "Get instant notifications when new opportunities match your expertise. Never miss a perfect gig again."
+    title: "AI Matchmaking",
+    description: "Not just keyword matching. Our AI understands your deep expertise and cross-references it with job requirements."
   },
   {
     icon: MessageSquare,
-    title: "AI-Powered Outreach",
-    description: "Generate personalized, professional follow-up messages tailored to each opportunity with one click."
+    title: "Instant Pitching",
+    description: "Generate highly personalized, high-conversion pitches that stand out in crowded inboxes with a single click."
   }
 ];
 
@@ -40,182 +43,170 @@ const platforms = [
   { name: "Facebook", icon: SiFacebook, color: "text-blue-500" },
 ];
 
-const stats = [
-  { value: "50K+", label: "Jobs Found", icon: Briefcase },
-  { value: "12K+", label: "Freelancers", icon: Users },
-  { value: "85%", label: "Success Rate", icon: TrendingUp },
-];
-
-const benefits = [
-  "Find opportunities before your competition",
-  "AI suggests skills based on your experience",
-  "Generate personalized pitches instantly",
-  "Track applications and saved jobs",
-  "Works with Reddit, X, and Facebook",
-  "Dark mode for late-night hustle"
-];
-
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-background/95 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-primary-foreground" />
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 border-b bg-background/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Briefcase className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-xl" data-testid="text-logo">Joblify</span>
+            <span className="font-bold text-xl tracking-tight">Joblify</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <ThemeToggle />
             <Link href="/dashboard">
-              <Button size="lg" className="font-semibold" data-testid="button-get-started">
-                Get Started
+              <Button size="sm" className="px-5">
+                Launch App
               </Button>
             </Link>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <main>
-        <section className="py-20 sm:py-28 px-4 sm:px-6">
-          <div className="max-w-4xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm rounded-lg" data-testid="badge-hero">
-              <Star className="w-3.5 h-3.5 mr-1.5 text-primary" />
-              Find Freelance Work Faster
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="max-w-3xl">
+            <Badge variant="secondary" className="mb-6 px-3 py-1 text-xs font-semibold tracking-wider uppercase border-none bg-primary/10 text-primary">
+              <Star className="w-3 h-3 mr-2 inline" />
+              The Future of Freelancing
             </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight" data-testid="text-hero-title">
-              Discover Freelance Jobs
-              <span className="block text-primary mt-2">Before Anyone Else</span>
+            <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]">
+              Stop scrolling. <br />
+              <span className="text-primary">Start winning</span> gigs.
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed" data-testid="text-hero-description">
-              Joblify scans social platforms in real-time to find freelance opportunities 
-              that match your skills. Stop scrolling, start earning.
+            <p className="text-xl text-muted-foreground mb-10 max-w-xl leading-relaxed">
+              The first AI-powered platform that turns social media noise into a high-quality pipeline of freelance opportunities.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="flex flex-wrap gap-4">
               <Link href="/dashboard">
-                <Button size="lg" className="gap-2 h-12 px-8 text-base font-semibold" data-testid="button-start-free">
-                  Start Free <ArrowRight className="w-4 h-4" />
+                <Button size="lg" className="h-14 px-8 text-base">
+                  Get Started for Free
+                  <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
-              <Button variant="secondary" size="lg" className="h-12 px-8 text-base" data-testid="button-learn-more">
-                Learn More
+              <Button variant="secondary" size="lg" className="h-14 px-8 text-base">
+                View Live Demo
               </Button>
             </div>
           </div>
-        </section>
+        </div>
+        
+        {/* Background Decorative Elements */}
+        <div className="absolute top-0 right-0 -z-10 w-1/2 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none" />
+      </section>
 
-        <section className="py-10 px-4 sm:px-6 border-y bg-muted/30">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-center text-sm text-muted-foreground mb-6">
-              We scan opportunities from these platforms
+      {/* Trust Bar */}
+      <section className="py-12 border-y bg-muted/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
+              Scanning high-intent posts on:
             </p>
-            <div className="flex items-center justify-center gap-10 sm:gap-20 flex-wrap">
-              {platforms.map((platform) => (
-                <div key={platform.name} className="flex items-center gap-2.5" data-testid={`platform-${platform.name.toLowerCase()}`}>
-                  <platform.icon className={`w-7 h-7 ${platform.color}`} />
-                  <span className="font-semibold text-lg">{platform.name}</span>
+            <div className="flex items-center gap-12 grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+              {platforms.map((p) => (
+                <div key={p.name} className="flex items-center gap-2">
+                  <p.icon className="w-6 h-6" />
+                  <span className="font-bold text-lg">{p.name}</span>
                 </div>
               ))}
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="py-20 sm:py-28 px-4 sm:px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4" data-testid="text-features-title">
-                How Joblify Works
-              </h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                Our intelligent system does the heavy lifting so you can focus on what you do best.
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, index) => (
-                <Card
-                  key={feature.title}
-                  className="hover-elevate border"
-                  data-testid={`feature-card-${index}`}
-                >
-                  <CardContent className="p-6">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
-                      <feature.icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="font-bold text-xl mb-3">{feature.title}</h3>
-                    <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20 sm:py-28 px-4 sm:px-6 bg-muted/30 border-y">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-                  Everything You Need to Land More Clients
-                </h2>
-                <p className="text-muted-foreground text-lg mb-8">
-                  Joblify combines smart discovery with AI-powered tools to help you find and win more freelance work.
+      {/* Features Grid */}
+      <section className="py-24 lg:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-3 gap-12">
+            {features.map((f, i) => (
+              <div key={i} className="group">
+                <div className="w-14 h-14 bg-primary/5 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-primary/10 transition-colors">
+                  <f.icon className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4">{f.title}</h3>
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  {f.description}
                 </p>
-                <div className="space-y-4">
-                  {benefits.map((benefit) => (
-                    <div key={benefit} className="flex items-center gap-3">
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                      <span className="text-foreground">{benefit}</span>
-                    </div>
-                  ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof */}
+      <section className="py-24 bg-primary text-primary-foreground rounded-[2rem] mx-4 lg:mx-8 mb-24 overflow-hidden relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-4xl lg:text-5xl font-bold mb-8 leading-tight">
+                Trusted by thousands of <br /> world-class freelancers.
+              </h2>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <p className="text-5xl font-extrabold mb-2">85%</p>
+                  <p className="text-primary-foreground/80 font-medium">Faster discovery</p>
+                </div>
+                <div>
+                  <p className="text-5xl font-extrabold mb-2">12k+</p>
+                  <p className="text-primary-foreground/80 font-medium">Monthly active users</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                {stats.map((stat) => (
-                  <Card key={stat.label} className="border" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                    <CardContent className="p-6 flex items-center gap-5">
-                      <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <stat.icon className="w-7 h-7 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                        <p className="text-muted-foreground">{stat.label}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            </div>
+            <div className="bg-background/10 backdrop-blur-sm p-8 rounded-2xl border border-white/10">
+              <p className="text-xl italic mb-6 leading-relaxed">
+                "Joblify changed my business. I found a $5k project on Reddit within 20 minutes of setting up my profile. The AI pitch generator is a game changer."
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full" />
+                <div>
+                  <p className="font-bold text-lg">Alex Rivera</p>
+                  <p className="text-primary-foreground/70">Full-stack Developer</p>
+                </div>
               </div>
             </div>
           </div>
-        </section>
+        </div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+      </section>
 
-        <section className="py-20 sm:py-28 px-4 sm:px-6">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4" data-testid="text-cta-title">
-              Ready to Find Your Next Gig?
-            </h2>
-            <p className="text-muted-foreground text-lg mb-10">
-              Join thousands of freelancers who are already landing clients through Joblify.
-            </p>
-            <Link href="/dashboard">
-              <Button size="lg" className="gap-2 h-12 px-10 text-base font-semibold" data-testid="button-cta-start">
-                Get Started Now <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-        </section>
-      </main>
+      {/* CTA Section */}
+      <section className="py-24 lg:py-32 text-center">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl lg:text-6xl font-extrabold mb-8 tracking-tight">
+            Ready to find your <br /> next project?
+          </h2>
+          <p className="text-xl text-muted-foreground mb-12 max-w-xl mx-auto leading-relaxed">
+            Join the elite circle of freelancers using AI to dominate their market. No credit card required.
+          </p>
+          <Link href="/dashboard">
+            <Button size="lg" className="h-16 px-12 text-lg font-bold">
+              Start Free Today
+              <ArrowRight className="ml-3 w-5 h-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
 
-      <footer className="border-t py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Footer */}
+      <footer className="py-12 border-t">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
-              <Briefcase className="w-4 h-4 text-primary-foreground" />
+            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
+              <Briefcase className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
-            <span className="font-semibold">Joblify</span>
+            <span className="font-bold text-lg">Joblify</span>
           </div>
-          <p className="text-sm text-muted-foreground" data-testid="text-footer-copyright">
-            2025 Joblify. All rights reserved.
+          <div className="flex gap-8 text-sm text-muted-foreground">
+            <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+            <a href="#" className="hover:text-primary transition-colors">Terms</a>
+            <a href="#" className="hover:text-primary transition-colors">Contact</a>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            © 2026 Joblify. Built with passion for freelancers.
           </p>
         </div>
       </footer>
