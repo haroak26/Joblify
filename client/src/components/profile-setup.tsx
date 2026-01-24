@@ -185,12 +185,12 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="text-base"
               data-testid="input-add-skill"
             />
             <Button
               onClick={() => addSkill(newSkill)}
               disabled={!newSkill.trim()}
+              size="lg"
               data-testid="button-add-skill"
             >
               <Plus className="w-4 h-4" />

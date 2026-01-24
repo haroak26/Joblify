@@ -41,13 +41,13 @@ export function JobFilters({
             placeholder="Search jobs..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 h-11 text-base"
+            className="pl-10"
             data-testid="input-search-jobs"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
           <Select value={sourceFilter} onValueChange={(v: SourceFilter) => onSourceChange(v)}>
-            <SelectTrigger className="w-40 h-11" data-testid="select-source">
+            <SelectTrigger className="w-40 h-10" data-testid="select-source">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue placeholder="Source" />
             </SelectTrigger>
@@ -74,7 +74,7 @@ export function JobFilters({
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v: StatusFilter) => onStatusChange(v)}>
-            <SelectTrigger className="w-36 h-11" data-testid="select-status">
+            <SelectTrigger className="w-36 h-10" data-testid="select-status">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>

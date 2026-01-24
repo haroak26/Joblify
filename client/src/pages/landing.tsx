@@ -99,7 +99,6 @@ export default function Landing() {
       <section className="py-8 border-y bg-muted/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
-            <span className="text-sm text-muted-foreground">Scanning:</span>
             {platforms.map((p) => (
               <div key={p.name} className="flex items-center gap-2">
                 <p.icon className={`w-5 h-5 ${p.color}`} />
