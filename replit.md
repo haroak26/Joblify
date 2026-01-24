@@ -1,68 +1,67 @@
-# Joblify
+# Joblify - Freelance Job Discovery Platform
 
 ## Overview
+Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter), and Facebook for freelance hiring opportunities. Users can add their skills and receive matching job listings, then generate personalized follow-up messages to apply.
 
-Joblify is a freelance job discovery platform that scans social media (Reddit, X/Twitter, Facebook) to find freelance opportunities matching user skills. The application provides skill-based job matching, job filtering/searching, and AI-powered outreach message generation.
+## Project Architecture
 
-## User Preferences
+### Frontend (React + Vite)
+- **Landing Page** (`/`) - Marketing page with platform overview
+- **Dashboard** (`/dashboard`) - Main application with skills management and job discovery
 
-Preferred communication style: Simple, everyday language.
+### Backend (Express)
+- In-memory storage for skills and jobs
+- API endpoints for CRUD operations
+- Message generation for job applications
 
-## System Architecture
+### Key Components
+- `SkillsManager` - Add/remove skills with suggestions
+- `JobCard` - Display job listings with actions
+- `JobFilters` - Search and filter jobs by source/status
+- `MessageGenerator` - Generate personalized follow-up messages
 
-### Frontend Architecture
-- **Framework**: React 18 with TypeScript
-- **Routing**: Wouter (lightweight React router)
-- **State Management**: TanStack React Query for server state
-- **Styling**: Tailwind CSS with shadcn/ui component library
-- **Build Tool**: Vite with HMR support
-- **Theme**: Light/dark mode with CSS variables and Fiverr/Upwork-inspired green color scheme
+## API Routes
 
-### Backend Architecture
-- **Runtime**: Node.js with Express 5
-- **Language**: TypeScript with ESM modules
-- **API Pattern**: RESTful JSON APIs under `/api/*` prefix
-- **Development**: Vite dev server proxied through Express for HMR
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/skills` | Get user's skills |
+| POST | `/api/skills` | Save skills (triggers job matching) |
+| GET | `/api/jobs` | Get matched job listings |
+| POST | `/api/jobs/refresh` | Refresh job listings |
+| POST | `/api/jobs/:id/save` | Toggle save status |
+| POST | `/api/jobs/:id/apply` | Mark as applied |
+| POST | `/api/generate-message` | Generate follow-up message |
 
-### Data Storage
-- **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Schema**: Defined in `shared/schema.ts` with Zod validation via drizzle-zod
-- **Migrations**: Drizzle Kit for schema migrations (`db:push` command)
-- **Current Storage**: In-memory storage implementation with sample data (database integration ready)
+## Design System
 
-### Key Data Models
-- **Users**: Authentication with username/password
-- **Skills**: User-defined skills for job matching
-- **JobPosts**: Scraped job opportunities with source, budget, matched skills, save/apply status
+### Colors
+- **Primary**: Green (#1B9C5D) inspired by Fiverr/Upwork
+- **Background**: Clean white/dark mode support
+- **No gradients, no shadows** as per requirements
+- **Medium rounded corners** (rounded-md)
 
-### API Endpoints
-- `GET/POST /api/skills` - Manage user skills
-- `GET /api/jobs` - Retrieve matched job listings
-- `POST /api/jobs/:id/save` - Save job for later
-- `POST /api/jobs/:id/apply` - Mark job as applied
-- `POST /api/messages/generate` - AI message generation (placeholder)
+### Typography
+- Font: Inter
+- Clean, professional hierarchy
 
-### Build System
-- **Development**: `npm run dev` - tsx for TypeScript execution with Vite HMR
-- **Production Build**: Custom esbuild script bundles server, Vite builds client
-- **Output**: Server as CJS bundle in `dist/index.cjs`, client in `dist/public`
+## Features
+1. **Skill-Based Matching** - Add skills to see relevant opportunities
+2. **Multi-Platform Discovery** - Jobs from Reddit, X, and Facebook
+3. **Smart Filtering** - Filter by source, status, or search
+4. **Message Generation** - AI-powered personalized messages with tone selection
+5. **Job Tracking** - Save and mark jobs as applied
+6. **Dark Mode** - Full dark mode support
 
-## External Dependencies
+## Running the Project
+```bash
+npm run dev
+```
+The app serves on port 5000.
 
-### UI Components
-- **shadcn/ui**: Full component library (Radix UI primitives + Tailwind)
-- **Lucide React**: Icon library
-- **react-icons**: Additional platform icons (Reddit, Facebook, etc.)
-
-### Database & Validation
-- **PostgreSQL**: Primary database (via DATABASE_URL environment variable)
-- **Drizzle ORM**: Type-safe database queries
-- **Zod**: Runtime schema validation
-
-### Development Tools
-- **Replit Plugins**: Runtime error overlay, cartographer, dev banner for Replit environment
-- **PostCSS/Autoprefixer**: CSS processing
-
-### Session Management
-- **connect-pg-simple**: PostgreSQL session store (configured but not actively used)
-- **express-session**: Session middleware support
+## Recent Changes
+- January 2026: Initial build with complete MVP features
+  - Landing page with Fiverr/Upwork inspired design
+  - Dashboard with skills management
+  - Job feed with filtering
+  - Message generator with tone options
+  - Theme toggle (light/dark mode)
