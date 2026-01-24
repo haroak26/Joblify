@@ -35,7 +35,7 @@ export async function registerRoutes(
       const profile = await storage.setProfile(data);
       
       if (data.skills.length > 0) {
-        const jobs = (storage as any).generateJobsForSkills(data.skills);
+        const jobs = await (storage as any).scrapeAndGenerateJobs(data.skills);
         await storage.setJobs(jobs);
       } else {
         await storage.setJobs([]);
@@ -71,7 +71,7 @@ export async function registerRoutes(
       const updated = await storage.setProfile({ ...profile, skills });
       
       if (skills.length > 0) {
-        const jobs = (storage as any).generateJobsForSkills(skills);
+        const jobs = await (storage as any).scrapeAndGenerateJobs(skills);
         await storage.setJobs(jobs);
       } else {
         await storage.setJobs([]);
@@ -141,7 +141,7 @@ export async function registerRoutes(
     try {
       const profile = await storage.getProfile();
       if (profile.skills.length > 0) {
-        const jobs = (storage as any).generateJobsForSkills(profile.skills);
+        const jobs = await (storage as any).scrapeAndGenerateJobs(profile.skills);
         await storage.setJobs(jobs);
         res.json({ jobs, message: "Jobs refreshed successfully" });
       } else {

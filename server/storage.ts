@@ -1,5 +1,6 @@
 import { type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { scrapeJobsForSkills } from "./apify";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -226,6 +227,33 @@ export class MemStorage implements IStorage {
       saved: false,
       applied: false,
     }));
+  }
+
+  async scrapeAndGenerateJobs(skills: Skill[]): Promise<JobPost[]> {
+    const skillNames = skills.map((s) => s.name);
+    
+    try {
+      const scrapedJobs = await scrapeJobsForSkills(skillNames);
+      if (scrapedJobs.length > 0) {
+        const matchedJobs = scrapedJobs.map(job => ({
+          ...job,
+          matchedSkills: job.matchedSkills.filter(ms =>
+            skillNames.some(sn => 
+              ms.toLowerCase().includes(sn.toLowerCase()) ||
+              sn.toLowerCase().includes(ms.toLowerCase())
+            )
+          )
+        })).filter(job => job.matchedSkills.length > 0 || job.description.toLowerCase().includes(skillNames[0]?.toLowerCase() || ''));
+        
+        if (matchedJobs.length > 0) {
+          return matchedJobs;
+        }
+      }
+    } catch (error) {
+      console.error('Apify scraping failed, using sample data:', error);
+    }
+    
+    return this.generateJobsForSkills(skills);
   }
 }
 
