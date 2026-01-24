@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,8 +33,13 @@ interface ProfileSetupProps {
 }
 
 export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: ProfileSetupProps) {
+  const [localIntro, setLocalIntro] = useState(intro);
   const [newSkill, setNewSkill] = useState("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    setLocalIntro(intro);
+  }, [intro]);
 
   const suggestMutation = useMutation({
     mutationFn: async (introText: string) => {
@@ -98,7 +103,7 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
   };
 
   const handleSuggestSkills = () => {
-    if (intro.length < 10) {
+    if (localIntro.length < 10) {
       toast({
         title: "More Info Needed",
         description: "Please write at least 10 characters about yourself.",
@@ -106,7 +111,13 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
       });
       return;
     }
-    suggestMutation.mutate(intro);
+    suggestMutation.mutate(localIntro);
+  };
+
+  const handleBlur = () => {
+    if (localIntro !== intro) {
+      onIntroChange(localIntro);
+    }
   };
 
   const availableSuggestions = popularSkills.filter(
@@ -128,19 +139,20 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
         <CardContent className="space-y-4">
           <Textarea
             placeholder="Example: I'm a frontend developer with 5 years of experience building web applications. I specialize in React and TypeScript, and I've worked with startups and enterprise clients. I'm looking for interesting projects where I can make a real impact..."
-            value={intro}
-            onChange={(e) => onIntroChange(e.target.value)}
+            value={localIntro}
+            onChange={(e) => setLocalIntro(e.target.value)}
+            onBlur={handleBlur}
             rows={5}
             className="resize-none text-base"
             data-testid="textarea-intro"
           />
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <p className="text-sm text-muted-foreground">
-              {intro.length} characters
+              {localIntro.length} characters
             </p>
             <Button
               onClick={handleSuggestSkills}
-              disabled={suggestMutation.isPending || intro.length < 10}
+              disabled={suggestMutation.isPending || localIntro.length < 10}
               variant="secondary"
               className="gap-2"
               data-testid="button-suggest-skills"
