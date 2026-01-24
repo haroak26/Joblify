@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Briefcase, Wand2, User } from "lucide-react";
+import { Home, Briefcase, Wand2, Calendar, Settings, CreditCard } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,9 +10,10 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 
-const menuItems = [
+const mainMenuItems = [
   {
     title: "Home",
     url: "/dashboard",
@@ -29,14 +30,21 @@ const menuItems = [
     icon: Wand2,
   },
   {
-    title: "Account",
-    url: "/dashboard/account",
-    icon: User,
+    title: "Schedules",
+    url: "/dashboard/schedules",
+    icon: Calendar,
   },
 ];
 
 export function AppSidebar() {
   const [location] = useLocation();
+
+  const isActive = (url: string) => {
+    if (url === "/dashboard") {
+      return location === "/dashboard";
+    }
+    return location.startsWith(url);
+  };
 
   return (
     <Sidebar>
@@ -50,30 +58,38 @@ export function AppSidebar() {
           </div>
         </Link>
       </SidebarHeader>
+      
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
-                const isActive = location === item.url || 
-                  (item.url === "/dashboard" && location === "/dashboard");
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.url}>
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {mainMenuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                    <Link href={item.url} data-testid={`link-sidebar-${item.title.toLowerCase().replace(' ', '-')}`}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4">
-        <p className="text-xs text-muted-foreground">Joblify v1.0</p>
+
+      <SidebarFooter className="mt-auto">
+        <SidebarSeparator />
+        <SidebarMenu className="p-2">
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive("/dashboard/account")}>
+              <Link href="/dashboard/account" data-testid="link-sidebar-account">
+                <Settings className="w-4 h-4" />
+                <span>Account</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );

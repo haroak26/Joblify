@@ -11,7 +11,8 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
   - **Home** (`/dashboard`) - Overview with stats, job finder, and profile setup
   - **My Jobs** (`/dashboard/jobs`) - Browse and manage job opportunities
   - **Generator** (`/dashboard/generator`) - Standalone AI message generator
-  - **Account** (`/dashboard/account`) - Profile and settings management
+  - **Schedules** (`/dashboard/schedules`) - Recurring automated job scans
+  - **Account** (`/dashboard/account`) - Profile, subscription, and settings management (at sidebar bottom)
 
 ### Backend (Express)
 - In-memory storage for profile and jobs
@@ -81,9 +82,13 @@ The app serves on port 5000.
 ## Recent Changes
 - January 2026: Added sidebar navigation
   - New AppSidebar and DashboardLayout components
-  - Split dashboard into 4 pages: Home, My Jobs, Generator, Account
+  - Split dashboard into 5 pages: Home, My Jobs, Generator, Schedules, Account
   - Home shows stats (opportunities, value, saved, applied) and job finder
   - Standalone message generator page
+  - Schedules page for recurring automated job scans
+  - Account page with subscription management (Free/Pro/Enterprise plans)
+  - Account tab positioned at bottom of sidebar
+  - Fixed URL routing (no more /dashboard/dashboard duplication)
   - Consistent input sizes (h-10), normal font weight buttons
   - Removed "(Twitter)" text, platform logos with proper colors
 - January 2026: Added AI-powered skill suggestions from personal introduction
