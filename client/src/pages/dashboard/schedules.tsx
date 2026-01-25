@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Plus, Trash2, Play } from "lucide-react";
-
+import { Calendar, Clock, Plus, Trash2, Play, Lock, Crown } from "lucide-react";
+import { Link } from "wouter";
 
 interface Schedule {
   id: string;
@@ -20,7 +21,17 @@ interface Schedule {
   nextRun?: string;
 }
 
+interface SubscriptionResponse {
+  subscription: { plan: string };
+  limits: { hasScheduleAccess: boolean };
+}
+
 export default function Schedules() {
+  const subscriptionQuery = useQuery<SubscriptionResponse>({
+    queryKey: ["/api/subscription"],
+  });
+
+  const hasAccess = subscriptionQuery.data?.limits.hasScheduleAccess ?? false;
   
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -76,6 +87,37 @@ export default function Schedules() {
       default: return freq;
     }
   };
+
+  if (!hasAccess && !subscriptionQuery.isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <Card className="border-primary/20">
+          <CardContent className="py-12 text-center">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2" data-testid="text-schedules-locked">Schedules - Plus Feature</h2>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Automate your job discovery with scheduled scans. Upgrade to Plus to unlock this feature 
+              and never miss a new opportunity.
+            </p>
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Crown className="w-4 h-4 text-primary" />
+                <span>Plus plan includes 300 job scrapes/month and unlimited skills</span>
+              </div>
+              <Button asChild className="gap-2" data-testid="button-upgrade-schedules">
+                <Link href="/dashboard/account">
+                  <Crown className="w-4 h-4" />
+                  Upgrade to Plus
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">

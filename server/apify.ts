@@ -6,11 +6,11 @@ const client = process.env.APIFY_API_TOKEN
   ? new ApifyClient({ token: process.env.APIFY_API_TOKEN })
   : null;
 
-// Actors for different platforms
+// Configurable actors for different platforms via environment variables
 const ACTORS = {
-  X: "pzMmk1t7AZ8OKJhfU", // Twitter/X Search Scraper
-  REDDIT: "8B4S7Mmk1t7AZ8OKJ", // Reddit Scraper (Placeholder ID)
-  FACEBOOK: "fb_groups_scraper" // Facebook Groups Scraper (Placeholder ID)
+  X: process.env.APIFY_X_ACTOR || "apidojo/tweet-scraper",
+  REDDIT: process.env.APIFY_REDDIT_ACTOR || "trudax/reddit-scraper",
+  FACEBOOK: process.env.APIFY_FACEBOOK_ACTOR || "apify/facebook-posts-scraper"
 };
 
 interface ScrapedItem {
@@ -28,11 +28,20 @@ interface ScrapedItem {
 }
 
 export async function scrapeXPosts(query: string, maxResults: number = 50): Promise<JobPost[]> {
-  if (!client) return [];
+  if (!client) {
+    console.log('Apify client not configured, skipping X scraping');
+    return [];
+  }
   try {
-    const input = { mode: "Search", query, query_type: "Top", max_results: maxResults };
+    console.log(`Scraping X for: ${query}`);
+    const input = { 
+      searchTerms: [query],
+      maxTweets: maxResults,
+      searchMode: "live"
+    };
     const run = await client.actor(ACTORS.X).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    console.log(`Found ${items.length} X posts`);
     return processItems(items, 'x');
   } catch (error) {
     console.error('Error scraping X posts:', error);
@@ -41,12 +50,22 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
 }
 
 export async function scrapeReddit(query: string, maxResults: number = 20): Promise<JobPost[]> {
-  if (!client) return [];
+  if (!client) {
+    console.log('Apify client not configured, skipping Reddit scraping');
+    return [];
+  }
   try {
-    // Note: In a real app, we'd use a specific Reddit actor like "shripad/reddit-scraper"
-    const input = { searchQueries: [query], maxPosts: maxResults };
-    const run = await client.actor("trunghieu/reddit-scraper").call(input);
+    console.log(`Scraping Reddit for: ${query}`);
+    const input = { 
+      searches: [
+        { term: query, type: "post" }
+      ],
+      maxItems: maxResults,
+      sort: "new"
+    };
+    const run = await client.actor(ACTORS.REDDIT).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    console.log(`Found ${items.length} Reddit posts`);
     return processItems(items, 'reddit');
   } catch (error) {
     console.error('Error scraping Reddit:', error);
@@ -55,12 +74,19 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
 }
 
 export async function scrapeFacebook(query: string, maxResults: number = 20): Promise<JobPost[]> {
-  if (!client) return [];
+  if (!client) {
+    console.log('Apify client not configured, skipping Facebook scraping');
+    return [];
+  }
   try {
-    // Note: Facebook scraping usually requires specific group IDs or page URLs
-    const input = { queries: [query], maxResultsPerQuery: maxResults };
-    const run = await client.actor("apify/facebook-groups-scraper").call(input);
+    console.log(`Scraping Facebook for: ${query}`);
+    const input = { 
+      searchTerms: [query],
+      maxPosts: maxResults
+    };
+    const run = await client.actor(ACTORS.FACEBOOK).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    console.log(`Found ${items.length} Facebook posts`);
     return processItems(items, 'facebook');
   } catch (error) {
     console.error('Error scraping Facebook:', error);

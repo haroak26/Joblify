@@ -3,15 +3,18 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
+import { setupStripeRoutes } from "./stripe";
 
 const app = express();
 const httpServer = createServer(app);
 
 declare module "http" {
   interface IncomingMessage {
-    rawBody: unknown;
+    rawBody: Buffer;
   }
 }
+
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
 app.use(
   express.json({
@@ -24,6 +27,7 @@ app.use(
 app.use(express.urlencoded({ extended: false }));
 
 setupAuth(app);
+setupStripeRoutes(app);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

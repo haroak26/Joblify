@@ -1,12 +1,16 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { EmailVerificationBanner } from "@/components/email-verification-banner";
+import { useAuth } from "@/hooks/use-auth";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user } = useAuth();
+  
   const style = {
     "--sidebar-width": "14rem",
     "--sidebar-width-icon": "3rem",
@@ -21,6 +25,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <ThemeToggle />
           </header>
+          {user && !user.emailVerified && (
+            <div className="px-4 pt-4">
+              <EmailVerificationBanner email={user.email} />
+            </div>
+          )}
           <main className="flex-1 overflow-auto">
             {children}
           </main>
