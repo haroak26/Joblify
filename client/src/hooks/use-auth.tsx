@@ -48,25 +48,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
 
   const login = async (username: string, password: string) => {
-    const response = await apiRequest("POST", "/api/auth/login", { username, password });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "Login failed");
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+      setUser(data.user);
+      queryClient.clear();
+      setLocation("/dashboard");
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Login failed");
     }
-    setUser(data.user);
-    queryClient.clear();
-    setLocation("/dashboard");
   };
 
   const register = async (username: string, email: string, password: string) => {
-    const response = await apiRequest("POST", "/api/auth/register", { username, email, password });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || "Registration failed");
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password }),
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
+      setUser(data.user);
+      queryClient.clear();
+      setLocation("/dashboard");
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Registration failed");
     }
-    setUser(data.user);
-    queryClient.clear();
-    setLocation("/dashboard");
   };
 
   const logout = async () => {
