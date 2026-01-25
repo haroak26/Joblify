@@ -6,10 +6,10 @@ const client = process.env.APIFY_API_TOKEN
   ? new ApifyClient({ token: process.env.APIFY_API_TOKEN })
   : null;
 
-// Configurable actors for different platforms via environment variables
+// Specific actor IDs for each platform
 const ACTORS = {
-  X: process.env.APIFY_X_ACTOR || "apidojo/tweet-scraper",
-  REDDIT: process.env.APIFY_REDDIT_ACTOR || "trudax/reddit-scraper",
+  X: "G8hR9sp2nkjI2om8X",
+  REDDIT: "lqOcm2Bgsg4LGNATd",
   FACEBOOK: process.env.APIFY_FACEBOOK_ACTOR || "apify/facebook-posts-scraper"
 };
 
@@ -35,9 +35,22 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
   try {
     console.log(`Scraping X for: ${query}`);
     const input = { 
-      searchTerms: [query],
-      maxTweets: maxResults,
-      searchMode: "live"
+      maxItems: maxResults,
+      query: query,
+      username: "",
+      replies: "",
+      retweets: "",
+      quotes: "",
+      verified: "",
+      links: "",
+      media: "",
+      images: "",
+      videos: "",
+      nativeVideos: "",
+      proVideos: "",
+      news: "",
+      safe: "",
+      near: ""
     };
     const run = await client.actor(ACTORS.X).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
@@ -57,11 +70,18 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
   try {
     console.log(`Scraping Reddit for: ${query}`);
     const input = { 
-      searches: [
-        { term: query, type: "post" }
-      ],
-      maxItems: maxResults,
-      sort: "new"
+      mode: "search",
+      searchQuery: query,
+      searchSubreddit: "",
+      sort: "hot",
+      timeFilter: "all",
+      maxPosts: maxResults,
+      maxComments: 0,
+      includeComments: false,
+      outputFormat: "markdown",
+      includeImages: false,
+      delaySeconds: 1,
+      debugMode: false
     };
     const run = await client.actor(ACTORS.REDDIT).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
