@@ -37,7 +37,9 @@ export default function Login() {
     try {
       await login(data.username, data.password);
     } catch (error) {
-      // Error is handled by auth state or form validation
+      form.setError("root", { 
+        message: error instanceof Error ? error.message : "Invalid credentials" 
+      });
     } finally {
       setIsSubmitting(false);
     }

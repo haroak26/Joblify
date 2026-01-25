@@ -43,7 +43,14 @@ export default function Register() {
     try {
       await register(data.username, data.email, data.password);
     } catch (error) {
-      // Error is handled by form validation or auth state
+      const message = error instanceof Error ? error.message : "Registration failed";
+      if (message.toLowerCase().includes("username")) {
+        form.setError("username", { message });
+      } else if (message.toLowerCase().includes("email")) {
+        form.setError("email", { message });
+      } else {
+        form.setError("root", { message });
+      }
     } finally {
       setIsSubmitting(false);
     }
