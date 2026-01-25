@@ -1,11 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { useLocation } from "wouter";
 import { 
   ExternalLink, 
   Bookmark, 
   BookmarkCheck, 
-  MessageSquare, 
+  Wand2, 
   Clock,
   MapPin,
   DollarSign
@@ -38,25 +39,30 @@ const sourceBgColors = {
 };
 
 export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
+  const [, setLocation] = useLocation();
   const SourceIcon = sourceIcons[job.source];
 
+  const handleGenerateClick = () => {
+    setLocation(`/dashboard/generator?jobId=${job.id}`);
+  };
+
   return (
-    <Card className="hover-elevate overflow-visible" data-testid={`job-card-${job.id}`}>
+    <Card className="hover-elevate overflow-visible border-sidebar-border/50 shadow-sm" data-testid={`job-card-${job.id}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${sourceBgColors[job.source]}`}>
-                <SourceIcon className={`w-4 h-4 ${sourceColors[job.source]}`} />
-                <span className="text-xs font-medium capitalize">{job.source}</span>
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md ${sourceBgColors[job.source]}`}>
+                <SourceIcon className={`w-3.5 h-3.5 ${sourceColors[job.source]}`} />
+                <span className="text-[11px] font-semibold uppercase tracking-wider">{job.source}</span>
               </div>
-              <span className="text-sm text-muted-foreground">@{job.authorHandle || job.author}</span>
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">@{job.authorHandle || job.author}</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {job.postedAt}
               </span>
             </div>
-            <h3 className="font-semibold text-lg leading-tight line-clamp-2" data-testid={`job-title-${job.id}`}>
+            <h3 className="font-bold text-lg leading-tight line-clamp-2" data-testid={`job-title-${job.id}`}>
               {job.title}
             </h3>
           </div>
@@ -64,7 +70,7 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
             variant="ghost"
             size="icon"
             onClick={() => onSave(job.id)}
-            className="flex-shrink-0"
+            className="flex-shrink-0 h-9 w-9 rounded-full hover:bg-sidebar-accent"
             data-testid={`button-save-job-${job.id}`}
           >
             {job.saved ? (
@@ -76,50 +82,51 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
         </div>
       </CardHeader>
       <CardContent className="pb-4">
-        <p className="text-muted-foreground line-clamp-3 mb-4 leading-relaxed" data-testid={`job-description-${job.id}`}>
+        <p className="text-muted-foreground text-sm line-clamp-3 mb-4 leading-relaxed" data-testid={`job-description-${job.id}`}>
           {job.description}
         </p>
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
+        <div className="flex flex-wrap gap-4 text-[13px] text-muted-foreground mb-4">
           {job.budget && (
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
+            <span className="flex items-center gap-1.5 font-semibold text-foreground">
               <DollarSign className="w-4 h-4 text-primary" />
               {job.budget}
             </span>
           )}
           {job.isRemote && (
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 font-medium">
               <MapPin className="w-4 h-4" />
               Remote
             </span>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {job.matchedSkills.map((skill) => (
-            <Badge key={skill} variant="secondary" className="rounded-md" data-testid={`job-skill-${job.id}-${skill}`}>
+            <Badge key={skill} variant="secondary" className="rounded-md px-2 py-0 h-5 text-[11px] font-medium" data-testid={`job-skill-${job.id}-${skill}`}>
               {skill}
             </Badge>
           ))}
         </div>
       </CardContent>
-      <CardFooter className="pt-4 border-t gap-3 flex-wrap">
+      <CardFooter className="pt-4 border-t border-sidebar-border/30 gap-3 flex-wrap">
         <Button
           variant="default"
-          className="gap-2"
-          onClick={() => onGenerateMessage(job)}
+          size="sm"
+          className="gap-2 h-9 px-4 font-medium"
+          onClick={handleGenerateClick}
           data-testid={`button-generate-message-${job.id}`}
         >
-          <MessageSquare className="w-4 h-4" />
+          <Wand2 className="w-3.5 h-3.5" />
           Generate Message
         </Button>
         <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
-          <Button variant="secondary" className="gap-2" data-testid={`button-view-post-${job.id}`}>
-            <ExternalLink className="w-4 h-4" />
+          <Button variant="outline" size="sm" className="gap-2 h-9 px-4 font-medium" data-testid={`button-view-post-${job.id}`}>
+            <ExternalLink className="w-3.5 h-3.5" />
             View Post
           </Button>
         </a>
         {job.applied && (
-          <Badge variant="outline" className="text-primary border-primary rounded-md">
-            Applied
+          <Badge variant="outline" className="text-primary border-primary rounded-md px-2 h-6 text-[11px] font-bold">
+            APPLIED
           </Badge>
         )}
       </CardFooter>

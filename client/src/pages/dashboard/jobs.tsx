@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LayoutGrid, List, RefreshCw } from "lucide-react";
 import { JobCard } from "@/components/job-card";
 import { JobFilters, type SourceFilter, type StatusFilter } from "@/components/job-filters";
-import { MessageGenerator } from "@/components/message-generator";
 import { EmptyState } from "@/components/empty-state";
 import { JobListSkeleton } from "@/components/loading-skeleton";
 import type { JobPost, FreelancerProfile } from "@shared/schema";
@@ -13,11 +13,10 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 
 export default function MyJobs() {
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [selectedJob, setSelectedJob] = useState<JobPost | null>(null);
-  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   
 
@@ -88,8 +87,7 @@ export default function MyJobs() {
   };
 
   const handleGenerateMessage = (job: JobPost) => {
-    setSelectedJob(job);
-    setMessageDialogOpen(true);
+    setLocation(`/dashboard/generator?jobId=${job.id}`);
   };
 
   const handleMessageSent = (jobId: string) => {
@@ -194,14 +192,7 @@ export default function MyJobs() {
         </>
       )}
 
-      <MessageGenerator
-        job={selectedJob}
-        skills={profile.skills.map((s) => s.name)}
-        intro={profile.intro}
-        open={messageDialogOpen}
-        onOpenChange={setMessageDialogOpen}
-        onMessageSent={handleMessageSent}
-      />
+      {/* MessageGenerator is no longer used here as it's replaced by the Generator page */}
     </div>
   );
 }
