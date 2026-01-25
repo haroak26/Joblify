@@ -11,10 +11,12 @@ import { apiRequest } from "@/lib/queryClient";
 
 
 type Tone = "professional" | "friendly" | "enthusiastic";
+type MessageType = "comment" | "initial";
 
 export default function Generator() {
   const [jobDescription, setJobDescription] = useState("");
   const [tone, setTone] = useState<Tone>("professional");
+  const [messageType, setMessageType] = useState<MessageType>("initial");
   const [generatedMessage, setGeneratedMessage] = useState("");
   const [copied, setCopied] = useState(false);
   
@@ -30,6 +32,7 @@ export default function Generator() {
         jobDescription,
         skills: profileQuery.data?.skills.map(s => s.name) ?? [],
         tone,
+        messageType,
         intro: profileQuery.data?.intro ?? "",
       });
       return response.json();
@@ -55,7 +58,11 @@ export default function Generator() {
     <div className="p-6 space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold mb-1" data-testid="text-generator-heading">Message Generator</h1>
-        <p className="text-muted-foreground">Create personalized outreach messages for any opportunity</p>
+        <p className="text-muted-foreground">
+          {messageType === "comment" 
+            ? "Create short, human-like comments for social media posts"
+            : "Create personalized outreach messages for any opportunity"}
+        </p>
       </div>
 
       <Card>
@@ -76,18 +83,32 @@ export default function Generator() {
           />
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Tone:</span>
-              <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
-                <SelectTrigger className="w-40" data-testid="select-tone">
+              <span className="text-sm text-muted-foreground">Type:</span>
+              <Select value={messageType} onValueChange={(v: MessageType) => setMessageType(v)}>
+                <SelectTrigger className="w-40" data-testid="select-message-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="professional">Professional</SelectItem>
-                  <SelectItem value="friendly">Friendly</SelectItem>
-                  <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                  <SelectItem value="comment">Comment</SelectItem>
+                  <SelectItem value="initial">Initial Message</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {messageType === "initial" && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Tone:</span>
+                <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
+                  <SelectTrigger className="w-40" data-testid="select-tone">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="friendly">Friendly</SelectItem>
+                    <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button
               onClick={() => generateMutation.mutate()}
               disabled={generateMutation.isPending || !jobDescription.trim() || !hasProfile}
@@ -99,7 +120,7 @@ export default function Generator() {
               ) : (
                 <Wand2 className="w-4 h-4" />
               )}
-              Generate Message
+              Generate {messageType === "comment" ? "Comment" : "Message"}
             </Button>
           </div>
           {!hasProfile && (

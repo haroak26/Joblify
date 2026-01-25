@@ -33,6 +33,7 @@ interface MessageGeneratorProps {
 }
 
 type Tone = "professional" | "friendly" | "enthusiastic";
+type MessageType = "comment" | "initial";
 
 export function MessageGenerator({ 
   job, 
@@ -43,6 +44,7 @@ export function MessageGenerator({
   onMessageSent 
 }: MessageGeneratorProps) {
   const [tone, setTone] = useState<Tone>("professional");
+  const [messageType, setMessageType] = useState<MessageType>("initial");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   
@@ -53,6 +55,7 @@ export function MessageGenerator({
       jobDescription: string; 
       skills: string[]; 
       tone: Tone;
+      messageType: MessageType;
       intro: string;
     }) => {
       const response = await apiRequest("POST", "/api/generate-message", data);
@@ -73,6 +76,7 @@ export function MessageGenerator({
       jobDescription: job.description,
       skills: skills.filter(s => job.matchedSkills.includes(s)),
       tone,
+      messageType,
       intro,
     });
   };
@@ -108,10 +112,12 @@ export function MessageGenerator({
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
               <Wand2 className="w-5 h-5 text-primary" />
             </div>
-            Generate Follow-up Message
+            Generate {messageType === "comment" ? "Comment" : "Outreach Message"}
           </DialogTitle>
           <DialogDescription>
-            Create a personalized message for this opportunity using AI
+            {messageType === "comment" 
+              ? "Create a short, human-like comment to post on this opportunity"
+              : "Create a personalized outreach message for this opportunity"}
           </DialogDescription>
         </DialogHeader>
 
@@ -132,18 +138,32 @@ export function MessageGenerator({
 
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Tone:</span>
-              <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
-                <SelectTrigger className="w-40" data-testid="select-tone">
+              <span className="text-sm font-medium">Type:</span>
+              <Select value={messageType} onValueChange={(v: MessageType) => setMessageType(v)}>
+                <SelectTrigger className="w-40" data-testid="select-message-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="professional">Professional</SelectItem>
-                  <SelectItem value="friendly">Friendly</SelectItem>
-                  <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                  <SelectItem value="comment">Comment</SelectItem>
+                  <SelectItem value="initial">Initial Message</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {messageType === "initial" && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Tone:</span>
+                <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
+                  <SelectTrigger className="w-40" data-testid="select-tone">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="friendly">Friendly</SelectItem>
+                    <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <Button
               onClick={handleGenerate}
               disabled={generateMutation.isPending}

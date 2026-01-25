@@ -246,42 +246,50 @@ export async function registerRoutes(
         jobDescription: z.string(),
         skills: z.array(z.string()),
         tone: z.enum(["professional", "friendly", "enthusiastic"]).default("professional"),
+        messageType: z.enum(["comment", "initial"]).default("initial"),
         intro: z.string().optional(),
       });
 
-      const { jobTitle, jobDescription, skills, tone, intro } = schema.parse(req.body);
+      const { jobTitle, jobDescription, skills, tone, messageType, intro } = schema.parse(req.body);
 
       const profile = await storage.getProfile(userId);
       const userIntro = intro || profile.intro || "";
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert at writing compelling freelance job application messages. Write a personalized message for a job opportunity. The message should be ${tone} in tone. Keep it concise (150-250 words), highlight relevant skills, and include a clear call to action. Do not use generic phrases like "I noticed your post" - be specific and engaging.`
-          },
-          {
-            role: "user",
-            content: `
-Job Title: ${jobTitle}
+      const isComment = messageType === "comment";
+      
+      const systemPrompt = isComment
+        ? `You are an expert at writing natural, human-like comments on social media posts about job opportunities. Write a SHORT comment (2-4 sentences max) that sounds genuine and casual - like a real person would write. Be conversational, not salesy. Show interest in the opportunity and briefly mention relevant experience. Never use generic phrases, corporate speak, or sound like a bot. The comment should feel authentic and match how real people engage on ${jobDescription.includes('reddit') ? 'Reddit' : jobDescription.includes('twitter') || jobDescription.includes('x.com') ? 'X/Twitter' : 'Facebook'}.`
+        : `You are an expert at writing compelling freelance job application messages. Write a personalized outreach message for a job opportunity. The message should be ${tone} in tone. Keep it concise (150-250 words), highlight relevant skills, and include a clear call to action. Do not use generic phrases like "I noticed your post" - be specific and engaging.`;
+
+      const userPrompt = isComment
+        ? `Post: ${jobDescription}
+My Skills: ${skills.join(", ")}
+${userIntro ? `About Me (for context): ${userIntro}` : ""}
+
+Write a short, human-sounding comment expressing interest. Be casual and genuine.`
+        : `Job Title: ${jobTitle}
 Job Description: ${jobDescription}
 My Skills: ${skills.join(", ")}
 ${userIntro ? `About Me: ${userIntro}` : ""}
 
-Write a ${tone} follow-up message for this job opportunity.`
-          }
+Write a ${tone} outreach message for this job opportunity.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
         ],
-        max_tokens: 400,
+        max_tokens: isComment ? 150 : 400,
       });
 
-      const message = response.choices[0]?.message?.content || generateFallbackMessage(jobTitle, skills, tone, userIntro);
+      const message = response.choices[0]?.message?.content || generateFallbackMessage(jobTitle, skills, tone, userIntro, isComment);
 
       res.json({ message });
     } catch (error) {
       console.error("Error generating message:", error);
-      const { jobTitle, skills, tone } = req.body;
-      const message = generateFallbackMessage(jobTitle || "this opportunity", skills || [], tone || "professional", "");
+      const { jobTitle, skills, tone, messageType } = req.body;
+      const message = generateFallbackMessage(jobTitle || "this opportunity", skills || [], tone || "professional", "", messageType === "comment");
       res.json({ message });
     }
   });
@@ -373,7 +381,18 @@ Write a ${tone} follow-up message for this job opportunity.`
   return httpServer;
 }
 
-function generateFallbackMessage(jobTitle: string, skills: string[], tone: string, intro: string): string {
+function generateFallbackMessage(jobTitle: string, skills: string[], tone: string, intro: string, isComment: boolean = false): string {
+  const skillsList = skills.length > 0 ? skills.join(", ") : "relevant expertise";
+
+  if (isComment) {
+    const comments = [
+      `This sounds like a great opportunity! I have experience with ${skillsList} and would love to help out. DM me if you're still looking!`,
+      `Hey, I'd be interested in this! Been working with ${skillsList} for a while now. Happy to chat if you need someone.`,
+      `Really cool project! I've got ${skillsList} experience and this seems like a good fit. Let me know if you want to connect.`,
+    ];
+    return comments[Math.floor(Math.random() * comments.length)];
+  }
+
   const toneIntros: Record<string, string> = {
     professional: "I hope this message finds you well.",
     friendly: "Hey there! I came across your post and got really excited.",
@@ -385,8 +404,6 @@ function generateFallbackMessage(jobTitle: string, skills: string[], tone: strin
     friendly: "Would love to chat more about this! Let me know if you'd like to hop on a quick call.",
     enthusiastic: "I can't wait to hear back from you!",
   };
-
-  const skillsList = skills.length > 0 ? skills.join(", ") : "relevant expertise";
 
   return `Hi,
 

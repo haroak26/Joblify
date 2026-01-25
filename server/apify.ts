@@ -10,7 +10,7 @@ const client = process.env.APIFY_API_TOKEN
 const ACTORS = {
   X: "G8hR9sp2nkjI2om8X",
   REDDIT: "lqOcm2Bgsg4LGNATd",
-  FACEBOOK: "alien_force/facebook-scraper-pro"
+  FACEBOOK: "Lnz4QRVI89bcQAUGQ"
 };
 
 interface ScrapedItem {
@@ -101,8 +101,21 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
   try {
     console.log(`Scraping Facebook for: ${query}`);
     const input = { 
-      searchTerms: [query],
-      maxPosts: maxResults
+      cookies: [],
+      function: "facebook_search_scraper",
+      keyword: query,
+      filter_by_recent_posts: false,
+      since: "all_times",
+      profile_urls: [],
+      post_urls: [],
+      post_urls_for_comments: [],
+      fetch_reaction_map: false,
+      results_limit: maxResults,
+      min_wait_time_in_sec: 1,
+      max_wait_time_in_sec: 4,
+      proxyConfiguration: {
+        useApifyProxy: true
+      }
     };
     const run = await client.actor(ACTORS.FACEBOOK).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
