@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { skillSchema } from "@shared/schema";
+import { requireAuth } from "./auth";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -15,7 +16,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  app.get("/api/profile", async (_req, res) => {
+  app.get("/api/profile", requireAuth, async (_req, res) => {
     try {
       const profile = await storage.getProfile();
       res.json(profile);
@@ -24,7 +25,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/profile", async (req, res) => {
+  app.post("/api/profile", requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         intro: z.string(),
@@ -51,7 +52,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/skills", async (_req, res) => {
+  app.get("/api/skills", requireAuth, async (_req, res) => {
     try {
       const profile = await storage.getProfile();
       res.json({ skills: profile.skills });
@@ -60,7 +61,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/skills", async (req, res) => {
+  app.post("/api/skills", requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         skills: z.array(skillSchema),
@@ -87,7 +88,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/suggest-skills", async (req, res) => {
+  app.post("/api/suggest-skills", requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         intro: z.string().min(10),
@@ -128,7 +129,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", async (_req, res) => {
+  app.get("/api/jobs", requireAuth, async (_req, res) => {
     try {
       const jobs = await storage.getJobs();
       res.json({ jobs });
@@ -137,7 +138,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs/refresh", async (_req, res) => {
+  app.post("/api/jobs/refresh", requireAuth, async (_req, res) => {
     try {
       const profile = await storage.getProfile();
       if (profile.skills.length > 0) {
@@ -152,7 +153,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs/:id/save", async (req, res) => {
+  app.post("/api/jobs/:id/save", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const job = await storage.saveJob(id);
@@ -166,7 +167,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs/:id/apply", async (req, res) => {
+  app.post("/api/jobs/:id/apply", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const job = await storage.markJobApplied(id);
@@ -180,7 +181,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/generate-message", async (req, res) => {
+  app.post("/api/generate-message", requireAuth, async (req, res) => {
     try {
       const schema = z.object({
         jobTitle: z.string(),
