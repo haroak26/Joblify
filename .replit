@@ -39,4 +39,9 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_database:1.0.0"]
+integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_database:1.0.0", "stripe:2.0.0"]
+
+[userenv]
+
+[userenv.shared]
+STRIPE_PLUS_PRICE_ID = "price_1StRa3K67DeOsEFbakADNzf0"

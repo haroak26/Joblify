@@ -15,9 +15,11 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
   - **Account** (`/dashboard/account`) - Profile, subscription, and settings management (at sidebar bottom)
 
 ### Backend (Express)
-- In-memory storage for profile and jobs
+- PostgreSQL database with Drizzle ORM
 - API endpoints for CRUD operations
 - OpenAI integration for skill suggestions and message generation
+- Stripe integration for subscription payments (via Replit connector)
+- Apify integration for job scraping from social platforms
 
 ### Key Components
 - `AppSidebar` - Navigation sidebar with Home, My Jobs, Generator, Account
@@ -52,6 +54,12 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 | POST | `/api/jobs/:id/save` | Toggle save status |
 | POST | `/api/jobs/:id/apply` | Mark as applied |
 | POST | `/api/generate-message` | Generate follow-up message |
+| GET | `/api/subscription` | Get user subscription details and limits |
+| GET | `/api/usage` | Get current usage stats and remaining limits |
+| POST | `/api/stripe/create-checkout` | Create Stripe checkout session for upgrade |
+| POST | `/api/stripe/cancel` | Cancel subscription at period end |
+| GET | `/api/stripe/portal` | Get Stripe billing portal URL |
+| DELETE | `/api/account` | Delete user account and all data |
 
 ## Design System
 
@@ -69,11 +77,17 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 1. **Personal Introduction** - Write about yourself to help AI understand your background
 2. **AI Skill Suggestions** - Get skill recommendations based on your intro using GPT-4o-mini
 3. **Skill-Based Matching** - Add skills to see relevant opportunities from sample data
-4. **Multi-Platform Discovery** - Simulated jobs from Reddit, X, and Facebook
+4. **Multi-Platform Discovery** - Jobs from Reddit, X, and Facebook via Apify scraping
 5. **Smart Filtering** - Filter by source, status, or search
 6. **AI Message Generation** - Personalized messages with tone selection (professional/friendly/enthusiastic)
 7. **Job Tracking** - Save and mark jobs as applied
 8. **Dark Mode** - Full dark mode support
+9. **Two-Tier Subscription System**:
+   - **Free Plan**: 5 skills max, 5 job scrapes/month
+   - **Plus Plan ($19/mo)**: Unlimited skills, 300 job scrapes/month, schedule access
+10. **Email Verification** - Required before accessing dashboard features
+11. **Stripe Payments** - Secure subscription billing via Stripe
+12. **Account Management** - View usage, upgrade/cancel subscription, delete account
 
 ## OpenAI Integration
 Uses Replit AI Integrations with gpt-4o-mini model for:
@@ -94,8 +108,33 @@ The app serves on port 5000.
 - `BREVO_API_KEY` - Required for sending verification and welcome emails via Brevo
 - `AI_INTEGRATIONS_OPENAI_API_KEY` - Auto-managed by Replit
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` - Auto-managed by Replit
+- `DATABASE_URL` - PostgreSQL connection string (auto-managed by Replit)
+- `STRIPE_PLUS_PRICE_ID` - Stripe price ID for Plus subscription
+- `APIFY_TOKEN` - Apify API token for job scraping (optional)
+- `APIFY_X_ACTOR` - Actor ID for X/Twitter scraping (optional)
+- `APIFY_REDDIT_ACTOR` - Actor ID for Reddit scraping (optional)
+- `APIFY_FACEBOOK_ACTOR` - Actor ID for Facebook scraping (optional)
+
+## Stripe Integration
+Uses Replit Stripe connector with stripe-replit-sync for:
+- Automatic schema creation and data sync
+- Managed webhooks
+- Checkout sessions for subscription upgrades
+- Billing portal for subscription management
+
+To create products, run: `npx tsx server/seed-products.ts`
 
 ## Recent Changes
+- January 2026: Added SaaS subscription features
+  - Two-tier subscription system (Free/Plus) with usage limits
+  - Stripe integration via Replit connector with stripe-replit-sync
+  - Usage tracking (skills count, jobs scraped per month)
+  - Monthly usage reset with automatic detection
+  - Account page redesign with subscription info, usage stats
+  - Schedules page gated to Plus subscribers
+  - Email verification enforcement on all dashboard APIs
+  - Toast notification system for user feedback
+  - Account deletion with Stripe subscription cancellation
 - January 2026: Added email verification with Brevo integration
   - Registration now collects email address with validation
   - Verification emails sent via Brevo with branded templates

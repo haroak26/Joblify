@@ -211,7 +211,7 @@ export async function registerRoutes(
   app.post("/api/jobs/:id/save", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
-      const { id } = req.params;
+      const id = req.params.id as string;
       const job = await storage.saveJob(userId, id);
       if (job) {
         res.json({ job });
@@ -226,7 +226,7 @@ export async function registerRoutes(
   app.post("/api/jobs/:id/apply", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
-      const { id } = req.params;
+      const id = req.params.id as string;
       const job = await storage.markJobApplied(userId, id);
       if (job) {
         res.json({ job });
