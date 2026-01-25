@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, jsonb, integer, timestamp } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -13,9 +13,42 @@ export const users = pgTable("users", {
   verificationToken: text("verification_token"),
 });
 
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  plan: text("plan").notNull().default("free"), // 'free' or 'plus'
+  status: text("status").notNull().default("active"), // 'active', 'cancelled', 'past_due'
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  currentPeriodEnd: timestamp("current_period_end"),
+});
+
+export const usage = pgTable("usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  jobsScrapedThisMonth: integer("jobs_scraped_this_month").notNull().default(0),
+  monthResetDate: timestamp("month_reset_date").notNull().default(sql`NOW()`),
+});
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const usageRelations = relations(usage, ({ one }) => ({
+  user: one(users, {
+    fields: [usage.userId],
+    references: [users.id],
+  }),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles),
   jobs: many(jobs),
+  subscription: one(subscriptions),
+  usage: one(usage),
 }));
 
 export const profiles = pgTable("profiles", {
@@ -117,3 +150,29 @@ export const suggestSkillsSchema = z.object({
 });
 
 export type SuggestSkillsInput = z.infer<typeof suggestSkillsSchema>;
+
+// Subscription types
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true });
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+// Usage types
+export const insertUsageSchema = createInsertSchema(usage).omit({ id: true });
+export type InsertUsage = z.infer<typeof insertUsageSchema>;
+export type Usage = typeof usage.$inferSelect;
+
+// Plan limits
+export const PLAN_LIMITS = {
+  free: {
+    maxSkills: 5,
+    maxJobsPerMonth: 5,
+    hasScheduleAccess: false,
+  },
+  plus: {
+    maxSkills: Infinity,
+    maxJobsPerMonth: 300,
+    hasScheduleAccess: true,
+  },
+} as const;
+
+export type PlanType = "free" | "plus";

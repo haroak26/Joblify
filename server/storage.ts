@@ -1,23 +1,48 @@
-import { type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, users, profiles, jobs } from "@shared/schema";
+import { 
+  type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, 
+  type Subscription, type Usage, type PlanType, PLAN_LIMITS,
+  users, profiles, jobs, subscriptions, usage 
+} from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { scrapeJobsForSkills } from "./apify";
 
 export interface IStorage {
+  // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
   createUser(user: InsertUser & { verificationToken?: string }): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
+  
+  // Profile methods
   getProfile(userId: string): Promise<FreelancerProfile>;
   setProfile(userId: string, profile: Partial<FreelancerProfile>): Promise<FreelancerProfile>;
+  
+  // Job methods
   getJobs(userId: string): Promise<JobPost[]>;
   setJobs(userId: string, jobs: JobPost[]): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
   scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]>;
+  
+  // Subscription methods
+  getSubscription(userId: string): Promise<Subscription | undefined>;
+  createSubscription(userId: string, plan?: PlanType): Promise<Subscription>;
+  updateSubscription(userId: string, updates: Partial<Subscription>): Promise<Subscription | undefined>;
+  
+  // Usage methods
+  getUsage(userId: string): Promise<Usage>;
+  incrementJobsScraped(userId: string, count: number): Promise<Usage>;
+  resetMonthlyUsage(userId: string): Promise<Usage>;
+  checkAndResetMonthlyUsage(userId: string): Promise<Usage>;
+  
+  // Limit checking
+  canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }>;
+  canScrapeJobs(userId: string, requestedCount: number): Promise<{ allowed: boolean; remaining: number; limit: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -53,10 +78,25 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
+    // Create profile
     await db.insert(profiles).values({
       userId: user.id,
       intro: "",
       skills: [],
+    });
+
+    // Create free subscription
+    await db.insert(subscriptions).values({
+      userId: user.id,
+      plan: "free",
+      status: "active",
+    });
+
+    // Create usage tracking
+    await db.insert(usage).values({
+      userId: user.id,
+      jobsScrapedThisMonth: 0,
+      monthResetDate: new Date(),
     });
 
     return user;
@@ -303,6 +343,125 @@ export class DatabaseStorage implements IStorage {
     }
     
     return this.generateJobsForSkills(skills);
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return true;
+  }
+
+  // Subscription methods
+  async getSubscription(userId: string): Promise<Subscription | undefined> {
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
+    return sub || undefined;
+  }
+
+  async createSubscription(userId: string, plan: PlanType = "free"): Promise<Subscription> {
+    const [sub] = await db
+      .insert(subscriptions)
+      .values({
+        userId,
+        plan,
+        status: "active",
+      })
+      .returning();
+    return sub;
+  }
+
+  async updateSubscription(userId: string, updates: Partial<Subscription>): Promise<Subscription | undefined> {
+    const [sub] = await db
+      .update(subscriptions)
+      .set(updates)
+      .where(eq(subscriptions.userId, userId))
+      .returning();
+    return sub || undefined;
+  }
+
+  // Usage methods
+  async getUsage(userId: string): Promise<Usage> {
+    let [userUsage] = await db.select().from(usage).where(eq(usage.userId, userId));
+    if (!userUsage) {
+      [userUsage] = await db
+        .insert(usage)
+        .values({
+          userId,
+          jobsScrapedThisMonth: 0,
+          monthResetDate: new Date(),
+        })
+        .returning();
+    }
+    return userUsage;
+  }
+
+  async incrementJobsScraped(userId: string, count: number): Promise<Usage> {
+    const current = await this.getUsage(userId);
+    const [updated] = await db
+      .update(usage)
+      .set({ jobsScrapedThisMonth: current.jobsScrapedThisMonth + count })
+      .where(eq(usage.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  async resetMonthlyUsage(userId: string): Promise<Usage> {
+    const [updated] = await db
+      .update(usage)
+      .set({ 
+        jobsScrapedThisMonth: 0, 
+        monthResetDate: new Date() 
+      })
+      .where(eq(usage.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  async checkAndResetMonthlyUsage(userId: string): Promise<Usage> {
+    const current = await this.getUsage(userId);
+    const now = new Date();
+    const resetDate = new Date(current.monthResetDate);
+    
+    // Check if it's been a month since last reset
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    if (resetDate < oneMonthAgo) {
+      return this.resetMonthlyUsage(userId);
+    }
+    
+    return current;
+  }
+
+  // Limit checking
+  async canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }> {
+    const subscription = await this.getSubscription(userId);
+    const plan = (subscription?.plan as PlanType) || "free";
+    const limits = PLAN_LIMITS[plan];
+    
+    const profile = await this.getProfile(userId);
+    const currentCount = profile.skills.length;
+    
+    return {
+      allowed: limits.maxSkills === Infinity || newSkillsCount <= limits.maxSkills,
+      limit: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
+      current: currentCount,
+    };
+  }
+
+  async canScrapeJobs(userId: string, requestedCount: number): Promise<{ allowed: boolean; remaining: number; limit: number }> {
+    await this.checkAndResetMonthlyUsage(userId);
+    
+    const subscription = await this.getSubscription(userId);
+    const plan = (subscription?.plan as PlanType) || "free";
+    const limits = PLAN_LIMITS[plan];
+    
+    const userUsage = await this.getUsage(userId);
+    const remaining = limits.maxJobsPerMonth - userUsage.jobsScrapedThisMonth;
+    
+    return {
+      allowed: remaining >= requestedCount,
+      remaining: Math.max(0, remaining),
+      limit: limits.maxJobsPerMonth,
+    };
   }
 }
 

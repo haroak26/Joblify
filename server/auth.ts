@@ -245,3 +245,24 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   }
   next();
 }
+
+export async function requireVerifiedEmail(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  
+  const user = await storage.getUser(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ error: "User not found" });
+  }
+  
+  if (!user.emailVerified) {
+    return res.status(403).json({ 
+      error: "Email verification required", 
+      code: "EMAIL_NOT_VERIFIED",
+      message: "Please verify your email address to access this feature."
+    });
+  }
+  
+  next();
+}

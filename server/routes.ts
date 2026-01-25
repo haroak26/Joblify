@@ -2,8 +2,8 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { skillSchema } from "@shared/schema";
-import { requireAuth } from "./auth";
+import { skillSchema, PLAN_LIMITS, type PlanType } from "@shared/schema";
+import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -26,7 +26,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/profile", requireAuth, async (req: Request, res) => {
+  app.post("/api/profile", requireVerifiedEmail, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({
@@ -35,11 +35,29 @@ export async function registerRoutes(
       });
       
       const data = schema.parse(req.body);
+      
+      // Check skills limit
+      const skillCheck = await storage.canAddSkills(userId, data.skills.length);
+      if (!skillCheck.allowed) {
+        return res.status(403).json({ 
+          error: "Skills limit reached", 
+          code: "SKILLS_LIMIT",
+          limit: skillCheck.limit,
+          current: data.skills.length,
+          message: `Free plan allows up to ${skillCheck.limit} skills. Upgrade to Plus for unlimited skills.`
+        });
+      }
+      
       const profile = await storage.setProfile(userId, data);
       
       if (data.skills.length > 0) {
-        const jobs = await storage.scrapeAndGenerateJobs(userId, data.skills);
-        await storage.setJobs(userId, jobs);
+        // Check job scraping limit before scraping
+        const scrapeCheck = await storage.canScrapeJobs(userId, 1);
+        if (scrapeCheck.allowed) {
+          const jobs = await storage.scrapeAndGenerateJobs(userId, data.skills);
+          await storage.setJobs(userId, jobs);
+          await storage.incrementJobsScraped(userId, 1);
+        }
       } else {
         await storage.setJobs(userId, []);
       }
@@ -64,7 +82,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/skills", requireAuth, async (req: Request, res) => {
+  app.post("/api/skills", requireVerifiedEmail, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({
@@ -72,12 +90,29 @@ export async function registerRoutes(
       });
       
       const { skills } = schema.parse(req.body);
+      
+      // Check skills limit
+      const skillCheck = await storage.canAddSkills(userId, skills.length);
+      if (!skillCheck.allowed) {
+        return res.status(403).json({ 
+          error: "Skills limit reached", 
+          code: "SKILLS_LIMIT",
+          limit: skillCheck.limit,
+          current: skills.length,
+          message: `Free plan allows up to ${skillCheck.limit} skills. Upgrade to Plus for unlimited skills.`
+        });
+      }
+      
       const profile = await storage.getProfile(userId);
       const updated = await storage.setProfile(userId, { ...profile, skills });
       
       if (skills.length > 0) {
-        const jobs = await storage.scrapeAndGenerateJobs(userId, skills);
-        await storage.setJobs(userId, jobs);
+        const scrapeCheck = await storage.canScrapeJobs(userId, 1);
+        if (scrapeCheck.allowed) {
+          const jobs = await storage.scrapeAndGenerateJobs(userId, skills);
+          await storage.setJobs(userId, jobs);
+          await storage.incrementJobsScraped(userId, 1);
+        }
       } else {
         await storage.setJobs(userId, []);
       }
@@ -143,13 +178,27 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs/refresh", requireAuth, async (req: Request, res) => {
+  app.post("/api/jobs/refresh", requireVerifiedEmail, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
+      
+      // Check job scraping limit
+      const scrapeCheck = await storage.canScrapeJobs(userId, 1);
+      if (!scrapeCheck.allowed) {
+        return res.status(403).json({ 
+          error: "Job scraping limit reached", 
+          code: "SCRAPE_LIMIT",
+          remaining: scrapeCheck.remaining,
+          limit: scrapeCheck.limit,
+          message: `You've reached your monthly job scraping limit of ${scrapeCheck.limit}. Upgrade to Plus for 300 jobs/month.`
+        });
+      }
+      
       const profile = await storage.getProfile(userId);
       if (profile.skills.length > 0) {
         const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
         await storage.setJobs(userId, jobs);
+        await storage.incrementJobsScraped(userId, 1);
         res.json({ jobs, message: "Jobs refreshed successfully" });
       } else {
         res.json({ jobs: [], message: "No skills set" });
@@ -234,6 +283,90 @@ Write a ${tone} follow-up message for this job opportunity.`
       const { jobTitle, skills, tone } = req.body;
       const message = generateFallbackMessage(jobTitle || "this opportunity", skills || [], tone || "professional", "");
       res.json({ message });
+    }
+  });
+
+  // Subscription endpoints
+  app.get("/api/subscription", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      let subscription = await storage.getSubscription(userId);
+      
+      // Create subscription if not exists (for existing users)
+      if (!subscription) {
+        subscription = await storage.createSubscription(userId, "free");
+      }
+      
+      const limits = PLAN_LIMITS[subscription.plan as PlanType] || PLAN_LIMITS.free;
+      
+      res.json({ 
+        subscription,
+        limits: {
+          maxSkills: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
+          maxJobsPerMonth: limits.maxJobsPerMonth,
+          hasScheduleAccess: limits.hasScheduleAccess,
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch subscription" });
+    }
+  });
+
+  // Usage endpoints
+  app.get("/api/usage", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const userUsage = await storage.checkAndResetMonthlyUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = (subscription?.plan as PlanType) || "free";
+      const limits = PLAN_LIMITS[plan];
+      const profile = await storage.getProfile(userId);
+      
+      res.json({
+        usage: {
+          skillsCount: profile.skills.length,
+          jobsScrapedThisMonth: userUsage.jobsScrapedThisMonth,
+          monthResetDate: userUsage.monthResetDate,
+        },
+        limits: {
+          maxSkills: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
+          maxJobsPerMonth: limits.maxJobsPerMonth,
+          hasScheduleAccess: limits.hasScheduleAccess,
+        },
+        remaining: {
+          skills: limits.maxSkills === Infinity ? -1 : Math.max(0, limits.maxSkills - profile.skills.length),
+          jobsThisMonth: Math.max(0, limits.maxJobsPerMonth - userUsage.jobsScrapedThisMonth),
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch usage" });
+    }
+  });
+
+  // Account deletion endpoint
+  app.delete("/api/account", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Delete user (cascade will handle related records)
+      await storage.deleteUser(userId);
+      
+      // Destroy session
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+        }
+        res.clearCookie("connect.sid");
+        res.json({ success: true, message: "Account deleted successfully" });
+      });
+    } catch (error) {
+      console.error("Account deletion error:", error);
+      res.status(500).json({ error: "Failed to delete account" });
     }
   });
 
