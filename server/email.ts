@@ -89,8 +89,15 @@ function getEmailTemplate(content: string): string {
 </html>`;
 }
 
+function getAppUrl(): string {
+  if (process.env.REPLIT_DOMAINS) {
+    return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
+  }
+  return process.env.APP_URL || 'http://localhost:5000';
+}
+
 export async function sendVerificationEmail(email: string, username: string, token: string): Promise<boolean> {
-  const verifyUrl = `${process.env.APP_URL || 'http://localhost:5000'}/verify-email?token=${token}`;
+  const verifyUrl = `${getAppUrl()}/verify-email?token=${token}`;
   
   const content = `
     <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0; color: #1a1a2e;">
@@ -125,7 +132,7 @@ export async function sendVerificationEmail(email: string, username: string, tok
 }
 
 export async function sendWelcomeEmail(email: string, username: string): Promise<boolean> {
-  const dashboardUrl = `${process.env.APP_URL || 'http://localhost:5000'}/dashboard`;
+  const dashboardUrl = `${getAppUrl()}/dashboard`;
   
   const content = `
     <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0; color: #1a1a2e;">

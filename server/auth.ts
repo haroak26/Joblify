@@ -101,6 +101,12 @@ export function setupAuth(app: Express) {
 
       req.session.userId = user.id;
 
+      // Send verification email
+      const emailSent = await sendVerificationEmail(user.email, user.username, verificationToken);
+      if (!emailSent) {
+        console.error("Failed to send verification email to:", user.email);
+      }
+
       res.json({
         user: {
           id: user.id,
@@ -108,7 +114,9 @@ export function setupAuth(app: Express) {
           email: user.email,
           emailVerified: user.emailVerified,
         },
-        message: "Account created. Please check your email to verify your account.",
+        message: emailSent 
+          ? "Account created. Please check your email to verify your account."
+          : "Account created. Email verification is pending.",
       });
     } catch (error) {
       console.error("Registration error:", error);
