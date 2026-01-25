@@ -1,21 +1,25 @@
 import { Link, useLocation } from "wouter";
-import { Home, Briefcase, Wand2, Calendar, LogOut, ChevronRight } from "lucide-react";
+import { Home, Briefcase, Wand2, Calendar, LogOut, Settings, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+
+interface SubscriptionResponse {
+  subscription: { plan: string };
+  limits: { hasScheduleAccess: boolean };
+}
 
 const mainMenuItems = [
   {
@@ -43,6 +47,12 @@ const mainMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout, isLoading } = useAuth();
+  
+  const subscriptionQuery = useQuery<SubscriptionResponse>({
+    queryKey: ["/api/subscription"],
+  });
+  
+  const planLabel = subscriptionQuery.data?.subscription?.plan === "plus" ? "Plus" : "Free";
 
   const isActive = (url: string) => {
     if (url === "/dashboard") {
@@ -56,41 +66,39 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4 pb-6">
+    <Sidebar className="border-r border-sidebar-border bg-sidebar">
+      <SidebarHeader className="p-4">
         <Link href="/">
-          <div className="flex items-center gap-2.5 cursor-pointer group" data-testid="link-logo">
-            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-3 cursor-pointer" data-testid="link-logo">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-sm">
               <Briefcase className="w-5 h-5 text-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-base leading-tight text-sidebar-foreground" data-testid="text-sidebar-logo">Joblify</span>
-              <span className="text-[10px] text-muted-foreground">Freelance Scout</span>
+              <span className="font-bold text-lg leading-tight text-sidebar-foreground" data-testid="text-sidebar-logo">Joblify</span>
+              <span className="text-xs text-muted-foreground/80">Find freelance work</span>
             </div>
           </div>
         </Link>
       </SidebarHeader>
       
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-3 py-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
-            Navigation
-          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
+            <SidebarMenu className="space-y-1">
               {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
                     asChild 
                     isActive={isActive(item.url)}
-                    className="h-10 px-3 rounded-lg"
+                    className={`h-11 px-3 rounded-lg transition-all ${
+                      isActive(item.url) 
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                        : 'text-sidebar-foreground/80 hover:text-sidebar-foreground'
+                    }`}
                   >
                     <Link href={item.url} data-testid={`link-nav-${item.title.toLowerCase()}`}>
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className={`w-5 h-5 ${isActive(item.url) ? 'text-primary' : ''}`} />
                       <span className="text-sm">{item.title}</span>
-                      {isActive(item.url) && (
-                        <ChevronRight className="w-4 h-4 ml-auto opacity-60" />
-                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -98,29 +106,55 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarSeparator className="my-4" />
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={isActive("/dashboard/account")}
+                  className={`h-11 px-3 rounded-lg transition-all ${
+                    isActive("/dashboard/account") 
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                      : 'text-sidebar-foreground/80 hover:text-sidebar-foreground'
+                  }`}
+                >
+                  <Link href="/dashboard/account" data-testid="link-nav-account">
+                    <Settings className={`w-5 h-5 ${isActive("/dashboard/account") ? 'text-primary' : ''}`} />
+                    <span className="text-sm">Account</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3 mt-auto border-t border-sidebar-border">
+      <SidebarFooter className="p-3 mt-auto">
         {!isLoading && user && (
-          <div className="flex items-center gap-3 p-2">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-                {getInitials(user.username)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-sm font-medium truncate" data-testid="text-username">{user.username}</span>
-              <span className="text-[11px] text-muted-foreground">Free Plan</span>
+          <div className="bg-sidebar-accent/50 rounded-xl p-3">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border-2 border-primary/20">
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary text-sm font-semibold">
+                  {getInitials(user.username)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-semibold truncate text-sidebar-foreground" data-testid="text-username">{user.username}</span>
+                <span className="text-xs text-muted-foreground">{planLabel} Plan</span>
+              </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 shrink-0"
+            <button
               onClick={() => logout()}
+              className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg transition-colors"
               data-testid="button-logout"
             >
               <LogOut className="w-4 h-4" />
-            </Button>
+              Sign out
+            </button>
           </div>
         )}
       </SidebarFooter>

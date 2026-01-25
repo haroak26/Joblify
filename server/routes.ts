@@ -378,6 +378,157 @@ Write a ${tone} outreach message for this job opportunity.`;
     }
   });
 
+  // Schedule endpoints
+  app.get("/api/schedules", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const userSchedules = await storage.getSchedules(userId);
+      res.json({ schedules: userSchedules });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch schedules" });
+    }
+  });
+
+  app.post("/api/schedules", requireVerifiedEmail, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Check if user has schedule access
+      const subscription = await storage.getSubscription(userId);
+      const plan = subscription?.plan || "free";
+      if (plan !== "plus") {
+        return res.status(403).json({ 
+          error: "Schedule access requires Plus plan",
+          code: "PLAN_REQUIRED"
+        });
+      }
+      
+      const schema = z.object({
+        name: z.string().min(1),
+        frequency: z.enum(["hourly", "daily", "weekly"]).default("daily"),
+        time: z.string().default("09:00"),
+        days: z.array(z.string()).default([]),
+        platforms: z.array(z.enum(["reddit", "x", "facebook"])).default(["reddit", "x", "facebook"]),
+        enabled: z.boolean().default(true),
+      });
+      
+      const data = schema.parse(req.body);
+      const schedule = await storage.createSchedule(userId, data);
+      res.json({ schedule });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid schedule data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create schedule" });
+      }
+    }
+  });
+
+  app.patch("/api/schedules/:id", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const scheduleId = req.params.id;
+      
+      const schema = z.object({
+        name: z.string().min(1).optional(),
+        frequency: z.enum(["hourly", "daily", "weekly"]).optional(),
+        time: z.string().optional(),
+        days: z.array(z.string()).optional(),
+        platforms: z.array(z.enum(["reddit", "x", "facebook"])).optional(),
+        enabled: z.boolean().optional(),
+      });
+      
+      const updates = schema.parse(req.body);
+      const schedule = await storage.updateSchedule(userId, scheduleId, updates);
+      
+      if (!schedule) {
+        return res.status(404).json({ error: "Schedule not found" });
+      }
+      
+      res.json({ schedule });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid schedule data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update schedule" });
+      }
+    }
+  });
+
+  app.delete("/api/schedules/:id", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const scheduleId = req.params.id;
+      
+      await storage.deleteSchedule(userId, scheduleId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete schedule" });
+    }
+  });
+
+  app.post("/api/schedules/:id/run", requireVerifiedEmail, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const scheduleId = req.params.id;
+      
+      const schedule = await storage.getSchedule(userId, scheduleId);
+      if (!schedule) {
+        return res.status(404).json({ error: "Schedule not found" });
+      }
+      
+      // Check scraping limit
+      const scrapeCheck = await storage.canScrapeJobs(userId, 1);
+      if (!scrapeCheck.allowed) {
+        return res.status(403).json({ 
+          error: "Job scraping limit reached",
+          code: "SCRAPE_LIMIT",
+          remaining: scrapeCheck.remaining,
+        });
+      }
+      
+      // Run the schedule
+      const profile = await storage.getProfile(userId);
+      if (profile.skills.length === 0) {
+        return res.status(400).json({ error: "No skills configured" });
+      }
+      
+      const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
+      
+      // Filter out seen jobs
+      const seenUrls = await storage.getSeenJobUrls(userId);
+      const newJobs = jobs.filter(job => !seenUrls.includes(job.sourceUrl));
+      
+      // Mark new jobs as seen
+      for (const job of newJobs) {
+        await storage.markJobAsSeen(userId, job.sourceUrl);
+      }
+      
+      // Update jobs and usage
+      await storage.setJobs(userId, newJobs);
+      if (newJobs.length > 0) {
+        await storage.incrementJobsScraped(userId, newJobs.length);
+      }
+      
+      // Update schedule last run
+      await storage.updateSchedule(userId, scheduleId, { lastRun: new Date() });
+      
+      // Send email notification if there are new jobs
+      if (newJobs.length > 0) {
+        const user = await storage.getUser(userId);
+        if (user?.email) {
+          const { sendScheduleJobsEmail } = await import("./brevo");
+          await sendScheduleJobsEmail(user.email, schedule.name, newJobs);
+        }
+      }
+      
+      res.json({ jobs: newJobs, count: newJobs.length });
+    } catch (error) {
+      console.error("Schedule run error:", error);
+      res.status(500).json({ error: "Failed to run schedule" });
+    }
+  });
+
   return httpServer;
 }
 

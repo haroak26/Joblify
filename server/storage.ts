@@ -1,10 +1,11 @@
 import { 
   type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, 
   type Subscription, type Usage, type PlanType, PLAN_LIMITS,
-  users, profiles, jobs, subscriptions, usage 
+  type Schedule, type InsertSchedule, type SeenJob,
+  users, profiles, jobs, subscriptions, usage, schedules, seenJobs 
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { scrapeJobsForSkills } from "./apify";
 
@@ -43,6 +44,18 @@ export interface IStorage {
   // Limit checking
   canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }>;
   canScrapeJobs(userId: string, requestedCount: number): Promise<{ allowed: boolean; remaining: number; limit: number }>;
+  
+  // Schedule methods
+  getSchedules(userId: string): Promise<Schedule[]>;
+  getSchedule(userId: string, scheduleId: string): Promise<Schedule | undefined>;
+  createSchedule(userId: string, schedule: Omit<InsertSchedule, 'userId'>): Promise<Schedule>;
+  updateSchedule(userId: string, scheduleId: string, updates: Partial<Schedule>): Promise<Schedule | undefined>;
+  deleteSchedule(userId: string, scheduleId: string): Promise<boolean>;
+  
+  // Seen jobs methods
+  markJobAsSeen(userId: string, sourceUrl: string): Promise<void>;
+  getSeenJobUrls(userId: string): Promise<string[]>;
+  filterUnseenJobs(userId: string, jobUrls: string[]): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -462,6 +475,96 @@ export class DatabaseStorage implements IStorage {
       remaining: Math.max(0, remaining),
       limit: limits.maxJobsPerMonth,
     };
+  }
+
+  // Schedule methods
+  async getSchedules(userId: string): Promise<Schedule[]> {
+    return await db.select().from(schedules).where(eq(schedules.userId, userId));
+  }
+
+  async getSchedule(userId: string, scheduleId: string): Promise<Schedule | undefined> {
+    const [schedule] = await db.select().from(schedules)
+      .where(and(eq(schedules.id, scheduleId), eq(schedules.userId, userId)));
+    return schedule || undefined;
+  }
+
+  async createSchedule(userId: string, scheduleData: Omit<InsertSchedule, 'userId'>): Promise<Schedule> {
+    const nextRun = this.calculateNextRun(scheduleData.frequency || 'daily', scheduleData.time || '09:00');
+    const [schedule] = await db.insert(schedules)
+      .values({
+        userId,
+        name: scheduleData.name,
+        frequency: scheduleData.frequency || 'daily',
+        time: scheduleData.time || '09:00',
+        days: scheduleData.days || [],
+        platforms: scheduleData.platforms || ['reddit', 'x', 'facebook'],
+        enabled: scheduleData.enabled ?? true,
+        nextRun,
+      })
+      .returning();
+    return schedule;
+  }
+
+  async updateSchedule(userId: string, scheduleId: string, updates: Partial<Schedule>): Promise<Schedule | undefined> {
+    const existing = await this.getSchedule(userId, scheduleId);
+    if (!existing) return undefined;
+    
+    const nextRun = updates.frequency || updates.time 
+      ? this.calculateNextRun(updates.frequency || existing.frequency, updates.time || existing.time)
+      : existing.nextRun;
+    
+    const [updated] = await db.update(schedules)
+      .set({ ...updates, nextRun })
+      .where(and(eq(schedules.id, scheduleId), eq(schedules.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteSchedule(userId: string, scheduleId: string): Promise<boolean> {
+    await db.delete(schedules).where(and(eq(schedules.id, scheduleId), eq(schedules.userId, userId)));
+    return true;
+  }
+
+  private calculateNextRun(frequency: string, time: string): Date {
+    const now = new Date();
+    const [hours, minutes] = time.split(':').map(Number);
+    const nextRun = new Date(now);
+    nextRun.setHours(hours, minutes, 0, 0);
+    
+    if (nextRun <= now) {
+      switch (frequency) {
+        case 'hourly':
+          nextRun.setHours(nextRun.getHours() + 1);
+          break;
+        case 'weekly':
+          nextRun.setDate(nextRun.getDate() + 7);
+          break;
+        default: // daily
+          nextRun.setDate(nextRun.getDate() + 1);
+      }
+    }
+    return nextRun;
+  }
+
+  // Seen jobs methods
+  async markJobAsSeen(userId: string, sourceUrl: string): Promise<void> {
+    await db.insert(seenJobs).values({ userId, sourceUrl }).onConflictDoNothing();
+  }
+
+  async getSeenJobUrls(userId: string): Promise<string[]> {
+    const seen = await db.select({ sourceUrl: seenJobs.sourceUrl })
+      .from(seenJobs)
+      .where(eq(seenJobs.userId, userId));
+    return seen.map(s => s.sourceUrl);
+  }
+
+  async filterUnseenJobs(userId: string, jobUrls: string[]): Promise<string[]> {
+    if (jobUrls.length === 0) return [];
+    const seen = await db.select({ sourceUrl: seenJobs.sourceUrl })
+      .from(seenJobs)
+      .where(and(eq(seenJobs.userId, userId), inArray(seenJobs.sourceUrl, jobUrls)));
+    const seenSet = new Set(seen.map(s => s.sourceUrl));
+    return jobUrls.filter(url => !seenSet.has(url));
   }
 }
 

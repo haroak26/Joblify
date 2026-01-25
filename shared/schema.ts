@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, jsonb, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, jsonb, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -49,6 +49,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   jobs: many(jobs),
   subscription: one(subscriptions),
   usage: one(usage),
+  schedules: many(schedules),
+  seenJobs: many(seenJobs),
 }));
 
 export const profiles = pgTable("profiles", {
@@ -85,6 +87,42 @@ export const jobs = pgTable("jobs", {
 export const jobsRelations = relations(jobs, ({ one }) => ({
   user: one(users, {
     fields: [jobs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const schedules = pgTable("schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  frequency: text("frequency").notNull().default("daily"), // 'hourly', 'daily', 'weekly'
+  time: text("time").notNull().default("09:00"),
+  days: jsonb("days").default([]), // For weekly: ['monday', 'wednesday']
+  platforms: jsonb("platforms").notNull().default(["reddit", "x", "facebook"]),
+  enabled: boolean("enabled").notNull().default(true),
+  lastRun: timestamp("last_run"),
+  nextRun: timestamp("next_run"),
+});
+
+export const schedulesRelations = relations(schedules, ({ one }) => ({
+  user: one(users, {
+    fields: [schedules.userId],
+    references: [users.id],
+  }),
+}));
+
+export const seenJobs = pgTable("seen_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sourceUrl: text("source_url").notNull(),
+  seenAt: timestamp("seen_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userSourceUnique: uniqueIndex("seen_jobs_user_source_idx").on(table.userId, table.sourceUrl),
+}));
+
+export const seenJobsRelations = relations(seenJobs, ({ one }) => ({
+  user: one(users, {
+    fields: [seenJobs.userId],
     references: [users.id],
   }),
 }));
@@ -176,3 +214,26 @@ export const PLAN_LIMITS = {
 } as const;
 
 export type PlanType = "free" | "plus";
+
+// Schedule types
+export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true, lastRun: true, nextRun: true });
+export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
+export type Schedule = typeof schedules.$inferSelect;
+
+export const scheduleSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  name: z.string(),
+  frequency: z.enum(["hourly", "daily", "weekly"]),
+  time: z.string(),
+  days: z.array(z.string()).default([]),
+  platforms: z.array(z.enum(["reddit", "x", "facebook"])),
+  enabled: z.boolean(),
+  lastRun: z.date().nullable().optional(),
+  nextRun: z.date().nullable().optional(),
+});
+
+// Seen jobs types
+export const insertSeenJobSchema = createInsertSchema(seenJobs).omit({ id: true, seenAt: true });
+export type InsertSeenJob = z.infer<typeof insertSeenJobSchema>;
+export type SeenJob = typeof seenJobs.$inferSelect;

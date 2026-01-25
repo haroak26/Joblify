@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,19 +7,29 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, Clock, Plus, Trash2, Play, Lock, Crown, Loader2 } from "lucide-react";
+import { SiReddit, SiX, SiFacebook } from "react-icons/si";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Schedule {
   id: string;
+  userId: string;
   name: string;
   frequency: "daily" | "weekly" | "hourly";
   time: string;
-  days?: string[];
+  days: string[];
+  platforms: ("reddit" | "x" | "facebook")[];
   enabled: boolean;
-  lastRun?: string;
-  nextRun?: string;
+  lastRun: string | null;
+  nextRun: string | null;
+}
+
+interface SchedulesResponse {
+  schedules: Schedule[];
 }
 
 interface SubscriptionResponse {
@@ -27,55 +37,117 @@ interface SubscriptionResponse {
   limits: { hasScheduleAccess: boolean };
 }
 
+const platformOptions = [
+  { id: "reddit" as const, name: "Reddit", icon: SiReddit, color: "text-orange-500" },
+  { id: "x" as const, name: "X (Twitter)", icon: SiX, color: "text-foreground" },
+  { id: "facebook" as const, name: "Facebook", icon: SiFacebook, color: "text-blue-600" },
+];
+
 export default function Schedules() {
+  const { toast } = useToast();
+  
   const subscriptionQuery = useQuery<SubscriptionResponse>({
     queryKey: ["/api/subscription"],
   });
 
+  const schedulesQuery = useQuery<SchedulesResponse>({
+    queryKey: ["/api/schedules"],
+    enabled: subscriptionQuery.data?.limits.hasScheduleAccess ?? false,
+  });
+
   const hasAccess = subscriptionQuery.data?.limits.hasScheduleAccess ?? false;
+  const schedules = schedulesQuery.data?.schedules ?? [];
   
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
     name: "",
     frequency: "daily" as "daily" | "weekly" | "hourly",
     time: "09:00",
+    platforms: ["reddit", "x", "facebook"] as ("reddit" | "x" | "facebook")[],
   });
 
-  const handleToggleSchedule = (id: string) => {
-    setSchedules(prev => 
-      prev.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s)
-    );
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof newSchedule) => {
+      const response = await apiRequest("POST", "/api/schedules", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      setNewSchedule({ name: "", frequency: "daily", time: "09:00", platforms: ["reddit", "x", "facebook"] });
+      setShowAddForm(false);
+      toast({ title: "Schedule created", description: "Your schedule has been created successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create schedule.", variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Schedule> }) => {
+      const response = await apiRequest("PATCH", `/api/schedules/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/schedules/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      toast({ title: "Schedule deleted", description: "Your schedule has been deleted." });
+    },
+  });
+
+  const runMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/schedules/${id}/run`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      toast({ 
+        title: "Scan complete", 
+        description: `Found ${data.count} new job${data.count === 1 ? '' : 's'}.` 
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to run schedule.", variant: "destructive" });
+    },
+  });
+
+  const handleToggleSchedule = (id: string, enabled: boolean) => {
+    updateMutation.mutate({ id, updates: { enabled: !enabled } });
   };
 
   const handleDeleteSchedule = (id: string) => {
-    setSchedules(prev => prev.filter(s => s.id !== id));
+    deleteMutation.mutate(id);
   };
 
   const handleAddSchedule = () => {
-    if (!newSchedule.name) {
-      return;
-    }
-
-    const schedule: Schedule = {
-      id: Date.now().toString(),
-      name: newSchedule.name,
-      frequency: newSchedule.frequency,
-      time: newSchedule.time,
-      enabled: true,
-      nextRun: new Date(Date.now() + 86400000).toISOString(),
-    };
-
-    setSchedules(prev => [...prev, schedule]);
-    setNewSchedule({ name: "", frequency: "daily", time: "09:00" });
-    setShowAddForm(false);
+    if (!newSchedule.name || newSchedule.platforms.length === 0) return;
+    createMutation.mutate(newSchedule);
   };
 
   const handleRunNow = (id: string) => {
-    // Run logic here
+    runMutation.mutate(id);
   };
 
-  const formatDate = (dateStr?: string) => {
+  const togglePlatform = (platform: "reddit" | "x" | "facebook") => {
+    setNewSchedule(prev => ({
+      ...prev,
+      platforms: prev.platforms.includes(platform)
+        ? prev.platforms.filter(p => p !== platform)
+        : [...prev.platforms, platform],
+    }));
+  };
+
+  const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "Never";
     return new Date(dateStr).toLocaleString();
   };
@@ -89,7 +161,7 @@ export default function Schedules() {
     }
   };
 
-  if (subscriptionQuery.isLoading) {
+  if (subscriptionQuery.isLoading || (hasAccess && schedulesQuery.isLoading)) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -207,12 +279,46 @@ export default function Schedules() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>Platforms to Scan</Label>
+              <div className="flex gap-4">
+                {platformOptions.map((platform) => (
+                  <label
+                    key={platform.id}
+                    className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                      newSchedule.platforms.includes(platform.id)
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                    data-testid={`checkbox-platform-${platform.id}`}
+                  >
+                    <Checkbox
+                      checked={newSchedule.platforms.includes(platform.id)}
+                      onCheckedChange={() => togglePlatform(platform.id)}
+                    />
+                    <platform.icon className={`w-4 h-4 ${platform.color}`} />
+                    <span className="text-sm">{platform.name}</span>
+                  </label>
+                ))}
+              </div>
+              {newSchedule.platforms.length === 0 && (
+                <p className="text-sm text-destructive">Select at least one platform</p>
+              )}
+            </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={() => setShowAddForm(false)} data-testid="button-cancel-schedule">
                 Cancel
               </Button>
-              <Button onClick={handleAddSchedule} data-testid="button-save-schedule">
-                Create Schedule
+              <Button 
+                onClick={handleAddSchedule} 
+                disabled={!newSchedule.name || newSchedule.platforms.length === 0 || createMutation.isPending}
+                data-testid="button-save-schedule"
+              >
+                {createMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</>
+                ) : (
+                  'Create Schedule'
+                )}
               </Button>
             </div>
           </CardContent>
@@ -238,21 +344,30 @@ export default function Schedules() {
           schedules.map((schedule) => (
             <Card key={schedule.id} data-testid={`card-schedule-${schedule.id}`}>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${schedule.enabled ? 'bg-primary/10' : 'bg-muted'}`}>
                       <Clock className={`w-5 h-5 ${schedule.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold">{schedule.name}</h3>
                         <Badge variant={schedule.enabled ? "default" : "secondary"}>
                           {schedule.enabled ? "Active" : "Paused"}
                         </Badge>
+                        <div className="flex items-center gap-1">
+                          {schedule.platforms?.map((p) => {
+                            const platform = platformOptions.find(opt => opt.id === p);
+                            return platform ? (
+                              <platform.icon key={p} className={`w-4 h-4 ${platform.color}`} title={platform.name} />
+                            ) : null;
+                          })}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-3 mt-1">
+                      <div className="text-sm text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
                         <span>{getFrequencyLabel(schedule.frequency)} at {schedule.time}</span>
                         <span>Next: {formatDate(schedule.nextRun)}</span>
+                        {schedule.lastRun && <span>Last: {formatDate(schedule.lastRun)}</span>}
                       </div>
                     </div>
                   </div>
@@ -262,14 +377,19 @@ export default function Schedules() {
                       size="sm"
                       onClick={() => handleRunNow(schedule.id)}
                       className="gap-1"
+                      disabled={runMutation.isPending}
                       data-testid={`button-run-${schedule.id}`}
                     >
-                      <Play className="w-3 h-3" />
+                      {runMutation.isPending ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Play className="w-3 h-3" />
+                      )}
                       Run Now
                     </Button>
                     <Switch
                       checked={schedule.enabled}
-                      onCheckedChange={() => handleToggleSchedule(schedule.id)}
+                      onCheckedChange={() => handleToggleSchedule(schedule.id, schedule.enabled)}
                       data-testid={`switch-schedule-${schedule.id}`}
                     />
                     <Button
@@ -277,6 +397,7 @@ export default function Schedules() {
                       size="icon"
                       onClick={() => handleDeleteSchedule(schedule.id)}
                       className="text-muted-foreground"
+                      disabled={deleteMutation.isPending}
                       data-testid={`button-delete-${schedule.id}`}
                     >
                       <Trash2 className="w-4 h-4" />
