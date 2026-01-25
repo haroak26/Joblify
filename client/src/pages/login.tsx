@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,10 +18,10 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login() {
-  const { login } = useAuth();
-  
+  const { login, user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -29,6 +29,20 @@ export default function Login() {
       password: "",
     },
   });
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      setLocation("/dashboard");
+    }
+  }, [user, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
@@ -93,6 +107,11 @@ export default function Login() {
                   </FormItem>
                 )}
               />
+              {form.formState.errors.root && (
+                <div className="text-sm text-destructive text-center" data-testid="text-login-error">
+                  {form.formState.errors.root.message}
+                </div>
+              )}
               <Button 
                 type="submit" 
                 className="w-full" 

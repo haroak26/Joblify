@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,8 +24,8 @@ const registerSchema = z.object({
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function Register() {
-  const { register } = useAuth();
-  
+  const { register, user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<RegisterFormData>({
@@ -37,6 +37,20 @@ export default function Register() {
       confirmPassword: "",
     },
   });
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      setLocation("/dashboard");
+    }
+  }, [user, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
