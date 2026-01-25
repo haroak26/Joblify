@@ -21,7 +21,7 @@ async function sendEmail(options: EmailOptions): Promise<boolean> {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "Joblify", email: "noreply@joblify.app" },
+        sender: { name: "Joblify", email: "noreply@joblifyai.com" },
         to: [{ email: options.to }],
         subject: options.subject,
         htmlContent: options.html,
