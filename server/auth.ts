@@ -4,6 +4,7 @@ import MemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
+import { sendVerificationEmail, sendWelcomeEmail } from "./email";
 
 const scryptAsync = promisify(scrypt);
 
@@ -17,6 +18,7 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     username: string;
+    email: string;
   };
 }
 
@@ -31,6 +33,10 @@ async function comparePasswords(supplied: string, stored: string): Promise<boole
   const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
   const suppliedPasswordBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
   return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
+}
+
+function generateVerificationToken(): string {
+  return randomBytes(32).toString("hex");
 }
 
 export function setupAuth(app: Express) {
@@ -54,30 +60,46 @@ export function setupAuth(app: Express) {
 
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      const { username, password } = req.body;
+      const { username, email, password } = req.body;
 
-      if (!username || !password) {
-        return res.status(400).json({ error: "Username and password are required" });
+      if (!username || !email || !password) {
+        return res.status(400).json({ error: "Username, email, and password are required" });
       }
 
       if (username.length < 3) {
         return res.status(400).json({ error: "Username must be at least 3 characters" });
       }
 
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Please enter a valid email address" });
+      }
+
       if (password.length < 6) {
         return res.status(400).json({ error: "Password must be at least 6 characters" });
       }
 
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
+      const existingUsername = await storage.getUserByUsername(username);
+      if (existingUsername) {
         return res.status(400).json({ error: "Username already taken" });
       }
 
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
       const hashedPassword = await hashPassword(password);
+      const verificationToken = generateVerificationToken();
+      
       const user = await storage.createUser({
         username,
+        email,
         password: hashedPassword,
+        verificationToken,
       });
+
+      const emailSent = await sendVerificationEmail(email, username, verificationToken);
 
       req.session.userId = user.id;
 
@@ -85,7 +107,13 @@ export function setupAuth(app: Express) {
         user: {
           id: user.id,
           username: user.username,
+          email: user.email,
+          emailVerified: user.emailVerified,
         },
+        message: emailSent 
+          ? "Please check your email to verify your account" 
+          : "Account created. Email verification may be delayed.",
+        emailSent,
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -117,6 +145,8 @@ export function setupAuth(app: Express) {
         user: {
           id: user.id,
           username: user.username,
+          email: user.email,
+          emailVerified: user.emailVerified,
         },
       });
     } catch (error) {
@@ -149,8 +179,68 @@ export function setupAuth(app: Express) {
       user: {
         id: user.id,
         username: user.username,
+        email: user.email,
+        emailVerified: user.emailVerified,
       },
     });
+  });
+
+  app.get("/api/auth/verify-email", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.query;
+
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Invalid verification token" });
+      }
+
+      const user = await storage.getUserByVerificationToken(token);
+      if (!user) {
+        return res.status(400).json({ error: "Invalid or expired verification token" });
+      }
+
+      if (user.emailVerified) {
+        return res.json({ message: "Email already verified" });
+      }
+
+      await storage.updateUser(user.id, {
+        emailVerified: true,
+        verificationToken: null,
+      });
+
+      await sendWelcomeEmail(user.email, user.username);
+
+      res.json({ message: "Email verified successfully" });
+    } catch (error) {
+      console.error("Verification error:", error);
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  app.post("/api/auth/resend-verification", async (req: Request, res: Response) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      if (user.emailVerified) {
+        return res.json({ message: "Email already verified" });
+      }
+
+      const verificationToken = generateVerificationToken();
+      await storage.updateUser(user.id, { verificationToken });
+
+      await sendVerificationEmail(user.email, user.username, verificationToken);
+
+      res.json({ message: "Verification email sent" });
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ error: "Failed to resend verification email" });
+    }
   });
 }
 

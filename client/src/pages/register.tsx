@@ -10,10 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { insertUserSchema } from "@shared/schema";
 
-const registerSchema = insertUserSchema.extend({
+const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -32,6 +32,7 @@ export default function Register() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
+      email: "",
       password: "",
       confirmPassword: "",
     },
@@ -40,7 +41,11 @@ export default function Register() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsSubmitting(true);
     try {
-      await register(data.username, data.password);
+      await register(data.username, data.email, data.password);
+      toast({
+        title: "Account created",
+        description: "Please check your email to verify your account.",
+      });
     } catch (error) {
       toast({
         title: "Registration failed",
@@ -77,6 +82,24 @@ export default function Register() {
                       <Input 
                         placeholder="Choose a username" 
                         data-testid="input-username"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="email"
+                        placeholder="Enter your email" 
+                        data-testid="input-email"
                         {...field} 
                       />
                     </FormControl>

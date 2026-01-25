@@ -5,14 +5,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 interface User {
   id: string;
   username: string;
+  email: string;
+  emailVerified: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  resendVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,8 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLocation("/dashboard");
   };
 
-  const register = async (username: string, password: string) => {
-    const response = await apiRequest("POST", "/api/auth/register", { username, password });
+  const register = async (username: string, email: string, password: string) => {
+    const response = await apiRequest("POST", "/api/auth/register", { username, email, password });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error || "Registration failed");
@@ -76,8 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLocation("/login");
   };
 
+  const resendVerification = async () => {
+    const response = await apiRequest("POST", "/api/auth/resend-verification", {});
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to resend verification");
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, resendVerification }}>
       {children}
     </AuthContext.Provider>
   );

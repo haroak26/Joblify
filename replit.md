@@ -29,6 +29,17 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 
 ## API Routes
 
+### Authentication (Public)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Create new user account with email |
+| POST | `/api/auth/login` | Login with username/password |
+| POST | `/api/auth/logout` | Logout and destroy session |
+| GET | `/api/auth/me` | Get current authenticated user |
+| GET | `/api/auth/verify-email` | Verify email with token |
+| POST | `/api/auth/resend-verification` | Resend verification email |
+
+### Protected Routes (Require Authentication)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/profile` | Get user profile (intro + skills) |
@@ -79,7 +90,26 @@ npm run dev
 ```
 The app serves on port 5000.
 
+## Environment Variables
+- `BREVO_API_KEY` - Required for sending verification and welcome emails via Brevo
+- `AI_INTEGRATIONS_OPENAI_API_KEY` - Auto-managed by Replit
+- `AI_INTEGRATIONS_OPENAI_BASE_URL` - Auto-managed by Replit
+
 ## Recent Changes
+- January 2026: Added email verification with Brevo integration
+  - Registration now collects email address with validation
+  - Verification emails sent via Brevo with branded templates
+  - Welcome emails sent after successful verification
+  - User-specific data storage (profiles, skills, jobs per user)
+  - Verify email page at /verify-email
+  - Schedules page starts empty (no mock data)
+- January 2026: Added custom authentication system
+  - Login and registration pages with form validation
+  - Session-based authentication with secure password hashing (scrypt)
+  - Protected routes redirect unauthenticated users to login
+  - All API routes require authentication
+  - User info displayed in sidebar footer with logout button
+  - Redesigned sidebar with cleaner, modern layout
 - January 2026: Added sidebar navigation
   - New AppSidebar and DashboardLayout components
   - Split dashboard into 5 pages: Home, My Jobs, Generator, Schedules, Account

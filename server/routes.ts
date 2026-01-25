@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
@@ -16,30 +16,32 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
-  app.get("/api/profile", requireAuth, async (_req, res) => {
+  app.get("/api/profile", requireAuth, async (req: Request, res) => {
     try {
-      const profile = await storage.getProfile();
+      const userId = req.session.userId!;
+      const profile = await storage.getProfile(userId);
       res.json(profile);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch profile" });
     }
   });
 
-  app.post("/api/profile", requireAuth, async (req, res) => {
+  app.post("/api/profile", requireAuth, async (req: Request, res) => {
     try {
+      const userId = req.session.userId!;
       const schema = z.object({
         intro: z.string(),
         skills: z.array(skillSchema),
       });
       
       const data = schema.parse(req.body);
-      const profile = await storage.setProfile(data);
+      const profile = await storage.setProfile(userId, data);
       
       if (data.skills.length > 0) {
-        const jobs = await (storage as any).scrapeAndGenerateJobs(data.skills);
-        await storage.setJobs(jobs);
+        const jobs = await storage.scrapeAndGenerateJobs(userId, data.skills);
+        await storage.setJobs(userId, jobs);
       } else {
-        await storage.setJobs([]);
+        await storage.setJobs(userId, []);
       }
       
       res.json(profile);
@@ -52,30 +54,32 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/skills", requireAuth, async (_req, res) => {
+  app.get("/api/skills", requireAuth, async (req: Request, res) => {
     try {
-      const profile = await storage.getProfile();
+      const userId = req.session.userId!;
+      const profile = await storage.getProfile(userId);
       res.json({ skills: profile.skills });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch skills" });
     }
   });
 
-  app.post("/api/skills", requireAuth, async (req, res) => {
+  app.post("/api/skills", requireAuth, async (req: Request, res) => {
     try {
+      const userId = req.session.userId!;
       const schema = z.object({
         skills: z.array(skillSchema),
       });
       
       const { skills } = schema.parse(req.body);
-      const profile = await storage.getProfile();
-      const updated = await storage.setProfile({ ...profile, skills });
+      const profile = await storage.getProfile(userId);
+      const updated = await storage.setProfile(userId, { ...profile, skills });
       
       if (skills.length > 0) {
-        const jobs = await (storage as any).scrapeAndGenerateJobs(skills);
-        await storage.setJobs(jobs);
+        const jobs = await storage.scrapeAndGenerateJobs(userId, skills);
+        await storage.setJobs(userId, jobs);
       } else {
-        await storage.setJobs([]);
+        await storage.setJobs(userId, []);
       }
       
       res.json({ skills: updated.skills });
@@ -88,7 +92,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/suggest-skills", requireAuth, async (req, res) => {
+  app.post("/api/suggest-skills", requireAuth, async (req: Request, res) => {
     try {
       const schema = z.object({
         intro: z.string().min(10),
@@ -129,21 +133,23 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", requireAuth, async (_req, res) => {
+  app.get("/api/jobs", requireAuth, async (req: Request, res) => {
     try {
-      const jobs = await storage.getJobs();
+      const userId = req.session.userId!;
+      const jobs = await storage.getJobs(userId);
       res.json({ jobs });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch jobs" });
     }
   });
 
-  app.post("/api/jobs/refresh", requireAuth, async (_req, res) => {
+  app.post("/api/jobs/refresh", requireAuth, async (req: Request, res) => {
     try {
-      const profile = await storage.getProfile();
+      const userId = req.session.userId!;
+      const profile = await storage.getProfile(userId);
       if (profile.skills.length > 0) {
-        const jobs = await (storage as any).scrapeAndGenerateJobs(profile.skills);
-        await storage.setJobs(jobs);
+        const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
+        await storage.setJobs(userId, jobs);
         res.json({ jobs, message: "Jobs refreshed successfully" });
       } else {
         res.json({ jobs: [], message: "No skills set" });
@@ -153,10 +159,11 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs/:id/save", requireAuth, async (req, res) => {
+  app.post("/api/jobs/:id/save", requireAuth, async (req: Request, res) => {
     try {
+      const userId = req.session.userId!;
       const { id } = req.params;
-      const job = await storage.saveJob(id);
+      const job = await storage.saveJob(userId, id);
       if (job) {
         res.json({ job });
       } else {
@@ -167,10 +174,11 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/jobs/:id/apply", requireAuth, async (req, res) => {
+  app.post("/api/jobs/:id/apply", requireAuth, async (req: Request, res) => {
     try {
+      const userId = req.session.userId!;
       const { id } = req.params;
-      const job = await storage.markJobApplied(id);
+      const job = await storage.markJobApplied(userId, id);
       if (job) {
         res.json({ job });
       } else {
@@ -181,8 +189,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/generate-message", requireAuth, async (req, res) => {
+  app.post("/api/generate-message", requireAuth, async (req: Request, res) => {
     try {
+      const userId = req.session.userId!;
       const schema = z.object({
         jobTitle: z.string(),
         jobDescription: z.string(),
@@ -193,7 +202,7 @@ export async function registerRoutes(
 
       const { jobTitle, jobDescription, skills, tone, intro } = schema.parse(req.body);
 
-      const profile = await storage.getProfile();
+      const profile = await storage.getProfile(userId);
       const userIntro = intro || profile.intro || "";
       
       const response = await openai.chat.completions.create({

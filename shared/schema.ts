@@ -1,16 +1,20 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  verificationToken: text("verification_token"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
   password: true,
 });
 
@@ -58,8 +62,8 @@ export type GenerateMessageInput = z.infer<typeof generateMessageSchema>;
 
 export const freelancerProfileSchema = z.object({
   name: z.string().optional(),
-  intro: z.string().min(1, "Please write a brief introduction"),
-  skills: z.array(skillSchema),
+  intro: z.string().default(""),
+  skills: z.array(skillSchema).default([]),
 });
 
 export type FreelancerProfile = z.infer<typeof freelancerProfileSchema>;

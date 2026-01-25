@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,8 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Plus, Trash2, Play, Pause } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Calendar, Clock, Plus, Trash2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Schedule {
@@ -22,31 +20,9 @@ interface Schedule {
   nextRun?: string;
 }
 
-const defaultSchedules: Schedule[] = [
-  {
-    id: "1",
-    name: "Morning Job Scan",
-    frequency: "daily",
-    time: "09:00",
-    enabled: true,
-    lastRun: "2026-01-24T09:00:00Z",
-    nextRun: "2026-01-25T09:00:00Z",
-  },
-  {
-    id: "2",
-    name: "Weekly Deep Search",
-    frequency: "weekly",
-    time: "10:00",
-    days: ["monday", "thursday"],
-    enabled: false,
-    lastRun: "2026-01-20T10:00:00Z",
-    nextRun: "2026-01-27T10:00:00Z",
-  },
-];
-
 export default function Schedules() {
   const { toast } = useToast();
-  const [schedules, setSchedules] = useState<Schedule[]>(defaultSchedules);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
     name: "",
@@ -254,7 +230,7 @@ export default function Schedules() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteSchedule(schedule.id)}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground"
                       data-testid={`button-delete-${schedule.id}`}
                     >
                       <Trash2 className="w-4 h-4" />

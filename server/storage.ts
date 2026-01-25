@@ -5,150 +5,28 @@ import { scrapeJobsForSkills } from "./apify";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  getProfile(): Promise<FreelancerProfile>;
-  setProfile(profile: Partial<FreelancerProfile>): Promise<FreelancerProfile>;
-  getJobs(): Promise<JobPost[]>;
-  setJobs(jobs: JobPost[]): Promise<void>;
-  saveJob(jobId: string): Promise<JobPost | undefined>;
-  markJobApplied(jobId: string): Promise<JobPost | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByVerificationToken(token: string): Promise<User | undefined>;
+  createUser(user: InsertUser & { verificationToken?: string }): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  getProfile(userId: string): Promise<FreelancerProfile>;
+  setProfile(userId: string, profile: Partial<FreelancerProfile>): Promise<FreelancerProfile>;
+  getJobs(userId: string): Promise<JobPost[]>;
+  setJobs(userId: string, jobs: JobPost[]): Promise<void>;
+  saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
+  markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
+  scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]>;
 }
-
-const sampleJobs: JobPost[] = [
-  {
-    id: "1",
-    title: "Looking for a UI/UX Designer for SaaS Dashboard",
-    description: "We need an experienced UI/UX designer to help us redesign our SaaS dashboard. Must have experience with Figma and modern design systems. Budget is negotiable based on experience. Remote work is fine.",
-    source: "reddit",
-    sourceUrl: "https://reddit.com/r/forhire/example1",
-    author: "techfounder_mike",
-    authorHandle: "techfounder_mike",
-    postedAt: "2 hours ago",
-    matchedSkills: ["UI/UX Design", "Figma"],
-    budget: "$2,000 - $5,000",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-  {
-    id: "2",
-    title: "React Developer Needed for E-commerce Platform",
-    description: "Hiring a React developer for our e-commerce startup. Need someone who can work with Next.js and has experience with payment integrations. Part-time or full-time available.",
-    source: "x",
-    sourceUrl: "https://x.com/user/status/example2",
-    author: "Sarah Chen",
-    authorHandle: "sarahbuilds",
-    postedAt: "4 hours ago",
-    matchedSkills: ["React", "Web Development", "Node.js"],
-    budget: "$50 - $80/hr",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-  {
-    id: "3",
-    title: "Need a Python Developer for Data Automation",
-    description: "Looking for someone to build automation scripts for our data pipeline. Experience with pandas, APIs, and database connections required. This is a quick project, should take 1-2 weeks.",
-    source: "reddit",
-    sourceUrl: "https://reddit.com/r/slavelabour/example3",
-    author: "data_enthusiast",
-    authorHandle: "data_enthusiast",
-    postedAt: "6 hours ago",
-    matchedSkills: ["Python", "Data Analysis"],
-    budget: "$500 - $1,000",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-  {
-    id: "4",
-    title: "WordPress Expert for Business Website",
-    description: "Small business looking for WordPress developer to create a professional website. Need custom theme development, WooCommerce setup, and SEO optimization. Timeline is 3 weeks.",
-    source: "facebook",
-    sourceUrl: "https://facebook.com/groups/freelancers/example4",
-    author: "Local Business Owner",
-    authorHandle: "jsmith_biz",
-    postedAt: "8 hours ago",
-    matchedSkills: ["WordPress", "Web Development", "SEO"],
-    budget: "$1,500 - $3,000",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-  {
-    id: "5",
-    title: "Video Editor for YouTube Channel",
-    description: "Growing tech YouTube channel needs a video editor. Must be proficient in Premiere Pro or DaVinci Resolve. Looking for someone who can edit 4-6 videos per month. Long-term collaboration preferred.",
-    source: "x",
-    sourceUrl: "https://x.com/user/status/example5",
-    author: "TechReviewerMax",
-    authorHandle: "maxreviews",
-    postedAt: "12 hours ago",
-    matchedSkills: ["Video Editing"],
-    budget: "$200 - $400/video",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-  {
-    id: "6",
-    title: "Content Writer for Tech Blog",
-    description: "Need a content writer who understands tech and can write engaging blog posts. Topics include AI, software development, and startup culture. 4-8 articles per month.",
-    source: "reddit",
-    sourceUrl: "https://reddit.com/r/hireawriter/example6",
-    author: "content_agency",
-    authorHandle: "content_agency",
-    postedAt: "1 day ago",
-    matchedSkills: ["Content Writing"],
-    budget: "$100 - $200/article",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-  {
-    id: "7",
-    title: "Mobile App Developer - iOS/Android",
-    description: "Startup looking for a mobile developer to build our MVP app. React Native or Flutter preferred. The app is a fitness tracker with social features. 2-3 month project.",
-    source: "facebook",
-    sourceUrl: "https://facebook.com/groups/startups/example7",
-    author: "FitStartup Founder",
-    authorHandle: "fitfounder",
-    postedAt: "1 day ago",
-    matchedSkills: ["Mobile Development", "React"],
-    budget: "$10,000 - $20,000",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-  {
-    id: "8",
-    title: "Graphic Designer for Brand Identity",
-    description: "New e-commerce brand needs complete visual identity - logo, color palette, typography, social media templates. Looking for someone with a modern, minimalist style.",
-    source: "x",
-    sourceUrl: "https://x.com/user/status/example8",
-    author: "Emily Rivera",
-    authorHandle: "emilybrands",
-    postedAt: "2 days ago",
-    matchedSkills: ["Graphic Design", "UI/UX Design"],
-    budget: "$1,000 - $2,500",
-    isRemote: true,
-    saved: false,
-    applied: false,
-  },
-];
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
-  private profile: FreelancerProfile;
-  private jobs: JobPost[];
+  private profiles: Map<string, FreelancerProfile>;
+  private jobs: Map<string, JobPost[]>;
 
   constructor() {
     this.users = new Map();
-    this.profile = {
-      intro: "",
-      skills: [],
-    };
-    this.jobs = [];
+    this.profiles = new Map();
+    this.jobs = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -161,49 +39,127 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.verificationToken === token,
+    );
+  }
+
+  async createUser(insertUser: InsertUser & { verificationToken?: string }): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      emailVerified: false,
+      verificationToken: insertUser.verificationToken || null,
+    };
     this.users.set(id, user);
+    this.profiles.set(id, { intro: "", skills: [] });
+    this.jobs.set(id, []);
     return user;
   }
 
-  async getProfile(): Promise<FreelancerProfile> {
-    return this.profile;
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    const updated = { ...user, ...updates };
+    this.users.set(id, updated);
+    return updated;
   }
 
-  async setProfile(data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
-    this.profile = { ...this.profile, ...data };
-    return this.profile;
+  async getProfile(userId: string): Promise<FreelancerProfile> {
+    return this.profiles.get(userId) || { intro: "", skills: [] };
   }
 
-  async getJobs(): Promise<JobPost[]> {
-    return this.jobs;
+  async setProfile(userId: string, data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
+    const current = await this.getProfile(userId);
+    const updated = { ...current, ...data };
+    this.profiles.set(userId, updated);
+    return updated;
   }
 
-  async setJobs(jobs: JobPost[]): Promise<void> {
-    this.jobs = jobs;
+  async getJobs(userId: string): Promise<JobPost[]> {
+    return this.jobs.get(userId) || [];
   }
 
-  async saveJob(jobId: string): Promise<JobPost | undefined> {
-    const job = this.jobs.find((j) => j.id === jobId);
+  async setJobs(userId: string, jobs: JobPost[]): Promise<void> {
+    this.jobs.set(userId, jobs);
+  }
+
+  async saveJob(userId: string, jobId: string): Promise<JobPost | undefined> {
+    const userJobs = await this.getJobs(userId);
+    const job = userJobs.find((j) => j.id === jobId);
     if (job) {
       job.saved = !job.saved;
+      this.jobs.set(userId, userJobs);
     }
     return job;
   }
 
-  async markJobApplied(jobId: string): Promise<JobPost | undefined> {
-    const job = this.jobs.find((j) => j.id === jobId);
+  async markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined> {
+    const userJobs = await this.getJobs(userId);
+    const job = userJobs.find((j) => j.id === jobId);
     if (job) {
       job.applied = true;
+      this.jobs.set(userId, userJobs);
     }
     return job;
   }
 
   generateJobsForSkills(skills: Skill[]): JobPost[] {
     const skillNames = skills.map((s) => s.name.toLowerCase());
-    
+    const sampleJobs: JobPost[] = [
+      {
+        id: randomUUID(),
+        title: "Looking for a UI/UX Designer for SaaS Dashboard",
+        description: "We need an experienced UI/UX designer to help us redesign our SaaS dashboard.",
+        source: "reddit",
+        sourceUrl: "https://reddit.com/r/forhire/example1",
+        author: "techfounder_mike",
+        postedAt: "2 hours ago",
+        matchedSkills: ["UI/UX Design", "Figma"],
+        budget: "$2,000 - $5,000",
+        isRemote: true,
+        saved: false,
+        applied: false,
+      },
+      {
+        id: randomUUID(),
+        title: "React Developer Needed for E-commerce Platform",
+        description: "Hiring a React developer for our e-commerce startup.",
+        source: "x",
+        sourceUrl: "https://x.com/user/status/example2",
+        author: "Sarah Chen",
+        authorHandle: "sarahbuilds",
+        postedAt: "4 hours ago",
+        matchedSkills: ["React", "Web Development", "Node.js"],
+        budget: "$50 - $80/hr",
+        isRemote: true,
+        saved: false,
+        applied: false,
+      },
+      {
+        id: randomUUID(),
+        title: "Need a Python Developer for Data Automation",
+        description: "Looking for someone to build automation scripts for our data pipeline.",
+        source: "reddit",
+        sourceUrl: "https://reddit.com/r/slavelabour/example3",
+        author: "data_enthusiast",
+        postedAt: "6 hours ago",
+        matchedSkills: ["Python", "Data Analysis"],
+        budget: "$500 - $1,000",
+        isRemote: true,
+        saved: false,
+        applied: false,
+      },
+    ];
+
     const relevantJobs = sampleJobs.filter((job) => {
       return job.matchedSkills.some((ms) =>
         skillNames.some(
@@ -224,12 +180,10 @@ export class MemStorage implements IStorage {
             sn.includes(ms.toLowerCase())
         )
       ),
-      saved: false,
-      applied: false,
     }));
   }
 
-  async scrapeAndGenerateJobs(skills: Skill[]): Promise<JobPost[]> {
+  async scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]> {
     const skillNames = skills.map((s) => s.name);
     
     try {

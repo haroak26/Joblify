@@ -11,6 +11,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import VerifyEmail from "@/pages/verify-email";
 import DashboardHome from "@/pages/dashboard/home";
 import MyJobs from "@/pages/dashboard/jobs";
 import Generator from "@/pages/dashboard/generator";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/dashboard">
         <ProtectedRoute>
           <DashboardLayout>
