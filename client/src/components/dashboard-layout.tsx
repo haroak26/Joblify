@@ -21,7 +21,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-3 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-50">
+          <header className="flex items-center justify-between gap-2 p-3 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-[9999]">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <ThemeToggle />
           </header>

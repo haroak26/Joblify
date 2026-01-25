@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
@@ -72,6 +73,7 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <Router />
+            <Toaster />
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>

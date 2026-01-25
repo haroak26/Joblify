@@ -18,6 +18,7 @@ import {
 import { User, CreditCard, BarChart3, Check, Crown, Trash2, ExternalLink, Loader2 } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";

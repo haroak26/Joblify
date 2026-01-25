@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Plus, Trash2, Play, Lock, Crown } from "lucide-react";
+import { Calendar, Clock, Plus, Trash2, Play, Lock, Crown, Loader2 } from "lucide-react";
 import { Link } from "wouter";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Schedule {
   id: string;
@@ -88,7 +89,30 @@ export default function Schedules() {
     }
   };
 
-  if (!hasAccess && !subscriptionQuery.isLoading) {
+  if (subscriptionQuery.isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center space-y-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <Card className="border-primary/20">
