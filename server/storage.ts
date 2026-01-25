@@ -1,4 +1,6 @@
-import { type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile } from "@shared/schema";
+import { type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, users, profiles, jobs } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { scrapeJobsForSkills } from "./apify";
 
@@ -18,98 +20,191 @@ export interface IStorage {
   scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private profiles: Map<string, FreelancerProfile>;
-  private jobs: Map<string, JobPost[]>;
-
-  constructor() {
-    this.users = new Map();
-    this.profiles = new Map();
-    this.jobs = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email,
-    );
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
   }
 
   async getUserByVerificationToken(token: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.verificationToken === token,
-    );
+    const [user] = await db.select().from(users).where(eq(users.verificationToken, token));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser & { verificationToken?: string }): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
-      id,
-      emailVerified: false,
-      verificationToken: insertUser.verificationToken || null,
-    };
-    this.users.set(id, user);
-    this.profiles.set(id, { intro: "", skills: [] });
-    this.jobs.set(id, []);
+    const [user] = await db
+      .insert(users)
+      .values({
+        username: insertUser.username,
+        email: insertUser.email,
+        password: insertUser.password,
+        verificationToken: insertUser.verificationToken || null,
+        emailVerified: false,
+      })
+      .returning();
+
+    await db.insert(profiles).values({
+      userId: user.id,
+      intro: "",
+      skills: [],
+    });
+
     return user;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    const updated = { ...user, ...updates };
-    this.users.set(id, updated);
-    return updated;
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
   }
 
   async getProfile(userId: string): Promise<FreelancerProfile> {
-    return this.profiles.get(userId) || { intro: "", skills: [] };
+    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+    if (!profile) {
+      return { intro: "", skills: [] };
+    }
+    return {
+      intro: profile.intro,
+      skills: (profile.skills as Skill[]) || [],
+    };
   }
 
   async setProfile(userId: string, data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
     const current = await this.getProfile(userId);
     const updated = { ...current, ...data };
-    this.profiles.set(userId, updated);
+    
+    const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+    
+    if (existing) {
+      await db
+        .update(profiles)
+        .set({
+          intro: updated.intro,
+          skills: updated.skills,
+        })
+        .where(eq(profiles.userId, userId));
+    } else {
+      await db.insert(profiles).values({
+        userId,
+        intro: updated.intro,
+        skills: updated.skills,
+      });
+    }
+    
     return updated;
   }
 
   async getJobs(userId: string): Promise<JobPost[]> {
-    return this.jobs.get(userId) || [];
+    const userJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
+    return userJobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      description: job.description,
+      source: job.source as "reddit" | "x" | "facebook",
+      sourceUrl: job.sourceUrl,
+      author: job.author,
+      authorHandle: job.authorHandle || undefined,
+      postedAt: job.postedAt,
+      matchedSkills: (job.matchedSkills as string[]) || [],
+      budget: job.budget || undefined,
+      isRemote: job.isRemote,
+      saved: job.saved,
+      applied: job.applied,
+    }));
   }
 
-  async setJobs(userId: string, jobs: JobPost[]): Promise<void> {
-    this.jobs.set(userId, jobs);
+  async setJobs(userId: string, newJobs: JobPost[]): Promise<void> {
+    await db.delete(jobs).where(eq(jobs.userId, userId));
+    
+    if (newJobs.length > 0) {
+      await db.insert(jobs).values(
+        newJobs.map(job => ({
+          id: job.id,
+          userId,
+          title: job.title,
+          description: job.description,
+          source: job.source,
+          sourceUrl: job.sourceUrl,
+          author: job.author,
+          authorHandle: job.authorHandle || null,
+          postedAt: job.postedAt,
+          matchedSkills: job.matchedSkills,
+          budget: job.budget || null,
+          isRemote: job.isRemote,
+          saved: job.saved,
+          applied: job.applied,
+        }))
+      );
+    }
   }
 
   async saveJob(userId: string, jobId: string): Promise<JobPost | undefined> {
-    const userJobs = await this.getJobs(userId);
-    const job = userJobs.find((j) => j.id === jobId);
-    if (job) {
-      job.saved = !job.saved;
-      this.jobs.set(userId, userJobs);
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
+    if (job && job.userId === userId) {
+      const [updated] = await db
+        .update(jobs)
+        .set({ saved: !job.saved })
+        .where(eq(jobs.id, jobId))
+        .returning();
+      
+      return {
+        id: updated.id,
+        title: updated.title,
+        description: updated.description,
+        source: updated.source as "reddit" | "x" | "facebook",
+        sourceUrl: updated.sourceUrl,
+        author: updated.author,
+        authorHandle: updated.authorHandle || undefined,
+        postedAt: updated.postedAt,
+        matchedSkills: (updated.matchedSkills as string[]) || [],
+        budget: updated.budget || undefined,
+        isRemote: updated.isRemote,
+        saved: updated.saved,
+        applied: updated.applied,
+      };
     }
-    return job;
+    return undefined;
   }
 
   async markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined> {
-    const userJobs = await this.getJobs(userId);
-    const job = userJobs.find((j) => j.id === jobId);
-    if (job) {
-      job.applied = true;
-      this.jobs.set(userId, userJobs);
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
+    if (job && job.userId === userId) {
+      const [updated] = await db
+        .update(jobs)
+        .set({ applied: true })
+        .where(eq(jobs.id, jobId))
+        .returning();
+      
+      return {
+        id: updated.id,
+        title: updated.title,
+        description: updated.description,
+        source: updated.source as "reddit" | "x" | "facebook",
+        sourceUrl: updated.sourceUrl,
+        author: updated.author,
+        authorHandle: updated.authorHandle || undefined,
+        postedAt: updated.postedAt,
+        matchedSkills: (updated.matchedSkills as string[]) || [],
+        budget: updated.budget || undefined,
+        isRemote: updated.isRemote,
+        saved: updated.saved,
+        applied: updated.applied,
+      };
     }
-    return job;
+    return undefined;
   }
 
   generateJobsForSkills(skills: Skill[]): JobPost[] {
@@ -211,4 +306,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, jsonb } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -11,6 +12,49 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
 });
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  profile: one(profiles),
+  jobs: many(jobs),
+}));
+
+export const profiles = pgTable("profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  intro: text("intro").notNull().default(""),
+  skills: jsonb("skills").notNull().default([]),
+});
+
+export const profilesRelations = relations(profiles, ({ one }) => ({
+  user: one(users, {
+    fields: [profiles.userId],
+    references: [users.id],
+  }),
+}));
+
+export const jobs = pgTable("jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  source: text("source").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  author: text("author").notNull(),
+  authorHandle: text("author_handle"),
+  postedAt: text("posted_at").notNull(),
+  matchedSkills: jsonb("matched_skills").notNull().default([]),
+  budget: text("budget"),
+  isRemote: boolean("is_remote").notNull().default(true),
+  saved: boolean("saved").notNull().default(false),
+  applied: boolean("applied").notNull().default(false),
+});
+
+export const jobsRelations = relations(jobs, ({ one }) => ({
+  user: one(users, {
+    fields: [jobs.userId],
+    references: [users.id],
+  }),
+}));
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
