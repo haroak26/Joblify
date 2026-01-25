@@ -10,7 +10,7 @@ const client = process.env.APIFY_API_TOKEN
 const ACTORS = {
   X: "G8hR9sp2nkjI2om8X",
   REDDIT: "lqOcm2Bgsg4LGNATd",
-  FACEBOOK: process.env.APIFY_FACEBOOK_ACTOR || "apify/facebook-posts-scraper"
+  FACEBOOK: "alien_force/facebook-scraper-pro"
 };
 
 interface ScrapedItem {
