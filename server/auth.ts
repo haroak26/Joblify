@@ -99,8 +99,6 @@ export function setupAuth(app: Express) {
         verificationToken,
       });
 
-      const emailSent = await sendVerificationEmail(email, username, verificationToken);
-
       req.session.userId = user.id;
 
       res.json({
@@ -110,10 +108,7 @@ export function setupAuth(app: Express) {
           email: user.email,
           emailVerified: user.emailVerified,
         },
-        message: emailSent 
-          ? "Please check your email to verify your account" 
-          : "Account created. Email verification may be delayed.",
-        emailSent,
+        message: "Account created. Please check your email to verify your account.",
       });
     } catch (error) {
       console.error("Registration error:", error);
