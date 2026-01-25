@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
+
 import { insertUserSchema } from "@shared/schema";
 
 const loginSchema = insertUserSchema.extend({
@@ -21,7 +21,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const { login } = useAuth();
-  const { toast } = useToast();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<LoginFormData>({
@@ -37,11 +37,7 @@ export default function Login() {
     try {
       await login(data.username, data.password);
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid credentials",
-        variant: "destructive",
-      });
+      // Error is handled by auth state or form validation
     } finally {
       setIsSubmitting(false);
     }

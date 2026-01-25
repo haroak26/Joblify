@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
+
 
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -25,7 +25,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function Register() {
   const { register } = useAuth();
-  const { toast } = useToast();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<RegisterFormData>({
@@ -42,16 +42,8 @@ export default function Register() {
     setIsSubmitting(true);
     try {
       await register(data.username, data.email, data.password);
-      toast({
-        title: "Account created",
-        description: "Please check your email to verify your account.",
-      });
     } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: error instanceof Error ? error.message : "Could not create account",
-        variant: "destructive",
-      });
+      // Error is handled by form validation or auth state
     } finally {
       setIsSubmitting(false);
     }

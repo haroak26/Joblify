@@ -21,7 +21,7 @@ import { Copy, Check, RefreshCw, Wand2 } from "lucide-react";
 import type { JobPost } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface MessageGeneratorProps {
   job: JobPost | null;
@@ -45,7 +45,7 @@ export function MessageGenerator({
   const [tone, setTone] = useState<Tone>("professional");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
+  
 
   const generateMutation = useMutation({
     mutationFn: async (data: { 
@@ -62,11 +62,7 @@ export function MessageGenerator({
       setMessage(data.message);
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to generate message. Please try again.",
-        variant: "destructive",
-      });
+      // Error handled by UI
     },
   });
 
@@ -84,10 +80,6 @@ export function MessageGenerator({
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
-    toast({
-      title: "Copied!",
-      description: "Message copied to clipboard.",
-    });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -96,10 +88,6 @@ export function MessageGenerator({
       onMessageSent(job.id);
       onOpenChange(false);
       setMessage("");
-      toast({
-        title: "Success",
-        description: "Job marked as applied!",
-      });
     }
   };
 

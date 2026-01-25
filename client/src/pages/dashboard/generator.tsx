@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Wand2, Copy, Check, RefreshCw } from "lucide-react";
 import type { FreelancerProfile } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+
 
 type Tone = "professional" | "friendly" | "enthusiastic";
 
@@ -17,7 +17,7 @@ export default function Generator() {
   const [tone, setTone] = useState<Tone>("professional");
   const [generatedMessage, setGeneratedMessage] = useState("");
   const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
+  
 
   const profileQuery = useQuery<FreelancerProfile>({
     queryKey: ["/api/profile"],
@@ -38,11 +38,7 @@ export default function Generator() {
       setGeneratedMessage(data.message);
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to generate message. Please try again.",
-        variant: "destructive",
-      });
+      // Error handled by UI
     },
   });
 
@@ -50,10 +46,6 @@ export default function Generator() {
     await navigator.clipboard.writeText(generatedMessage);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: "Copied",
-      description: "Message copied to clipboard",
-    });
   };
 
   const profile = profileQuery.data ?? { intro: "", skills: [] };

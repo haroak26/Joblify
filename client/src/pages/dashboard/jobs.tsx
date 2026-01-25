@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/empty-state";
 import { JobListSkeleton } from "@/components/loading-skeleton";
 import type { JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+
 
 export default function MyJobs() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,7 +19,7 @@ export default function MyJobs() {
   const [selectedJob, setSelectedJob] = useState<JobPost | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-  const { toast } = useToast();
+  
 
   const profileQuery = useQuery<FreelancerProfile>({
     queryKey: ["/api/profile"],
@@ -57,17 +57,9 @@ export default function MyJobs() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({
-        title: "Jobs Refreshed",
-        description: "We've found new opportunities for you!",
-      });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to refresh jobs. Please try again.",
-        variant: "destructive",
-      });
+      // Error handled by UI
     },
   });
 

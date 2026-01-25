@@ -7,10 +7,10 @@ import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+
 
 export default function DashboardHome() {
-  const { toast } = useToast();
+  
 
   const profileQuery = useQuery<FreelancerProfile>({
     queryKey: ["/api/profile"],
@@ -39,17 +39,9 @@ export default function DashboardHome() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      toast({
-        title: "Finder Complete",
-        description: "We've found new opportunities for you!",
-      });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to find jobs. Please try again.",
-        variant: "destructive",
-      });
+      // Error handled by UI
     },
   });
 

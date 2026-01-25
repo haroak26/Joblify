@@ -8,7 +8,7 @@ import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+
 
 const plans = [
   {
@@ -39,7 +39,7 @@ const plans = [
 ];
 
 export default function Account() {
-  const { toast } = useToast();
+  
   const [currentPlan] = useState("free");
 
   const profileQuery = useQuery<FreelancerProfile>({
@@ -68,10 +68,7 @@ export default function Account() {
   };
 
   const handleUpgrade = (planId: string) => {
-    toast({
-      title: "Upgrade coming soon",
-      description: "Subscription management will be available soon.",
-    });
+    // Upgrade logic here
   };
 
   return (

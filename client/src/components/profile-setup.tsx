@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { X, Plus, Sparkles, Wand2, RefreshCw, User } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+
 import type { Skill } from "@shared/schema";
 
 const popularSkills = [
@@ -35,7 +35,7 @@ interface ProfileSetupProps {
 export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: ProfileSetupProps) {
   const [localIntro, setLocalIntro] = useState(intro);
   const [newSkill, setNewSkill] = useState("");
-  const { toast } = useToast();
+  
 
   useEffect(() => {
     setLocalIntro(intro);
@@ -57,24 +57,11 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
         
         if (newSkills.length > 0) {
           onSkillsChange([...skills, ...newSkills]);
-          toast({
-            title: "Skills Suggested",
-            description: `Added ${newSkills.length} skills based on your intro.`,
-          });
-        } else {
-          toast({
-            title: "No New Skills",
-            description: "All suggested skills are already in your list.",
-          });
         }
       }
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to suggest skills. Please try again.",
-        variant: "destructive",
-      });
+      // Error handled by UI
     },
   });
 
@@ -104,11 +91,6 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
 
   const handleSuggestSkills = () => {
     if (localIntro.length < 10) {
-      toast({
-        title: "More Info Needed",
-        description: "Please write at least 10 characters about yourself.",
-        variant: "destructive",
-      });
       return;
     }
     suggestMutation.mutate(localIntro);

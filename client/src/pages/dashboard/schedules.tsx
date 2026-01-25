@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Plus, Trash2, Play } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+
 
 interface Schedule {
   id: string;
@@ -21,7 +21,7 @@ interface Schedule {
 }
 
 export default function Schedules() {
-  const { toast } = useToast();
+  
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
@@ -34,27 +34,14 @@ export default function Schedules() {
     setSchedules(prev => 
       prev.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s)
     );
-    toast({
-      title: "Schedule updated",
-      description: "Your schedule has been updated successfully.",
-    });
   };
 
   const handleDeleteSchedule = (id: string) => {
     setSchedules(prev => prev.filter(s => s.id !== id));
-    toast({
-      title: "Schedule deleted",
-      description: "Your schedule has been removed.",
-    });
   };
 
   const handleAddSchedule = () => {
     if (!newSchedule.name) {
-      toast({
-        title: "Name required",
-        description: "Please enter a name for your schedule.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -70,17 +57,10 @@ export default function Schedules() {
     setSchedules(prev => [...prev, schedule]);
     setNewSchedule({ name: "", frequency: "daily", time: "09:00" });
     setShowAddForm(false);
-    toast({
-      title: "Schedule created",
-      description: "Your new job scan schedule has been created.",
-    });
   };
 
   const handleRunNow = (id: string) => {
-    toast({
-      title: "Job scan started",
-      description: "Scanning for new opportunities now...",
-    });
+    // Run logic here
   };
 
   const formatDate = (dateStr?: string) => {
