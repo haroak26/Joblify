@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -15,10 +15,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Crown, Trash2, ExternalLink, Loader2 } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Crown, Trash2, Loader2 } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -205,94 +204,118 @@ export default function Account() {
     : 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold mb-1" data-testid="text-account-heading">Account</h1>
-        <p className="text-muted-foreground">Manage your profile, subscription, and preferences</p>
+    <div className="p-6 space-y-8 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <User className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-account-heading">Account</h1>
+            <p className="text-muted-foreground">Manage profile settings, usage, and subscription details</p>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5 text-primary" />
-            Account Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Username</p>
-              <p className="font-medium" data-testid="text-username">{user?.username || "Loading..."}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Email</p>
-              <div className="flex items-center gap-2">
-                <p className="font-medium" data-testid="text-email">{user?.email || "Loading..."}</p>
-                {user?.emailVerified ? (
-                  <Badge variant="secondary" className="text-xs">Verified</Badge>
-                ) : (
-                  <Badge variant="destructive" className="text-xs">Not Verified</Badge>
-                )}
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Account overview
+            </CardTitle>
+            <CardDescription>Everything tied to your Joblify profile.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Username</p>
+                <p className="mt-2 text-lg font-semibold" data-testid="text-username">{user?.username || "Loading..."}</p>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Email</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <p className="text-lg font-semibold truncate" data-testid="text-email">{user?.email || "Loading..."}</p>
+                  {user?.emailVerified ? (
+                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">Verified</Badge>
+                  ) : (
+                    <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">Not Verified</Badge>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            Usage This Month
-          </CardTitle>
-          <CardDescription>
-            {usageData && (
-              <span>Resets on {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Job Scrapes</span>
-              <span className="text-muted-foreground">
-                {usageData?.usage.jobsScrapedThisMonth || 0} / {usageData?.limits.maxJobsPerMonth || 5}
-              </span>
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Current plan</p>
+                  <p className="mt-2 text-lg font-semibold capitalize">{currentPlan}</p>
+                </div>
+                <Badge variant={isPlus ? "default" : "secondary"} className="text-xs uppercase tracking-wide">
+                  {isPlus ? "Plus" : "Free"}
+                </Badge>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Upgrade anytime to unlock more jobs, unlimited skills, and scheduling.
+              </p>
             </div>
-            <Progress value={jobsUsedPercent} className="h-2" data-testid="progress-jobs" />
-          </div>
-          
-          {!isPlus && (
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Usage snapshot
+            </CardTitle>
+            <CardDescription>
+              {usageData && (
+                <span>Resets on {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Skills</span>
+                <span>Job Scrapes</span>
                 <span className="text-muted-foreground">
-                  {usageData?.usage.skillsCount || 0} / {usageData?.limits.maxSkills || 5}
+                  {usageData?.usage.jobsScrapedThisMonth || 0} / {usageData?.limits.maxJobsPerMonth || 5}
                 </span>
               </div>
-              <Progress value={skillsUsedPercent} className="h-2" data-testid="progress-skills" />
+              <Progress value={jobsUsedPercent} className="h-2" data-testid="progress-jobs" />
             </div>
-          )}
-
-          {isPlus && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Check className="w-4 h-4 text-primary" />
-              <span>Unlimited skills with Plus plan</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Schedule Access:</span>
-            {usageData?.limits.hasScheduleAccess ? (
-              <Badge variant="secondary">Enabled</Badge>
-            ) : (
-              <Badge variant="outline">Plus Only</Badge>
+            
+            {!isPlus && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Skills</span>
+                  <span className="text-muted-foreground">
+                    {usageData?.usage.skillsCount || 0} / {usageData?.limits.maxSkills || 5}
+                  </span>
+                </div>
+                <Progress value={skillsUsedPercent} className="h-2" data-testid="progress-skills" />
+              </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card>
+            {isPlus && (
+              <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground">
+                <Check className="w-4 h-4 text-primary" />
+                <span>Unlimited skills included in Plus.</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
+              <span className="text-muted-foreground">Schedule Access</span>
+              {usageData?.limits.hasScheduleAccess ? (
+                <Badge variant="secondary">Enabled</Badge>
+              ) : (
+                <Badge variant="outline">Plus Only</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-border/60 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-primary" />
@@ -309,9 +332,9 @@ export default function Account() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative border rounded-lg p-4 ${
-                    isCurrent ? 'border-primary bg-primary/5' : 'border-border'
-                  } ${plan.popular && !isCurrent ? 'ring-2 ring-primary' : ''}`}
+                  className={`relative border rounded-xl p-5 shadow-sm transition-all ${
+                    isCurrent ? 'border-primary/60 bg-primary/5' : 'border-border/70 hover:border-primary/40'
+                  } ${plan.popular && !isCurrent ? 'ring-2 ring-primary/40' : ''}`}
                   data-testid={`card-plan-${plan.id}`}
                 >
                   {plan.popular && !isCurrent && (

@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface SubscriptionResponse {
   subscription: { plan: string };
@@ -68,20 +69,28 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border bg-sidebar/50 backdrop-blur-xl">
+    <Sidebar className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="p-5">
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer group" data-testid="link-logo">
-            <div className="w-8 h-8 bg-foreground rounded-lg flex items-center justify-center transition-transform group-hover:scale-105">
-              <Sparkles className="w-5 h-5 text-background" />
+            <div className="w-9 h-9 bg-sidebar-accent rounded-xl flex items-center justify-center border border-sidebar-border transition-transform group-hover:-rotate-3">
+              <Sparkles className="w-5 h-5 text-sidebar-accent-foreground" />
             </div>
-            <span className="font-bold text-xl tracking-tight text-sidebar-foreground" data-testid="text-sidebar-logo">Joblify</span>
+            <div>
+              <span className="font-semibold text-lg tracking-tight text-sidebar-foreground" data-testid="text-sidebar-logo">
+                Joblify
+              </span>
+              <p className="text-xs text-sidebar-foreground/60">Freelance command center</p>
+            </div>
           </div>
         </Link>
       </SidebarHeader>
-      
+
       <SidebarContent className="px-3">
         <SidebarGroup>
+          <SidebarGroupLabel className="text-[11px] uppercase tracking-[0.2em] text-sidebar-foreground/50">
+            Workspace
+          </SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {mainMenuItems.map((item) => (
               <SidebarMenuItem key={item.title}>
@@ -90,12 +99,12 @@ export function AppSidebar() {
                   isActive={isActive(item.url)}
                   className={`h-10 px-3 rounded-md transition-all duration-200 ${
                     isActive(item.url) 
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
                   }`}
                 >
                   <Link href={item.url} data-testid={`link-nav-${item.title.toLowerCase()}`}>
-                    <item.icon className={`w-4 h-4 ${isActive(item.url) ? 'text-foreground' : ''}`} />
+                    <item.icon className={`w-4 h-4 ${isActive(item.url) ? 'text-sidebar-accent-foreground' : ''}`} />
                     <span className="text-[14px]">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -103,11 +112,29 @@ export function AppSidebar() {
             ))}
           </SidebarMenu>
         </SidebarGroup>
+
+        <SidebarGroup className="mt-6">
+          <SidebarGroupLabel className="text-[11px] uppercase tracking-[0.2em] text-sidebar-foreground/50">
+            Plan
+          </SidebarGroupLabel>
+          <SidebarGroupContent className="px-2">
+            <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/30 px-3 py-3">
+              <p className="text-xs text-sidebar-foreground/60">Current tier</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-sidebar-foreground">{planLabel}</span>
+                <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                  Active
+                </Badge>
+              </div>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-3">
         {!isLoading && user && (
           <div className="space-y-3">
+            <SidebarSeparator className="bg-sidebar-border/60" />
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton 
@@ -115,20 +142,20 @@ export function AppSidebar() {
                   isActive={isActive("/dashboard/account")}
                   className={`h-10 px-3 rounded-md transition-all duration-200 ${
                     isActive("/dashboard/account") 
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
                   }`}
                 >
                   <Link href="/dashboard/account" data-testid="link-nav-account">
-                    <User className={`w-4 h-4 ${isActive("/dashboard/account") ? 'text-foreground' : ''}`} />
-                    <span className="text-[14px]">Profile</span>
+                    <User className={`w-4 h-4 ${isActive("/dashboard/account") ? 'text-sidebar-accent-foreground' : ''}`} />
+                    <span className="text-[14px]">Account</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={() => logout()}
-                  className="h-10 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-all duration-200"
+                  className="h-10 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-all duration-200"
                   data-testid="button-logout"
                 >
                   <LogOut className="w-4 h-4" />
@@ -137,8 +164,8 @@ export function AppSidebar() {
               </SidebarMenuItem>
             </SidebarMenu>
 
-            <div className="flex items-center gap-3 px-3 py-2 border-t border-sidebar-border mt-2 pt-4">
-              <Avatar className="h-8 w-8 ring-1 ring-sidebar-border">
+            <div className="flex items-center gap-3 px-3 py-2 border border-sidebar-border rounded-xl bg-sidebar-accent/20">
+              <Avatar className="h-9 w-9 ring-1 ring-sidebar-border">
                 <AvatarImage src={`https://avatar.vercel.sh/${user.username}`} />
                 <AvatarFallback className="bg-sidebar-accent text-[10px] font-medium">
                   {getInitials(user.username)}
@@ -146,7 +173,7 @@ export function AppSidebar() {
               </Avatar>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm font-medium truncate text-sidebar-foreground" data-testid="text-username">{user.username}</span>
-                <span className="text-[11px] text-muted-foreground/70 font-medium uppercase tracking-wider">{planLabel}</span>
+                <span className="text-[11px] text-sidebar-foreground/60">Plan: {planLabel}</span>
               </div>
             </div>
           </div>
