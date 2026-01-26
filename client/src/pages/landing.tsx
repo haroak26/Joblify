@@ -68,28 +68,70 @@ export default function Landing() {
       {/* Hero */}
       <section className="pt-28 pb-16 lg:pt-40 lg:pb-24 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="max-w-2xl">
-            <Badge variant="secondary" className="mb-5 text-xs font-medium bg-primary/10 text-primary border-none">
-              <Star className="w-3 h-3 mr-1.5" />
-              AI-Powered Job Discovery
-            </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
-              Find freelance gigs
-              <span className="text-primary block mt-1">before anyone else</span>
-            </h1>
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Joblify scans social media in real-time to surface hiring opportunities that match your skills. Stop scrolling, start earning.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/dashboard">
-                <Button size="lg">
-                  Start Free
-                  <ArrowRight className="ml-1.5 w-4 h-4" />
-                </Button>
-              </Link>
-              <Button variant="secondary" size="lg">
-                See How It Works
-              </Button>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="max-w-2xl">
+              <Badge variant="secondary" className="mb-5 text-xs font-medium bg-primary/10 text-primary border-none">
+                <Star className="w-3 h-3 mr-1.5" />
+                AI-Powered Job Discovery
+              </Badge>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
+                Find freelance gigs
+                <span className="text-primary block mt-1">before anyone else</span>
+              </h1>
+              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+                Joblify scans social media in real-time to surface hiring opportunities that match your skills. Stop scrolling, start earning.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/dashboard">
+                  <Button size="lg">
+                    Start Free
+                    <ArrowRight className="ml-1.5 w-4 h-4" />
+                  </Button>
+                </Link>
+                <a href="#examples">
+                  <Button variant="secondary" size="lg">
+                    See How It Works
+                  </Button>
+                </a>
+              </div>
+            </div>
+            <div className="bg-muted/20 border rounded-2xl p-6 lg:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Live Preview</p>
+                <Badge variant="secondary" className="text-xs border-none bg-primary/10 text-primary">Realtime</Badge>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-background border rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-semibold">SaaS Landing Page</p>
+                    <span className="text-xs text-muted-foreground">Reddit · 2m ago</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Looking for a designer/dev to polish a SaaS hero + pricing section. Budget $1.5k.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {["UI Design", "React", "Figma"].map((skill) => (
+                      <Badge key={skill} variant="secondary" className="text-[11px] border-none bg-muted">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-background border rounded-xl p-4">
+                  <p className="text-xs uppercase text-muted-foreground mb-2">AI Pitch Draft</p>
+                  <p className="text-sm">
+                    I can deliver a high-converting hero and pricing flow within a week. Recent work includes
+                    SaaS launches that improved trials by 28%. Happy to share a quick mockup.
+                  </p>
+                </div>
+                <div className="bg-background border rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">Match Score</p>
+                    <p className="text-xs text-muted-foreground">Based on your skills + intro</p>
+                  </div>
+                  <p className="text-2xl font-bold text-primary">92%</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -128,6 +170,41 @@ export default function Landing() {
                 <p className="text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Example */}
+      <section id="examples" className="py-20 lg:py-28 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Example workflow</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              See how a typical Joblify session turns a social post into a qualified lead.
+            </p>
+          </div>
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="border rounded-2xl p-6 bg-background">
+              <p className="text-xs uppercase text-muted-foreground mb-3">Step 1</p>
+              <h3 className="text-xl font-semibold mb-3">Import your experience</h3>
+              <p className="text-muted-foreground">
+                Add a short intro and a few skills. Joblify builds a matching profile instantly.
+              </p>
+            </div>
+            <div className="border rounded-2xl p-6 bg-background">
+              <p className="text-xs uppercase text-muted-foreground mb-3">Step 2</p>
+              <h3 className="text-xl font-semibold mb-3">Get matched posts</h3>
+              <p className="text-muted-foreground">
+                Live feeds from Reddit, X, and Facebook surface the newest hiring posts for you.
+              </p>
+            </div>
+            <div className="border rounded-2xl p-6 bg-background">
+              <p className="text-xs uppercase text-muted-foreground mb-3">Step 3</p>
+              <h3 className="text-xl font-semibold mb-3">Send a tailored pitch</h3>
+              <p className="text-muted-foreground">
+                Use AI to craft a crisp response, then track the lead inside your dashboard.
+              </p>
+            </div>
           </div>
         </div>
       </section>
