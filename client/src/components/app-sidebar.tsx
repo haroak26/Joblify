@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Briefcase, Wand2, Calendar, LogOut, Sparkles } from "lucide-react";
+import { Home, Briefcase, Wand2, Calendar, LogOut, Sparkles, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
