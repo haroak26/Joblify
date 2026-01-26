@@ -92,62 +92,86 @@ export default function DashboardHome() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-sidebar-accent/30 rounded-xl p-5 border border-sidebar-border/50">
-          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-            <Briefcase className="w-4 h-4" />
-            <span className="text-sm font-medium">Opportunities</span>
-          </div>
-          <p className="text-3xl font-bold tracking-tight" data-testid="text-total-jobs">{jobs.length}</p>
-        </div>
-        <div className="bg-sidebar-accent/30 rounded-xl p-5 border border-sidebar-border/50">
-          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-            <DollarSign className="w-4 h-4" />
-            <span className="text-sm font-medium">Est. Value</span>
-          </div>
-          <p className="text-3xl font-bold tracking-tight" data-testid="text-total-value">
-            ${totalValue.toLocaleString()}
-          </p>
-        </div>
-        <div className="bg-sidebar-accent/30 rounded-xl p-5 border border-sidebar-border/50">
-          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-sm font-medium">Saved</span>
-          </div>
-          <p className="text-3xl font-bold tracking-tight" data-testid="text-saved-jobs">{savedJobs.length}</p>
-        </div>
-        <div className="bg-sidebar-accent/30 rounded-xl p-5 border border-sidebar-border/50">
-          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm font-medium">Applied</span>
-          </div>
-          <p className="text-3xl font-bold tracking-tight" data-testid="text-applied-jobs">{appliedJobs.length}</p>
-        </div>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              Total Opportunities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold" data-testid="text-total-jobs">{jobs.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              Estimated Value
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold" data-testid="text-total-value">
+              ${totalValue.toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Saved Jobs
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold" data-testid="text-saved-jobs">{savedJobs.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Applied
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold" data-testid="text-applied-jobs">{appliedJobs.length}</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-foreground text-background rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6 overflow-hidden relative group">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent opacity-50 pointer-events-none" />
-        <div className="relative z-10">
-          <h2 className="text-2xl font-bold mb-2">Ready to find work?</h2>
-          <p className="text-background/70 max-w-md">
-            Our AI scans social platforms in real-time to find freelance opportunities matching your unique skills.
-          </p>
-        </div>
-        <Button
-          onClick={() => refreshJobsMutation.mutate()}
-          disabled={refreshJobsMutation.isPending || !hasSkills}
-          size="lg"
-          variant="secondary"
-          className="relative z-10 gap-2 h-12 px-8 rounded-full font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
-          data-testid="button-run-finder"
-        >
-          {refreshJobsMutation.isPending ? (
-            <RefreshCw className="w-5 h-5 animate-spin" />
-          ) : (
-            <Search className="w-5 h-5" />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="w-5 h-5 text-primary" />
+            Job Finder
+          </CardTitle>
+          <CardDescription>
+            Search social media platforms for freelance opportunities matching your skills
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={() => refreshJobsMutation.mutate()}
+            disabled={refreshJobsMutation.isPending || !hasSkills}
+            size="lg"
+            className="gap-2"
+            data-testid="button-run-finder"
+          >
+            {refreshJobsMutation.isPending ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Search className="w-4 h-4" />
+            )}
+            {refreshJobsMutation.isPending ? "Searching..." : "Find Opportunities"}
+          </Button>
+          {!hasSkills && (
+            <p className="text-sm text-muted-foreground mt-3">
+              Add skills below to start finding opportunities
+            </p>
           )}
-          {refreshJobsMutation.isPending ? "Searching..." : "Find Opportunities"}
-        </Button>
-      </div>
+        </CardContent>
+      </Card>
 
       {profileQuery.isLoading ? (
         <SkillsSkeleton />
