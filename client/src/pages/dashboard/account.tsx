@@ -204,44 +204,44 @@ export default function Account() {
     : 0;
 
   return (
-    <div className="p-6 space-y-10 max-w-5xl mx-auto">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-account-heading">Account Settings</h1>
-        <p className="text-muted-foreground">Manage your profile, usage, and subscription.</p>
+    <div className="p-10 space-y-12 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-account-heading">Account Settings</h1>
+        <p className="text-lg text-muted-foreground">Manage your profile, usage, and subscription.</p>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[1fr_300px]">
-        <div className="space-y-10">
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
+      <div className="grid gap-12 lg:grid-cols-[1fr_300px]">
+        <div className="space-y-12">
+          <section className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-3">
+              <User className="w-6 h-6 text-primary" />
               Account Details
             </h2>
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Username</p>
-                <p className="text-base font-medium" data-testid="text-username">{user?.username || "Loading..."}</p>
+            <div className="grid gap-10 sm:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Username</p>
+                <p className="text-lg font-semibold" data-testid="text-username">{user?.username || "Loading..."}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Email Address</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-base font-medium truncate" data-testid="text-email">{user?.email || "Loading..."}</p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Email Address</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-lg font-semibold truncate" data-testid="text-email">{user?.email || "Loading..."}</p>
                   {user?.emailVerified ? (
-                    <Badge variant="secondary" className="text-[10px] uppercase h-5">Verified</Badge>
+                    <Badge variant="secondary" className="text-xs uppercase h-6 px-3">Verified</Badge>
                   ) : (
-                    <Badge variant="destructive" className="text-[10px] uppercase h-5">Unverified</Badge>
+                    <Badge variant="destructive" className="text-xs uppercase h-6 px-3">Unverified</Badge>
                   )}
                 </div>
               </div>
             </div>
           </section>
 
-          <section className="space-y-6 pt-6 border-t">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-primary" />
+          <section className="space-y-8 pt-10 border-t">
+            <h2 className="text-xl font-semibold flex items-center gap-3">
+              <CreditCard className="w-6 h-6 text-primary" />
               Subscription Plans
             </h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-8 md:grid-cols-2">
               {plans.map((plan) => {
                 const isCurrent = currentPlan === plan.id;
                 const isCancelled = subscription?.status === "cancelled";
@@ -249,28 +249,28 @@ export default function Account() {
                 return (
                   <div
                     key={plan.id}
-                    className={`relative border rounded-lg p-5 transition-all ${
-                      isCurrent ? 'border-primary bg-primary/5' : 'border-border'
+                    className={`relative border rounded-xl p-8 transition-all shadow-sm ${
+                      isCurrent ? 'border-primary ring-1 ring-primary/20 bg-primary/5' : 'border-border hover:border-primary/30'
                     }`}
                     data-testid={`card-plan-${plan.id}`}
                   >
                     {isCurrent && (
-                      <Badge variant="secondary" className="absolute -top-2 right-4 text-[10px] uppercase">
-                        {isCancelled ? "Cancelling" : "Active Plan"}
+                      <Badge variant="secondary" className="absolute -top-3 right-6 text-xs uppercase px-4 h-6">
+                        {isCancelled ? "Cancelling" : "Current Plan"}
                       </Badge>
                     )}
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-bold">{plan.name}</h3>
+                        <h3 className="text-lg font-bold">{plan.name}</h3>
                         <div className="text-right">
-                          <span className="text-xl font-bold">{plan.price}</span>
-                          <span className="text-muted-foreground text-xs">/mo</span>
+                          <span className="text-2xl font-bold">{plan.price}</span>
+                          <span className="text-muted-foreground text-sm font-medium">/mo</span>
                         </div>
                       </div>
-                      <ul className="space-y-2">
+                      <ul className="space-y-3">
                         {plan.features.map((feature, i) => (
-                          <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Check className="w-3.5 h-3.5 text-primary" />
+                          <li key={i} className="flex items-center gap-3 text-base text-muted-foreground">
+                            <Check className="w-5 h-5 text-primary flex-shrink-0" />
                             <span>{feature}</span>
                           </li>
                         ))}
@@ -278,7 +278,8 @@ export default function Account() {
                       
                       {plan.id === "plus" && !isCurrent && (
                         <Button 
-                          className="w-full" 
+                          size="lg"
+                          className="w-full h-12 text-base font-bold shadow-md" 
                           onClick={() => upgradeMutation.mutate()}
                           disabled={upgradeMutation.isPending}
                           data-testid="button-upgrade-plus"
@@ -290,20 +291,20 @@ export default function Account() {
                       {plan.id === "plus" && isCurrent && !isCancelled && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" className="w-full" data-testid="button-cancel-subscription">
+                            <Button variant="outline" size="lg" className="w-full h-11" data-testid="button-cancel-subscription">
                               Cancel Subscription
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Cancel Plus?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                You'll keep Plus benefits until the end of your billing cycle.
+                              <AlertDialogTitle className="text-xl font-bold">Cancel Subscription?</AlertDialogTitle>
+                              <AlertDialogDescription className="text-base">
+                                You'll retain Plus benefits until the end of your current billing cycle.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => cancelSubscriptionMutation.mutate()} className="bg-destructive text-destructive-foreground">
+                            <AlertDialogFooter className="gap-3 mt-4">
+                              <AlertDialogCancel className="h-11 px-6">Keep Subscription</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => cancelSubscriptionMutation.mutate()} className="bg-destructive text-destructive-foreground h-11 px-6">
                                 Confirm Cancellation
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -317,7 +318,7 @@ export default function Account() {
             </div>
           </section>
 
-          <section className="pt-6 border-t">
+          <section className="pt-10 border-t">
             {profileQuery.isLoading ? (
               <SkillsSkeleton />
             ) : (
@@ -330,27 +331,29 @@ export default function Account() {
             )}
           </section>
 
-          <section className="pt-10 border-t">
-            <div className="flex items-center justify-between gap-4 p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-destructive">Delete Account</p>
-                <p className="text-xs text-muted-foreground">Permanently remove all your data and subscription.</p>
+          <section className="pt-12 border-t">
+            <div className="flex items-center justify-between gap-8 p-8 rounded-xl border border-destructive/20 bg-destructive/5">
+              <div className="space-y-2">
+                <p className="text-lg font-bold text-destructive">Delete Account</p>
+                <p className="text-base text-muted-foreground">Permanently remove all your data, profile, and subscription.</p>
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" data-testid="button-delete-account">
+                  <Button variant="destructive" size="lg" className="px-8 h-12 font-bold" data-testid="button-delete-account">
                     Delete
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>This action is irreversible.</AlertDialogDescription>
+                    <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-base">
+                      This action is irreversible. All your matched jobs, AI profile, and subscription benefits will be lost forever.
+                    </AlertDialogDescription>
                   </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deleteAccountMutation.mutate()} className="bg-destructive text-destructive-foreground">
-                      Delete Account
+                  <AlertDialogFooter className="gap-3 mt-4">
+                    <AlertDialogCancel className="h-11 px-6">Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteAccountMutation.mutate()} className="bg-destructive text-destructive-foreground h-11 px-6 font-bold">
+                      Delete Forever
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -359,35 +362,37 @@ export default function Account() {
           </section>
         </div>
 
-        <aside className="space-y-8">
-          <div className="space-y-6">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              Usage Snapshot
+        <aside className="space-y-12">
+          <div className="space-y-8 sticky top-10">
+            <h3 className="text-base font-bold flex items-center gap-3 border-b pb-4">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Usage Tracker
             </h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="text-muted-foreground">Job Scrapes</span>
-                  <span>{usageData?.usage.jobsScrapedThisMonth || 0}/{usageData?.limits.maxJobsPerMonth || 5}</span>
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm font-bold">
+                  <span className="text-muted-foreground uppercase tracking-wider">Job Scrapes</span>
+                  <span className="text-primary">{usageData?.usage.jobsScrapedThisMonth || 0}/{usageData?.limits.maxJobsPerMonth || 5}</span>
                 </div>
-                <Progress value={jobsUsedPercent} className="h-1.5" />
+                <Progress value={jobsUsedPercent} className="h-2 bg-muted shadow-inner" />
               </div>
               
               {!isPlus && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-medium">
-                    <span className="text-muted-foreground">Skills</span>
-                    <span>{usageData?.usage.skillsCount || 0}/{usageData?.limits.maxSkills || 5}</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm font-bold">
+                    <span className="text-muted-foreground uppercase tracking-wider">Skills</span>
+                    <span className="text-primary">{usageData?.usage.skillsCount || 0}/{usageData?.limits.maxSkills || 5}</span>
                   </div>
-                  <Progress value={skillsUsedPercent} className="h-1.5" />
+                  <Progress value={skillsUsedPercent} className="h-2 bg-muted shadow-inner" />
                 </div>
               )}
 
               {usageData && (
-                <p className="text-[10px] text-muted-foreground text-center">
-                  Resets on {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                </p>
+                <div className="pt-4 text-center">
+                  <p className="text-xs text-muted-foreground font-medium bg-muted/30 py-2 px-4 rounded-full inline-block">
+                    Resets on {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                  </p>
+                </div>
               )}
             </div>
           </div>

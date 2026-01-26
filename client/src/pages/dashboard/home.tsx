@@ -85,58 +85,59 @@ export default function DashboardHome() {
   const hasSkills = profile.skills.length > 0;
 
   return (
-    <div className="p-6 space-y-8 max-w-5xl mx-auto">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-home-heading">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's a quick look at your freelance funnel.</p>
+    <div className="p-10 space-y-12 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-home-heading">Dashboard</h1>
+        <p className="text-muted-foreground text-lg">Welcome back! Here's a quick look at your freelance funnel.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
         {[
           { label: "Opportunities", value: jobs.length, icon: Briefcase },
           { label: "Est. Value", value: `$${totalValue.toLocaleString()}`, icon: DollarSign },
           { label: "Saved", value: savedJobs.length, icon: TrendingUp },
           { label: "Applied", value: appliedJobs.length, icon: Clock },
         ].map((stat) => (
-          <div key={stat.label} className="flex flex-col gap-1">
+          <div key={stat.label} className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <stat.icon className="w-4 h-4" />
-              <span className="text-xs font-medium uppercase tracking-wider">{stat.label}</span>
+              <stat.icon className="w-5 h-5" />
+              <span className="text-sm font-medium uppercase tracking-wider">{stat.label}</span>
             </div>
-            <p className="text-2xl font-bold" data-testid={`text-${stat.label.toLowerCase().replace(" ", "-")}`}>{stat.value}</p>
+            <p className="text-4xl font-bold" data-testid={`text-${stat.label.toLowerCase().replace(" ", "-")}`}>{stat.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="pt-6 border-t space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold">Ready to find work?</h2>
-            <p className="text-sm text-muted-foreground">Search social media for freelance opportunities matching your skills.</p>
+      <div className="pt-10 border-t space-y-8">
+        <div className="flex items-center justify-between gap-8 flex-wrap">
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Ready to find work?</h2>
+            <p className="text-base text-muted-foreground">Search social media for freelance opportunities matching your skills.</p>
           </div>
           <Button
             onClick={() => refreshJobsMutation.mutate()}
             disabled={refreshJobsMutation.isPending || !hasSkills}
-            className="gap-2"
+            size="lg"
+            className="gap-3 h-12 px-6"
             data-testid="button-run-finder"
           >
             {refreshJobsMutation.isPending ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
+              <RefreshCw className="w-5 h-5 animate-spin" />
             ) : (
-              <Search className="w-4 h-4" />
+              <Search className="w-5 h-5" />
             )}
             Find Opportunities
           </Button>
         </div>
 
         {!hasSkills && (
-          <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground border border-dashed">
+          <div className="p-6 bg-muted/50 rounded-xl text-base text-muted-foreground border border-dashed text-center">
             Add skills below to start finding opportunities.
           </div>
         )}
       </div>
 
-      <div className="pt-6 border-t">
+      <div className="pt-10 border-t">
         {profileQuery.isLoading ? (
           <SkillsSkeleton />
         ) : (

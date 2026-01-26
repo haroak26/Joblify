@@ -85,18 +85,18 @@ export default function Generator() {
   const jobs = jobsQuery.data?.jobs ?? [];
 
   return (
-    <div className="p-6 space-y-10 max-w-3xl mx-auto">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-generator-heading">Message Generator</h1>
-        <p className="text-muted-foreground">Personalized outreach and social media engagement.</p>
+    <div className="p-10 space-y-12 max-w-3xl mx-auto">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-generator-heading">Message Generator</h1>
+        <p className="text-lg text-muted-foreground">Personalized outreach and social media engagement.</p>
       </div>
 
-      <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold">Step 1: Select Job</p>
+      <div className="space-y-10">
+        <div className="grid gap-10 md:grid-cols-2">
+          <div className="space-y-3">
+            <p className="text-base font-semibold">Step 1: Select Job</p>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
-              <SelectTrigger className="w-full" data-testid="select-source-job">
+              <SelectTrigger className="w-full h-11 px-4" data-testid="select-source-job">
                 <SelectValue placeholder="Select a job..." />
               </SelectTrigger>
               <SelectContent>
@@ -110,11 +110,11 @@ export default function Generator() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-semibold">Step 2: Strategy</p>
-            <div className="flex gap-2">
+          <div className="space-y-3">
+            <p className="text-base font-semibold">Step 2: Strategy</p>
+            <div className="flex gap-4">
               <Select value={messageType} onValueChange={(v: MessageType) => setMessageType(v)}>
-                <SelectTrigger className="flex-1" data-testid="select-message-type">
+                <SelectTrigger className="flex-1 h-11 px-4" data-testid="select-message-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -124,7 +124,7 @@ export default function Generator() {
               </Select>
               {messageType === "initial" && (
                 <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
-                  <SelectTrigger className="flex-1" data-testid="select-tone">
+                  <SelectTrigger className="flex-1 h-11 px-4" data-testid="select-tone">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -138,14 +138,14 @@ export default function Generator() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-semibold">Step 3: Description</p>
+        <div className="space-y-3">
+          <p className="text-base font-semibold">Step 3: Description</p>
           <Textarea
             placeholder="Paste job details here..."
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
-            rows={5}
-            className="resize-none"
+            rows={8}
+            className="resize-none text-base p-4"
             data-testid="textarea-job-description"
             disabled={selectedJobId !== "custom"}
           />
@@ -154,40 +154,41 @@ export default function Generator() {
         <Button
           onClick={() => generateMutation.mutate()}
           disabled={generateMutation.isPending || !jobDescription.trim() || !hasProfile}
-          className="w-full h-11 text-base font-semibold"
+          size="lg"
+          className="w-full h-12 text-lg font-semibold shadow-md"
           data-testid="button-generate"
         >
           {generateMutation.isPending ? (
-            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            <RefreshCw className="w-5 h-5 mr-3 animate-spin" />
           ) : (
-            <Wand2 className="w-4 h-4 mr-2" />
+            <Wand2 className="w-5 h-5 mr-3" />
           )}
           Generate {messageType === "comment" ? "Comment" : "Message"}
         </Button>
 
         {!hasProfile && (
-          <p className="text-sm text-center text-muted-foreground">
+          <p className="text-base text-center text-muted-foreground mt-4">
             Complete your profile to enable AI generation.
           </p>
         )}
       </div>
 
       {generatedMessage && (
-        <div className="pt-10 border-t space-y-4">
+        <div className="pt-12 border-t space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Generated Message</h2>
+            <h2 className="text-xl font-semibold">Generated Message</h2>
             <Button
               variant="outline"
-              size="sm"
+              size="lg"
               onClick={handleCopy}
-              className="gap-2"
+              className="gap-3 h-10 px-5"
               data-testid="button-copy"
             >
-              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              {copied ? "Copied" : "Copy"}
+              {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+              {copied ? "Copied" : "Copy Message"}
             </Button>
           </div>
-          <div className="p-5 bg-muted/30 border rounded-lg whitespace-pre-wrap text-base leading-relaxed" data-testid="text-generated-message">
+          <div className="p-8 bg-muted/30 border rounded-xl whitespace-pre-wrap text-lg leading-relaxed shadow-inner" data-testid="text-generated-message">
             {generatedMessage}
           </div>
         </div>

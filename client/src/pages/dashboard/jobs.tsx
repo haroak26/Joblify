@@ -98,49 +98,49 @@ export default function MyJobs() {
   const hasJobs = jobs.length > 0;
 
   return (
-    <div className="p-6 space-y-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-jobs-heading">
+    <div className="p-10 space-y-12 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between gap-8 flex-wrap">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-jobs-heading">
             My Jobs
             {hasJobs && (
-              <span className="ml-3 text-muted-foreground font-normal text-lg">
+              <span className="ml-4 text-muted-foreground font-normal text-xl">
                 ({jobs.length})
               </span>
             )}
           </h1>
-          <p className="text-muted-foreground">Find and track opportunities that match your skills.</p>
+          <p className="text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <Button
             variant="outline"
             onClick={() => refreshJobsMutation.mutate()}
             disabled={refreshJobsMutation.isPending || !hasSkills}
-            className="gap-2"
+            className="gap-3 h-11 px-5"
             data-testid="button-refresh-jobs"
           >
-            <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-5 h-5 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
             Refresh List
           </Button>
           {hasJobs && (
-            <div className="flex items-center gap-1 border rounded-md p-0.5">
+            <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20">
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={() => setViewMode("list")}
                 data-testid="button-view-list"
               >
-                <List className="w-4 h-4" />
+                <List className="w-5 h-5" />
               </Button>
               <Button
                 variant={viewMode === "grid" ? "secondary" : "ghost"}
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={() => setViewMode("grid")}
                 data-testid="button-view-grid"
               >
-                <LayoutGrid className="w-4 h-4" />
+                <LayoutGrid className="w-5 h-5" />
               </Button>
             </div>
           )}
@@ -157,8 +157,8 @@ export default function MyJobs() {
           onAction={() => refreshJobsMutation.mutate()}
         />
       ) : (
-        <div className="space-y-8">
-          <div className="border-b pb-6">
+        <div className="space-y-10">
+          <div className="border-b pb-8">
             <JobFilters
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -176,8 +176,8 @@ export default function MyJobs() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid sm:grid-cols-2 gap-6"
-                  : "space-y-6"
+                  ? "grid sm:grid-cols-2 gap-8"
+                  : "space-y-8"
               }
               data-testid="job-list"
             >
