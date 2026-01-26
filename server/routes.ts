@@ -6,10 +6,27 @@ import { skillSchema, PLAN_LIMITS, type PlanType } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.POE_API_KEY,
-  baseURL: process.env.POE_API_BASE_URL ?? "https://api.poe.com/v1",
-});
+let poeClient: OpenAI | null = null;
+
+function getPoeClient(): OpenAI {
+  if (poeClient) {
+    return poeClient;
+  }
+
+  const apiKey = process.env.POE_API_KEY ?? process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "Missing Poe API credentials. Set POE_API_KEY (preferred) or OPENAI_API_KEY."
+    );
+  }
+
+  poeClient = new OpenAI({
+    apiKey,
+    baseURL: process.env.POE_API_BASE_URL ?? "https://api.poe.com/v1",
+  });
+
+  return poeClient;
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -135,7 +152,7 @@ export async function registerRoutes(
       
       const { intro } = schema.parse(req.body);
       
-      const response = await openai.chat.completions.create({
+      const response = await getPoeClient().chat.completions.create({
         model: "gpt-5-nano",
         messages: [
           {
