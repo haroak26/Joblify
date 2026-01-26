@@ -98,18 +98,18 @@ export default function MyJobs() {
   const hasJobs = jobs.length > 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="p-6 space-y-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold mb-1" data-testid="text-jobs-heading">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-jobs-heading">
             My Jobs
             {hasJobs && (
-              <Badge variant="secondary" className="ml-3 text-sm">
-                {jobs.length}
-              </Badge>
+              <span className="ml-3 text-muted-foreground font-normal text-lg">
+                ({jobs.length})
+              </span>
             )}
           </h1>
-          <p className="text-muted-foreground">Browse and manage your job opportunities</p>
+          <p className="text-muted-foreground">Find and track opportunities that match your skills.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -120,10 +120,10 @@ export default function MyJobs() {
             data-testid="button-refresh-jobs"
           >
             <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
-            Refresh
+            Refresh List
           </Button>
           {hasJobs && (
-            <div className="flex items-center gap-1 border rounded-lg p-1">
+            <div className="flex items-center gap-1 border rounded-md p-0.5">
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="icon"
@@ -157,16 +157,18 @@ export default function MyJobs() {
           onAction={() => refreshJobsMutation.mutate()}
         />
       ) : (
-        <>
-          <JobFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            sourceFilter={sourceFilter}
-            onSourceChange={setSourceFilter}
-            statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
-            jobCount={filteredJobs.length}
-          />
+        <div className="space-y-8">
+          <div className="border-b pb-6">
+            <JobFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              sourceFilter={sourceFilter}
+              onSourceChange={setSourceFilter}
+              statusFilter={statusFilter}
+              onStatusChange={setStatusFilter}
+              jobCount={filteredJobs.length}
+            />
+          </div>
 
           {filteredJobs.length === 0 ? (
             <EmptyState type="no-results" />
@@ -174,8 +176,8 @@ export default function MyJobs() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid sm:grid-cols-2 gap-5"
-                  : "space-y-5"
+                  ? "grid sm:grid-cols-2 gap-6"
+                  : "space-y-6"
               }
               data-testid="job-list"
             >
@@ -189,10 +191,8 @@ export default function MyJobs() {
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
-
-      {/* MessageGenerator is no longer used here as it's replaced by the Generator page */}
     </div>
   );
 }

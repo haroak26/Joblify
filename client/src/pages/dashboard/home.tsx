@@ -85,76 +85,38 @@ export default function DashboardHome() {
   const hasSkills = profile.skills.length > 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold mb-1" data-testid="text-home-heading">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your freelance opportunities</p>
+    <div className="p-6 space-y-8 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-home-heading">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome back! Here's a quick look at your freelance funnel.</p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Briefcase className="w-4 h-4" />
-              Total Opportunities
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold" data-testid="text-total-jobs">{jobs.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              Estimated Value
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold" data-testid="text-total-value">
-              ${totalValue.toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              Saved Jobs
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold" data-testid="text-saved-jobs">{savedJobs.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Applied
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold" data-testid="text-applied-jobs">{appliedJobs.length}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Opportunities", value: jobs.length, icon: Briefcase },
+          { label: "Est. Value", value: `$${totalValue.toLocaleString()}`, icon: DollarSign },
+          { label: "Saved", value: savedJobs.length, icon: TrendingUp },
+          { label: "Applied", value: appliedJobs.length, icon: Clock },
+        ].map((stat) => (
+          <div key={stat.label} className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <stat.icon className="w-4 h-4" />
+              <span className="text-xs font-medium uppercase tracking-wider">{stat.label}</span>
+            </div>
+            <p className="text-2xl font-bold" data-testid={`text-${stat.label.toLowerCase().replace(" ", "-")}`}>{stat.value}</p>
+          </div>
+        ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="w-5 h-5 text-primary" />
-            Job Finder
-          </CardTitle>
-          <CardDescription>
-            Search social media platforms for freelance opportunities matching your skills
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="pt-6 border-t space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Ready to find work?</h2>
+            <p className="text-sm text-muted-foreground">Search social media for freelance opportunities matching your skills.</p>
+          </div>
           <Button
             onClick={() => refreshJobsMutation.mutate()}
             disabled={refreshJobsMutation.isPending || !hasSkills}
-            size="lg"
             className="gap-2"
             data-testid="button-run-finder"
           >
@@ -163,26 +125,29 @@ export default function DashboardHome() {
             ) : (
               <Search className="w-4 h-4" />
             )}
-            {refreshJobsMutation.isPending ? "Searching..." : "Find Opportunities"}
+            Find Opportunities
           </Button>
-          {!hasSkills && (
-            <p className="text-sm text-muted-foreground mt-3">
-              Add skills below to start finding opportunities
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {profileQuery.isLoading ? (
-        <SkillsSkeleton />
-      ) : (
-        <ProfileSetup
-          intro={profile.intro}
-          skills={profile.skills}
-          onIntroChange={handleIntroChange}
-          onSkillsChange={handleSkillsChange}
-        />
-      )}
+        {!hasSkills && (
+          <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground border border-dashed">
+            Add skills below to start finding opportunities.
+          </div>
+        )}
+      </div>
+
+      <div className="pt-6 border-t">
+        {profileQuery.isLoading ? (
+          <SkillsSkeleton />
+        ) : (
+          <ProfileSetup
+            intro={profile.intro}
+            skills={profile.skills}
+            onIntroChange={handleIntroChange}
+            onSkillsChange={handleSkillsChange}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -85,28 +85,18 @@ export default function Generator() {
   const jobs = jobsQuery.data?.jobs ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold mb-1" data-testid="text-generator-heading">Message Generator</h1>
-        <p className="text-muted-foreground">
-          {messageType === "comment" 
-            ? "Create short, human-like comments for social media posts"
-            : "Create personalized outreach messages for any opportunity"}
-        </p>
+    <div className="p-6 space-y-10 max-w-3xl mx-auto">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-generator-heading">Message Generator</h1>
+        <p className="text-muted-foreground">Personalized outreach and social media engagement.</p>
       </div>
 
-      <Card className="border-sidebar-border/50 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Job Details</CardTitle>
-          <CardDescription>
-            Select a scraped job or paste details manually
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
-            <span className="text-sm font-medium">Source Job</span>
+            <p className="text-sm font-semibold">Step 1: Select Job</p>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
-              <SelectTrigger className="w-full bg-muted/30" data-testid="select-source-job">
+              <SelectTrigger className="w-full" data-testid="select-source-job">
                 <SelectValue placeholder="Select a job..." />
               </SelectTrigger>
               <SelectContent>
@@ -121,37 +111,20 @@ export default function Generator() {
           </div>
 
           <div className="space-y-2">
-            <span className="text-sm font-medium">Description</span>
-            <Textarea
-              placeholder="Paste the job posting or describe the opportunity here..."
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              rows={6}
-              className="resize-none bg-muted/30 focus-visible:ring-1"
-              data-testid="textarea-job-description"
-              disabled={selectedJobId !== "custom"}
-            />
-          </div>
-
-          <div className="flex items-center gap-6 pt-2">
-            <div className="flex flex-col gap-1.5 flex-1">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Message Type</span>
+            <p className="text-sm font-semibold">Step 2: Strategy</p>
+            <div className="flex gap-2">
               <Select value={messageType} onValueChange={(v: MessageType) => setMessageType(v)}>
-                <SelectTrigger className="w-full bg-muted/30" data-testid="select-message-type">
+                <SelectTrigger className="flex-1" data-testid="select-message-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="comment">Social Media Comment</SelectItem>
+                  <SelectItem value="comment">Short Comment</SelectItem>
                   <SelectItem value="initial">Outreach Message</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            
-            {messageType === "initial" && (
-              <div className="flex flex-col gap-1.5 flex-1">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tone</span>
+              {messageType === "initial" && (
                 <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
-                  <SelectTrigger className="w-full bg-muted/30" data-testid="select-tone">
+                  <SelectTrigger className="flex-1" data-testid="select-tone">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -160,61 +133,64 @@ export default function Generator() {
                     <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4">
-            <Button
-              onClick={() => generateMutation.mutate()}
-              disabled={generateMutation.isPending || !jobDescription.trim() || !hasProfile}
-              className="w-full gap-2 h-11 text-base font-medium shadow-sm transition-all hover:translate-y-[-1px] active:translate-y-[0px]"
-              data-testid="button-generate"
-            >
-              {generateMutation.isPending ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Wand2 className="w-4 h-4" />
               )}
-              Generate {messageType === "comment" ? "Comment" : "Message"}
-            </Button>
+            </div>
           </div>
+        </div>
 
-          {!hasProfile && (
-            <p className="text-sm text-center text-muted-foreground/80 mt-2">
-              Add your profile details in the Profile section first
-            </p>
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">Step 3: Description</p>
+          <Textarea
+            placeholder="Paste job details here..."
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            rows={5}
+            className="resize-none"
+            data-testid="textarea-job-description"
+            disabled={selectedJobId !== "custom"}
+          />
+        </div>
+
+        <Button
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending || !jobDescription.trim() || !hasProfile}
+          className="w-full h-11 text-base font-semibold"
+          data-testid="button-generate"
+        >
+          {generateMutation.isPending ? (
+            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Wand2 className="w-4 h-4 mr-2" />
           )}
-        </CardContent>
-      </Card>
+          Generate {messageType === "comment" ? "Comment" : "Message"}
+        </Button>
+
+        {!hasProfile && (
+          <p className="text-sm text-center text-muted-foreground">
+            Complete your profile to enable AI generation.
+          </p>
+        )}
+      </div>
 
       {generatedMessage && (
-        <Card className="border-sidebar-border/50 shadow-md">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-4">
-              <CardTitle className="text-lg">Generated Output</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-                className="gap-2 h-8"
-                data-testid="button-copy"
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-500" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-                {copied ? "Copied" : "Copy"}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="p-5 bg-muted/40 border rounded-lg whitespace-pre-wrap text-[15px] leading-relaxed" data-testid="text-generated-message">
-              {generatedMessage}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="pt-10 border-t space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Generated Message</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopy}
+              className="gap-2"
+              data-testid="button-copy"
+            >
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+          <div className="p-5 bg-muted/30 border rounded-lg whitespace-pre-wrap text-base leading-relaxed" data-testid="text-generated-message">
+            {generatedMessage}
+          </div>
+        </div>
       )}
     </div>
   );
