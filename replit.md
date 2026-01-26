@@ -89,14 +89,14 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 11. **Stripe Payments** - Secure subscription billing via Stripe
 12. **Account Management** - View usage, upgrade/cancel subscription, delete account
 
-## OpenAI Integration
-Uses Replit AI Integrations with gpt-4o-mini model for:
+## AI Integration (Poe)
+Uses Poe's OpenAI-compatible API with the gpt-5-nano model for:
 - Suggesting skills from user's introduction
 - Generating personalized follow-up messages
 
-Environment variables (auto-managed by Replit):
-- `AI_INTEGRATIONS_OPENAI_API_KEY`
-- `AI_INTEGRATIONS_OPENAI_BASE_URL`
+Environment variables (stored in Replit secrets):
+- `POE_API_KEY`
+- `POE_API_BASE_URL` (optional, defaults to `https://api.poe.com/v1`)
 
 ## Running the Project
 ```bash
@@ -106,8 +106,8 @@ The app serves on port 5000.
 
 ## Environment Variables
 - `BREVO_API_KEY` - Required for sending verification and welcome emails via Brevo
-- `AI_INTEGRATIONS_OPENAI_API_KEY` - Auto-managed by Replit
-- `AI_INTEGRATIONS_OPENAI_BASE_URL` - Auto-managed by Replit
+- `POE_API_KEY` - Poe API key (stored in Replit secrets)
+- `POE_API_BASE_URL` - Optional override for Poe API base URL
 - `DATABASE_URL` - PostgreSQL connection string (auto-managed by Replit)
 - `STRIPE_PLUS_PRICE_ID` - Stripe price ID for Plus subscription
 - `APIFY_TOKEN` - Apify API token for job scraping (optional)

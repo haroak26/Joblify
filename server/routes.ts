@@ -7,8 +7,8 @@ import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.POE_API_KEY,
+  baseURL: process.env.POE_API_BASE_URL ?? "https://api.poe.com/v1",
 });
 
 export async function registerRoutes(
@@ -136,7 +136,7 @@ export async function registerRoutes(
       const { intro } = schema.parse(req.body);
       
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-nano",
         messages: [
           {
             role: "system",
@@ -147,7 +147,6 @@ export async function registerRoutes(
             content: intro
           }
         ],
-        response_format: { type: "json_object" },
         max_tokens: 200,
       });
       
@@ -275,7 +274,7 @@ ${userIntro ? `About Me: ${userIntro}` : ""}
 Write a ${tone} outreach message for this job opportunity.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-5-nano",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
