@@ -117,138 +117,128 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
   );
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-4 pb-6 border-b">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-12">
+      <section className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <User className="w-5 h-5 text-primary" />
-              Your Introduction
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Share what you do, the industries you know, and the outcomes you deliver. This powers better job matches and sharper outreach.
+            <h2 className="text-xl font-bold tracking-tight">Personal Introduction</h2>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Describe your expertise and what makes you unique. This helps our AI personalize your outreach messages for every job.
             </p>
           </div>
-          <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-            Step 1
+          <Badge variant="outline" className="rounded-full px-4 py-1 font-bold bg-sidebar-accent/50">
+            Phase 1
           </Badge>
         </div>
-        <div className="space-y-4">
+        <div className="relative">
           <Textarea
-            placeholder="Example: I'm a frontend developer with 5 years of experience building SaaS products. I specialize in React and TypeScript and help startups ship faster. I'm looking for product-led teams that need clean UI and fast iterations."
+            placeholder="Example: I'm a senior frontend engineer with a focus on high-performance React applications and motion design. I've spent the last 4 years helping early-stage SaaS companies build their core products from scratch..."
             value={localIntro}
             onChange={(e) => setLocalIntro(e.target.value)}
             onBlur={handleBlur}
-            rows={5}
-            className="resize-none text-base"
+            rows={6}
+            className="resize-none text-base bg-muted/30 border-sidebar-border/50 rounded-2xl p-6 focus-visible:ring-1 transition-all"
             data-testid="textarea-intro"
           />
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>{localIntro.length} characters</span>
-              <span className="hidden sm:inline">Aim for 2-4 sentences.</span>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-[13px] text-muted-foreground font-medium">
+              <span className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full ${localIntro.length > 50 ? 'bg-green-500' : 'bg-orange-500'}`} />
+                {localIntro.length} characters
+              </span>
+              <span className="hidden sm:inline opacity-60">Write 2-3 detailed sentences for best results</span>
             </div>
             <Button
               onClick={handleSuggestSkills}
               disabled={suggestMutation.isPending || localIntro.length < 10}
-              variant="secondary"
-              size="lg"
-              className="gap-2"
+              variant="outline"
+              className="gap-2 rounded-full h-11 px-6 font-bold hover:bg-foreground hover:text-background transition-colors"
               data-testid="button-suggest-skills"
             >
               {suggestMutation.isPending ? (
                 <RefreshCw className="w-4 h-4 animate-spin" />
               ) : (
-                <Wand2 className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
               )}
-              Suggest skills
+              AI Analysis
             </Button>
           </div>
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <section className="space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <Sparkles className="w-5 h-5 text-primary" />
-              Your Skills
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Add the exact skills you want to be hired for. Joblify matches jobs to these signals first.
+            <h2 className="text-xl font-bold tracking-tight">Core Competencies</h2>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Your skills are used to match you with the right opportunities. Add both hard and soft skills.
             </p>
           </div>
-          <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-            Step 2
+          <Badge variant="outline" className="rounded-full px-4 py-1 font-bold bg-sidebar-accent/50">
+            Phase 2
           </Badge>
         </div>
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-3">
             <Input
-              placeholder="Add a skill (e.g., React, UI Design)"
+              placeholder="e.g. Next.js, Product Management, Figma"
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="h-11 min-w-[220px] flex-1"
+              className="h-12 text-base px-5 bg-muted/30 border-sidebar-border/50 rounded-2xl flex-1 min-w-[300px]"
               data-testid="input-add-skill"
             />
             <Button
               onClick={() => addSkill(newSkill)}
               disabled={!newSkill.trim()}
               size="lg"
-              className="h-11"
+              className="h-12 px-8 rounded-2xl font-bold"
               data-testid="button-add-skill"
             >
-              <Plus className="w-4 h-4" />
-              Add skill
+              Add Skill
             </Button>
           </div>
 
-          {localSkills.length > 0 && (
-            <div className="flex flex-wrap gap-2" data-testid="skills-list">
-              {localSkills.map((skill) => (
-                <Badge
+          <div className="min-h-[120px] p-8 rounded-3xl border border-dashed border-sidebar-border/50 bg-sidebar-accent/5 flex flex-wrap gap-3 content-start">
+            {localSkills.length > 0 ? (
+              localSkills.map((skill) => (
+                <div
                   key={skill.id}
-                  variant="secondary"
-                  className="gap-1.5 pr-1.5 py-1.5 text-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-background border border-sidebar-border/50 rounded-full text-sm font-semibold shadow-sm group hover:border-primary/50 transition-colors"
                   data-testid={`skill-badge-${skill.id}`}
                 >
                   {skill.name}
                   <button
                     onClick={() => removeSkill(skill.id)}
-                    className="ml-1 p-0.5 rounded hover-elevate"
+                    className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     data-testid={`button-remove-skill-${skill.id}`}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {localSkills.length === 0 && (
-            <div className="py-4 text-center border border-dashed rounded-lg" data-testid="text-no-skills">
-              <Sparkles className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground px-2">
-                No skills yet. Add 3-6 of your strongest ones to unlock better matches.
-              </p>
-            </div>
-          )}
+                </div>
+              ))
+            ) : (
+              <div className="w-full flex flex-col items-center justify-center py-6 text-muted-foreground/40" data-testid="text-no-skills">
+                <Sparkles className="w-10 h-10 mb-3" />
+                <p className="text-sm font-medium">Add your first skill to begin matching</p>
+              </div>
+            )}
+          </div>
 
           {availableSuggestions.length > 0 && (
-            <div className="pt-4 border-t">
-              <p className="text-sm text-muted-foreground mb-3">Popular skills:</p>
+            <div className="pt-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-4">Trending Skills</p>
               <div className="flex flex-wrap gap-2">
-                {availableSuggestions.slice(0, 8).map((skill) => (
+                {availableSuggestions.slice(0, 10).map((skill) => (
                   <Button
                     key={skill}
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
                     onClick={() => addSkill(skill)}
-                    className="text-sm"
+                    className="rounded-full px-4 h-8 bg-muted/40 hover:bg-muted font-medium text-xs transition-colors"
                     data-testid={`button-suggest-${skill.toLowerCase().replace(/\s+/g, '-')}`}
                   >
-                    <Plus className="w-3 h-3 mr-1" />
+                    <Plus className="w-3 h-3 mr-1.5 opacity-50" />
                     {skill}
                   </Button>
                 ))}

@@ -114,37 +114,53 @@ export function AppSidebar() {
 
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
+      <SidebarFooter className="p-4 mt-auto">
         {!isLoading && user && (
-          <div className="space-y-3">
-            <SidebarSeparator className="bg-sidebar-border/60" />
-            <SidebarMenu>
+          <div className="space-y-4">
+            <SidebarMenu className="gap-1">
               <SidebarMenuItem>
                 <SidebarMenuButton 
-                  onClick={() => logout()}
-                  className="h-10 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-all duration-200"
-                  data-testid="button-logout"
+                  asChild 
+                  isActive={isActive("/dashboard/account")}
+                  className={`h-11 px-4 rounded-xl transition-all duration-200 ${
+                    isActive("/dashboard/account") 
+                      ? 'bg-foreground text-background shadow-lg' 
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                  }`}
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span className="text-[14px]">Log out</span>
+                  <Link href="/dashboard/account" data-testid="link-nav-account">
+                    <User className="w-4 h-4" />
+                    <span className="text-[14px] font-semibold">Account</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
 
-            <Link href="/dashboard/account">
-              <div className="flex items-center gap-3 px-3 py-2 border border-sidebar-border rounded-xl bg-sidebar-accent/20 transition-colors hover:bg-sidebar-accent/40">
-                <Avatar className="h-9 w-9 ring-1 ring-sidebar-border">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 bg-sidebar-accent/30 rounded-2xl border border-sidebar-border/50 group">
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm transition-transform group-hover:scale-105">
                   <AvatarImage src={`https://avatar.vercel.sh/${user.username}`} />
-                  <AvatarFallback className="bg-sidebar-accent text-[10px] font-medium">
+                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
                     {getInitials(user.username)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-sm font-medium truncate text-sidebar-foreground" data-testid="text-username">{user.username}</span>
-                  <span className="text-[11px] text-sidebar-foreground/60">Plan: {planLabel}</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-bold truncate text-sidebar-foreground" data-testid="text-username">{user.username}</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter opacity-70">{planLabel}</span>
+                  </div>
                 </div>
               </div>
-            </Link>
+              <button
+                onClick={() => logout()}
+                className="p-2 rounded-lg text-muted-foreground hover:bg-background hover:text-red-500 transition-all active:scale-95"
+                title="Log out"
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </SidebarFooter>
