@@ -43,11 +43,29 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
   const SourceIcon = sourceIcons[job.source];
 
   const handleGenerateClick = () => {
-    setLocation(`/dashboard/generator?jobId=${job.id}`);
+    onGenerateMessage(job);
+  };
+
+  const handleOpenDetails = () => {
+    setLocation(`/dashboard/jobs/${job.id}`);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleOpenDetails();
+    }
   };
 
   return (
-    <Card className="hover-elevate overflow-visible border-sidebar-border/50 shadow-sm" data-testid={`job-card-${job.id}`}>
+    <Card
+      className="hover-elevate overflow-visible border-sidebar-border/50 shadow-sm cursor-pointer transition-transform"
+      data-testid={`job-card-${job.id}`}
+      onClick={handleOpenDetails}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -69,7 +87,10 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onSave(job.id)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSave(job.id);
+            }}
             className="flex-shrink-0 h-9 w-9 rounded-full hover:bg-sidebar-accent"
             data-testid={`button-save-job-${job.id}`}
           >
@@ -112,13 +133,21 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
           variant="default"
           size="sm"
           className="gap-2 h-9 px-4 font-medium"
-          onClick={handleGenerateClick}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleGenerateClick();
+          }}
           data-testid={`button-generate-message-${job.id}`}
         >
           <Wand2 className="w-3.5 h-3.5" />
           Generate Message
         </Button>
-        <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+        <a
+          href={job.sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(event) => event.stopPropagation()}
+        >
           <Button variant="outline" size="sm" className="gap-2 h-9 px-4 font-medium" data-testid={`button-view-post-${job.id}`}>
             <ExternalLink className="w-3.5 h-3.5" />
             View Post

@@ -15,6 +15,7 @@ import Register from "@/pages/register";
 import VerifyEmail from "@/pages/verify-email";
 import DashboardHome from "@/pages/dashboard/home";
 import MyJobs from "@/pages/dashboard/jobs";
+import JobDetails from "@/pages/dashboard/job-details";
 import Generator from "@/pages/dashboard/generator";
 import Schedules from "@/pages/dashboard/schedules";
 import Account from "@/pages/dashboard/account";
@@ -30,6 +31,13 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <DashboardHome />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/jobs/:id">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <JobDetails />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
