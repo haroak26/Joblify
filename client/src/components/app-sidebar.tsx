@@ -4,7 +4,6 @@ import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
-  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
@@ -16,7 +15,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
 
 interface SubscriptionResponse {
   subscription: { plan: string };
@@ -114,22 +112,6 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup className="mt-6">
-          <SidebarGroupLabel className="text-[11px] uppercase tracking-[0.2em] text-sidebar-foreground/50">
-            Plan
-          </SidebarGroupLabel>
-          <SidebarGroupContent className="px-2">
-            <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/30 px-3 py-3">
-              <p className="text-xs text-sidebar-foreground/60">Current tier</p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-sidebar-foreground">{planLabel}</span>
-                <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                  Active
-                </Badge>
-              </div>
-            </div>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-3">
@@ -149,18 +131,20 @@ export function AppSidebar() {
               </SidebarMenuItem>
             </SidebarMenu>
 
-            <div className="flex items-center gap-3 px-3 py-2 border border-sidebar-border rounded-xl bg-sidebar-accent/20">
-              <Avatar className="h-9 w-9 ring-1 ring-sidebar-border">
-                <AvatarImage src={`https://avatar.vercel.sh/${user.username}`} />
-                <AvatarFallback className="bg-sidebar-accent text-[10px] font-medium">
-                  {getInitials(user.username)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-sm font-medium truncate text-sidebar-foreground" data-testid="text-username">{user.username}</span>
-                <span className="text-[11px] text-sidebar-foreground/60">Plan: {planLabel}</span>
+            <Link href="/dashboard/account">
+              <div className="flex items-center gap-3 px-3 py-2 border border-sidebar-border rounded-xl bg-sidebar-accent/20 transition-colors hover:bg-sidebar-accent/40">
+                <Avatar className="h-9 w-9 ring-1 ring-sidebar-border">
+                  <AvatarImage src={`https://avatar.vercel.sh/${user.username}`} />
+                  <AvatarFallback className="bg-sidebar-accent text-[10px] font-medium">
+                    {getInitials(user.username)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-sm font-medium truncate text-sidebar-foreground" data-testid="text-username">{user.username}</span>
+                  <span className="text-[11px] text-sidebar-foreground/60">Plan: {planLabel}</span>
+                </div>
               </div>
-            </div>
+            </Link>
           </div>
         )}
       </SidebarFooter>

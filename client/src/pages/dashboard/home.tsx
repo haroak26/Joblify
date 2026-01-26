@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
@@ -25,6 +24,21 @@ export default function DashboardHome() {
     mutationFn: async (profile: Partial<FreelancerProfile>) => {
       const response = await apiRequest("POST", "/api/profile", profile);
       return response.json();
+    },
+    onMutate: async (nextProfile) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/profile"] });
+      const previousProfile = queryClient.getQueryData<FreelancerProfile>(["/api/profile"]);
+      const optimisticProfile: FreelancerProfile = {
+        intro: nextProfile.intro ?? previousProfile?.intro ?? "",
+        skills: nextProfile.skills ?? previousProfile?.skills ?? [],
+      };
+      queryClient.setQueryData(["/api/profile"], optimisticProfile);
+      return { previousProfile };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousProfile) {
+        queryClient.setQueryData(["/api/profile"], context.previousProfile);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profile"] });

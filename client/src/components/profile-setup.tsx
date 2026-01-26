@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Plus, Sparkles, Wand2, RefreshCw, User } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -119,24 +118,22 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-primary" />
-                Your Introduction
-              </CardTitle>
-              <CardDescription>
-                Share what you do, the industries you know, and the outcomes you deliver. This powers better job matches and sharper outreach.
-              </CardDescription>
-            </div>
-            <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-              Step 1
-            </Badge>
+      <section className="space-y-4 pb-6 border-b">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <User className="w-5 h-5 text-primary" />
+              Your Introduction
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Share what you do, the industries you know, and the outcomes you deliver. This powers better job matches and sharper outreach.
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
+            Step 1
+          </Badge>
+        </div>
+        <div className="space-y-4">
           <Textarea
             placeholder="Example: I'm a frontend developer with 5 years of experience building SaaS products. I specialize in React and TypeScript and help startups ship faster. I'm looking for product-led teams that need clean UI and fast iterations."
             value={localIntro}
@@ -167,27 +164,25 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
               Suggest skills
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                Your Skills
-              </CardTitle>
-              <CardDescription>
-                Add the exact skills you want to be hired for. Joblify matches jobs to these signals first.
-              </CardDescription>
-            </div>
-            <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-              Step 2
-            </Badge>
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Your Skills
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Add the exact skills you want to be hired for. Joblify matches jobs to these signals first.
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
+            Step 2
+          </Badge>
+        </div>
+        <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <Input
               placeholder="Add a skill (e.g., React, UI Design)"
@@ -260,8 +255,8 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }
