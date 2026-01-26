@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Crown, Trash2, Loader2 } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Crown, Trash2, Loader2, Briefcase } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
