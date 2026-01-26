@@ -21,15 +21,15 @@
   --card-foreground: 220 13% 13%;
   --card-border: 220 13% 91%;
 
-  --sidebar: 220 14% 96%;
-  --sidebar-foreground: 220 13% 13%;
-  --sidebar-border: 220 13% 91%;
+  --sidebar: 220 15% 6%;
+  --sidebar-foreground: 210 20% 98%;
+  --sidebar-border: 220 13% 18%;
 
   --sidebar-primary: 142 70% 45%;
   --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 142 40% 95%;
-  --sidebar-accent-foreground: 142 70% 30%;
+  --sidebar-accent: 142 50% 15%;
+  --sidebar-accent-foreground: 142 60% 70%;
 
   --sidebar-ring: 142 70% 45%;
 

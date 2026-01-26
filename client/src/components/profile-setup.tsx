@@ -120,18 +120,25 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5 text-primary" />
-            Your Introduction
-          </CardTitle>
-          <CardDescription>
-            Tell us about yourself, your experience, and what you're looking for. This helps generate better job matches and personalized messages.
-          </CardDescription>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5 text-primary" />
+                Your Introduction
+              </CardTitle>
+              <CardDescription>
+                Share what you do, the industries you know, and the outcomes you deliver. This powers better job matches and sharper outreach.
+              </CardDescription>
+            </div>
+            <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
+              Step 1
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
-            placeholder="Example: I'm a frontend developer with 5 years of experience building web applications. I specialize in React and TypeScript, and I've worked with startups and enterprise clients. I'm looking for interesting projects where I can make a real impact..."
+            placeholder="Example: I'm a frontend developer with 5 years of experience building SaaS products. I specialize in React and TypeScript and help startups ship faster. I'm looking for product-led teams that need clean UI and fast iterations."
             value={localIntro}
             onChange={(e) => setLocalIntro(e.target.value)}
             onBlur={handleBlur}
@@ -139,14 +146,16 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
             className="resize-none text-base"
             data-testid="textarea-intro"
           />
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <p className="text-sm text-muted-foreground">
-              {localIntro.length} characters
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span>{localIntro.length} characters</span>
+              <span className="hidden sm:inline">Aim for 2-4 sentences.</span>
+            </div>
             <Button
               onClick={handleSuggestSkills}
               disabled={suggestMutation.isPending || localIntro.length < 10}
               variant="secondary"
+              size="lg"
               className="gap-2"
               data-testid="button-suggest-skills"
             >
@@ -155,38 +164,48 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
               ) : (
                 <Wand2 className="w-4 h-4" />
               )}
-              Suggest Skills with AI
+              Suggest skills
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Your Skills
-          </CardTitle>
-          <CardDescription>
-            Add your skills to find matching freelance opportunities. The more skills you add, the more jobs you'll see.
-          </CardDescription>
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Your Skills
+              </CardTitle>
+              <CardDescription>
+                Add the exact skills you want to be hired for. Joblify matches jobs to these signals first.
+              </CardDescription>
+            </div>
+            <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
+              Step 2
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Input
               placeholder="Add a skill (e.g., React, UI Design)"
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
               onKeyDown={handleKeyDown}
+              className="h-11 min-w-[220px] flex-1"
               data-testid="input-add-skill"
             />
             <Button
               onClick={() => addSkill(newSkill)}
               disabled={!newSkill.trim()}
               size="lg"
+              className="h-11"
               data-testid="button-add-skill"
             >
               <Plus className="w-4 h-4" />
+              Add skill
             </Button>
           </div>
 
@@ -216,7 +235,7 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
             <div className="py-4 text-center border border-dashed rounded-lg" data-testid="text-no-skills">
               <Sparkles className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/50" />
               <p className="text-xs text-muted-foreground px-2">
-                No skills added yet. Add skills above or use AI.
+                No skills yet. Add 3-6 of your strongest ones to unlock better matches.
               </p>
             </div>
           )}

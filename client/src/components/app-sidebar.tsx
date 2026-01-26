@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Briefcase, Wand2, Calendar, LogOut, User, Sparkles, Moon, Sun } from "lucide-react";
+import { Home, Briefcase, Wand2, Calendar, LogOut, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { useTheme } from "@/components/theme-provider";
 
 interface SubscriptionResponse {
   subscription: { plan: string };
@@ -50,7 +49,6 @@ const mainMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout, isLoading } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   
   const subscriptionQuery = useQuery<SubscriptionResponse>({
     queryKey: ["/api/subscription"],
@@ -139,38 +137,6 @@ export function AppSidebar() {
           <div className="space-y-3">
             <SidebarSeparator className="bg-sidebar-border/60" />
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={toggleTheme}
-                  className="h-10 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-all duration-200"
-                  data-testid="button-theme-sidebar"
-                >
-                  {theme === "light" ? (
-                    <Moon className="w-4 h-4" />
-                  ) : (
-                    <Sun className="w-4 h-4" />
-                  )}
-                  <span className="text-[14px]">
-                    {theme === "light" ? "Dark mode" : "Light mode"}
-                  </span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={isActive("/dashboard/account")}
-                  className={`h-10 px-3 rounded-md transition-all duration-200 ${
-                    isActive("/dashboard/account") 
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm' 
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
-                  }`}
-                >
-                  <Link href="/dashboard/account" data-testid="link-nav-account">
-                    <User className={`w-4 h-4 ${isActive("/dashboard/account") ? 'text-sidebar-accent-foreground' : ''}`} />
-                    <span className="text-[14px]">Account</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={() => logout()}
