@@ -34,12 +34,17 @@ interface ProfileSetupProps {
 
 export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: ProfileSetupProps) {
   const [localIntro, setLocalIntro] = useState(intro);
+  const [localSkills, setLocalSkills] = useState<Skill[]>(skills);
   const [newSkill, setNewSkill] = useState("");
   
 
   useEffect(() => {
     setLocalIntro(intro);
   }, [intro]);
+
+  useEffect(() => {
+    setLocalSkills(skills);
+  }, [skills]);
 
   const suggestMutation = useMutation({
     mutationFn: async (introText: string) => {
@@ -49,14 +54,16 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
     onSuccess: (data) => {
       if (data.skills && data.skills.length > 0) {
         const newSkills: Skill[] = data.skills
-          .filter((name: string) => !skills.some(s => s.name.toLowerCase() === name.toLowerCase()))
+          .filter((name: string) => !localSkills.some(s => s.name.toLowerCase() === name.toLowerCase()))
           .map((name: string) => ({
             id: crypto.randomUUID(),
             name,
           }));
         
         if (newSkills.length > 0) {
-          onSkillsChange([...skills, ...newSkills]);
+          const updatedSkills = [...localSkills, ...newSkills];
+          setLocalSkills(updatedSkills);
+          onSkillsChange(updatedSkills);
         }
       }
     },
@@ -68,18 +75,22 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
   const addSkill = (skillName: string) => {
     const trimmed = skillName.trim();
     if (!trimmed) return;
-    if (skills.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) return;
+    if (localSkills.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) return;
     
     const skill: Skill = {
       id: crypto.randomUUID(),
       name: trimmed,
     };
-    onSkillsChange([...skills, skill]);
+    const updatedSkills = [...localSkills, skill];
+    setLocalSkills(updatedSkills);
+    onSkillsChange(updatedSkills);
     setNewSkill("");
   };
 
   const removeSkill = (id: string) => {
-    onSkillsChange(skills.filter((s) => s.id !== id));
+    const updatedSkills = localSkills.filter((s) => s.id !== id);
+    setLocalSkills(updatedSkills);
+    onSkillsChange(updatedSkills);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -103,7 +114,7 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
   };
 
   const availableSuggestions = popularSkills.filter(
-    (s) => !skills.some((skill) => skill.name.toLowerCase() === s.toLowerCase())
+    (s) => !localSkills.some((skill) => skill.name.toLowerCase() === s.toLowerCase())
   );
 
   return (
@@ -179,9 +190,9 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
             </Button>
           </div>
 
-          {skills.length > 0 && (
+          {localSkills.length > 0 && (
             <div className="flex flex-wrap gap-2" data-testid="skills-list">
-              {skills.map((skill) => (
+              {localSkills.map((skill) => (
                 <Badge
                   key={skill.id}
                   variant="secondary"
@@ -201,7 +212,7 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
             </div>
           )}
 
-          {skills.length === 0 && (
+          {localSkills.length === 0 && (
             <div className="py-4 text-center border border-dashed rounded-lg" data-testid="text-no-skills">
               <Sparkles className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/50" />
               <p className="text-xs text-muted-foreground px-2">

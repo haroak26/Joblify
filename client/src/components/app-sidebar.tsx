@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Briefcase, Wand2, Calendar, LogOut, Settings, User, Sparkles } from "lucide-react";
+import { Home, Briefcase, Wand2, Calendar, LogOut, User, Sparkles, Moon, Sun } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,8 +16,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useTheme } from "@/components/theme-provider";
 
 interface SubscriptionResponse {
   subscription: { plan: string };
@@ -50,6 +50,7 @@ const mainMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout, isLoading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   
   const subscriptionQuery = useQuery<SubscriptionResponse>({
     queryKey: ["/api/subscription"],
@@ -68,10 +69,12 @@ export function AppSidebar() {
     return username.slice(0, 2).toUpperCase();
   };
 
+  const logoHref = user ? "/dashboard" : "/";
+
   return (
     <Sidebar className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="p-5">
-        <Link href="/">
+        <Link href={logoHref}>
           <div className="flex items-center gap-3 cursor-pointer group" data-testid="link-logo">
             <div className="w-9 h-9 bg-sidebar-accent rounded-xl flex items-center justify-center border border-sidebar-border transition-transform group-hover:-rotate-3">
               <Sparkles className="w-5 h-5 text-sidebar-accent-foreground" />
@@ -136,6 +139,22 @@ export function AppSidebar() {
           <div className="space-y-3">
             <SidebarSeparator className="bg-sidebar-border/60" />
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={toggleTheme}
+                  className="h-10 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-all duration-200"
+                  data-testid="button-theme-sidebar"
+                >
+                  {theme === "light" ? (
+                    <Moon className="w-4 h-4" />
+                  ) : (
+                    <Sun className="w-4 h-4" />
+                  )}
+                  <span className="text-[14px]">
+                    {theme === "light" ? "Dark mode" : "Light mode"}
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild 
