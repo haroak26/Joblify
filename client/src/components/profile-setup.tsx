@@ -259,5 +259,4 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
       </section>
     </div>
   );
-  );
 }
