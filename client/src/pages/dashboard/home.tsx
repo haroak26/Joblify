@@ -83,6 +83,7 @@ export default function DashboardHome() {
   };
 
   const hasSkills = profile.skills.length > 0;
+  const isProfileComplete = profile.intro.length > 20 && hasSkills;
 
   return (
     <div className="p-10 space-y-12 max-w-5xl mx-auto">
@@ -117,14 +118,13 @@ export default function DashboardHome() {
           <Button
             onClick={() => refreshJobsMutation.mutate()}
             disabled={refreshJobsMutation.isPending || !hasSkills}
-            size="lg"
-            className="gap-3 h-12 px-6"
+            className="gap-3 px-6"
             data-testid="button-run-finder"
           >
             {refreshJobsMutation.isPending ? (
-              <RefreshCw className="w-5 h-5 animate-spin" />
+              <RefreshCw className="w-4 h-4 animate-spin" />
             ) : (
-              <Search className="w-5 h-5" />
+              <Search className="w-4 h-4" />
             )}
             Find Opportunities
           </Button>
@@ -137,18 +137,20 @@ export default function DashboardHome() {
         )}
       </div>
 
-      <div className="pt-10 border-t">
-        {profileQuery.isLoading ? (
-          <SkillsSkeleton />
-        ) : (
-          <ProfileSetup
-            intro={profile.intro}
-            skills={profile.skills}
-            onIntroChange={handleIntroChange}
-            onSkillsChange={handleSkillsChange}
-          />
-        )}
-      </div>
+      {!isProfileComplete && (
+        <div className="pt-10 border-t">
+          {profileQuery.isLoading ? (
+            <SkillsSkeleton />
+          ) : (
+            <ProfileSetup
+              intro={profile.intro}
+              skills={profile.skills}
+              onIntroChange={handleIntroChange}
+              onSkillsChange={handleSkillsChange}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
