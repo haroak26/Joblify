@@ -75,7 +75,7 @@ export default function Generator() {
   const selectedJob = jobs.find(j => j.id.toString() === selectedJobId);
 
   return (
-    <div className="p-10 space-y-12 max-w-3xl mx-auto">
+    <div className="p-10 space-y-12 max-w-5xl mx-auto">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight" data-testid="text-generator-heading">Message Generator</h1>
         <p className="text-lg text-muted-foreground">Personalized outreach and social media engagement.</p>

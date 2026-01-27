@@ -166,7 +166,7 @@ export default function Schedules() {
 
   if (subscriptionQuery.isLoading || (hasAccess && schedulesQuery.isLoading)) {
     return (
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div className="p-10 max-w-5xl mx-auto space-y-12">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <Skeleton className="h-8 w-32" />
@@ -189,7 +189,7 @@ export default function Schedules() {
 
   if (!hasAccess) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="p-10 max-w-5xl mx-auto space-y-12">
         <Card className="border-primary/20">
           <CardContent className="py-12 text-center">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
@@ -219,7 +219,7 @@ export default function Schedules() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-10 max-w-5xl mx-auto space-y-12">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-schedules-title">Schedules</h1>
