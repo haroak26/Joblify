@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { SiReddit, SiFacebook } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/hooks/use-auth";
 
 const features = [
   {
@@ -45,6 +46,10 @@ const benefits = [
 ];
 
 export default function Landing() {
+  const { user } = useAuth();
+  const primaryCtaLabel = user ? "My Account" : "Get Started";
+  const heroCtaLabel = user ? "My Account" : "Start Free";
+  const secondaryCtaLabel = user ? "My Account" : "Get Started Free";
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
@@ -59,7 +64,7 @@ export default function Landing() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link href="/dashboard">
-              <Button size="sm">Get Started</Button>
+              <Button size="sm">{primaryCtaLabel}</Button>
             </Link>
           </div>
         </div>
@@ -84,7 +89,7 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 <Link href="/dashboard">
                   <Button size="lg" className="w-full sm:w-auto">
-                    Start Free
+                    {heroCtaLabel}
                     <ArrowRight className="ml-1.5 w-4 h-4" />
                   </Button>
                 </Link>
@@ -262,7 +267,7 @@ export default function Landing() {
           </p>
           <Link href="/dashboard">
             <Button size="lg" className="w-full sm:w-auto">
-              Get Started Free
+              {secondaryCtaLabel}
               <ArrowRight className="ml-1.5 w-4 h-4" />
             </Button>
           </Link>

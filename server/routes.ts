@@ -5,6 +5,7 @@ import { z } from "zod";
 import { skillSchema, PLAN_LIMITS, type PlanType } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
+import { getUncachableStripeClient } from "./stripeClient";
 
 let poeClient: OpenAI | null = null;
 
@@ -379,6 +380,17 @@ Write a ${tone} outreach message for this job opportunity.`;
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      const subscription = await storage.getSubscription(userId);
+
+      if (subscription?.stripeSubscriptionId) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
+        } catch (error) {
+          console.error("Stripe cancellation error during account deletion:", error);
+        }
       }
 
       // Delete user (cascade will handle related records)

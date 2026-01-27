@@ -84,11 +84,16 @@ export async function setupStripeRoutes(app: Express) {
         return res.status(400).json({ error: "No active subscription to cancel" });
       }
 
-      await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+      const updatedSubscription = await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         cancel_at_period_end: true,
       });
 
-      await storage.updateSubscription(userId, { status: "cancelled" });
+      await storage.updateSubscription(userId, {
+        status: "cancelled",
+        currentPeriodEnd: updatedSubscription.current_period_end
+          ? new Date(updatedSubscription.current_period_end * 1000)
+          : undefined,
+      });
 
       res.json({ success: true, message: "Subscription will be cancelled at the end of the billing period" });
     } catch (error) {

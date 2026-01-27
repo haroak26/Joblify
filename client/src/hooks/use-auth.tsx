@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { clearStoredUser, getStoredUser, setStoredUser, type StoredUser } from "@/lib/auth-storage";
 
 interface User {
   id: string;
@@ -21,7 +22,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
 
@@ -33,11 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         setUser(data.user);
+        setStoredUser(data.user as StoredUser);
       } else {
         setUser(null);
+        clearStoredUser();
       }
     } catch {
       setUser(null);
+      clearStoredUser();
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || "Login failed");
       }
       setUser(data.user);
+      setStoredUser(data.user as StoredUser);
       queryClient.clear();
       setLocation("/dashboard");
     } catch (error) {
@@ -83,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || "Registration failed");
       }
       setUser(data.user);
+      setStoredUser(data.user as StoredUser);
       queryClient.clear();
       setLocation("/dashboard");
     } catch (error) {
@@ -99,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
     }
     setUser(null);
+    clearStoredUser();
     queryClient.clear();
     setLocation("/login");
   };
