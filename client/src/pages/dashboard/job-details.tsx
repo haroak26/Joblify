@@ -93,7 +93,7 @@ export default function JobDetails() {
 
   if (jobsQuery.isLoading || profileQuery.isLoading) {
     return (
-      <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <div className="p-10 space-y-12 max-w-5xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Loading job details...</CardTitle>
@@ -105,7 +105,7 @@ export default function JobDetails() {
 
   if (!job) {
     return (
-      <div className="p-6 space-y-6 max-w-4xl mx-auto">
+      <div className="p-10 space-y-12 max-w-5xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Job not found</CardTitle>
@@ -127,7 +127,7 @@ export default function JobDetails() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-10 space-y-12 max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="space-y-1">
           <Button asChild variant="ghost" className="px-0 text-muted-foreground">

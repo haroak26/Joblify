@@ -219,7 +219,7 @@ export default function Account() {
     : 0;
 
   return (
-    <div className="p-10 space-y-12 max-w-4xl mx-auto">
+    <div className="p-10 space-y-12 max-w-5xl mx-auto">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight" data-testid="text-account-heading">Account Settings</h1>
         <p className="text-lg text-muted-foreground">Manage your profile, usage, and subscription.</p>
