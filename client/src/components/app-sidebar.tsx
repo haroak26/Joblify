@@ -52,7 +52,8 @@ export function AppSidebar() {
     queryKey: ["/api/subscription"],
   });
   
-  const planLabel = subscriptionQuery.data?.subscription?.plan === "plus" ? "Plus" : "Free";
+  const planValue = subscriptionQuery.data?.subscription?.plan;
+  const planLabel = planValue === "ultra" ? "Ultra" : planValue === "plus" ? "Plus" : "Free";
 
   const isActive = (url: string) => {
     if (url === "/dashboard") {

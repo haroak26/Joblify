@@ -5,13 +5,11 @@ import { getUncachableStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 
 const PLUS_PRICE_ID = process.env.STRIPE_PLUS_PRICE_ID || "";
+const ULTRA_PRICE_ID = process.env.STRIPE_ULTRA_PRICE_ID || "";
 
 export async function setupStripeRoutes(app: Express) {
-  let stripeAvailable = false;
-  
   try {
     await getUncachableStripeClient();
-    stripeAvailable = true;
     console.log("Stripe connected via Replit integration");
   } catch (error) {
     console.log("Stripe not configured - payment features disabled");
@@ -23,9 +21,17 @@ export async function setupStripeRoutes(app: Express) {
       const stripe = await getUncachableStripeClient();
       const userId = req.session.userId!;
       const user = await storage.getUser(userId);
+
+      const requestedPlan = typeof req.body?.plan === "string" ? req.body.plan : "plus";
+      const plan = requestedPlan === "ultra" ? "ultra" : "plus";
+      const priceId = plan === "ultra" ? ULTRA_PRICE_ID : PLUS_PRICE_ID;
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!priceId) {
+        return res.status(400).json({ error: "Stripe price not configured for selected plan" });
       }
 
       let subscription = await storage.getSubscription(userId);
@@ -51,13 +57,14 @@ export async function setupStripeRoutes(app: Express) {
         mode: "subscription",
         line_items: [
           {
-            price: PLUS_PRICE_ID,
+            price: priceId,
             quantity: 1,
           },
         ],
+        allow_promotion_codes: true,
         success_url: `${appUrl}/dashboard/account?success=true`,
         cancel_url: `${appUrl}/dashboard/account?canceled=true`,
-        metadata: { userId },
+        metadata: { userId, plan },
       });
 
       res.json({ url: session.url });

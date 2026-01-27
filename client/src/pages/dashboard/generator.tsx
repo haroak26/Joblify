@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Wand2, Copy, Check, RefreshCw, Briefcase } from "lucide-react";
 import type { FreelancerProfile, JobPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -15,9 +11,7 @@ type Tone = "professional" | "friendly" | "enthusiastic";
 type MessageType = "comment" | "initial";
 
 export default function Generator() {
-  const [location] = useLocation();
-  const [jobDescription, setJobDescription] = useState("");
-  const [selectedJobId, setSelectedJobId] = useState<string>("custom");
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [tone, setTone] = useState<Tone>("professional");
   const [messageType, setMessageType] = useState<MessageType>("initial");
   const [generatedMessage, setGeneratedMessage] = useState("");
@@ -39,21 +33,16 @@ export default function Generator() {
       const job = jobsQuery.data.jobs.find(j => j.id.toString() === jobIdFromQuery);
       if (job) {
         setSelectedJobId(job.id.toString());
-        setJobDescription(job.description);
       }
     }
   }, [jobIdFromQuery, jobsQuery.data]);
 
+  useEffect(() => {
+    setGeneratedMessage("");
+  }, [selectedJobId, messageType, tone]);
+
   const handleJobSelect = (id: string) => {
     setSelectedJobId(id);
-    if (id === "custom") {
-      setJobDescription("");
-    } else {
-      const job = jobsQuery.data?.jobs.find(j => j.id.toString() === id);
-      if (job) {
-        setJobDescription(job.description);
-      }
-    }
   };
 
   const generateMutation = useMutation({
@@ -61,7 +50,7 @@ export default function Generator() {
       const selectedJob = jobsQuery.data?.jobs.find(j => j.id.toString() === selectedJobId);
       const response = await apiRequest("POST", "/api/generate-message", {
         jobTitle: selectedJob?.title ?? "Custom Job",
-        jobDescription,
+        jobDescription: selectedJob?.description ?? "",
         skills: profileQuery.data?.skills.map(s => s.name) ?? [],
         tone,
         messageType,
@@ -83,6 +72,7 @@ export default function Generator() {
   const profile = profileQuery.data ?? { intro: "", skills: [] };
   const hasProfile = profile.intro.length > 0 || profile.skills.length > 0;
   const jobs = jobsQuery.data?.jobs ?? [];
+  const selectedJob = jobs.find(j => j.id.toString() === selectedJobId);
 
   return (
     <div className="p-10 space-y-12 max-w-3xl mx-auto">
@@ -100,7 +90,6 @@ export default function Generator() {
                 <SelectValue placeholder="Select a job..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="custom">Custom Input (Manual)</SelectItem>
                 {jobs.map((job) => (
                   <SelectItem key={job.id} value={job.id.toString()}>
                     {job.title}
@@ -139,21 +128,30 @@ export default function Generator() {
         </div>
 
         <div className="space-y-3">
-          <p className="text-base font-semibold">Step 3: Description</p>
-          <Textarea
-            placeholder="Paste job details here..."
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            rows={8}
-            className="resize-none text-base p-4"
-            data-testid="textarea-job-description"
-            disabled={selectedJobId !== "custom"}
-          />
+          <p className="text-base font-semibold">Step 3: Review Job</p>
+          {selectedJob ? (
+            <div className="rounded-xl border bg-muted/30 p-5 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Briefcase className="w-4 h-4" />
+                <span>{selectedJob.source.toUpperCase()}</span>
+                <span>•</span>
+                <span>{selectedJob.postedAt}</span>
+              </div>
+              <h3 className="text-lg font-semibold">{selectedJob.title}</h3>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {selectedJob.description}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground text-center">
+              Select a job to preview details before generating a message.
+            </div>
+          )}
         </div>
 
         <Button
           onClick={() => generateMutation.mutate()}
-          disabled={generateMutation.isPending || !jobDescription.trim() || !hasProfile}
+          disabled={generateMutation.isPending || !selectedJob || !hasProfile}
           size="lg"
           className="w-full h-12 text-lg font-semibold shadow-md"
           data-testid="button-generate"

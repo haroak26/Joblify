@@ -34,7 +34,7 @@ interface SchedulesResponse {
 
 interface SubscriptionResponse {
   subscription: { plan: string };
-  limits: { hasScheduleAccess: boolean };
+  limits: { hasScheduleAccess: boolean; maxSchedules: number };
 }
 
 const platformOptions = [
@@ -56,6 +56,8 @@ export default function Schedules() {
   });
 
   const hasAccess = subscriptionQuery.data?.limits.hasScheduleAccess ?? false;
+  const maxSchedules = subscriptionQuery.data?.limits.maxSchedules ?? 0;
+  const scheduleLimitLabel = maxSchedules === -1 ? "Unlimited" : maxSchedules;
   const schedules = schedulesQuery.data?.schedules ?? [];
   
   const [showAddForm, setShowAddForm] = useState(false);
@@ -77,8 +79,9 @@ export default function Schedules() {
       setShowAddForm(false);
       toast({ title: "Schedule created", description: "Your schedule has been created successfully." });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create schedule.", variant: "destructive" });
+    onError: (error: any) => {
+      const message = error?.message || "Failed to create schedule.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
@@ -192,20 +195,20 @@ export default function Schedules() {
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
               <Lock className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold mb-2" data-testid="text-schedules-locked">Schedules - Plus Feature</h2>
+            <h2 className="text-2xl font-bold mb-2" data-testid="text-schedules-locked">Schedules - Paid Feature</h2>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Automate your job discovery with scheduled scans. Upgrade to Plus to unlock this feature 
+              Automate your job discovery with scheduled scans. Upgrade to Plus or Ultra to unlock this feature 
               and never miss a new opportunity.
             </p>
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Crown className="w-4 h-4 text-primary" />
-                <span>Plus plan includes 300 job scrapes/month and unlimited skills</span>
+                <span>Plus includes 100 jobs/month, unlimited skills, and 2 schedules</span>
               </div>
               <Button asChild className="gap-2" data-testid="button-upgrade-schedules">
                 <Link href="/dashboard/account">
                   <Crown className="w-4 h-4" />
-                  Upgrade to Plus
+                  Upgrade
                 </Link>
               </Button>
             </div>
@@ -222,14 +225,18 @@ export default function Schedules() {
           <h1 className="text-2xl font-bold" data-testid="text-schedules-title">Schedules</h1>
           <p className="text-muted-foreground">Automate your job discovery with recurring scans</p>
         </div>
-        <Button 
-          onClick={() => setShowAddForm(!showAddForm)} 
-          className="gap-2"
-          data-testid="button-add-schedule"
-        >
-          <Plus className="w-4 h-4" />
-          Add Schedule
-        </Button>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <span>Schedules: {schedules.length}/{scheduleLimitLabel}</span>
+          <Button 
+            onClick={() => setShowAddForm(!showAddForm)} 
+            className="gap-2"
+            data-testid="button-add-schedule"
+            disabled={maxSchedules !== -1 && schedules.length >= maxSchedules}
+          >
+            <Plus className="w-4 h-4" />
+            Add Schedule
+          </Button>
+        </div>
       </div>
 
       {showAddForm && (

@@ -5,7 +5,7 @@ import {
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs 
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, lte, isNotNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { scrapeJobsForSkills } from "./apify";
 
@@ -15,6 +15,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
+  getUserByPasswordResetToken(token: string): Promise<User | undefined>;
   createUser(user: InsertUser & { verificationToken?: string }): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
@@ -32,6 +33,7 @@ export interface IStorage {
   
   // Subscription methods
   getSubscription(userId: string): Promise<Subscription | undefined>;
+  getSubscriptionByCustomerId(customerId: string): Promise<Subscription | undefined>;
   createSubscription(userId: string, plan?: PlanType): Promise<Subscription>;
   updateSubscription(userId: string, updates: Partial<Subscription>): Promise<Subscription | undefined>;
   
@@ -47,6 +49,7 @@ export interface IStorage {
   
   // Schedule methods
   getSchedules(userId: string): Promise<Schedule[]>;
+  getDueSchedules(cutoff?: Date): Promise<Schedule[]>;
   getSchedule(userId: string, scheduleId: string): Promise<Schedule | undefined>;
   createSchedule(userId: string, schedule: Omit<InsertSchedule, 'userId'>): Promise<Schedule>;
   updateSchedule(userId: string, scheduleId: string, updates: Partial<Schedule>): Promise<Schedule | undefined>;
@@ -76,6 +79,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByVerificationToken(token: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.verificationToken, token));
+    return user || undefined;
+  }
+
+  async getUserByPasswordResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.passwordResetToken, token));
     return user || undefined;
   }
 
@@ -369,6 +377,11 @@ export class DatabaseStorage implements IStorage {
     return sub || undefined;
   }
 
+  async getSubscriptionByCustomerId(customerId: string): Promise<Subscription | undefined> {
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.stripeCustomerId, customerId));
+    return sub || undefined;
+  }
+
   async createSubscription(userId: string, plan: PlanType = "free"): Promise<Subscription> {
     const [sub] = await db
       .insert(subscriptions)
@@ -448,7 +461,7 @@ export class DatabaseStorage implements IStorage {
   async canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }> {
     const subscription = await this.getSubscription(userId);
     const plan = (subscription?.plan as PlanType) || "free";
-    const limits = PLAN_LIMITS[plan];
+    const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
     
     const profile = await this.getProfile(userId);
     const currentCount = profile.skills.length;
@@ -465,8 +478,16 @@ export class DatabaseStorage implements IStorage {
     
     const subscription = await this.getSubscription(userId);
     const plan = (subscription?.plan as PlanType) || "free";
-    const limits = PLAN_LIMITS[plan];
-    
+    const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+
+    if (limits.maxJobsPerMonth === Infinity) {
+      return {
+        allowed: true,
+        remaining: Infinity,
+        limit: Infinity,
+      };
+    }
+
     const userUsage = await this.getUsage(userId);
     const remaining = limits.maxJobsPerMonth - userUsage.jobsScrapedThisMonth;
     
@@ -480,6 +501,13 @@ export class DatabaseStorage implements IStorage {
   // Schedule methods
   async getSchedules(userId: string): Promise<Schedule[]> {
     return await db.select().from(schedules).where(eq(schedules.userId, userId));
+  }
+
+  async getDueSchedules(cutoff: Date = new Date()): Promise<Schedule[]> {
+    return await db
+      .select()
+      .from(schedules)
+      .where(and(eq(schedules.enabled, true), isNotNull(schedules.nextRun), lte(schedules.nextRun, cutoff)));
   }
 
   async getSchedule(userId: string, scheduleId: string): Promise<Schedule | undefined> {
@@ -509,7 +537,8 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getSchedule(userId, scheduleId);
     if (!existing) return undefined;
     
-    const nextRun = updates.frequency || updates.time 
+    const shouldRecalculate = updates.frequency || updates.time || updates.lastRun;
+    const nextRun = shouldRecalculate
       ? this.calculateNextRun(updates.frequency || existing.frequency, updates.time || existing.time)
       : existing.nextRun;
     

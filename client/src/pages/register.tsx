@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Briefcase, Loader2 } from "lucide-react";
+import { Briefcase, CheckCircle2, Eye, EyeOff, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +11,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/hooks/use-auth";
 
 
+const passwordSchema = z.string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Include at least one uppercase letter")
+  .regex(/[a-z]/, "Include at least one lowercase letter")
+  .regex(/\d/, "Include at least one number");
+
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: passwordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -27,6 +33,8 @@ export default function Register() {
   const { register, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -37,6 +45,14 @@ export default function Register() {
       confirmPassword: "",
     },
   });
+
+  const passwordValue = form.watch("password");
+  const passwordChecks = [
+    { label: "At least 8 characters", valid: passwordValue.length >= 8 },
+    { label: "One uppercase letter", valid: /[A-Z]/.test(passwordValue) },
+    { label: "One lowercase letter", valid: /[a-z]/.test(passwordValue) },
+    { label: "One number", valid: /\d/.test(passwordValue) },
+  ];
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -127,17 +143,39 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Create a password" 
-                        data-testid="input-password"
-                        {...field} 
-                      />
+                      <div className="relative">
+                        <Input 
+                          type={showPassword ? "text" : "password"} 
+                          placeholder="Create a password" 
+                          data-testid="input-password"
+                          {...field} 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <div className="grid gap-2 rounded-lg border border-muted p-3 text-sm text-muted-foreground">
+                {passwordChecks.map((check) => (
+                  <div key={check.label} className="flex items-center gap-2">
+                    {check.valid ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-muted-foreground" />
+                    )}
+                    <span className={check.valid ? "text-foreground" : ""}>{check.label}</span>
+                  </div>
+                ))}
+              </div>
               <FormField
                 control={form.control}
                 name="confirmPassword"
@@ -145,12 +183,22 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Confirm your password" 
-                        data-testid="input-confirm-password"
-                        {...field} 
-                      />
+                      <div className="relative">
+                        <Input 
+                          type={showConfirmPassword ? "text" : "password"} 
+                          placeholder="Confirm your password" 
+                          data-testid="input-confirm-password"
+                          {...field} 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((prev) => !prev)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

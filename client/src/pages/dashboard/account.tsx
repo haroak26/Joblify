@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Crown, Trash2, Loader2, Briefcase } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Briefcase } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
@@ -28,6 +28,7 @@ interface SubscriptionResponse {
   limits: {
     maxSkills: number;
     maxJobsPerMonth: number;
+    maxSchedules: number;
     hasScheduleAccess: boolean;
   };
 }
@@ -41,6 +42,7 @@ interface UsageResponse {
   limits: {
     maxSkills: number;
     maxJobsPerMonth: number;
+    maxSchedules: number;
     hasScheduleAccess: boolean;
   };
   remaining: {
@@ -64,17 +66,25 @@ const plans = [
     name: "Free",
     price: "$0",
     period: "forever",
-    features: ["5 skills maximum", "5 job scrapes per month", "Basic AI messages"],
-    limits: { skills: 5, jobs: 5 },
+    features: ["10 skills maximum", "10 jobs per month", "Basic AI messages"],
+    limits: { skills: 10, jobs: 10 },
   },
   {
     id: "plus",
     name: "Plus",
-    price: "$19",
+    price: "$15",
     period: "per month",
-    features: ["Unlimited skills", "300 job scrapes per month", "Advanced AI messages", "Schedule access", "Priority support"],
-    limits: { skills: -1, jobs: 300 },
+    features: ["Unlimited skills", "100 jobs per month", "2 schedules", "Priority support"],
+    limits: { skills: -1, jobs: 100 },
     popular: true,
+  },
+  {
+    id: "ultra",
+    name: "Ultra",
+    price: "$30",
+    period: "per month",
+    features: ["Unlimited skills", "Unlimited jobs", "Unlimited schedules", "Priority support"],
+    limits: { skills: -1, jobs: -1 },
   },
 ];
 
@@ -120,8 +130,8 @@ export default function Account() {
   });
 
   const upgradeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/stripe/create-checkout");
+    mutationFn: async (plan: "plus" | "ultra") => {
+      const response = await apiRequest("POST", "/api/stripe/create-checkout", { plan });
       return response.json();
     },
     onSuccess: (data) => {
@@ -186,6 +196,8 @@ export default function Account() {
   const user = userQuery.data?.user;
   const currentPlan = subscription?.plan || "free";
   const isPlus = currentPlan === "plus";
+  const isUltra = currentPlan === "ultra";
+  const currentPlanLabel = currentPlan === "ultra" ? "Ultra" : currentPlan === "plus" ? "Plus" : "Free";
 
   const handleIntroChange = (intro: string) => {
     updateProfileMutation.mutate({ ...profile, intro });
@@ -195,12 +207,15 @@ export default function Account() {
     updateProfileMutation.mutate({ ...profile, skills });
   };
 
-  const jobsUsedPercent = usageData 
-    ? (usageData.usage.jobsScrapedThisMonth / usageData.limits.maxJobsPerMonth) * 100
+  const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
+  const maxSkills = usageData?.limits.maxSkills ?? 0;
+
+  const jobsUsedPercent = usageData && maxJobs > 0
+    ? (usageData.usage.jobsScrapedThisMonth / maxJobs) * 100
     : 0;
 
-  const skillsUsedPercent = usageData && usageData.limits.maxSkills > 0
-    ? (usageData.usage.skillsCount / usageData.limits.maxSkills) * 100
+  const skillsUsedPercent = usageData && maxSkills > 0
+    ? (usageData.usage.skillsCount / maxSkills) * 100
     : 0;
 
   return (
@@ -242,7 +257,7 @@ export default function Account() {
             <CreditCard className="w-6 h-6 text-primary" />
             Subscription & Billing
           </h2>
-          <div className="grid gap-8 md:grid-cols-2">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {plans.map((plan) => {
               const isCurrent = currentPlan === plan.id;
               const isCancelled = subscription?.status === "cancelled";
@@ -277,19 +292,19 @@ export default function Account() {
                       ))}
                     </ul>
                     
-                    {plan.id === "plus" && !isCurrent && (
+                    {(plan.id === "plus" || plan.id === "ultra") && !isCurrent && (
                       <Button 
                         size="default"
                         className="w-full font-bold shadow-md" 
-                        onClick={() => upgradeMutation.mutate()}
+                        onClick={() => upgradeMutation.mutate(plan.id as "plus" | "ultra")}
                         disabled={upgradeMutation.isPending}
-                        data-testid="button-upgrade-plus"
+                        data-testid={`button-upgrade-${plan.id}`}
                       >
-                        {upgradeMutation.isPending ? "Processing..." : "Upgrade to Plus"}
+                        {upgradeMutation.isPending ? "Processing..." : `Upgrade to ${plan.name}`}
                       </Button>
                     )}
                     
-                    {plan.id === "plus" && isCurrent && !isCancelled && (
+                    {(plan.id === "plus" || plan.id === "ultra") && isCurrent && !isCancelled && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" className="w-full" data-testid="button-cancel-subscription">
@@ -300,7 +315,7 @@ export default function Account() {
                           <AlertDialogHeader>
                             <AlertDialogTitle className="text-xl font-bold">Cancel Subscription?</AlertDialogTitle>
                             <AlertDialogDescription className="text-base">
-                              You'll retain Plus benefits until the end of your current billing cycle.
+                              You'll retain {currentPlanLabel} benefits until the end of your current billing cycle.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter className="gap-3 mt-4">
@@ -329,16 +344,22 @@ export default function Account() {
             <div className="space-y-3">
               <div className="flex justify-between text-sm font-bold">
                 <span className="text-muted-foreground uppercase tracking-wider">Job Scrapes</span>
-                <span className="text-primary">{usageData?.usage.jobsScrapedThisMonth || 0}/{usageData?.limits.maxJobsPerMonth || 5}</span>
-              </div>
-              <Progress value={jobsUsedPercent} className="h-2 bg-muted shadow-inner" />
+                  <span className="text-primary">
+                    {usageData?.usage.jobsScrapedThisMonth || 0}/
+                    {maxJobs === -1 ? "Unlimited" : maxJobs || 0}
+                  </span>
+                </div>
+                <Progress value={jobsUsedPercent} className="h-2 bg-muted shadow-inner" />
             </div>
             
-            {!isPlus && (
+            {!isPlus && !isUltra && (
               <div className="space-y-3">
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-muted-foreground uppercase tracking-wider">Skills Limit</span>
-                  <span className="text-primary">{usageData?.usage.skillsCount || 0}/{usageData?.limits.maxSkills || 5}</span>
+                  <span className="text-primary">
+                    {usageData?.usage.skillsCount || 0}/
+                    {maxSkills === -1 ? "Unlimited" : maxSkills || 0}
+                  </span>
                 </div>
                 <Progress value={skillsUsedPercent} className="h-2 bg-muted shadow-inner" />
               </div>
