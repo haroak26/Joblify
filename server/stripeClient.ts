@@ -3,6 +3,20 @@ import Stripe from 'stripe';
 let connectionSettings: any;
 
 async function getCredentials() {
+  const envSecretKey = process.env.STRIPE_SECRET_KEY;
+  const envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+
+  if (envSecretKey) {
+    return {
+      publishableKey: envPublishableKey || "",
+      secretKey: envSecretKey,
+    };
+  }
+
+  if (!process.env.REPLIT_CONNECTORS_HOSTNAME) {
+    throw new Error("Stripe credentials not configured");
+  }
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY
@@ -52,6 +66,9 @@ export async function getUncachableStripeClient() {
 
 export async function getStripePublishableKey() {
   const { publishableKey } = await getCredentials();
+  if (!publishableKey) {
+    throw new Error("Stripe publishable key not configured");
+  }
   return publishableKey;
 }
 
