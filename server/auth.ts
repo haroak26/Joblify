@@ -142,7 +142,7 @@ export function setupAuth(app: Express) {
       // Send verification email
       const emailSent = await sendVerificationEmail(user.email, user.username, verificationToken);
       if (!emailSent) {
-        console.error("Failed to send verification email to:", user.email);
+        console.error("Failed to send verification email.");
       }
 
       res.json({

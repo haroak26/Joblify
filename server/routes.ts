@@ -73,19 +73,7 @@ export async function registerRoutes(
       
       const profile = await storage.setProfile(userId, data);
       
-      if (data.skills.length > 0) {
-        // Check job scraping limit before scraping
-        const scrapeCheck = await storage.canScrapeJobs(userId, 1);
-        if (scrapeCheck.allowed) {
-          const jobs = await storage.scrapeAndGenerateJobs(userId, data.skills);
-          const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
-          const limitedJobs = jobs.slice(0, Math.max(0, remaining));
-          await storage.setJobs(userId, limitedJobs);
-          if (limitedJobs.length > 0) {
-            await storage.incrementJobsScraped(userId, limitedJobs.length);
-          }
-        }
-      } else {
+      if (data.skills.length === 0) {
         await storage.setJobs(userId, []);
       }
       
@@ -139,18 +127,7 @@ export async function registerRoutes(
       const profile = await storage.getProfile(userId);
       const updated = await storage.setProfile(userId, { ...profile, skills });
       
-      if (skills.length > 0) {
-        const scrapeCheck = await storage.canScrapeJobs(userId, 1);
-        if (scrapeCheck.allowed) {
-          const jobs = await storage.scrapeAndGenerateJobs(userId, skills);
-          const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
-          const limitedJobs = jobs.slice(0, Math.max(0, remaining));
-          await storage.setJobs(userId, limitedJobs);
-          if (limitedJobs.length > 0) {
-            await storage.incrementJobsScraped(userId, limitedJobs.length);
-          }
-        }
-      } else {
+      if (skills.length === 0) {
         await storage.setJobs(userId, []);
       }
       
