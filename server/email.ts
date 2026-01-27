@@ -50,37 +50,27 @@ function getEmailTemplate(content: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Joblify</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f6f7f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f6f7f9; padding: 32px 16px;">
+<body style="margin: 0; padding: 0; background-color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ffffff; padding: 32px 16px;">
     <tr>
       <td align="center">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px;">
           <tr>
             <td style="padding-bottom: 20px;">
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="vertical-align: middle;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td style="width: 44px; height: 44px; background-color: #16a34a; border-radius: 14px; text-align: center; vertical-align: middle;">
-                          <span style="color: white; font-size: 20px; font-weight: 700;">J</span>
-                        </td>
-                        <td style="padding-left: 12px;">
-                          <div style="font-size: 18px; font-weight: 700; color: #0f172a;">Joblify</div>
-                          <div style="font-size: 12px; color: #64748b;">Freelance ops, simplified.</div>
-                        </td>
-                      </tr>
-                    </table>
+                  <td style="width: 44px; height: 44px; background-color: #16a34a; border-radius: 12px; text-align: center; vertical-align: middle;">
+                    <span style="color: white; font-size: 20px; font-weight: 700;">J</span>
                   </td>
-                  <td align="right" style="font-size: 12px; color: #94a3b8;">
-                    <span>joblify.ai</span>
+                  <td style="padding-left: 12px; font-size: 18px; font-weight: 700; color: #0f172a;">
+                    Joblify
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="background-color: #ffffff; border-radius: 16px; padding: 32px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);">
+            <td style="background-color: #ffffff; border-radius: 16px; padding: 32px; border: 1px solid #e2e8f0;">
               ${content}
             </td>
           </tr>
@@ -88,9 +78,6 @@ function getEmailTemplate(content: string): string {
             <td style="padding-top: 20px; text-align: center;">
               <p style="font-size: 12px; color: #94a3b8; margin: 0 0 6px 0;">
                 This email was sent by Joblify. If you didn’t request this, you can safely ignore it.
-              </p>
-              <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-                Joblify • Remote-first • Built for freelancers
               </p>
             </td>
           </tr>
@@ -106,7 +93,7 @@ function getAppUrl(): string {
   if (process.env.REPLIT_DOMAINS) {
     return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
   }
-  return process.env.APP_URL || 'http://localhost:5000';
+  return process.env.APP_URL || "https://JoblifyAI.com";
 }
 
 export async function sendVerificationEmail(email: string, username: string, token: string): Promise<boolean> {
@@ -142,6 +129,46 @@ export async function sendVerificationEmail(email: string, username: string, tok
   return sendEmail({
     to: email,
     subject: "Verify your Joblify email",
+    html: getEmailTemplate(content),
+  });
+}
+
+export async function sendPasswordResetEmail(email: string, username: string, token: string): Promise<boolean> {
+  const resetUrl = `${getAppUrl()}/reset-password?token=${token}`;
+
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      Reset your password
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${username},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 24px 0;">
+      We received a request to reset your Joblify password. Click the button below to choose a new one.
+    </p>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
+      <tr>
+        <td style="background-color: #16a34a; border-radius: 10px;">
+          <a href="${resetUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
+            Reset password
+          </a>
+        </td>
+      </tr>
+    </table>
+    <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-top: 20px;">
+      <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0;">
+        Or paste this link in your browser:<br>
+        <a href="${resetUrl}" style="color: #16a34a; word-break: break-all;">${resetUrl}</a>
+      </p>
+    </div>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      If you didn’t request this, you can safely ignore this email.
+    </p>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: "Reset your Joblify password",
     html: getEmailTemplate(content),
   });
 }

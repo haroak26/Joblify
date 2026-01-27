@@ -4,7 +4,7 @@ import MemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { sendVerificationEmail, sendWelcomeEmail } from "./email";
+import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "./email";
 
 const scryptAsync = promisify(scrypt);
 
@@ -35,12 +35,47 @@ async function comparePasswords(supplied: string, stored: string): Promise<boole
   return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
 }
 
+function isStrongPassword(password: string): { valid: boolean; message?: string } {
+  if (password.length < 8) {
+    return { valid: false, message: "Password must be at least 8 characters" };
+  }
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
+    return { valid: false, message: "Password must include uppercase and lowercase letters" };
+  }
+  if (!/\d/.test(password)) {
+    return { valid: false, message: "Password must include at least one number" };
+  }
+  return { valid: true };
+}
+
 function generateVerificationToken(): string {
   return randomBytes(32).toString("hex");
 }
 
+function createRateLimiter(windowMs: number, maxRequests: number) {
+  const attempts = new Map<string, { count: number; resetAt: number }>();
+  return (req: Request, res: Response): boolean => {
+    const key = req.ip;
+    const now = Date.now();
+    const entry = attempts.get(key);
+    if (entry && entry.resetAt > now) {
+      if (entry.count >= maxRequests) {
+        res.status(429).json({ error: "Too many requests. Please try again later." });
+        return false;
+      }
+      entry.count += 1;
+      attempts.set(key, entry);
+      return true;
+    }
+    attempts.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  };
+}
+
 export function setupAuth(app: Express) {
   const MemoryStoreSession = MemoryStore(session);
+  const authLimiter = createRateLimiter(15 * 60 * 1000, 20);
+  const passwordResetLimiter = createRateLimiter(15 * 60 * 1000, 10);
 
   app.use(
     session({
@@ -51,7 +86,8 @@ export function setupAuth(app: Express) {
         checkPeriod: 86400000,
       }),
       cookie: {
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       },
@@ -60,6 +96,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
+      if (!authLimiter(req, res)) return;
       const { username, email, password } = req.body;
 
       if (!username || !email || !password) {
@@ -75,8 +112,9 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Please enter a valid email address" });
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      const passwordCheck = isStrongPassword(password);
+      if (!passwordCheck.valid) {
+        return res.status(400).json({ error: passwordCheck.message });
       }
 
       const existingUsername = await storage.getUserByUsername(username);
@@ -126,6 +164,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
+      if (!authLimiter(req, res)) return;
       const { username, password } = req.body;
 
       if (!username || !password) {
@@ -221,6 +260,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/auth/resend-verification", async (req: Request, res: Response) => {
     try {
+      if (!authLimiter(req, res)) return;
       if (!req.session.userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
@@ -243,6 +283,69 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error("Resend verification error:", error);
       res.status(500).json({ error: "Failed to resend verification email" });
+    }
+  });
+
+  app.post("/api/auth/request-password-reset", async (req: Request, res: Response) => {
+    try {
+      if (!passwordResetLimiter(req, res)) return;
+      const { email } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (user) {
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+        await storage.updateUser(user.id, {
+          passwordResetToken: token,
+          passwordResetExpiresAt: expiresAt,
+        });
+        await sendPasswordResetEmail(user.email, user.username, token);
+      }
+
+      res.json({ message: "If that email exists, a reset link has been sent." });
+    } catch (error) {
+      console.error("Password reset request error:", error);
+      res.status(500).json({ error: "Failed to request password reset" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      if (!passwordResetLimiter(req, res)) return;
+      const { token, password } = req.body;
+
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Invalid reset token" });
+      }
+
+      const passwordCheck = isStrongPassword(password || "");
+      if (!passwordCheck.valid) {
+        return res.status(400).json({ error: passwordCheck.message });
+      }
+
+      const user = await storage.getUserByPasswordResetToken(token);
+      if (!user || !user.passwordResetExpiresAt) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+
+      if (new Date(user.passwordResetExpiresAt).getTime() < Date.now()) {
+        return res.status(400).json({ error: "Reset token has expired" });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpiresAt: null,
+      });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ error: "Failed to reset password" });
     }
   });
 }

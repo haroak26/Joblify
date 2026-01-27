@@ -6,6 +6,7 @@ import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
 import { runMigrations } from "stripe-replit-sync";
 import { getStripeSync } from "./stripeClient";
+import { startScheduleRunner } from "./scheduler";
 
 const app = express();
 const httpServer = createServer(app);
@@ -110,6 +111,7 @@ app.use((req, res, next) => {
   await initStripe();
   await setupStripeRoutes(app);
   await registerRoutes(httpServer, app);
+  startScheduleRunner();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

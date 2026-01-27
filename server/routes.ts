@@ -43,7 +43,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/profile", requireVerifiedEmail, async (req: Request, res) => {
+  app.post("/api/profile", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({
@@ -53,6 +53,10 @@ export async function registerRoutes(
       
       const data = schema.parse(req.body);
       
+      const subscription = await storage.getSubscription(userId);
+      const plan = (subscription?.plan as PlanType) || "free";
+      const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+
       // Check skills limit
       const skillCheck = await storage.canAddSkills(userId, data.skills.length);
       if (!skillCheck.allowed) {
@@ -61,7 +65,9 @@ export async function registerRoutes(
           code: "SKILLS_LIMIT",
           limit: skillCheck.limit,
           current: data.skills.length,
-          message: `Free plan allows up to ${skillCheck.limit} skills. Upgrade to Plus for unlimited skills.`
+          message: planLimits.maxSkills === Infinity
+            ? "Skills limit reached."
+            : `Your plan allows up to ${skillCheck.limit} skills. Upgrade to Plus or Ultra for unlimited skills.`
         });
       }
       
@@ -72,8 +78,12 @@ export async function registerRoutes(
         const scrapeCheck = await storage.canScrapeJobs(userId, 1);
         if (scrapeCheck.allowed) {
           const jobs = await storage.scrapeAndGenerateJobs(userId, data.skills);
-          await storage.setJobs(userId, jobs);
-          await storage.incrementJobsScraped(userId, 1);
+          const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
+          const limitedJobs = jobs.slice(0, Math.max(0, remaining));
+          await storage.setJobs(userId, limitedJobs);
+          if (limitedJobs.length > 0) {
+            await storage.incrementJobsScraped(userId, limitedJobs.length);
+          }
         }
       } else {
         await storage.setJobs(userId, []);
@@ -99,7 +109,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/skills", requireVerifiedEmail, async (req: Request, res) => {
+  app.post("/api/skills", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({
@@ -108,6 +118,10 @@ export async function registerRoutes(
       
       const { skills } = schema.parse(req.body);
       
+      const subscription = await storage.getSubscription(userId);
+      const plan = (subscription?.plan as PlanType) || "free";
+      const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+
       // Check skills limit
       const skillCheck = await storage.canAddSkills(userId, skills.length);
       if (!skillCheck.allowed) {
@@ -116,7 +130,9 @@ export async function registerRoutes(
           code: "SKILLS_LIMIT",
           limit: skillCheck.limit,
           current: skills.length,
-          message: `Free plan allows up to ${skillCheck.limit} skills. Upgrade to Plus for unlimited skills.`
+          message: planLimits.maxSkills === Infinity
+            ? "Skills limit reached."
+            : `Your plan allows up to ${skillCheck.limit} skills. Upgrade to Plus or Ultra for unlimited skills.`
         });
       }
       
@@ -127,8 +143,12 @@ export async function registerRoutes(
         const scrapeCheck = await storage.canScrapeJobs(userId, 1);
         if (scrapeCheck.allowed) {
           const jobs = await storage.scrapeAndGenerateJobs(userId, skills);
-          await storage.setJobs(userId, jobs);
-          await storage.incrementJobsScraped(userId, 1);
+          const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
+          const limitedJobs = jobs.slice(0, Math.max(0, remaining));
+          await storage.setJobs(userId, limitedJobs);
+          if (limitedJobs.length > 0) {
+            await storage.incrementJobsScraped(userId, limitedJobs.length);
+          }
         }
       } else {
         await storage.setJobs(userId, []);
@@ -206,16 +226,20 @@ export async function registerRoutes(
           code: "SCRAPE_LIMIT",
           remaining: scrapeCheck.remaining,
           limit: scrapeCheck.limit,
-          message: `You've reached your monthly job scraping limit of ${scrapeCheck.limit}. Upgrade to Plus for 300 jobs/month.`
+          message: `You've reached your monthly job scraping limit of ${scrapeCheck.limit}. Upgrade to Plus or Ultra for more.`
         });
       }
       
       const profile = await storage.getProfile(userId);
       if (profile.skills.length > 0) {
         const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
-        await storage.setJobs(userId, jobs);
-        await storage.incrementJobsScraped(userId, 1);
-        res.json({ jobs, message: "Jobs refreshed successfully" });
+        const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
+        const limitedJobs = jobs.slice(0, Math.max(0, remaining));
+        await storage.setJobs(userId, limitedJobs);
+        if (limitedJobs.length > 0) {
+          await storage.incrementJobsScraped(userId, limitedJobs.length);
+        }
+        res.json({ jobs: limitedJobs, message: "Jobs refreshed successfully" });
       } else {
         res.json({ jobs: [], message: "No skills set" });
       }
@@ -290,7 +314,8 @@ ${userIntro ? `About Me: ${userIntro}` : ""}
 
 Write a ${tone} outreach message for this job opportunity.`;
 
-      const response = await openai.chat.completions.create({
+      const poeClient = getPoeClient();
+      const response = await poeClient.chat.completions.create({
         model: "gpt-5-nano",
         messages: [
           { role: "system", content: systemPrompt },
@@ -327,7 +352,8 @@ Write a ${tone} outreach message for this job opportunity.`;
         subscription,
         limits: {
           maxSkills: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
-          maxJobsPerMonth: limits.maxJobsPerMonth,
+          maxJobsPerMonth: limits.maxJobsPerMonth === Infinity ? -1 : limits.maxJobsPerMonth,
+          maxSchedules: limits.maxSchedules === Infinity ? -1 : limits.maxSchedules,
           hasScheduleAccess: limits.hasScheduleAccess,
         }
       });
@@ -343,7 +369,7 @@ Write a ${tone} outreach message for this job opportunity.`;
       const userUsage = await storage.checkAndResetMonthlyUsage(userId);
       const subscription = await storage.getSubscription(userId);
       const plan = (subscription?.plan as PlanType) || "free";
-      const limits = PLAN_LIMITS[plan];
+      const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
       const profile = await storage.getProfile(userId);
       
       res.json({
@@ -354,12 +380,13 @@ Write a ${tone} outreach message for this job opportunity.`;
         },
         limits: {
           maxSkills: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
-          maxJobsPerMonth: limits.maxJobsPerMonth,
+          maxJobsPerMonth: limits.maxJobsPerMonth === Infinity ? -1 : limits.maxJobsPerMonth,
+          maxSchedules: limits.maxSchedules === Infinity ? -1 : limits.maxSchedules,
           hasScheduleAccess: limits.hasScheduleAccess,
         },
         remaining: {
           skills: limits.maxSkills === Infinity ? -1 : Math.max(0, limits.maxSkills - profile.skills.length),
-          jobsThisMonth: Math.max(0, limits.maxJobsPerMonth - userUsage.jobsScrapedThisMonth),
+          jobsThisMonth: limits.maxJobsPerMonth === Infinity ? -1 : Math.max(0, limits.maxJobsPerMonth - userUsage.jobsScrapedThisMonth),
         }
       });
     } catch (error) {
@@ -411,12 +438,26 @@ Write a ${tone} outreach message for this job opportunity.`;
       
       // Check if user has schedule access
       const subscription = await storage.getSubscription(userId);
-      const plan = subscription?.plan || "free";
-      if (plan !== "plus") {
+      const plan = (subscription?.plan as PlanType) || "free";
+      const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+
+      if (!limits.hasScheduleAccess) {
         return res.status(403).json({ 
-          error: "Schedule access requires Plus plan",
+          error: "Schedule access requires Plus or Ultra plan",
           code: "PLAN_REQUIRED"
         });
+      }
+
+      if (limits.maxSchedules !== Infinity) {
+        const existingSchedules = await storage.getSchedules(userId);
+        if (existingSchedules.length >= limits.maxSchedules) {
+          return res.status(403).json({
+            error: "Schedule limit reached",
+            code: "SCHEDULE_LIMIT",
+            limit: limits.maxSchedules,
+            message: `Your plan allows up to ${limits.maxSchedules} schedules.`,
+          });
+        }
       }
       
       const schema = z.object({
@@ -514,31 +555,34 @@ Write a ${tone} outreach message for this job opportunity.`;
       // Filter out seen jobs
       const seenUrls = await storage.getSeenJobUrls(userId);
       const newJobs = jobs.filter(job => !seenUrls.includes(job.sourceUrl));
+
+      const remaining = scrapeCheck.remaining === Infinity ? newJobs.length : scrapeCheck.remaining;
+      const limitedJobs = newJobs.slice(0, Math.max(0, remaining));
       
       // Mark new jobs as seen
-      for (const job of newJobs) {
+      for (const job of limitedJobs) {
         await storage.markJobAsSeen(userId, job.sourceUrl);
       }
       
       // Update jobs and usage
-      await storage.setJobs(userId, newJobs);
-      if (newJobs.length > 0) {
-        await storage.incrementJobsScraped(userId, newJobs.length);
+      await storage.setJobs(userId, limitedJobs);
+      if (limitedJobs.length > 0) {
+        await storage.incrementJobsScraped(userId, limitedJobs.length);
       }
       
       // Update schedule last run
       await storage.updateSchedule(userId, scheduleId, { lastRun: new Date() });
       
       // Send email notification if there are new jobs
-      if (newJobs.length > 0) {
+      if (limitedJobs.length > 0) {
         const user = await storage.getUser(userId);
         if (user?.email) {
           const { sendScheduleJobsEmail } = await import("./brevo");
-          await sendScheduleJobsEmail(user.email, schedule.name, newJobs);
+          await sendScheduleJobsEmail(user.email, schedule.name, limitedJobs);
         }
       }
       
-      res.json({ jobs: newJobs, count: newJobs.length });
+      res.json({ jobs: limitedJobs, count: limitedJobs.length });
     } catch (error) {
       console.error("Schedule run error:", error);
       res.status(500).json({ error: "Failed to run schedule" });

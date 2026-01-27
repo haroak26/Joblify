@@ -11,12 +11,14 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpiresAt: timestamp("password_reset_expires_at"),
 });
 
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  plan: text("plan").notNull().default("free"), // 'free' or 'plus'
+  plan: text("plan").notNull().default("free"), // 'free', 'plus', or 'ultra'
   status: text("status").notNull().default("active"), // 'active', 'cancelled', 'past_due'
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
@@ -202,18 +204,26 @@ export type Usage = typeof usage.$inferSelect;
 // Plan limits
 export const PLAN_LIMITS = {
   free: {
-    maxSkills: 5,
-    maxJobsPerMonth: 5,
+    maxSkills: 10,
+    maxJobsPerMonth: 10,
+    maxSchedules: 0,
     hasScheduleAccess: false,
   },
   plus: {
     maxSkills: Infinity,
-    maxJobsPerMonth: 300,
+    maxJobsPerMonth: 100,
+    maxSchedules: 2,
+    hasScheduleAccess: true,
+  },
+  ultra: {
+    maxSkills: Infinity,
+    maxJobsPerMonth: Infinity,
+    maxSchedules: Infinity,
     hasScheduleAccess: true,
   },
 } as const;
 
-export type PlanType = "free" | "plus";
+export type PlanType = "free" | "plus" | "ultra";
 
 // Schedule types
 export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true, lastRun: true, nextRun: true });

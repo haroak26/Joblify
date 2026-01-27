@@ -1,7 +1,7 @@
 import type { JobPost } from "@shared/schema";
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@joblify.app";
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@joblifyai.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "Joblify";
 
 interface SendEmailParams {
@@ -82,14 +82,22 @@ export function generateJobsEmailHtml(jobs: JobPost[], scheduleName: string): st
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; margin: 0; padding: 24px;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <div style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 24px; text-align: center;">
-          <h1 style="margin: 0; color: white; font-size: 24px;">Joblify</h1>
-          <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">New job opportunities found!</p>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #ffffff; margin: 0; padding: 24px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="padding: 20px 24px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+              <td style="width: 40px; height: 40px; background-color: #16a34a; border-radius: 10px; text-align: center; vertical-align: middle;">
+                <span style="color: white; font-size: 18px; font-weight: 700;">J</span>
+              </td>
+              <td style="padding-left: 12px; font-size: 18px; font-weight: 700; color: #111827;">
+                Joblify
+              </td>
+            </tr>
+          </table>
         </div>
         
-        <div style="padding: 24px;">
+        <div style="padding: 0 24px 24px;">
           <p style="color: #374151; font-size: 14px; margin: 0 0 16px 0;">
             Your scheduled scan "<strong>${escapeHtml(scheduleName)}</strong>" found <strong>${jobs.length} new job${jobs.length === 1 ? '' : 's'}</strong> matching your skills.
           </p>
@@ -99,14 +107,14 @@ export function generateJobsEmailHtml(jobs: JobPost[], scheduleName: string): st
           </table>
           
           <div style="text-align: center; margin-top: 24px;">
-            <a href="${process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/dashboard/jobs` : '/dashboard/jobs'}" 
+            <a href="${process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/dashboard/jobs` : 'https://JoblifyAI.com/dashboard/jobs'}" 
                style="display: inline-block; background-color: #16a34a; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">
               View All Jobs
             </a>
           </div>
         </div>
         
-        <div style="background-color: #f9fafb; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <div style="background-color: #ffffff; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
           <p style="margin: 0; color: #9ca3af; font-size: 12px;">
             You received this email because you have an active schedule on Joblify.
           </p>
