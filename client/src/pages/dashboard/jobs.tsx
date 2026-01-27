@@ -98,32 +98,32 @@ export default function MyJobs() {
   const hasJobs = jobs.length > 0;
 
   return (
-    <div className="p-10 space-y-12 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between gap-8 flex-wrap">
+    <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8 flex-wrap">
         <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-jobs-heading">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-jobs-heading">
             My Jobs
             {hasJobs && (
-              <span className="ml-4 text-muted-foreground font-normal text-xl">
+              <span className="block sm:inline sm:ml-4 text-muted-foreground font-normal text-lg sm:text-xl">
                 ({jobs.length})
               </span>
             )}
           </h1>
-          <p className="text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
+          <p className="text-base sm:text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <Button
             variant="outline"
             onClick={() => refreshJobsMutation.mutate()}
             disabled={refreshJobsMutation.isPending || !hasSkills}
-            className="gap-3 h-11 px-5"
+            className="gap-3 h-11 px-5 w-full sm:w-auto"
             data-testid="button-refresh-jobs"
           >
             <RefreshCw className={`w-5 h-5 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
             Refresh List
           </Button>
           {hasJobs && (
-            <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20">
+            <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="icon"

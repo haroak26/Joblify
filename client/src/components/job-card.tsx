@@ -128,11 +128,11 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
           ))}
         </div>
       </CardContent>
-      <CardFooter className="pt-4 border-t border-sidebar-border/30 gap-3 flex-wrap">
+      <CardFooter className="pt-4 border-t border-sidebar-border/30 gap-3 flex-col sm:flex-row sm:items-center flex-wrap">
         <Button
           variant="default"
           size="sm"
-          className="gap-2 h-9 px-4 font-medium"
+          className="gap-2 h-9 px-4 font-medium w-full sm:w-auto justify-center"
           onClick={(event) => {
             event.stopPropagation();
             handleGenerateClick();
@@ -147,8 +147,9 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={(event) => event.stopPropagation()}
+          className="w-full sm:w-auto"
         >
-          <Button variant="outline" size="sm" className="gap-2 h-9 px-4 font-medium" data-testid={`button-view-post-${job.id}`}>
+          <Button variant="outline" size="sm" className="gap-2 h-9 px-4 font-medium w-full sm:w-auto justify-center" data-testid={`button-view-post-${job.id}`}>
             <ExternalLink className="w-3.5 h-3.5" />
             View Post
           </Button>

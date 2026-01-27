@@ -219,20 +219,20 @@ export default function Account() {
     : 0;
 
   return (
-    <div className="p-10 space-y-12 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-account-heading">Account Settings</h1>
-        <p className="text-lg text-muted-foreground">Manage your profile, usage, and subscription.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-account-heading">Account Settings</h1>
+        <p className="text-base sm:text-lg text-muted-foreground">Manage your profile, usage, and subscription.</p>
       </div>
 
-      <div className="space-y-16">
+      <div className="space-y-12 sm:space-y-16">
         {/* Account Details Section */}
         <section className="space-y-6">
           <h2 className="text-xl font-semibold flex items-center gap-3 border-b pb-4">
             <User className="w-6 h-6 text-primary" />
             Profile Information
           </h2>
-          <div className="grid gap-10 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Username</p>
               <p className="text-lg font-semibold" data-testid="text-username">{user?.username || "Loading..."}</p>
@@ -257,7 +257,7 @@ export default function Account() {
             <CreditCard className="w-6 h-6 text-primary" />
             Subscription & Billing
           </h2>
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {plans.map((plan) => {
               const isCurrent = currentPlan === plan.id;
               const isCancelled = subscription?.status === "cancelled";
@@ -265,7 +265,7 @@ export default function Account() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative border rounded-xl p-8 transition-all shadow-sm ${
+                  className={`relative border rounded-xl p-6 sm:p-8 transition-all shadow-sm ${
                     isCurrent ? 'border-primary ring-1 ring-primary/20 bg-primary/5' : 'border-border'
                   }`}
                   data-testid={`card-plan-${plan.id}`}
@@ -340,7 +340,7 @@ export default function Account() {
             <BarChart3 className="w-6 h-6 text-primary" />
             Usage Overview
           </h2>
-          <div className="grid gap-10 md:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-3">
               <div className="flex justify-between text-sm font-bold">
                 <span className="text-muted-foreground uppercase tracking-wider">Job Scrapes</span>
@@ -394,14 +394,14 @@ export default function Account() {
 
         {/* Danger Zone Section */}
         <section className="pt-12 border-t">
-          <div className="flex items-center justify-between gap-8 p-8 rounded-xl border border-destructive/20 bg-destructive/5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 sm:p-8 rounded-xl border border-destructive/20 bg-destructive/5">
             <div className="space-y-2">
               <p className="text-lg font-bold text-destructive">Danger Zone</p>
               <p className="text-base text-muted-foreground">Permanently remove your account and all associated data.</p>
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="default" className="px-8 font-bold" data-testid="button-delete-account">
+                <Button variant="destructive" size="default" className="px-8 font-bold w-full sm:w-auto" data-testid="button-delete-account">
                   Delete Account
                 </Button>
               </AlertDialogTrigger>

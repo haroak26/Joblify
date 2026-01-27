@@ -75,14 +75,14 @@ export default function Generator() {
   const selectedJob = jobs.find(j => j.id.toString() === selectedJobId);
 
   return (
-    <div className="p-10 space-y-12 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-generator-heading">Message Generator</h1>
-        <p className="text-lg text-muted-foreground">Personalized outreach and social media engagement.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-generator-heading">Message Generator</h1>
+        <p className="text-base sm:text-lg text-muted-foreground">Personalized outreach and social media engagement.</p>
       </div>
 
-      <div className="space-y-10">
-        <div className="grid gap-10 md:grid-cols-2">
+      <div className="space-y-8 sm:space-y-10">
+        <div className="grid gap-8 lg:grid-cols-2">
           <div className="space-y-3">
             <p className="text-base font-semibold">Step 1: Select Job</p>
             <Select value={selectedJobId} onValueChange={handleJobSelect}>
@@ -101,7 +101,7 @@ export default function Generator() {
 
           <div className="space-y-3">
             <p className="text-base font-semibold">Step 2: Strategy</p>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <Select value={messageType} onValueChange={(v: MessageType) => setMessageType(v)}>
                 <SelectTrigger className="flex-1 h-11 px-4" data-testid="select-message-type">
                   <SelectValue />
@@ -113,7 +113,7 @@ export default function Generator() {
               </Select>
               {messageType === "initial" && (
                 <Select value={tone} onValueChange={(v: Tone) => setTone(v)}>
-                  <SelectTrigger className="flex-1 h-11 px-4" data-testid="select-tone">
+                  <SelectTrigger className="flex-1 h-11 px-4 w-full" data-testid="select-tone">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,15 +171,15 @@ export default function Generator() {
         )}
       </div>
 
-      {generatedMessage && (
+        {generatedMessage && (
         <div className="pt-12 border-t space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h2 className="text-xl font-semibold">Generated Message</h2>
             <Button
               variant="outline"
               size="lg"
               onClick={handleCopy}
-              className="gap-3 h-10 px-5"
+              className="gap-3 h-10 px-5 w-full sm:w-auto"
               data-testid="button-copy"
             >
               {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
