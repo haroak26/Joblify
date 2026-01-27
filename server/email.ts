@@ -41,7 +41,7 @@ async function sendEmail(options: EmailOptions): Promise<boolean> {
   }
 }
 
-function getEmailTemplate(content: string): string {
+function getEmailTemplate(content: string, previewText: string): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -50,8 +50,11 @@ function getEmailTemplate(content: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Joblify</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ffffff; padding: 32px 16px;">
+<body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a;">
+  <span style="display:none; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">
+    ${previewText}
+  </span>
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="padding: 32px 16px;">
     <tr>
       <td align="center">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px;">
@@ -70,7 +73,7 @@ function getEmailTemplate(content: string): string {
             </td>
           </tr>
           <tr>
-            <td style="background-color: #ffffff; border-radius: 16px; padding: 32px; border: 1px solid #e2e8f0;">
+            <td style="padding: 0;">
               ${content}
             </td>
           </tr>
@@ -118,18 +121,16 @@ export async function sendVerificationEmail(email: string, username: string, tok
         </td>
       </tr>
     </table>
-    <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-top: 20px;">
-      <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0;">
-        Or paste this link in your browser:<br>
-        <a href="${verifyUrl}" style="color: #16a34a; word-break: break-all;">${verifyUrl}</a>
-      </p>
-    </div>
+    <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
+      Or paste this link in your browser:<br>
+      <a href="${verifyUrl}" style="color: #16a34a; word-break: break-all;">${verifyUrl}</a>
+    </p>
   `;
 
   return sendEmail({
     to: email,
     subject: "Verify your Joblify email",
-    html: getEmailTemplate(content),
+    html: getEmailTemplate(content, "Confirm your Joblify email address to activate your account."),
   });
 }
 
@@ -155,12 +156,10 @@ export async function sendPasswordResetEmail(email: string, username: string, to
         </td>
       </tr>
     </table>
-    <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-top: 20px;">
-      <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0;">
-        Or paste this link in your browser:<br>
-        <a href="${resetUrl}" style="color: #16a34a; word-break: break-all;">${resetUrl}</a>
-      </p>
-    </div>
+    <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
+      Or paste this link in your browser:<br>
+      <a href="${resetUrl}" style="color: #16a34a; word-break: break-all;">${resetUrl}</a>
+    </p>
     <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
       If you didn’t request this, you can safely ignore this email.
     </p>
@@ -169,7 +168,7 @@ export async function sendPasswordResetEmail(email: string, username: string, to
   return sendEmail({
     to: email,
     subject: "Reset your Joblify password",
-    html: getEmailTemplate(content),
+    html: getEmailTemplate(content, "Reset your Joblify password with this secure link."),
   });
 }
 
@@ -223,6 +222,6 @@ export async function sendWelcomeEmail(email: string, username: string): Promise
   return sendEmail({
     to: email,
     subject: "Welcome to Joblify - Let's find your next opportunity!",
-    html: getEmailTemplate(content),
+    html: getEmailTemplate(content, "Your Joblify account is ready. Start discovering freelance opportunities."),
   });
 }

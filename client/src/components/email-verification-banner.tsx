@@ -37,7 +37,7 @@ export function EmailVerificationBanner({ email }: EmailVerificationBannerProps)
 
   return (
     <Alert className="bg-amber-500/10 border-amber-500/20" data-testid="alert-verify-email">
-      <Mail className="h-4 w-4 text-amber-500" />
+      <Mail className="h-4 w-4 text-amber-700 dark:text-amber-400" />
       <AlertTitle className="text-amber-700 dark:text-amber-400" data-testid="text-verify-email-title">Verify Your Email</AlertTitle>
       <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-3">
         <span className="text-amber-700/80 dark:text-amber-400/80" data-testid="text-verify-email-description">

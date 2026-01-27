@@ -22,6 +22,7 @@ import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/sche
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { clearStoredUser } from "@/lib/auth-storage";
 
 interface SubscriptionResponse {
   subscription: Subscription;
@@ -179,6 +180,8 @@ export default function Account() {
         title: "Account Deleted",
         description: "Your account has been permanently deleted.",
       });
+      clearStoredUser();
+      queryClient.clear();
       navigate("/");
     },
     onError: () => {
@@ -198,6 +201,9 @@ export default function Account() {
   const isPlus = currentPlan === "plus";
   const isUltra = currentPlan === "ultra";
   const currentPlanLabel = currentPlan === "ultra" ? "Ultra" : currentPlan === "plus" ? "Plus" : "Free";
+  const cancellationDate = subscription?.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+    : null;
 
   const handleIntroChange = (intro: string) => {
     updateProfileMutation.mutate({ ...profile, intro });
@@ -257,6 +263,11 @@ export default function Account() {
             <CreditCard className="w-6 h-6 text-primary" />
             Subscription & Billing
           </h2>
+          {subscription?.status === "cancelled" && cancellationDate && (
+            <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              Your subscription will cancel on <span className="font-semibold">{cancellationDate}</span>.
+            </div>
+          )}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {plans.map((plan) => {
               const isCurrent = currentPlan === plan.id;
@@ -265,28 +276,36 @@ export default function Account() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative border rounded-xl p-6 sm:p-8 transition-all shadow-sm ${
-                    isCurrent ? 'border-primary ring-1 ring-primary/20 bg-primary/5' : 'border-border'
+                  className={`relative overflow-hidden rounded-2xl border p-6 sm:p-7 transition-all shadow-sm ${
+                    isCurrent
+                      ? 'border-primary/40 bg-gradient-to-br from-primary/10 via-transparent to-transparent ring-1 ring-primary/20'
+                      : 'border-border bg-background'
                   }`}
                   data-testid={`card-plan-${plan.id}`}
                 >
+                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
                   {isCurrent && (
-                    <Badge variant="secondary" className="absolute -top-3 right-6 text-xs uppercase px-4 h-6">
+                    <Badge variant="secondary" className="absolute -top-3 right-6 text-xs uppercase px-4 h-6 shadow-sm">
                       {isCancelled ? "Cancelling" : "Active Plan"}
                     </Badge>
                   )}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-bold">{plan.name}</h3>
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-bold">{plan.name}</h3>
+                        <p className="text-xs uppercase tracking-widest text-muted-foreground">{plan.period}</p>
+                      </div>
                       <div className="text-right">
-                        <span className="text-2xl font-bold">{plan.price}</span>
-                        <span className="text-muted-foreground text-sm font-medium">/mo</span>
+                        <span className="text-3xl font-bold">{plan.price}</span>
+                        {plan.id !== "free" && (
+                          <span className="text-muted-foreground text-sm font-medium">/mo</span>
+                        )}
                       </div>
                     </div>
                     <ul className="space-y-3">
                       {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-3 text-base text-muted-foreground">
-                          <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                        <li key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <Check className="w-4 h-4 text-primary flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -295,7 +314,7 @@ export default function Account() {
                     {(plan.id === "plus" || plan.id === "ultra") && !isCurrent && (
                       <Button 
                         size="default"
-                        className="w-full font-bold shadow-md" 
+                        className="w-full font-bold shadow-md hover:shadow-lg" 
                         onClick={() => upgradeMutation.mutate(plan.id as "plus" | "ultra")}
                         disabled={upgradeMutation.isPending}
                         data-testid={`button-upgrade-${plan.id}`}
