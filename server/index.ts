@@ -19,9 +19,15 @@ declare module "http" {
 
 async function initStripe() {
   const databaseUrl = process.env.DATABASE_URL;
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!databaseUrl) {
     console.log("DATABASE_URL not set - Stripe sync disabled");
+    return;
+  }
+
+  if (!stripeSecretKey) {
+    console.log("STRIPE_SECRET_KEY not set - Stripe sync disabled");
     return;
   }
 
@@ -81,13 +87,15 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+const shouldLogRequests = process.env.LOG_REQUESTS === "true";
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
+    if (shouldLogRequests && path.startsWith("/api")) {
       log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
     }
   });
@@ -99,7 +107,9 @@ app.use((req, res, next) => {
   await initStripe();
   await setupStripeRoutes(app);
   await registerRoutes(httpServer, app);
-  startScheduleRunner();
+  if (process.env.SCHEDULE_RUNNER_ENABLED === "true") {
+    startScheduleRunner();
+  }
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
