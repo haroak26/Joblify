@@ -66,7 +66,7 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="pt-28 pb-16 lg:pt-40 lg:pb-24 px-4 sm:px-6">
+      <section className="pt-24 pb-14 sm:pt-28 sm:pb-16 lg:pt-40 lg:pb-24 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="max-w-2xl">
@@ -74,28 +74,28 @@ export default function Landing() {
                 <Star className="w-3 h-3 mr-1.5" />
                 AI-Powered Job Discovery
               </Badge>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
                 Find freelance gigs
                 <span className="text-primary block mt-1">before anyone else</span>
               </h1>
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed">
                 Joblify scans social media in real-time to surface hiring opportunities that match your skills. Stop scrolling, start earning.
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 <Link href="/dashboard">
-                  <Button size="lg">
+                  <Button size="lg" className="w-full sm:w-auto">
                     Start Free
                     <ArrowRight className="ml-1.5 w-4 h-4" />
                   </Button>
                 </Link>
                 <a href="#examples">
-                  <Button variant="secondary" size="lg">
+                  <Button variant="secondary" size="lg" className="w-full sm:w-auto">
                     See How It Works
                   </Button>
                 </a>
               </div>
             </div>
-            <div className="bg-muted/20 border rounded-2xl p-6 lg:p-8">
+            <div className="bg-muted/20 border rounded-2xl p-4 sm:p-6 lg:p-8">
               <div className="flex items-center justify-between mb-6">
                 <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Live Preview</p>
                 <Badge variant="secondary" className="text-xs border-none bg-primary/10 text-primary">Realtime</Badge>
@@ -152,11 +152,11 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section className="py-20 lg:py-28 px-4 sm:px-6">
+      <section className="py-16 sm:py-20 lg:py-28 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">How it works</h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            <h2 className="text-2xl sm:text-4xl font-bold mb-4">How it works</h2>
+            <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
               Three simple steps to land your next project
             </p>
           </div>
@@ -175,11 +175,11 @@ export default function Landing() {
       </section>
 
       {/* Example */}
-      <section id="examples" className="py-20 lg:py-28 px-4 sm:px-6">
+      <section id="examples" className="py-16 sm:py-20 lg:py-28 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Example workflow</h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <h2 className="text-2xl sm:text-4xl font-bold mb-4">Example workflow</h2>
+            <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
               See how a typical Joblify session turns a social post into a qualified lead.
             </p>
           </div>
@@ -210,14 +210,14 @@ export default function Landing() {
       </section>
 
       {/* Benefits */}
-      <section className="py-20 lg:py-28 px-4 sm:px-6 bg-muted/30">
+      <section className="py-16 sm:py-20 lg:py-28 px-4 sm:px-6 bg-muted/30">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-6">
+              <h2 className="text-2xl sm:text-4xl font-bold mb-6">
                 Everything you need to land more clients
               </h2>
-              <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
+              <p className="text-muted-foreground text-base sm:text-lg mb-8 leading-relaxed">
                 Joblify combines smart discovery with AI-powered tools to help you find and win more freelance work.
               </p>
               <div className="space-y-4">
@@ -229,7 +229,7 @@ export default function Landing() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-background border rounded-lg p-6">
                 <p className="text-4xl font-bold text-primary mb-1">85%</p>
                 <p className="text-sm text-muted-foreground">Faster discovery</p>
@@ -252,16 +252,16 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 lg:py-28 px-4 sm:px-6 text-center">
+      <section className="py-16 sm:py-20 lg:py-28 px-4 sm:px-6 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+          <h2 className="text-2xl sm:text-4xl font-bold mb-4">
             Ready to find your next gig?
           </h2>
-          <p className="text-muted-foreground text-lg mb-8">
+          <p className="text-muted-foreground text-base sm:text-lg mb-8">
             Join thousands of freelancers using AI to discover opportunities faster.
           </p>
           <Link href="/dashboard">
-            <Button size="lg">
+            <Button size="lg" className="w-full sm:w-auto">
               Get Started Free
               <ArrowRight className="ml-1.5 w-4 h-4" />
             </Button>

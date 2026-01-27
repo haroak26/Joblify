@@ -93,7 +93,7 @@ export default function JobDetails() {
 
   if (jobsQuery.isLoading || profileQuery.isLoading) {
     return (
-      <div className="p-10 space-y-12 max-w-5xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Loading job details...</CardTitle>
@@ -105,7 +105,7 @@ export default function JobDetails() {
 
   if (!job) {
     return (
-      <div className="p-10 space-y-12 max-w-5xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Job not found</CardTitle>
@@ -127,8 +127,8 @@ export default function JobDetails() {
   }
 
   return (
-    <div className="p-10 space-y-12 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between flex-wrap">
         <div className="space-y-1">
           <Button asChild variant="ghost" className="px-0 text-muted-foreground">
             <Link href="/dashboard/jobs">
@@ -144,7 +144,7 @@ export default function JobDetails() {
             {job.source} • @{job.authorHandle || job.author}
           </p>
         </div>
-        <Button asChild variant="outline" className="gap-2">
+        <Button asChild variant="outline" className="gap-2 w-full sm:w-auto">
           <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="w-4 h-4" />
             View original post

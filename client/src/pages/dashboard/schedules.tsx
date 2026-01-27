@@ -166,8 +166,8 @@ export default function Schedules() {
 
   if (subscriptionQuery.isLoading || (hasAccess && schedulesQuery.isLoading)) {
     return (
-      <div className="p-10 max-w-5xl mx-auto space-y-12">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto space-y-8 sm:space-y-12">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="space-y-2">
             <Skeleton className="h-8 w-32" />
             <Skeleton className="h-4 w-64" />
@@ -189,7 +189,7 @@ export default function Schedules() {
 
   if (!hasAccess) {
     return (
-      <div className="p-10 max-w-5xl mx-auto space-y-12">
+      <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto space-y-8 sm:space-y-12">
         <Card className="border-primary/20">
           <CardContent className="py-12 text-center">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6">
@@ -219,17 +219,17 @@ export default function Schedules() {
   }
 
   return (
-    <div className="p-10 max-w-5xl mx-auto space-y-12">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto space-y-8 sm:space-y-12">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-schedules-title">Schedules</h1>
           <p className="text-muted-foreground">Automate your job discovery with recurring scans</p>
         </div>
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-muted-foreground">
           <span>Schedules: {schedules.length}/{scheduleLimitLabel}</span>
           <Button 
             onClick={() => setShowAddForm(!showAddForm)} 
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
             data-testid="button-add-schedule"
             disabled={maxSchedules !== -1 && schedules.length >= maxSchedules}
           >
@@ -257,7 +257,7 @@ export default function Schedules() {
                 data-testid="input-schedule-name"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Frequency</Label>
                 <Select
@@ -288,7 +288,7 @@ export default function Schedules() {
             </div>
             <div className="space-y-2">
               <Label>Platforms to Scan</Label>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-3">
                 {platformOptions.map((platform) => (
                   <label
                     key={platform.id}
@@ -312,13 +312,14 @@ export default function Schedules() {
                 <p className="text-sm text-destructive">Select at least one platform</p>
               )}
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowAddForm(false)} data-testid="button-cancel-schedule">
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+              <Button variant="outline" onClick={() => setShowAddForm(false)} className="w-full sm:w-auto" data-testid="button-cancel-schedule">
                 Cancel
               </Button>
               <Button 
                 onClick={handleAddSchedule} 
                 disabled={!newSchedule.name || newSchedule.platforms.length === 0 || createMutation.isPending}
+                className="w-full sm:w-auto"
                 data-testid="button-save-schedule"
               >
                 {createMutation.isPending ? (
@@ -351,8 +352,8 @@ export default function Schedules() {
           schedules.map((schedule) => (
             <Card key={schedule.id} data-testid={`card-schedule-${schedule.id}`}>
               <CardContent className="p-4">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between flex-wrap gap-4">
+                  <div className="flex items-start sm:items-center gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${schedule.enabled ? 'bg-primary/10' : 'bg-muted'}`}>
                       <Clock className={`w-5 h-5 ${schedule.enabled ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
@@ -378,7 +379,7 @@ export default function Schedules() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
