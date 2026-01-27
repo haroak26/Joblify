@@ -10,7 +10,7 @@ const ULTRA_PRICE_ID = process.env.STRIPE_ULTRA_PRICE_ID || "";
 export async function setupStripeRoutes(app: Express) {
   try {
     await getUncachableStripeClient();
-    console.log("Stripe connected via Replit integration");
+    console.log("Stripe configured");
   } catch (error) {
     console.log("Stripe not configured - payment features disabled");
     return;

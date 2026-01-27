@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
@@ -99,13 +99,22 @@ export default function DashboardHome() {
           { label: "Saved", value: savedJobs.length, icon: TrendingUp },
           { label: "Applied", value: appliedJobs.length, icon: Clock },
         ].map((stat) => (
-          <div key={stat.label} className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <stat.icon className="w-5 h-5" />
-              <span className="text-sm font-medium uppercase tracking-wider">{stat.label}</span>
-            </div>
-            <p className="text-3xl sm:text-4xl font-bold" data-testid={`text-${stat.label.toLowerCase().replace(" ", "-")}`}>{stat.value}</p>
-          </div>
+          <Card key={stat.label} className="border border-border/60 bg-card/80 shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <stat.icon className="w-5 h-5" />
+                <span className="text-xs font-medium uppercase tracking-wider">{stat.label}</span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p
+                className="text-3xl sm:text-4xl font-bold"
+                data-testid={`text-${stat.label.toLowerCase().replace(" ", "-")}`}
+              >
+                {stat.value}
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
