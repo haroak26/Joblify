@@ -100,8 +100,8 @@ export default function Landing() {
                 </a>
               </div>
             </div>
-            <div className="bg-muted/20 border rounded-2xl p-4 sm:p-6 lg:p-8">
-              <div className="flex items-center justify-between mb-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Live Preview</p>
                 <Badge variant="secondary" className="text-xs border-none bg-primary/10 text-primary">Realtime</Badge>
               </div>
