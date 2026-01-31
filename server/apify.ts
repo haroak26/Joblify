@@ -31,9 +31,9 @@ function getProxyConfiguration() {
 
 // Verified Apify actor IDs (as of 2025)
 const ACTORS = {
-  X: "apidojo/tweet-scraper",           // Tweet Scraper V2 - most reliable
+  X: "G8hR9sp2nkjI2om8X",               // X scraper (required actor ID)
   REDDIT: "lqOcm2Bgsg4LGNATd",          // Reddit scraper (required actor ID)
-  FACEBOOK: "Lnz4QRVI89bcQAUGQ"          // Facebook search scraper
+  FACEBOOK: "Lnz4QRVI89bcQAUGQ"         // Facebook search scraper
 };
 
 interface ScrapedItem {
@@ -87,7 +87,7 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
       tweetLanguage: "en",
       proxyConfiguration: getProxyConfiguration()
     };
-    console.log('Starting X scraper with query:', query);
+    console.log('Starting X scraper');
     const run = await client.actor(ACTORS.X).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`X scraper returned ${items.length} items`);
@@ -229,18 +229,31 @@ function isHiringPost(text: string): boolean {
   return hasHiringSignal && !isSelfPromo;
 }
 
+function normalizeUrl(rawUrl?: string): string {
+  if (!rawUrl) return '';
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('//')) {
+    return `https:${trimmed}`;
+  }
+  if (trimmed.startsWith('x.com/') || trimmed.startsWith('twitter.com/') || trimmed.startsWith('reddit.com/') || trimmed.startsWith('www.')) {
+    return `https://${trimmed}`;
+  }
+  return '';
+}
+
 function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'): string {
-  if (item.url) return item.url;
-  if (item.tweetUrl) return item.tweetUrl;
-  if (item.tweet_url) return item.tweet_url;
-  if (item.statusUrl) return item.statusUrl;
-  if (item.status_url) return item.status_url;
+  const directUrl = normalizeUrl(item.url || item.tweetUrl || item.tweet_url || item.statusUrl || item.status_url);
+  if (directUrl) return directUrl;
   if (source === 'x' && item.id) {
     const user = item.user as { screen_name?: string } | undefined;
     const author = item.author as { userName?: string } | undefined;
     const handle = user?.screen_name || (typeof author === 'object' ? author?.userName : undefined);
     if (handle) {
-      return `https://x.com/${handle}/status/${item.id}`;
+      return `https://x.com/${handle.replace(/^@/, "")}/status/${item.id}`;
     }
   }
   if (source === 'x') {
@@ -255,7 +268,7 @@ function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'):
   if (source === 'reddit' && item.permalink) {
     return item.permalink.startsWith('http') ? item.permalink : `https://reddit.com${item.permalink}`;
   }
-  return item.link || item.postUrl || item.post_url || item.permalink_url || '';
+  return normalizeUrl(item.link || item.postUrl || item.post_url || item.permalink_url);
 }
 
 function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResults: number): JobPost[] {
