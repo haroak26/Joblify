@@ -7,6 +7,28 @@ const client = apifyToken
   ? new ApifyClient({ token: apifyToken })
   : null;
 
+const useApifyProxy = process.env.APIFY_USE_PROXY === 'true';
+const apifyProxyGroups = process.env.APIFY_PROXY_GROUPS
+  ? process.env.APIFY_PROXY_GROUPS.split(',').map((group) => group.trim()).filter(Boolean)
+  : [];
+
+function getProxyConfiguration() {
+  if (!useApifyProxy) {
+    return {
+      useApifyProxy: false,
+    };
+  }
+  if (apifyProxyGroups.length > 0) {
+    return {
+      useApifyProxy: true,
+      apifyProxyGroups,
+    };
+  }
+  return {
+    useApifyProxy: true,
+  };
+}
+
 // Verified Apify actor IDs (as of 2025)
 const ACTORS = {
   X: "apidojo/tweet-scraper",           // Tweet Scraper V2 - most reliable
@@ -62,7 +84,8 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
       searchTerms: [query],
       maxItems: maxResults,
       sort: "Latest",
-      tweetLanguage: "en"
+      tweetLanguage: "en",
+      proxyConfiguration: getProxyConfiguration()
     };
     console.log('Starting X scraper with query:', query);
     const run = await client.actor(ACTORS.X).call(input);
@@ -82,7 +105,7 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
   }
   try {
     // Input schema for trudax/reddit-scraper (verified from Apify docs)
-    // Uses: startUrls, maxItems, maxPostCount, maxComments, scrollTimeout, proxy (required)
+    // Uses: startUrls, maxItems, maxPostCount, maxComments, scrollTimeout, proxy
     const startUrls = [
       "https://www.reddit.com/r/forhire/new/",
       "https://www.reddit.com/r/hiring/new/",
@@ -99,10 +122,7 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
       scrollTimeout: 40,
       skipComments: true,
       sort: "new",
-      proxy: {
-        useApifyProxy: true,
-        apifyProxyGroups: ["RESIDENTIAL"]
-      }
+      proxy: getProxyConfiguration()
     };
     
     console.log('Starting Reddit scraper');
@@ -147,9 +167,7 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
       results_limit: maxResults * 2,
       min_wait_time_in_sec: 1,
       max_wait_time_in_sec: 4,
-      proxyConfiguration: {
-        useApifyProxy: true
-      }
+      proxyConfiguration: getProxyConfiguration()
     };
     
     console.log('Starting Facebook scraper');
