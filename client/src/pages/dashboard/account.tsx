@@ -73,7 +73,7 @@ const plans = [
   },
   {
     id: "plus",
-    name: "Pro",
+    name: "Plus",
     price: "$15",
     period: "per month",
     billingSuffix: "/mo",
@@ -135,7 +135,7 @@ export default function Account() {
       if (error.code === "SKILLS_LIMIT") {
         toast({
           title: "Skills Limit Reached",
-          description: error.message || "Upgrade to Pro for unlimited skills.",
+          description: error.message || "Upgrade to Plus for unlimited skills.",
           variant: "destructive",
         });
       }
@@ -217,7 +217,7 @@ export default function Account() {
   const currentPlanLabel = currentPlan === "ultra"
     ? "Ultra"
     : currentPlan === "plus"
-    ? "Pro"
+    ? "Plus"
     : currentPlan === "lifetime"
     ? "Lifetime"
     : "Free";
@@ -303,18 +303,20 @@ export default function Account() {
                   }`}
                   data-testid={`card-plan-${plan.id}`}
                 >
-                  {isCurrent && (
-                    <Badge
-                      variant="secondary"
-                      className="absolute -top-2 right-5 h-6 rounded-full border border-primary/30 bg-primary/10 px-3 text-[10px] font-semibold uppercase tracking-widest text-primary"
-                    >
-                      {isCancelled ? "Cancelling" : "Active Plan"}
-                    </Badge>
-                  )}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <h3 className="text-lg font-bold">{plan.name}</h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-bold">{plan.name}</h3>
+                          {isCurrent && (
+                            <Badge
+                              variant="secondary"
+                              className="h-5 rounded-full border border-primary/30 bg-primary/10 px-2 text-[10px] font-semibold uppercase tracking-widest text-primary"
+                            >
+                              {isCancelled ? "Cancelling" : "Active Plan"}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs uppercase tracking-widest text-muted-foreground">{plan.period}</p>
                       </div>
                       <div className="text-right">
