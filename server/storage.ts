@@ -348,22 +348,22 @@ export class DatabaseStorage implements IStorage {
         const matchedJobs = scrapedJobs.map(job => ({
           ...job,
           matchedSkills: job.matchedSkills.filter(ms =>
-            skillNames.some(sn => 
+            skillNames.some(sn =>
               ms.toLowerCase().includes(sn.toLowerCase()) ||
               sn.toLowerCase().includes(ms.toLowerCase())
             )
           )
         })).filter(job => job.matchedSkills.length > 0 || job.description.toLowerCase().includes(skillNames[0]?.toLowerCase() || ''));
-        
+
         if (matchedJobs.length > 0) {
           return matchedJobs;
         }
       }
     } catch (error) {
-      console.error('Apify scraping failed, using sample data:', error);
+      console.error('Apify scraping failed:', error);
     }
-    
-    return this.generateJobsForSkills(skills);
+
+    return [];
   }
 
   async deleteUser(id: string): Promise<boolean> {

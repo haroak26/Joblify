@@ -213,6 +213,7 @@ export default function Account() {
   const isPlus = currentPlan === "plus";
   const isUltra = currentPlan === "ultra";
   const isLifetime = currentPlan === "lifetime";
+  const visiblePlans = isLifetime ? plans.filter((plan) => plan.id === "lifetime") : plans;
   const currentPlanLabel = currentPlan === "ultra"
     ? "Ultra"
     : currentPlan === "plus"
@@ -288,7 +289,7 @@ export default function Account() {
             </div>
           )}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {plans.map((plan) => {
+            {visiblePlans.map((plan) => {
               const isCurrent = currentPlan === plan.id;
               const isCancelled = subscription?.status === "cancelled";
               
@@ -305,7 +306,7 @@ export default function Account() {
                   {isCurrent && (
                     <Badge
                       variant="secondary"
-                      className="absolute -top-3 right-6 h-6 rounded-full border border-primary/30 bg-primary/10 px-3 text-[10px] font-semibold uppercase tracking-widest text-primary"
+                      className="absolute -top-2 right-5 h-6 rounded-full border border-primary/30 bg-primary/10 px-3 text-[10px] font-semibold uppercase tracking-widest text-primary"
                     >
                       {isCancelled ? "Cancelling" : "Active Plan"}
                     </Badge>
