@@ -32,7 +32,7 @@ function getProxyConfiguration() {
 // Verified Apify actor IDs (as of 2025)
 const ACTORS = {
   X: "apidojo/tweet-scraper",           // Tweet Scraper V2 - most reliable
-  REDDIT: "trudax/reddit-scraper",       // Full-featured Reddit scraper
+  REDDIT: "lqOcm2Bgsg4LGNATd",          // Reddit scraper (required actor ID)
   FACEBOOK: "Lnz4QRVI89bcQAUGQ"          // Facebook search scraper
 };
 
@@ -104,25 +104,24 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
     return [];
   }
   try {
-    // Input schema for trudax/reddit-scraper (verified from Apify docs)
-    // Uses: startUrls, maxItems, maxPostCount, maxComments, scrollTimeout, proxy
-    const startUrls = [
-      "https://www.reddit.com/r/forhire/new/",
-      "https://www.reddit.com/r/hiring/new/",
-      "https://www.reddit.com/r/freelance_forhire/new/",
-      "https://www.reddit.com/r/slavelabour/new/",
-      "https://www.reddit.com/r/jobbit/new/"
-    ];
-    
-    const input = { 
-      startUrls: startUrls.map(url => ({ url })),
-      maxItems: maxResults * 2,
-      maxPostCount: maxResults * 2,
+    // Input schema for lqOcm2Bgsg4LGNATd Reddit actor (matches Apify docs example)
+    const input = {
+      mode: "search",
+      subreddit: "forhire",
+      postUrl: "",
+      username: "",
+      searchQuery: query,
+      searchSubreddit: "forhire",
+      sort: "hot",
+      timeFilter: "all",
+      maxPosts: maxResults * 2,
       maxComments: 0,
-      scrollTimeout: 40,
-      skipComments: true,
-      sort: "new",
-      proxy: getProxyConfiguration()
+      includeComments: false,
+      sinceDate: "2025-01-01",
+      outputFormat: "markdown",
+      includeImages: false,
+      delaySeconds: 1,
+      debugMode: false
     };
     
     console.log('Starting Reddit scraper');
