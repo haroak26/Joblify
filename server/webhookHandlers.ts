@@ -1,17 +1,21 @@
 import Stripe from "stripe";
-import { getStripeSync } from "./stripeClient";
 import { getUncachableStripeClient } from "./stripeClient";
 import { storage } from "./storage";
 
-const PRICE_ID_TO_PLAN = new Map<string, "plus" | "ultra">();
+type PlanName = "plus" | "ultra" | "lifetime";
+
+const PRICE_ID_TO_PLAN = new Map<string, PlanName>();
 if (process.env.STRIPE_PLUS_PRICE_ID) {
   PRICE_ID_TO_PLAN.set(process.env.STRIPE_PLUS_PRICE_ID, "plus");
 }
 if (process.env.STRIPE_ULTRA_PRICE_ID) {
   PRICE_ID_TO_PLAN.set(process.env.STRIPE_ULTRA_PRICE_ID, "ultra");
 }
+if (process.env.STRIPE_LIFETIME_PRICE_ID) {
+  PRICE_ID_TO_PLAN.set(process.env.STRIPE_LIFETIME_PRICE_ID, "lifetime");
+}
 
-function resolvePlanFromPrice(priceId?: string | null): "plus" | "ultra" | undefined {
+function resolvePlanFromPrice(priceId?: string | null): PlanName | undefined {
   if (!priceId) return undefined;
   return PRICE_ID_TO_PLAN.get(priceId);
 }
@@ -27,34 +31,26 @@ export class WebhookHandlers {
       );
     }
 
-    const sync = await getStripeSync();
     let event: Stripe.Event;
 
     try {
-      await sync.processWebhook(payload, signature);
-      event = JSON.parse(payload.toString("utf8")) as Stripe.Event;
-    } catch (error) {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
       if (!webhookSecret) {
-        console.error("Stripe webhook signature verification failed:", error);
-        return;
+        throw new Error("STRIPE_WEBHOOK_SECRET not configured");
       }
 
       const stripe = await getUncachableStripeClient();
-
-      try {
-        event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-      } catch (stripeError) {
-        console.error("Stripe webhook signature verification failed:", stripeError);
-        return;
-      }
+      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    } catch (error) {
+      console.error("Stripe webhook signature verification failed:", error);
+      return;
     }
 
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
-        const plan = session.metadata?.plan as "plus" | "ultra" | undefined;
+        const plan = session.metadata?.plan as PlanName | undefined;
         if (userId) {
           await storage.updateSubscription(userId, {
             stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,

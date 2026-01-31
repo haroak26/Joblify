@@ -6,6 +6,7 @@ import { WebhookHandlers } from "./webhookHandlers";
 
 const PLUS_PRICE_ID = process.env.STRIPE_PLUS_PRICE_ID || "";
 const ULTRA_PRICE_ID = process.env.STRIPE_ULTRA_PRICE_ID || "";
+const LIFETIME_PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID || "";
 
 export async function setupStripeRoutes(app: Express) {
   try {
@@ -23,8 +24,8 @@ export async function setupStripeRoutes(app: Express) {
       const user = await storage.getUser(userId);
 
       const requestedPlan = typeof req.body?.plan === "string" ? req.body.plan : "plus";
-      const plan = requestedPlan === "ultra" ? "ultra" : "plus";
-      const priceId = plan === "ultra" ? ULTRA_PRICE_ID : PLUS_PRICE_ID;
+      const plan = requestedPlan === "ultra" ? "ultra" : requestedPlan === "lifetime" ? "lifetime" : "plus";
+      const priceId = plan === "ultra" ? ULTRA_PRICE_ID : plan === "lifetime" ? LIFETIME_PRICE_ID : PLUS_PRICE_ID;
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -54,7 +55,7 @@ export async function setupStripeRoutes(app: Express) {
 
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
-        mode: "subscription",
+        mode: plan === "lifetime" ? "payment" : "subscription",
         line_items: [
           {
             price: priceId,

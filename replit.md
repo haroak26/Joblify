@@ -109,25 +109,29 @@ The app serves on port 5000.
 - `POE_API_KEY` - Poe API key (stored in Replit secrets)
 - `POE_API_BASE_URL` - Optional override for Poe API base URL
 - `DATABASE_URL` - PostgreSQL connection string (auto-managed by Replit)
+- `STRIPE_SECRET_KEY` - Stripe secret API key
+- `STRIPE_PUBLISHABLE_KEY` - Stripe publishable key (client-side checkout)
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook signing secret for `/api/stripe/webhook`
 - `STRIPE_PLUS_PRICE_ID` - Stripe price ID for Plus subscription
+- `STRIPE_ULTRA_PRICE_ID` - Stripe price ID for Ultra subscription
+- `STRIPE_LIFETIME_PRICE_ID` - Stripe price ID for the lifetime (one-time) plan
 - `APIFY_TOKEN` - Apify API token for job scraping (optional)
 - `APIFY_X_ACTOR` - Actor ID for X/Twitter scraping (optional)
 - `APIFY_REDDIT_ACTOR` - Actor ID for Reddit scraping (optional)
 - `APIFY_FACEBOOK_ACTOR` - Actor ID for Facebook scraping (optional)
 
 ## Stripe Integration
-Uses Replit Stripe connector with stripe-replit-sync for:
-- Automatic schema creation and data sync
-- Managed webhooks
-- Checkout sessions for subscription upgrades
+Uses direct Stripe API integration for:
+- Checkout sessions for subscription upgrades and lifetime purchases
 - Billing portal for subscription management
+- Webhook processing for subscription and payment updates
 
 To create products, run: `npx tsx server/seed-products.ts`
 
 ## Recent Changes
 - January 2026: Added SaaS subscription features
   - Two-tier subscription system (Free/Plus) with usage limits
-  - Stripe integration via Replit connector with stripe-replit-sync
+  - Stripe integration via direct API with webhook handling
   - Usage tracking (skills count, jobs scraped per month)
   - Monthly usage reset with automatic detection
   - Account page redesign with subscription info, usage stats

@@ -197,7 +197,7 @@ export default function Schedules() {
             </div>
             <h2 className="text-2xl font-bold mb-2" data-testid="text-schedules-locked">Schedules - Paid Feature</h2>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Automate your job discovery with scheduled scans. Upgrade to Pro or Ultra to unlock this feature 
+              Automate your job discovery with scheduled scans. Upgrade to Pro, Ultra, or Lifetime to unlock this feature 
               and never miss a new opportunity.
             </p>
             <div className="flex flex-col items-center gap-4">
