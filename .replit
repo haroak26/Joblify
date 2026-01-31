@@ -44,4 +44,3 @@ integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_database:
 [userenv]
 
 [userenv.shared]
-STRIPE_PLUS_PRICE_ID = "price_1StRa3K67DeOsEFbakADNzf0"
