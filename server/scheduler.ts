@@ -9,12 +9,12 @@ async function runSchedule(scheduleId: string, userId: string, name: string) {
   }
 
   const profile = await storage.getProfile(userId);
-  if (profile.skills.length === 0) {
+  if (profile.skills.length === 0 && profile.intro.trim().length === 0) {
     await storage.updateSchedule(userId, scheduleId, { lastRun: new Date() });
     return;
   }
 
-  const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
+  const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro);
   const seenUrls = await storage.getSeenJobUrls(userId);
   const newJobs = jobs.filter(job => !seenUrls.includes(job.sourceUrl));
 
