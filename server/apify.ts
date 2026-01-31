@@ -183,7 +183,17 @@ function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResu
     .map((item: ScrapedItem) => {
       const text = item.text || item.full_text || item.body || item.title || '';
       const author = item.author?.name || item.user?.name || item.author_name || 'Unknown';
-      const handle = item.author?.userName || item.user?.screen_name || '';
+      const handle = (
+        item.author?.userName ||
+        item.user?.screen_name ||
+        item.author_name ||
+        (typeof item.author === "string" ? item.author : "") ||
+        item.author?.name ||
+        item.user?.name ||
+        ""
+      )
+        .toString()
+        .replace(/^@/, "");
 
       const sourceUrl = buildSourceUrl(item, source);
       const budget = extractBudget(text);
