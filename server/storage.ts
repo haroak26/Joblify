@@ -517,7 +517,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSchedule(userId: string, scheduleData: Omit<InsertSchedule, 'userId'>): Promise<Schedule> {
-    const nextRun = this.calculateNextRun(scheduleData.frequency || 'daily', scheduleData.time || '09:00');
+    const nextRun = this.calculateNextRun(
+      scheduleData.frequency || 'daily',
+      scheduleData.time || '09:00',
+      scheduleData.days || []
+    );
     const [schedule] = await db.insert(schedules)
       .values({
         userId,
@@ -537,9 +541,13 @@ export class DatabaseStorage implements IStorage {
     const existing = await this.getSchedule(userId, scheduleId);
     if (!existing) return undefined;
     
-    const shouldRecalculate = updates.frequency || updates.time || updates.lastRun;
+    const shouldRecalculate = updates.frequency || updates.time || updates.lastRun || updates.days;
     const nextRun = shouldRecalculate
-      ? this.calculateNextRun(updates.frequency || existing.frequency, updates.time || existing.time)
+      ? this.calculateNextRun(
+          updates.frequency || existing.frequency,
+          updates.time || existing.time,
+          updates.days || existing.days || []
+        )
       : existing.nextRun;
     
     const [updated] = await db.update(schedules)
@@ -554,24 +562,56 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  private calculateNextRun(frequency: string, time: string): Date {
+  private calculateNextRun(frequency: string, time: string, days: string[] = []): Date {
     const now = new Date();
     const [hours, minutes] = time.split(':').map(Number);
     const nextRun = new Date(now);
     nextRun.setHours(hours, minutes, 0, 0);
-    
+
+    if (frequency === 'hourly') {
+      nextRun.setHours(now.getHours() + 1);
+      nextRun.setMinutes(now.getMinutes(), 0, 0);
+      return nextRun;
+    }
+
+    if (frequency === 'weekly' && days.length > 0) {
+      const dayMap: Record<string, number> = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+      };
+      const targetDays = days
+        .map((day) => dayMap[day.toLowerCase()])
+        .filter((day) => day !== undefined) as number[];
+      const currentDay = now.getDay();
+
+      for (let offset = 0; offset <= 7; offset += 1) {
+        const candidateDay = (currentDay + offset) % 7;
+        if (targetDays.includes(candidateDay)) {
+          const candidate = new Date(now);
+          candidate.setDate(candidate.getDate() + offset);
+          candidate.setHours(hours, minutes, 0, 0);
+          if (candidate > now) {
+            return candidate;
+          }
+        }
+      }
+    }
+
     if (nextRun <= now) {
       switch (frequency) {
-        case 'hourly':
-          nextRun.setHours(nextRun.getHours() + 1);
-          break;
         case 'weekly':
           nextRun.setDate(nextRun.getDate() + 7);
           break;
-        default: // daily
+        default:
           nextRun.setDate(nextRun.getDate() + 1);
       }
     }
+
     return nextRun;
   }
 
