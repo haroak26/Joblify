@@ -128,17 +128,8 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
     const run = await client.actor(ACTORS.REDDIT).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`Reddit scraper returned ${items.length} items`);
-    
-    // Filter items that match the query keywords
-    const queryTerms = query.toLowerCase().split(/\s+or\s+/i).map(t => t.trim().replace(/['"]/g, ''));
-    const filteredItems = items.filter((item: any) => {
-      const text = (item.title || '') + ' ' + (item.selftext || item.body || '');
-      const lowerText = text.toLowerCase();
-      return queryTerms.some(term => lowerText.includes(term.toLowerCase()));
-    });
-    
-    console.log(`Reddit filtered to ${filteredItems.length} items matching query`);
-    return processItems(filteredItems.length > 0 ? filteredItems : items, 'reddit', maxResults);
+
+    return processItems(items, 'reddit', maxResults);
   } catch (error) {
     console.error('Error scraping Reddit:', error instanceof Error ? error.message : error);
     return [];
@@ -173,16 +164,8 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
     const run = await client.actor(ACTORS.FACEBOOK).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`Facebook scraper returned ${items.length} items`);
-    
-    // Filter by query terms
-    const queryTerms = query.toLowerCase().split(/\s+or\s+/i).map(t => t.trim().replace(/['"]/g, ''));
-    const filteredItems = items.filter((item: any) => {
-      const text = (item.text || item.message || item.postText || item.post_text || item.content || '').toLowerCase();
-      return queryTerms.some(term => text.includes(term.toLowerCase()));
-    });
-    
-    console.log(`Facebook filtered to ${filteredItems.length} items`);
-    return processItems(filteredItems.length > 0 ? filteredItems : items, 'facebook', maxResults);
+
+    return processItems(items, 'facebook', maxResults);
   } catch (error) {
     console.error('Error scraping Facebook:', error instanceof Error ? error.message : error);
     return [];
@@ -216,6 +199,116 @@ const HIRING_PHRASES = [
 ];
 
 const EXCLUDED_PHRASES = ["for hire", "available for work", "open to work", "looking for work", "seeking employment", "looking for job"];
+const EXCLUDED_CONTEXTS = [
+  "how to get",
+  "tips for",
+  "resume",
+  "cv",
+  "portfolio",
+  "tutorial",
+  "bootcamp",
+  "course",
+  "interview",
+  "career advice",
+  "job search",
+  "looking for a job",
+  "looking for work",
+  "seeking employment",
+  "open to work"
+];
+const REMOTE_PHRASES = ["remote", "work from home", "wfh", "anywhere", "distributed", "location independent"];
+
+const COMMON_JOB_KEYWORDS = [
+  "developer",
+  "designer",
+  "engineer",
+  "marketing",
+  "writer",
+  "copywriter",
+  "editor",
+  "virtual assistant",
+  "assistant",
+  "data",
+  "product",
+  "project",
+  "customer support",
+  "qa",
+  "tester",
+  "accounting",
+  "bookkeeping",
+  "video editor",
+  "social media",
+  "seo",
+  "wordpress",
+  "shopify",
+  "webflow",
+  "figma",
+  "ui",
+  "ux",
+  "frontend",
+  "backend",
+  "full stack",
+  "mobile",
+  "ios",
+  "android",
+  "sales",
+  "lead generation",
+  "automation"
+];
+
+const INTRO_PHRASES: Array<{ term: string; label: string }> = [
+  { term: "front end", label: "Front End" },
+  { term: "front-end", label: "Front End" },
+  { term: "back end", label: "Back End" },
+  { term: "back-end", label: "Back End" },
+  { term: "full stack", label: "Full Stack" },
+  { term: "full-stack", label: "Full Stack" },
+  { term: "machine learning", label: "Machine Learning" },
+  { term: "data science", label: "Data Science" },
+  { term: "product design", label: "Product Design" },
+  { term: "graphic design", label: "Graphic Design" },
+  { term: "ui/ux", label: "UI/UX Design" },
+  { term: "project management", label: "Project Management" },
+  { term: "social media", label: "Social Media" },
+  { term: "content writing", label: "Content Writing" },
+  { term: "video editing", label: "Video Editing" },
+  { term: "virtual assistant", label: "Virtual Assistant" }
+];
+
+const STOPWORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "you",
+  "your",
+  "our",
+  "are",
+  "is",
+  "to",
+  "of",
+  "in",
+  "on",
+  "at",
+  "as",
+  "be",
+  "by",
+  "from",
+  "or",
+  "a",
+  "an",
+  "i",
+  "we",
+  "us",
+  "my",
+  "me",
+  "it",
+  "their",
+  "they",
+  "them"
+]);
 
 function isHiringPost(text: string): boolean {
   const normalized = text.toLowerCase();
@@ -227,6 +320,64 @@ function isHiringPost(text: string): boolean {
     return !beforePhrase.includes("looking") && !beforePhrase.includes("need");
   });
   return hasHiringSignal && !isSelfPromo;
+}
+
+function isRemotePost(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return REMOTE_PHRASES.some((phrase) => normalized.includes(phrase));
+}
+
+function isAdvicePost(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return EXCLUDED_CONTEXTS.some((phrase) => normalized.includes(phrase));
+}
+
+function formatKeywordLabel(term: string): string {
+  return term
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function extractIntroKeywords(intro: string): string[] {
+  const normalized = intro.toLowerCase();
+  const keywords: string[] = [];
+
+  for (const phrase of INTRO_PHRASES) {
+    if (normalized.includes(phrase.term)) {
+      keywords.push(phrase.label);
+    }
+  }
+
+  const words = normalized
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length > 2 && !STOPWORDS.has(word));
+
+  for (const word of words) {
+    keywords.push(formatKeywordLabel(word));
+  }
+
+  return keywords;
+}
+
+export function buildProfileKeywords(skills: string[], intro: string): string[] {
+  const rawSkills = skills.map((skill) => skill.trim()).filter(Boolean);
+  const introKeywords = intro ? extractIntroKeywords(intro).slice(0, 12) : [];
+  const combined = [...rawSkills, ...introKeywords];
+
+  if (combined.length < 6) {
+    combined.push(...COMMON_JOB_KEYWORDS.map((term) => formatKeywordLabel(term)));
+  }
+
+  const deduped: string[] = [];
+  for (const term of combined) {
+    if (!deduped.some((existing) => existing.toLowerCase() === term.toLowerCase())) {
+      deduped.push(term);
+    }
+  }
+  return deduped.slice(0, 14);
 }
 
 function normalizeUrl(rawUrl?: string): string {
@@ -275,7 +426,7 @@ function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResu
   const results = items
     .filter((item: ScrapedItem) => {
       const text = (item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.title || item.postText || item.post_text || item.message || item.content || '');
-      return text.length > 20 && isHiringPost(text);
+      return text.length > 20 && isHiringPost(text) && isRemotePost(text) && !isAdvicePost(text);
     })
     .map((item: ScrapedItem) => {
       const text = item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
@@ -324,7 +475,7 @@ function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResu
         postedAt,
         matchedSkills: extractSkills(fullText),
         budget,
-        isRemote: fullText.toLowerCase().includes('remote'),
+        isRemote: isRemotePost(fullText),
         saved: false,
         applied: false,
       };
@@ -532,13 +683,14 @@ function formatTimeAgo(dateStr: string): string {
   } catch { return 'Recently'; }
 }
 
-export async function scrapeJobsForSkills(skills: string[]): Promise<JobPost[]> {
-  if (!client || skills.length === 0) {
-    console.log('No Apify client or no skills provided');
+export async function scrapeJobsForSkills(skills: string[], intro: string): Promise<JobPost[]> {
+  const profileKeywords = buildProfileKeywords(skills, intro);
+  if (!client || profileKeywords.length === 0) {
+    console.log('No Apify client or no keywords provided');
     return [];
   }
   
-  const query = buildSearchQuery(skills);
+  const query = buildSearchQuery(profileKeywords);
   console.log('Scraping jobs for skills:', skills.join(', '));
   
   const results = await Promise.allSettled([
@@ -599,9 +751,9 @@ function buildSearchQuery(skills: string[]): { x: string; reddit: string; facebo
   const skillQuery = trimmedSkills.length > 0 ? trimmedSkills.join(" OR ") : "";
 
   return {
-    x: `(${skillQuery}) (hiring OR "looking for" OR freelance OR contract OR "need a" OR developer OR designer)`,
-    reddit: skillQuery || "developer designer freelance",
-    facebook: `${skillQuery} hiring freelance`,
+    x: `(${skillQuery}) (hiring OR "looking for" OR freelance OR contract OR remote OR "work from home")`,
+    reddit: `${skillQuery} hiring remote`,
+    facebook: `${skillQuery} hiring remote`,
   };
 }
 

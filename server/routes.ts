@@ -211,8 +211,8 @@ export async function registerRoutes(
       }
       
       const profile = await storage.getProfile(userId);
-      if (profile.skills.length > 0) {
-        const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
+      if (profile.skills.length > 0 || profile.intro.trim().length > 0) {
+        const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro);
         const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
         const limitedJobs = jobs.slice(0, Math.max(0, remaining));
         
@@ -227,7 +227,7 @@ export async function registerRoutes(
         const allJobs = await storage.getJobs(userId);
         res.json({ jobs: allJobs, newCount: limitedJobs.length, message: "Jobs refreshed successfully" });
       } else {
-        res.json({ jobs: [], message: "No skills set" });
+        res.json({ jobs: [], message: "No profile details set" });
       }
     } catch (error) {
       console.error("Error refreshing jobs:", error);
@@ -549,7 +549,7 @@ Write a ${tone} outreach message for this job opportunity.`;
         return res.status(400).json({ error: "No skills configured" });
       }
       
-      const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
+      const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro);
       
       // Filter out seen jobs
       const seenUrls = await storage.getSeenJobUrls(userId);

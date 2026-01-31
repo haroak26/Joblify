@@ -7,7 +7,7 @@ import {
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { scrapeJobsForSkills } from "./apify";
+import { buildProfileKeywords, scrapeJobsForSkills } from "./apify";
 
 export interface IStorage {
   // User methods
@@ -31,7 +31,7 @@ export interface IStorage {
   clearUnsavedJobs(userId: string): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
-  scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]>;
+  scrapeAndGenerateJobs(userId: string, skills: Skill[], intro: string): Promise<JobPost[]>;
   
   // Subscription methods
   getSubscription(userId: string): Promise<Subscription | undefined>;
@@ -397,18 +397,23 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]> {
+  async scrapeAndGenerateJobs(userId: string, skills: Skill[], intro: string): Promise<JobPost[]> {
     const skillNames = skills.map((s) => s.name);
     const skillMatchers = buildSkillMatchers(skills);
+    const profileKeywords = buildProfileKeywords(skillNames, intro);
+    const keywordMatchers = buildKeywordMatchers(profileKeywords);
     
     try {
-      const scrapedJobs = await scrapeJobsForSkills(skillNames);
+      const scrapedJobs = await scrapeJobsForSkills(skillNames, intro);
       if (scrapedJobs.length > 0) {
         const matchedJobs = scrapedJobs.map(job => {
           const text = `${job.title} ${job.description}`.toLowerCase();
           const matchedFromText = skillMatchers
             .filter(({ matcher }) => matcher.test(text))
             .map(({ name }) => name);
+          const matchedFromKeywords = keywordMatchers
+            .filter(({ matcher }) => matcher.test(text))
+            .map(({ label }) => label);
           const combinedSkills = Array.from(new Set([
             ...job.matchedSkills.filter(ms =>
               skillNames.some(sn =>
@@ -417,6 +422,7 @@ export class DatabaseStorage implements IStorage {
               )
             ),
             ...matchedFromText,
+            ...matchedFromKeywords,
           ]));
 
           return {
@@ -724,6 +730,19 @@ function buildSkillMatchers(skills: Skill[]): { name: string; matcher: RegExp }[
       matcher: new RegExp(`\\b(${pattern})\\b`, "i"),
     };
   });
+}
+
+function buildKeywordMatchers(keywords: string[]): { label: string; matcher: RegExp }[] {
+  return keywords
+    .map((keyword) => keyword.trim())
+    .filter(Boolean)
+    .map((keyword) => {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const matcher = /[^\w\s]/.test(keyword)
+        ? new RegExp(escaped, "i")
+        : new RegExp(`\\b${escaped}\\b`, "i");
+      return { label: keyword, matcher };
+    });
 }
 
 export const storage = new DatabaseStorage();
