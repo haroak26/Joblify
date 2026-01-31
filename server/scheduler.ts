@@ -25,7 +25,7 @@ async function runSchedule(scheduleId: string, userId: string, name: string) {
     await storage.markJobAsSeen(userId, job.sourceUrl);
   }
 
-  await storage.setJobs(userId, limitedJobs);
+  await storage.addJobs(userId, limitedJobs);
   if (limitedJobs.length > 0) {
     await storage.incrementJobsScraped(userId, limitedJobs.length);
   }

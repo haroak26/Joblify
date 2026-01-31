@@ -27,6 +27,8 @@ export interface IStorage {
   // Job methods
   getJobs(userId: string): Promise<JobPost[]>;
   setJobs(userId: string, jobs: JobPost[]): Promise<void>;
+  addJobs(userId: string, jobs: JobPost[]): Promise<void>;
+  clearUnsavedJobs(userId: string): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
   scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]>;
@@ -188,11 +190,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async setJobs(userId: string, newJobs: JobPost[]): Promise<void> {
-    await db.delete(jobs).where(eq(jobs.userId, userId));
+    // Get existing jobs to preserve saved/applied ones
+    const existingJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
+    const savedOrAppliedJobs = existingJobs.filter(job => job.saved || job.applied);
     
-    if (newJobs.length > 0) {
+    // Delete only non-saved and non-applied jobs
+    const jobsToDelete = existingJobs.filter(job => !job.saved && !job.applied);
+    if (jobsToDelete.length > 0) {
+      const idsToDelete = jobsToDelete.map(j => j.id);
+      await db.delete(jobs).where(and(eq(jobs.userId, userId), inArray(jobs.id, idsToDelete)));
+    }
+    
+    // Filter out new jobs that already exist - dedupe against ALL remaining jobs (saved/applied)
+    const existingUrls = new Set(savedOrAppliedJobs.map(j => j.sourceUrl));
+    const trulyNewJobs = newJobs.filter(job => !existingUrls.has(job.sourceUrl));
+    
+    if (trulyNewJobs.length > 0) {
       await db.insert(jobs).values(
-        newJobs.map(job => ({
+        trulyNewJobs.map(job => ({
           id: job.id,
           userId,
           title: job.title,
@@ -209,6 +224,49 @@ export class DatabaseStorage implements IStorage {
           applied: job.applied,
         }))
       );
+    }
+  }
+  
+  async addJobs(userId: string, newJobs: JobPost[]): Promise<void> {
+    if (newJobs.length === 0) return;
+    
+    // Get ALL existing job URLs to avoid duplicates
+    const existingJobs = await db.select({ sourceUrl: jobs.sourceUrl }).from(jobs).where(eq(jobs.userId, userId));
+    const existingUrls = new Set(existingJobs.map(j => j.sourceUrl));
+    
+    // Filter out duplicates against ALL existing jobs
+    const trulyNewJobs = newJobs.filter(job => !existingUrls.has(job.sourceUrl));
+    
+    if (trulyNewJobs.length > 0) {
+      await db.insert(jobs).values(
+        trulyNewJobs.map(job => ({
+          id: job.id,
+          userId,
+          title: job.title,
+          description: job.description,
+          source: job.source,
+          sourceUrl: job.sourceUrl,
+          author: job.author,
+          authorHandle: job.authorHandle || null,
+          postedAt: job.postedAt,
+          matchedSkills: job.matchedSkills,
+          budget: job.budget || null,
+          isRemote: job.isRemote,
+          saved: job.saved,
+          applied: job.applied,
+        }))
+      );
+    }
+  }
+  
+  async clearUnsavedJobs(userId: string): Promise<void> {
+    // Only delete jobs that are not saved and not applied
+    const existingJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
+    const jobsToDelete = existingJobs.filter(job => !job.saved && !job.applied);
+    
+    if (jobsToDelete.length > 0) {
+      const idsToDelete = jobsToDelete.map(j => j.id);
+      await db.delete(jobs).where(and(eq(jobs.userId, userId), inArray(jobs.id, idsToDelete)));
     }
   }
 

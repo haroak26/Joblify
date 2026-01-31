@@ -230,10 +230,18 @@ export async function setupStripeRoutes(app: Express) {
     }
 
     try {
-      const payload = req.rawBody ?? req.body;
+      // For express.raw(), req.body is already the Buffer
+      // req.rawBody is set by the verify callback as a backup
+      let payload: Buffer | undefined;
+      
+      if (Buffer.isBuffer(req.body)) {
+        payload = req.body;
+      } else if (Buffer.isBuffer(req.rawBody)) {
+        payload = req.rawBody;
+      }
 
-      if (!payload || !Buffer.isBuffer(payload)) {
-        console.error("Webhook error: raw body is missing or not a Buffer");
+      if (!payload) {
+        console.error("Webhook error: raw body is missing or not a Buffer. Body type:", typeof req.body);
         return res.status(400).json({ error: "Webhook processing error" });
       }
 

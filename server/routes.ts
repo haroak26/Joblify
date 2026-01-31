@@ -75,7 +75,8 @@ export async function registerRoutes(
       const profile = await storage.setProfile(userId, data);
       
       if (data.skills.length === 0) {
-        await storage.setJobs(userId, []);
+        // Only clear unsaved jobs when skills are empty, preserve saved/applied
+        await storage.clearUnsavedJobs(userId);
       }
       
       res.json(profile);
@@ -129,7 +130,8 @@ export async function registerRoutes(
       const updated = await storage.setProfile(userId, { ...profile, skills });
       
       if (skills.length === 0) {
-        await storage.setJobs(userId, []);
+        // Only clear unsaved jobs when skills are empty, preserve saved/applied
+        await storage.clearUnsavedJobs(userId);
       }
       
       res.json({ skills: updated.skills });
@@ -213,15 +215,22 @@ export async function registerRoutes(
         const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills);
         const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
         const limitedJobs = jobs.slice(0, Math.max(0, remaining));
-        await storage.setJobs(userId, limitedJobs);
+        
+        // Add new jobs without deleting saved/applied ones
+        await storage.addJobs(userId, limitedJobs);
+        
         if (limitedJobs.length > 0) {
           await storage.incrementJobsScraped(userId, limitedJobs.length);
         }
-        res.json({ jobs: limitedJobs, message: "Jobs refreshed successfully" });
+        
+        // Get all jobs (including saved/applied) to return
+        const allJobs = await storage.getJobs(userId);
+        res.json({ jobs: allJobs, newCount: limitedJobs.length, message: "Jobs refreshed successfully" });
       } else {
         res.json({ jobs: [], message: "No skills set" });
       }
     } catch (error) {
+      console.error("Error refreshing jobs:", error);
       res.status(500).json({ error: "Failed to refresh jobs" });
     }
   });
@@ -554,8 +563,8 @@ Write a ${tone} outreach message for this job opportunity.`;
         await storage.markJobAsSeen(userId, job.sourceUrl);
       }
       
-      // Update jobs and usage
-      await storage.setJobs(userId, limitedJobs);
+      // Add new jobs without deleting saved/applied ones
+      await storage.addJobs(userId, limitedJobs);
       if (limitedJobs.length > 0) {
         await storage.incrementJobsScraped(userId, limitedJobs.length);
       }
@@ -572,7 +581,9 @@ Write a ${tone} outreach message for this job opportunity.`;
         }
       }
       
-      res.json({ jobs: limitedJobs, count: limitedJobs.length });
+      // Get all jobs (including saved/applied) to return
+      const allJobs = await storage.getJobs(userId);
+      res.json({ jobs: allJobs, newCount: limitedJobs.length, count: allJobs.length });
     } catch (error) {
       console.error("Schedule run error:", error);
       res.status(500).json({ error: "Failed to run schedule" });
