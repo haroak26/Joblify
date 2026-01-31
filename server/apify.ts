@@ -16,8 +16,14 @@ const ACTORS = {
 
 interface ScrapedItem {
   id?: string;
+  id_str?: string;
+  tweetId?: string;
+  tweet_id?: string;
   text?: string;
   full_text?: string;
+  fullText?: string;
+  tweetText?: string;
+  tweet_text?: string;
   body?: string;
   selftext?: string;
   title?: string;
@@ -25,6 +31,10 @@ interface ScrapedItem {
   user?: { screen_name?: string; name?: string };
   author_name?: string;
   authorName?: string;
+  tweetUrl?: string;
+  tweet_url?: string;
+  statusUrl?: string;
+  status_url?: string;
   created_at?: string;
   createdAt?: string;
   created_utc?: number;
@@ -204,12 +214,25 @@ function isHiringPost(text: string): boolean {
 
 function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'): string {
   if (item.url) return item.url;
+  if (item.tweetUrl) return item.tweetUrl;
+  if (item.tweet_url) return item.tweet_url;
+  if (item.statusUrl) return item.statusUrl;
+  if (item.status_url) return item.status_url;
   if (source === 'x' && item.id) {
     const user = item.user as { screen_name?: string } | undefined;
     const author = item.author as { userName?: string } | undefined;
     const handle = user?.screen_name || (typeof author === 'object' ? author?.userName : undefined);
     if (handle) {
       return `https://x.com/${handle}/status/${item.id}`;
+    }
+  }
+  if (source === 'x') {
+    const user = item.user as { screen_name?: string } | undefined;
+    const author = item.author as { userName?: string; name?: string } | undefined;
+    const handle = user?.screen_name || (typeof author === 'object' ? author?.userName || author?.name : undefined);
+    const tweetId = item.id_str || item.tweetId || item.tweet_id;
+    if (handle && tweetId) {
+      return `https://x.com/${handle.replace(/^@/, "")}/status/${tweetId}`;
     }
   }
   if (source === 'reddit' && item.permalink) {
@@ -221,11 +244,11 @@ function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'):
 function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResults: number): JobPost[] {
   const results = items
     .filter((item: ScrapedItem) => {
-      const text = (item.text || item.full_text || item.body || item.selftext || item.title || item.postText || item.post_text || item.message || item.content || '');
+      const text = (item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.title || item.postText || item.post_text || item.message || item.content || '');
       return text.length > 20 && isHiringPost(text);
     })
     .map((item: ScrapedItem) => {
-      const text = item.text || item.full_text || item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
+      const text = item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
       const title = item.title || '';
       const fullText = title ? `${title}\n\n${text}` : text;
       
