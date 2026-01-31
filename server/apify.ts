@@ -11,7 +11,7 @@ const client = apifyToken
 const ACTORS = {
   X: "apidojo/tweet-scraper",           // Tweet Scraper V2 - most reliable
   REDDIT: "trudax/reddit-scraper",       // Full-featured Reddit scraper
-  FACEBOOK: "KoJrdxJCTtpon81KY"          // Official Facebook Posts Scraper
+  FACEBOOK: "Lnz4QRVI89bcQAUGQ"          // Facebook search scraper
 };
 
 interface ScrapedItem {
@@ -32,8 +32,12 @@ interface ScrapedItem {
   permalink?: string;
   link?: string;
   postUrl?: string;
+  post_url?: string;
+  permalink_url?: string;
   postText?: string;
+  post_text?: string;
   message?: string;
+  content?: string;
 }
 
 export async function scrapeXPosts(query: string, maxResults: number = 50): Promise<JobPost[]> {
@@ -118,19 +122,24 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
     return [];
   }
   try {
-    // Input schema for apify/facebook-posts-scraper (KoJrdxJCTtpon81KY)
-    // Verified from Apify docs: startUrls (required), resultsLimit, onlyPostsNewerThan
-    // Note: Can only scrape PUBLIC pages, not personal profiles or private groups
-    const freelancePages = [
-      "https://www.facebook.com/freelancersunion/",
-      "https://www.facebook.com/weworkremotely/",
-      "https://www.facebook.com/remotework/"
-    ];
-    
-    const input = { 
-      startUrls: freelancePages.map(url => ({ url })),
-      resultsLimit: maxResults * 2,
-      onlyPostsNewerThan: "7 days"
+    // Input schema for Lnz4QRVI89bcQAUGQ (facebook_search_scraper)
+    // Uses: keyword, results_limit, min/max wait, proxyConfiguration
+    const input = {
+      cookies: [],
+      function: "facebook_search_scraper",
+      keyword: query,
+      filter_by_recent_posts: false,
+      since: "all_times",
+      profile_urls: [],
+      post_urls: [],
+      post_urls_for_comments: [],
+      fetch_reaction_map: false,
+      results_limit: maxResults * 2,
+      min_wait_time_in_sec: 1,
+      max_wait_time_in_sec: 4,
+      proxyConfiguration: {
+        useApifyProxy: true
+      }
     };
     
     console.log('Starting Facebook scraper');
@@ -141,7 +150,7 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
     // Filter by query terms
     const queryTerms = query.toLowerCase().split(/\s+or\s+/i).map(t => t.trim().replace(/['"]/g, ''));
     const filteredItems = items.filter((item: any) => {
-      const text = (item.text || item.message || item.postText || '').toLowerCase();
+      const text = (item.text || item.message || item.postText || item.post_text || item.content || '').toLowerCase();
       return queryTerms.some(term => text.includes(term.toLowerCase()));
     });
     
@@ -206,17 +215,17 @@ function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'):
   if (source === 'reddit' && item.permalink) {
     return item.permalink.startsWith('http') ? item.permalink : `https://reddit.com${item.permalink}`;
   }
-  return item.link || item.postUrl || '';
+  return item.link || item.postUrl || item.post_url || item.permalink_url || '';
 }
 
 function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResults: number): JobPost[] {
   const results = items
     .filter((item: ScrapedItem) => {
-      const text = (item.text || item.full_text || item.body || item.selftext || item.title || item.postText || item.message || '');
+      const text = (item.text || item.full_text || item.body || item.selftext || item.title || item.postText || item.post_text || item.message || item.content || '');
       return text.length > 20 && isHiringPost(text);
     })
     .map((item: ScrapedItem) => {
-      const text = item.text || item.full_text || item.body || item.selftext || item.postText || item.message || '';
+      const text = item.text || item.full_text || item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
       const title = item.title || '';
       const fullText = title ? `${title}\n\n${text}` : text;
       
