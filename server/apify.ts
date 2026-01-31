@@ -51,7 +51,7 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
       tweetLanguage: "en"
     };
     console.log('Starting X scraper with query:', query);
-    const run = await client.actor(ACTORS.X).call(input, { timeoutSecs: 180 });
+    const run = await client.actor(ACTORS.X).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`X scraper returned ${items.length} items`);
     return processItems(items, 'x', maxResults);
@@ -92,7 +92,7 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
     };
     
     console.log('Starting Reddit scraper');
-    const run = await client.actor(ACTORS.REDDIT).call(input, { timeoutSecs: 180 });
+    const run = await client.actor(ACTORS.REDDIT).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`Reddit scraper returned ${items.length} items`);
     
@@ -134,7 +134,7 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
     };
     
     console.log('Starting Facebook scraper');
-    const run = await client.actor(ACTORS.FACEBOOK).call(input, { timeoutSecs: 180 });
+    const run = await client.actor(ACTORS.FACEBOOK).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`Facebook scraper returned ${items.length} items`);
     
