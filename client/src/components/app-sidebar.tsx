@@ -15,6 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
+import { normalizePlan } from "@shared/schema";
 
 interface SubscriptionResponse {
   subscription: { plan: string };
@@ -52,7 +53,7 @@ export function AppSidebar() {
     queryKey: ["/api/subscription"],
   });
   
-  const planValue = subscriptionQuery.data?.subscription?.plan;
+  const planValue = normalizePlan(subscriptionQuery.data?.subscription?.plan);
   const planLabel = planValue === "ultra"
     ? "Ultra"
     : planValue === "plus"

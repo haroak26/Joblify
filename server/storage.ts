@@ -1,6 +1,6 @@
 import { 
   type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, 
-  type Subscription, type Usage, type PlanType, PLAN_LIMITS,
+  type Subscription, type Usage, type PlanType, PLAN_LIMITS, normalizePlan,
   type Schedule, type InsertSchedule, type SeenJob,
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs 
 } from "@shared/schema";
@@ -460,7 +460,7 @@ export class DatabaseStorage implements IStorage {
   // Limit checking
   async canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }> {
     const subscription = await this.getSubscription(userId);
-    const plan = (subscription?.plan as PlanType) || "free";
+    const plan = normalizePlan(subscription?.plan);
     const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
     
     const profile = await this.getProfile(userId);
@@ -477,7 +477,7 @@ export class DatabaseStorage implements IStorage {
     await this.checkAndResetMonthlyUsage(userId);
     
     const subscription = await this.getSubscription(userId);
-    const plan = (subscription?.plan as PlanType) || "free";
+    const plan = normalizePlan(subscription?.plan);
     const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
     if (limits.maxJobsPerMonth === Infinity) {
