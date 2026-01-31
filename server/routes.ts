@@ -222,6 +222,14 @@ export async function registerRoutes(
         if (limitedJobs.length > 0) {
           await storage.incrementJobsScraped(userId, limitedJobs.length);
         }
+
+        if (limitedJobs.length > 0) {
+          const user = await storage.getUser(userId);
+          if (user?.email) {
+            const { sendJobScanEmail } = await import("./brevo");
+            await sendJobScanEmail(user.email, limitedJobs);
+          }
+        }
         
         // Get all jobs (including saved/applied) to return
         const allJobs = await storage.getJobs(userId);
