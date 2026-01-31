@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { User, CreditCard, BarChart3, Check, Briefcase } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
+import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -207,9 +208,10 @@ export default function Account() {
 
   const profile = profileQuery.data ?? { intro: "", skills: [] };
   const subscription = subscriptionQuery.data?.subscription;
+  const normalizedPlan = normalizePlan(subscription?.plan);
   const usageData = usageQuery.data;
   const user = userQuery.data?.user;
-  const currentPlan = subscription?.plan || "free";
+  const currentPlan = normalizedPlan;
   const isPlus = currentPlan === "plus";
   const isUltra = currentPlan === "ultra";
   const isLifetime = currentPlan === "lifetime";
@@ -224,6 +226,41 @@ export default function Account() {
   const cancellationDate = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : null;
+
+  const [hasSyncedCheckout, setHasSyncedCheckout] = useState(false);
+
+  const syncCheckoutMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const response = await apiRequest("GET", `/api/stripe/checkout-session/${sessionId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+      toast({
+        title: "Subscription Updated",
+        description: "Your upgrade has been applied.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Upgrade Pending",
+        description: "We could not confirm your upgrade yet. Please refresh in a moment.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isSuccess = params.get("success") === "true";
+    const sessionId = params.get("session_id");
+
+    if (!hasSyncedCheckout && isSuccess && sessionId && !syncCheckoutMutation.isPending) {
+      setHasSyncedCheckout(true);
+      syncCheckoutMutation.mutate(sessionId);
+    }
+  }, [hasSyncedCheckout, syncCheckoutMutation]);
 
   const handleIntroChange = (intro: string) => {
     updateProfileMutation.mutate({ ...profile, intro });

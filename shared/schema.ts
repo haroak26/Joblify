@@ -232,6 +232,21 @@ export const PLAN_LIMITS = {
 } as const;
 
 export type PlanType = "free" | "plus" | "ultra" | "lifetime";
+export type LegacyPlanType = PlanType | "pro";
+
+export function normalizePlan(plan?: string | null): PlanType {
+  switch (plan) {
+    case "plus":
+    case "ultra":
+    case "lifetime":
+    case "free":
+      return plan;
+    case "pro":
+      return "plus";
+    default:
+      return "free";
+  }
+}
 
 // Schedule types
 export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true, lastRun: true, nextRun: true });

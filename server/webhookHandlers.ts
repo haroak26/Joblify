@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { getUncachableStripeClient } from "./stripeClient";
 import { storage } from "./storage";
+import { normalizePlan } from "@shared/schema";
 
 type PlanName = "plus" | "ultra" | "lifetime";
 
@@ -15,7 +16,7 @@ if (process.env.STRIPE_LIFETIME_PRICE_ID) {
   PRICE_ID_TO_PLAN.set(process.env.STRIPE_LIFETIME_PRICE_ID, "lifetime");
 }
 
-function resolvePlanFromPrice(priceId?: string | null): PlanName | undefined {
+export function resolvePlanFromPrice(priceId?: string | null): PlanName | undefined {
   if (!priceId) return undefined;
   return PRICE_ID_TO_PLAN.get(priceId);
 }
@@ -50,8 +51,8 @@ export class WebhookHandlers {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
-        const plan = session.metadata?.plan as PlanName | undefined;
-        if (userId) {
+        const plan = normalizePlan(session.metadata?.plan);
+        if (userId && plan !== "free") {
           await storage.updateSubscription(userId, {
             stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
             stripeSubscriptionId: plan === "lifetime"
@@ -60,7 +61,7 @@ export class WebhookHandlers {
               ? session.subscription
               : undefined,
             status: "active",
-            plan: plan || "plus",
+            plan,
           });
         }
         break;

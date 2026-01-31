@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { skillSchema, PLAN_LIMITS, type PlanType } from "@shared/schema";
+import { skillSchema, PLAN_LIMITS, normalizePlan } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
@@ -55,7 +55,7 @@ export async function registerRoutes(
       const data = schema.parse(req.body);
       
       const subscription = await storage.getSubscription(userId);
-      const plan = (subscription?.plan as PlanType) || "free";
+      const plan = normalizePlan(subscription?.plan);
       const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
       // Check skills limit
@@ -108,7 +108,7 @@ export async function registerRoutes(
       const { skills } = schema.parse(req.body);
       
       const subscription = await storage.getSubscription(userId);
-      const plan = (subscription?.plan as PlanType) || "free";
+      const plan = normalizePlan(subscription?.plan);
       const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
       // Check skills limit
@@ -324,7 +324,8 @@ Write a ${tone} outreach message for this job opportunity.`;
         subscription = await storage.createSubscription(userId, "free");
       }
       
-      const limits = PLAN_LIMITS[subscription.plan as PlanType] || PLAN_LIMITS.free;
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
       
       res.json({ 
         subscription,
@@ -346,7 +347,7 @@ Write a ${tone} outreach message for this job opportunity.`;
       const userId = req.session.userId!;
       const userUsage = await storage.checkAndResetMonthlyUsage(userId);
       const subscription = await storage.getSubscription(userId);
-      const plan = (subscription?.plan as PlanType) || "free";
+      const plan = normalizePlan(subscription?.plan);
       const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
       const profile = await storage.getProfile(userId);
       
@@ -427,7 +428,7 @@ Write a ${tone} outreach message for this job opportunity.`;
       
       // Check if user has schedule access
       const subscription = await storage.getSubscription(userId);
-      const plan = (subscription?.plan as PlanType) || "free";
+      const plan = normalizePlan(subscription?.plan);
       const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
       if (!limits.hasScheduleAccess) {

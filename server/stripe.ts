@@ -2,7 +2,8 @@ import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import { requireAuth } from "./auth";
 import { getUncachableStripeClient } from "./stripeClient";
-import { WebhookHandlers } from "./webhookHandlers";
+import { WebhookHandlers, resolvePlanFromPrice } from "./webhookHandlers";
+import { normalizePlan } from "@shared/schema";
 
 const PLUS_PRICE_ID = process.env.STRIPE_PLUS_PRICE_ID || "";
 const ULTRA_PRICE_ID = process.env.STRIPE_ULTRA_PRICE_ID || "";
@@ -48,7 +49,10 @@ export async function setupStripeRoutes(app: Express) {
       const user = await storage.getUser(userId);
 
       const requestedPlan = typeof req.body?.plan === "string" ? req.body.plan : "plus";
-      const plan = requestedPlan === "ultra" ? "ultra" : requestedPlan === "lifetime" ? "lifetime" : "plus";
+      const normalizedPlan = normalizePlan(requestedPlan);
+      const plan = normalizedPlan === "ultra" || normalizedPlan === "lifetime" || normalizedPlan === "plus"
+        ? normalizedPlan
+        : "plus";
       const priceId = plan === "ultra" ? ULTRA_PRICE_ID : plan === "lifetime" ? LIFETIME_PRICE_ID : PLUS_PRICE_ID;
       
       if (!user) {
@@ -94,7 +98,7 @@ export async function setupStripeRoutes(app: Express) {
           },
         ],
         allow_promotion_codes: true,
-        success_url: `${appUrl}/dashboard/account?success=true`,
+        success_url: `${appUrl}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${appUrl}/dashboard/account?canceled=true`,
         metadata: { userId, plan },
       });
@@ -103,6 +107,77 @@ export async function setupStripeRoutes(app: Express) {
     } catch (error) {
       console.error("Stripe checkout error:", error);
       res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  app.get("/api/stripe/checkout-session/:sessionId", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const stripe = await getUncachableStripeClient();
+      const userId = req.session.userId!;
+      const sessionId = req.params.sessionId;
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ["subscription"],
+      });
+
+      if (!session) {
+        return res.status(404).json({ error: "Checkout session not found" });
+      }
+
+      if (session.metadata?.userId !== userId) {
+        return res.status(403).json({ error: "Session does not belong to user" });
+      }
+
+      let plan = normalizePlan(session.metadata?.plan);
+
+      if (plan === "free") {
+        const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 1 });
+        const priceId = lineItems.data[0]?.price?.id;
+        plan = resolvePlanFromPrice(priceId) ?? "free";
+      }
+
+      if (plan === "free") {
+        return res.status(400).json({ error: "Unable to determine plan from checkout session" });
+      }
+
+      if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+        return res.status(400).json({ error: "Checkout session not paid" });
+      }
+
+      const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+      let stripeSubscriptionId: string | null = null;
+      let status = "active";
+      let currentPeriodEnd: Date | undefined;
+
+      if (session.mode === "subscription") {
+        stripeSubscriptionId = typeof session.subscription === "string"
+          ? session.subscription
+          : session.subscription?.id ?? null;
+
+        const subscription = typeof session.subscription === "string"
+          ? await stripe.subscriptions.retrieve(session.subscription)
+          : session.subscription;
+
+        if (subscription) {
+          status = subscription.status;
+          currentPeriodEnd = subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000)
+            : undefined;
+        }
+      }
+
+      await storage.updateSubscription(userId, {
+        plan,
+        status,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId,
+        currentPeriodEnd,
+      });
+
+      res.json({ success: true, plan });
+    } catch (error) {
+      console.error("Stripe checkout session sync error:", error);
+      res.status(500).json({ error: "Failed to sync checkout session" });
     }
   });
 
