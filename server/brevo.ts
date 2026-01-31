@@ -48,7 +48,11 @@ export async function sendEmail({ to, subject, htmlContent }: SendEmailParams): 
   }
 }
 
-export function generateJobsEmailHtml(jobs: JobPost[], scheduleName: string): string {
+export function generateJobsEmailHtml(
+  jobs: JobPost[],
+  summaryText: string,
+  footerText: string = "You received this email because you have an active schedule on Joblify."
+): string {
   const jobsList = jobs.map(job => `
     <tr>
       <td style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
@@ -99,7 +103,7 @@ export function generateJobsEmailHtml(jobs: JobPost[], scheduleName: string): st
         
         <div style="padding: 0 24px 24px;">
           <p style="color: #374151; font-size: 14px; margin: 0 0 16px 0;">
-            Your scheduled scan "<strong>${escapeHtml(scheduleName)}</strong>" found <strong>${jobs.length} new job${jobs.length === 1 ? '' : 's'}</strong> matching your skills.
+            ${summaryText}
           </p>
           
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px;">
@@ -116,7 +120,7 @@ export function generateJobsEmailHtml(jobs: JobPost[], scheduleName: string): st
         
         <div style="background-color: #ffffff; padding: 16px; text-align: center; border-top: 1px solid #e5e7eb;">
           <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-            You received this email because you have an active schedule on Joblify.
+            ${footerText}
           </p>
         </div>
       </div>
@@ -142,7 +146,23 @@ export async function sendScheduleJobsEmail(
   if (jobs.length === 0) return true;
   
   const subject = `${jobs.length} new job${jobs.length === 1 ? '' : 's'} found - ${scheduleName}`;
-  const htmlContent = generateJobsEmailHtml(jobs, scheduleName);
+  const htmlContent = generateJobsEmailHtml(
+    jobs,
+    `Your scheduled scan "<strong>${escapeHtml(scheduleName)}</strong>" found <strong>${jobs.length} new job${jobs.length === 1 ? '' : 's'}</strong> matching your skills.`
+  );
   
+  return sendEmail({ to: userEmail, subject, htmlContent });
+}
+
+export async function sendJobScanEmail(userEmail: string, jobs: JobPost[]): Promise<boolean> {
+  if (jobs.length === 0) return true;
+
+  const subject = `${jobs.length} new job${jobs.length === 1 ? '' : 's'} found - Job Scan`;
+  const htmlContent = generateJobsEmailHtml(
+    jobs,
+    `Your latest job scan found <strong>${jobs.length} new job${jobs.length === 1 ? '' : 's'}</strong> matching your skills.`,
+    "You received this email because you ran a job scan on Joblify."
+  );
+
   return sendEmail({ to: userEmail, subject, htmlContent });
 }
