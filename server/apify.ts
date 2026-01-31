@@ -98,36 +98,54 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
   }
 }
 
+const REDDIT_SUBREDDITS = [
+  "hiring",
+  "forhire",
+  "slavelabour",
+  "freelance",
+  "designjobs",
+  "programmingjobs"
+];
+
 export async function scrapeReddit(query: string, maxResults: number = 20): Promise<JobPost[]> {
   if (!client) {
     console.log('Apify client not configured');
     return [];
   }
   try {
-    // Input schema for lqOcm2Bgsg4LGNATd Reddit actor (matches Apify docs example)
-    const input = {
-      mode: "search",
-      subreddit: "forhire",
-      postUrl: "",
-      username: "",
-      searchQuery: query,
-      searchSubreddit: "forhire",
-      sort: "hot",
-      timeFilter: "all",
-      maxPosts: maxResults * 2,
-      maxComments: 0,
-      includeComments: false,
-      sinceDate: "2025-01-01",
-      outputFormat: "markdown",
-      includeImages: false,
-      delaySeconds: 1,
-      debugMode: false
-    };
-    
-    console.log('Starting Reddit scraper');
-    const run = await client.actor(ACTORS.REDDIT).call(input);
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    console.log(`Reddit scraper returned ${items.length} items`);
+    const maxPostsPerSubreddit = Math.max(5, Math.ceil((maxResults * 2) / REDDIT_SUBREDDITS.length));
+    const results = await Promise.allSettled(
+      REDDIT_SUBREDDITS.map(async (subreddit) => {
+        // Input schema for lqOcm2Bgsg4LGNATd Reddit actor (matches Apify docs example)
+        const input = {
+          mode: "search",
+          subreddit,
+          postUrl: "",
+          username: "",
+          searchQuery: query,
+          searchSubreddit: subreddit,
+          sort: "hot",
+          timeFilter: "all",
+          maxPosts: maxPostsPerSubreddit,
+          maxComments: 0,
+          includeComments: false,
+          sinceDate: "2025-01-01",
+          outputFormat: "markdown",
+          includeImages: false,
+          delaySeconds: 1,
+          debugMode: false
+        };
+
+        console.log(`Starting Reddit scraper for r/${subreddit}`);
+        const run = await client.actor(ACTORS.REDDIT).call(input);
+        const { items } = await client.dataset(run.defaultDatasetId).listItems();
+        console.log(`Reddit scraper returned ${items.length} items for r/${subreddit}`);
+        return items as any[];
+      })
+    );
+
+    const items = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
+    console.log(`Reddit scraper returned ${items.length} total items`);
 
     return processItems(items, 'reddit', maxResults);
   } catch (error) {
