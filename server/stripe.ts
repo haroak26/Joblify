@@ -8,6 +8,30 @@ const PLUS_PRICE_ID = process.env.STRIPE_PLUS_PRICE_ID || "";
 const ULTRA_PRICE_ID = process.env.STRIPE_ULTRA_PRICE_ID || "";
 const LIFETIME_PRICE_ID = process.env.STRIPE_LIFETIME_PRICE_ID || "";
 
+function resolveAppUrl(req: Request): string {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+
+  const origin = req.headers.origin;
+  if (typeof origin === "string" && origin.length > 0) {
+    return origin;
+  }
+
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  const protocol = typeof forwardedProto === "string"
+    ? forwardedProto.split(",")[0]
+    : req.secure
+    ? "https"
+    : "http";
+  const host = (req.headers["x-forwarded-host"] as string) || req.headers.host;
+  if (host) {
+    return `${protocol}://${host}`;
+  }
+
+  return "http://localhost:5000";
+}
+
 export async function setupStripeRoutes(app: Express) {
   try {
     await getUncachableStripeClient();
@@ -51,7 +75,14 @@ export async function setupStripeRoutes(app: Express) {
         await storage.updateSubscription(userId, { stripeCustomerId: customerId });
       }
 
-      const appUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+      try {
+        await stripe.prices.retrieve(priceId);
+      } catch (error) {
+        console.error("Stripe price lookup error:", error);
+        return res.status(400).json({ error: "Stripe price not found for selected plan" });
+      }
+
+      const appUrl = resolveAppUrl(req);
 
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
@@ -111,13 +142,17 @@ export async function setupStripeRoutes(app: Express) {
     }
 
     try {
-      if (!Buffer.isBuffer(req.body)) {
-        console.error("Webhook error: req.body is not a Buffer");
-        return res.status(500).json({ error: "Webhook processing error" });
+      const payload = Buffer.isBuffer(req.body)
+        ? req.body
+        : req.rawBody;
+
+      if (!payload || !Buffer.isBuffer(payload)) {
+        console.error("Webhook error: raw body is missing or not a Buffer");
+        return res.status(400).json({ error: "Webhook processing error" });
       }
 
-      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
-      
+      await WebhookHandlers.processWebhook(payload, sig);
+
       res.status(200).json({ received: true });
     } catch (error: any) {
       console.error("Webhook error:", error.message);
@@ -135,7 +170,7 @@ export async function setupStripeRoutes(app: Express) {
         return res.status(400).json({ error: "No Stripe customer found" });
       }
 
-      const appUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+      const appUrl = resolveAppUrl(req);
 
       const session = await stripe.billingPortal.sessions.create({
         customer: subscription.stripeCustomerId,

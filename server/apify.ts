@@ -2,8 +2,9 @@ import { ApifyClient } from 'apify-client';
 import type { JobPost } from '@shared/schema';
 import { randomUUID } from 'crypto';
 
-const client = process.env.APIFY_API_TOKEN 
-  ? new ApifyClient({ token: process.env.APIFY_API_TOKEN })
+const apifyToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
+const client = apifyToken
+  ? new ApifyClient({ token: apifyToken })
   : null;
 
 // Specific actor IDs for each platform

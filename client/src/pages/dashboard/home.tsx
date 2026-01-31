@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 
 export default function DashboardHome() {
-  
+  const [refreshStatus, setRefreshStatus] = useState<string | null>(null);
 
   const profileQuery = useQuery<FreelancerProfile>({
     queryKey: ["/api/profile"],
@@ -63,6 +64,7 @@ export default function DashboardHome() {
   const jobs = jobsQuery.data?.jobs ?? [];
   const savedJobs = jobs.filter(j => j.saved);
   const appliedJobs = jobs.filter(j => j.applied);
+  const refreshSteps = useMemo(() => ["Fetching X", "Fetching Reddit", "Fetching Facebook"], []);
 
   const totalValue = jobs.reduce((sum, job) => {
     if (job.budget) {
@@ -84,6 +86,22 @@ export default function DashboardHome() {
 
   const hasSkills = profile.skills.length > 0;
   const isProfileComplete = profile.intro.length > 20 && hasSkills;
+
+  useEffect(() => {
+    if (!refreshJobsMutation.isPending) {
+      setRefreshStatus(null);
+      return;
+    }
+
+    let stepIndex = 0;
+    setRefreshStatus(refreshSteps[stepIndex]);
+    const interval = setInterval(() => {
+      stepIndex = (stepIndex + 1) % refreshSteps.length;
+      setRefreshStatus(refreshSteps[stepIndex]);
+    }, 1400);
+
+    return () => clearInterval(interval);
+  }, [refreshJobsMutation.isPending, refreshSteps]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
@@ -124,19 +142,26 @@ export default function DashboardHome() {
             <h2 className="text-xl font-semibold">Ready to find work?</h2>
             <p className="text-base text-muted-foreground">Search social media for freelance opportunities matching your skills.</p>
           </div>
-          <Button
-            onClick={() => refreshJobsMutation.mutate()}
-            disabled={refreshJobsMutation.isPending || !hasSkills}
-            className="gap-3 px-6 w-full sm:w-auto"
-            data-testid="button-run-finder"
-          >
-            {refreshJobsMutation.isPending ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Search className="w-4 h-4" />
+          <div className="flex flex-col gap-2 items-start w-full sm:w-auto">
+            <Button
+              onClick={() => refreshJobsMutation.mutate()}
+              disabled={refreshJobsMutation.isPending || !hasSkills}
+              className="gap-3 px-6 w-full sm:w-auto"
+              data-testid="button-run-finder"
+            >
+              {refreshJobsMutation.isPending ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
+              Find Opportunities
+            </Button>
+            {refreshJobsMutation.isPending && (
+              <div className="text-sm text-muted-foreground" aria-live="polite">
+                {refreshStatus || "Fetching opportunities"} — Please keep this tab open.
+              </div>
             )}
-            Find Opportunities
-          </Button>
+          </div>
         </div>
 
         {!hasSkills && (

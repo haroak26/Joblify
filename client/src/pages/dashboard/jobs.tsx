@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ export default function MyJobs() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [refreshStatus, setRefreshStatus] = useState<string | null>(null);
   
 
   const profileQuery = useQuery<FreelancerProfile>({
@@ -64,6 +65,23 @@ export default function MyJobs() {
 
   const profile = profileQuery.data ?? { intro: "", skills: [] };
   const jobs = jobsQuery.data?.jobs ?? [];
+  const refreshSteps = useMemo(() => ["Fetching X", "Fetching Reddit", "Fetching Facebook"], []);
+
+  useEffect(() => {
+    if (!refreshJobsMutation.isPending) {
+      setRefreshStatus(null);
+      return;
+    }
+
+    let stepIndex = 0;
+    setRefreshStatus(refreshSteps[stepIndex]);
+    const interval = setInterval(() => {
+      stepIndex = (stepIndex + 1) % refreshSteps.length;
+      setRefreshStatus(refreshSteps[stepIndex]);
+    }, 1400);
+
+    return () => clearInterval(interval);
+  }, [refreshJobsMutation.isPending, refreshSteps]);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -122,6 +140,11 @@ export default function MyJobs() {
             <RefreshCw className={`w-5 h-5 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
             Refresh List
           </Button>
+          {refreshJobsMutation.isPending && (
+            <div className="text-sm text-muted-foreground" aria-live="polite">
+              {refreshStatus || "Fetching opportunities"} — Please keep this tab open.
+            </div>
+          )}
           {hasJobs && (
             <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
               <Button

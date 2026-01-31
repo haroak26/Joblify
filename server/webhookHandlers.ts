@@ -43,7 +43,7 @@ export class WebhookHandlers {
       event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
     } catch (error) {
       console.error("Stripe webhook signature verification failed:", error);
-      return;
+      throw error;
     }
 
     switch (event.type) {
@@ -54,7 +54,11 @@ export class WebhookHandlers {
         if (userId) {
           await storage.updateSubscription(userId, {
             stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
-            stripeSubscriptionId: typeof session.subscription === "string" ? session.subscription : undefined,
+            stripeSubscriptionId: plan === "lifetime"
+              ? null
+              : typeof session.subscription === "string"
+              ? session.subscription
+              : undefined,
             status: "active",
             plan: plan || "plus",
           });
