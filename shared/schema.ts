@@ -20,7 +20,7 @@ export const users = pgTable("users", {
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  plan: text("plan").notNull().default("free"), // 'free', 'plus', or 'ultra'
+  plan: text("plan").notNull().default("free"), // 'free', 'plus', 'ultra', or 'lifetime'
   status: text("status").notNull().default("active"), // 'active', 'cancelled', 'past_due'
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
@@ -223,9 +223,15 @@ export const PLAN_LIMITS = {
     maxSchedules: Infinity,
     hasScheduleAccess: true,
   },
+  lifetime: {
+    maxSkills: Infinity,
+    maxJobsPerMonth: Infinity,
+    maxSchedules: Infinity,
+    hasScheduleAccess: true,
+  },
 } as const;
 
-export type PlanType = "free" | "plus" | "ultra";
+export type PlanType = "free" | "plus" | "ultra" | "lifetime";
 
 // Schedule types
 export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true, lastRun: true, nextRun: true });

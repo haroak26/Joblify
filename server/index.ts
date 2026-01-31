@@ -4,8 +4,6 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
-import { runMigrations } from "stripe-replit-sync";
-import { getStripeSync } from "./stripeClient";
 import { startScheduleRunner } from "./scheduler";
 
 const app = express();
@@ -14,51 +12,6 @@ const httpServer = createServer(app);
 declare module "http" {
   interface IncomingMessage {
     rawBody: Buffer;
-  }
-}
-
-async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-
-  if (!databaseUrl) {
-    console.log("DATABASE_URL not set - Stripe sync disabled");
-    return;
-  }
-
-  if (!stripeSecretKey) {
-    console.log("STRIPE_SECRET_KEY not set - Stripe sync disabled");
-    return;
-  }
-
-  try {
-    console.log("Initializing Stripe schema...");
-    await runMigrations({ databaseUrl });
-    console.log("Stripe schema ready");
-
-    const stripeSync = await getStripeSync();
-
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-    console.log("Setting up managed webhook...");
-    try {
-      const result = await stripeSync.findOrCreateManagedWebhook(
-        `${webhookBaseUrl}/api/stripe/webhook`
-      );
-      if (result?.webhook?.url) {
-        console.log(`Webhook configured: ${result.webhook.url}`);
-      } else {
-        console.log("Webhook setup completed (no URL returned)");
-      }
-    } catch (webhookError) {
-      console.log("Managed webhook setup skipped (dev environment)");
-    }
-
-    console.log("Syncing Stripe data in background...");
-    stripeSync.syncBackfill()
-      .then(() => console.log("Stripe data synced"))
-      .catch((err: any) => console.error("Error syncing Stripe data:", err));
-  } catch (error) {
-    console.error("Failed to initialize Stripe:", error);
   }
 }
 
@@ -104,7 +57,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await initStripe();
   await setupStripeRoutes(app);
   await registerRoutes(httpServer, app);
   if (process.env.SCHEDULE_RUNNER_ENABLED === "true") {

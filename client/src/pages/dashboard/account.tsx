@@ -67,6 +67,7 @@ const plans = [
     name: "Free",
     price: "$0",
     period: "forever",
+    billingSuffix: "",
     features: ["10 skills maximum", "10 jobs scraped", "5 AI messages"],
     limits: { skills: 10, jobs: 10 },
   },
@@ -75,6 +76,7 @@ const plans = [
     name: "Pro",
     price: "$15",
     period: "per month",
+    billingSuffix: "/mo",
     features: ["Unlimited skills", "300 jobs scraped", "500 AI messages", "2 schedules", "Priority support"],
     limits: { skills: -1, jobs: 300 },
     popular: true,
@@ -84,14 +86,16 @@ const plans = [
     name: "Ultra",
     price: "$30",
     period: "per month",
+    billingSuffix: "/mo",
     features: ["Unlimited skills", "Unlimited jobs scraped", "Unlimited messages", "Unlimited schedules", "Priority support"],
     limits: { skills: -1, jobs: -1 },
   },
   {
-    id: "beta",
+    id: "lifetime",
     name: "Beta Tester Lifetime",
     price: "$100",
     period: "one-time",
+    billingSuffix: "",
     features: ["Unlimited skills", "Unlimited jobs scraped", "Unlimited messages", "Unlimited schedules", "Ultra access for life"],
     limits: { skills: -1, jobs: -1 },
   },
@@ -139,7 +143,7 @@ export default function Account() {
   });
 
   const upgradeMutation = useMutation({
-    mutationFn: async (plan: "plus" | "ultra") => {
+    mutationFn: async (plan: "plus" | "ultra" | "lifetime") => {
       const response = await apiRequest("POST", "/api/stripe/create-checkout", { plan });
       return response.json();
     },
@@ -208,7 +212,14 @@ export default function Account() {
   const currentPlan = subscription?.plan || "free";
   const isPlus = currentPlan === "plus";
   const isUltra = currentPlan === "ultra";
-  const currentPlanLabel = currentPlan === "ultra" ? "Ultra" : currentPlan === "plus" ? "Pro" : "Free";
+  const isLifetime = currentPlan === "lifetime";
+  const currentPlanLabel = currentPlan === "ultra"
+    ? "Ultra"
+    : currentPlan === "plus"
+    ? "Pro"
+    : currentPlan === "lifetime"
+    ? "Lifetime"
+    : "Free";
   const cancellationDate = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : null;
@@ -307,8 +318,8 @@ export default function Account() {
                       </div>
                       <div className="text-right">
                         <span className="text-3xl font-bold">{plan.price}</span>
-                        {plan.id !== "free" && (
-                          <span className="text-muted-foreground text-sm font-medium">/mo</span>
+                        {plan.billingSuffix && (
+                          <span className="text-muted-foreground text-sm font-medium">{plan.billingSuffix}</span>
                         )}
                       </div>
                     </div>
@@ -321,11 +332,11 @@ export default function Account() {
                       ))}
                     </ul>
                     
-                    {(plan.id === "plus" || plan.id === "ultra") && !isCurrent && (
+                    {(plan.id === "plus" || plan.id === "ultra" || plan.id === "lifetime") && !isCurrent && (
                       <Button 
                         size="default"
                         className="w-full font-bold"
-                        onClick={() => upgradeMutation.mutate(plan.id as "plus" | "ultra")}
+                        onClick={() => upgradeMutation.mutate(plan.id as "plus" | "ultra" | "lifetime")}
                         disabled={upgradeMutation.isPending}
                         data-testid={`button-upgrade-${plan.id}`}
                       >
@@ -381,7 +392,7 @@ export default function Account() {
                 <Progress value={jobsUsedPercent} className="h-2 bg-muted shadow-inner" />
             </div>
             
-            {!isPlus && !isUltra && (
+            {!isPlus && !isUltra && !isLifetime && (
               <div className="space-y-3">
                 <div className="flex justify-between text-sm font-bold">
                   <span className="text-muted-foreground uppercase tracking-wider">Skills Limit</span>
