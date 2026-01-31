@@ -18,7 +18,6 @@ export default function DashboardHome() {
 
   const jobsQuery = useQuery<{ jobs: JobPost[] }>({
     queryKey: ["/api/jobs"],
-    enabled: (profileQuery.data?.skills?.length ?? 0) > 0,
   });
 
   const updateProfileMutation = useMutation({

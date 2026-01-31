@@ -27,7 +27,6 @@ export default function MyJobs() {
 
   const jobsQuery = useQuery<{ jobs: JobPost[] }>({
     queryKey: ["/api/jobs"],
-    enabled: (profileQuery.data?.skills?.length ?? 0) > 0,
   });
 
   const saveJobMutation = useMutation({
@@ -170,10 +169,10 @@ export default function MyJobs() {
         </div>
       </div>
 
-      {!hasSkills ? (
-        <EmptyState type="no-skills" />
-      ) : jobsQuery.isLoading ? (
+      {jobsQuery.isLoading ? (
         <JobListSkeleton />
+      ) : !hasSkills && !hasJobs ? (
+        <EmptyState type="no-skills" />
       ) : !hasJobs ? (
         <EmptyState
           type="no-jobs"
