@@ -17,8 +17,8 @@ import { useAuth } from "@/hooks/use-auth";
 const features = [
   {
     icon: Search,
-    title: "Real-time Scanning",
-    description: "Our engine monitors Reddit, X, and Facebook 24/7 to catch hiring posts seconds after they go live."
+    title: "Smart Scanning",
+    description: "Our engine monitors Reddit, X, and Facebook around the clock to catch new hiring posts."
   },
   {
     icon: Zap,
@@ -84,7 +84,7 @@ export default function Landing() {
                 <span className="text-primary block mt-1">before anyone else</span>
               </h1>
               <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed">
-                Joblify scans social media in real-time to surface hiring opportunities that match your skills. Stop scrolling, start earning.
+                Joblify scans social media around the clock to surface hiring opportunities that match your skills. Stop scrolling, start earning.
               </p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 <Link href="/dashboard">
@@ -101,10 +101,6 @@ export default function Landing() {
               </div>
             </div>
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Live Preview</p>
-                <Badge variant="secondary" className="text-xs border-none bg-primary/10 text-primary">Realtime</Badge>
-              </div>
               <div className="space-y-4">
                 <div className="bg-background border rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -200,7 +196,7 @@ export default function Landing() {
               <p className="text-xs uppercase text-muted-foreground mb-3">Step 2</p>
               <h3 className="text-xl font-semibold mb-3">Get matched posts</h3>
               <p className="text-muted-foreground">
-                Live feeds from Reddit, X, and Facebook surface the newest hiring posts for you.
+                Fresh feeds from Reddit, X, and Facebook surface the newest hiring posts for you.
               </p>
             </div>
             <div className="border rounded-2xl p-6 bg-background">
