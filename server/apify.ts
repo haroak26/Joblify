@@ -25,22 +25,23 @@ interface ScrapedItem {
   created_at?: string;
   createdAt?: string;
   url?: string;
+  permalink?: string;
+  link?: string;
+  postUrl?: string;
 }
 
 export async function scrapeXPosts(query: string, maxResults: number = 50): Promise<JobPost[]> {
   if (!client) {
-    console.log('Apify client not configured, skipping X scraping');
     return [];
   }
   try {
-    console.log(`Scraping X for: ${query}`);
     const input = { 
       maxItems: maxResults,
       query: query,
       username: "",
-      replies: "",
-      retweets: "",
-      quotes: "",
+      replies: false,
+      retweets: false,
+      quotes: false,
       verified: "",
       links: "",
       media: "",
@@ -50,29 +51,30 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
       proVideos: "",
       news: "",
       safe: "",
-      near: ""
+      near: "",
+      language: "en",
+      includeReplies: false,
+      includeRetweets: false,
+      includeQuotes: false
     };
     const run = await client.actor(ACTORS.X).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    console.log(`Found ${items.length} X posts`);
-    return processItems(items, 'x');
+    return processItems(items, 'x', maxResults);
   } catch (error) {
-    console.error('Error scraping X posts:', error);
+    console.error('Error scraping X posts:', error instanceof Error ? error.message : error);
     return [];
   }
 }
 
 export async function scrapeReddit(query: string, maxResults: number = 20): Promise<JobPost[]> {
   if (!client) {
-    console.log('Apify client not configured, skipping Reddit scraping');
     return [];
   }
   try {
-    console.log(`Scraping Reddit for: ${query}`);
     const input = { 
       mode: "search",
       searchQuery: query,
-      searchSubreddit: "",
+      searchSubreddit: "all",
       sort: "hot",
       timeFilter: "all",
       maxPosts: maxResults,
@@ -81,25 +83,31 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
       outputFormat: "markdown",
       includeImages: false,
       delaySeconds: 1,
-      debugMode: false
+      debugMode: false,
+      proxyConfiguration: {
+        useApifyProxy: true
+      }
     };
     const run = await client.actor(ACTORS.REDDIT).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    console.log(`Found ${items.length} Reddit posts`);
-    return processItems(items, 'reddit');
+    if (items.length === 0 && query.includes("OR")) {
+      const fallbackInput = { ...input, searchQuery: query.replace(/OR/gi, "") };
+      const fallbackRun = await client.actor(ACTORS.REDDIT).call(fallbackInput);
+      const { items: fallbackItems } = await client.dataset(fallbackRun.defaultDatasetId).listItems();
+      return processItems(fallbackItems, 'reddit', maxResults);
+    }
+    return processItems(items, 'reddit', maxResults);
   } catch (error) {
-    console.error('Error scraping Reddit:', error);
+    console.error('Error scraping Reddit:', error instanceof Error ? error.message : error);
     return [];
   }
 }
 
 export async function scrapeFacebook(query: string, maxResults: number = 20): Promise<JobPost[]> {
   if (!client) {
-    console.log('Apify client not configured, skipping Facebook scraping');
     return [];
   }
   try {
-    console.log(`Scraping Facebook for: ${query}`);
     const input = { 
       cookies: [],
       function: "facebook_search_scraper",
@@ -115,49 +123,91 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
       max_wait_time_in_sec: 4,
       proxyConfiguration: {
         useApifyProxy: true
-      }
+      },
+      timezone: "UTC",
+      locale: "en_US"
     };
     const run = await client.actor(ACTORS.FACEBOOK).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    console.log(`Found ${items.length} Facebook posts`);
-    return processItems(items, 'facebook');
+    return processItems(items, 'facebook', maxResults);
   } catch (error) {
-    console.error('Error scraping Facebook:', error);
+    console.error('Error scraping Facebook:', error instanceof Error ? error.message : error);
     return [];
   }
 }
 
-function processItems(items: any[], source: 'x' | 'reddit' | 'facebook'): JobPost[] {
+const HIRING_PHRASES = [
+  "hiring",
+  "we're hiring",
+  "we are hiring",
+  "looking for",
+  "seeking",
+  "need a",
+  "need an",
+  "wanted",
+  "contract",
+  "freelance",
+  "gig",
+  "paid",
+  "budget",
+  "rate"
+];
+
+const EXCLUDED_PHRASES = ["for hire", "available for work", "open to work"];
+
+function isHiringPost(text: string): boolean {
+  const normalized = text.toLowerCase();
+  const hasHiringSignal = HIRING_PHRASES.some((phrase) => normalized.includes(phrase));
+  const isSelfPromo = EXCLUDED_PHRASES.some((phrase) => normalized.includes(phrase));
+  return hasHiringSignal && !isSelfPromo;
+}
+
+function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'): string {
+  if (item.url) return item.url;
+  if (source === 'x' && item.id && (item.user?.screen_name || item.author?.userName)) {
+    const handle = item.user?.screen_name || item.author?.userName;
+    return `https://x.com/${handle}/status/${item.id}`;
+  }
+  if (source === 'reddit' && item.permalink) {
+    return `https://reddit.com${item.permalink}`;
+  }
+  return item.link || item.postUrl || '';
+}
+
+function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResults: number): JobPost[] {
   return items
     .filter((item: ScrapedItem) => {
-      const text = (item.text || item.full_text || item.body || item.title || '').toLowerCase();
-      return text.includes('hire') || text.includes('hiring') || text.includes('looking for') || 
-             text.includes('freelance') || text.includes('developer') || text.includes('designer');
+      const text = (item.text || item.full_text || item.body || item.title || '');
+      return isHiringPost(text);
     })
     .map((item: ScrapedItem) => {
       const text = item.text || item.full_text || item.body || item.title || '';
       const author = item.author?.name || item.user?.name || item.author_name || 'Unknown';
       const handle = item.author?.userName || item.user?.screen_name || '';
-      
-      let sourceUrl = item.url || '';
-      if (source === 'x') sourceUrl = `https://x.com/${handle}/status/${item.id}`;
-      
+
+      const sourceUrl = buildSourceUrl(item, source);
+      const budget = extractBudget(text);
+      const details = extractCoreDetails(text);
+      const description = formatDescription(text, budget, details);
+
       return {
         id: randomUUID(),
         title: (item.title || text).slice(0, 100) + (text.length > 100 ? '...' : ''),
-        description: text,
+        description,
         source,
         sourceUrl,
         author,
         authorHandle: handle,
         postedAt: formatTimeAgo(item.created_at || item.createdAt || ''),
         matchedSkills: extractSkills(text),
-        budget: extractBudget(text),
+        budget,
         isRemote: text.toLowerCase().includes('remote'),
         saved: false,
         applied: false,
       };
-    });
+    })
+    .filter((job) => job.sourceUrl)
+    .slice(0, maxResults);
 }
 
 function extractSkills(text: string): string[] {
@@ -174,8 +224,40 @@ function extractSkills(text: string): string[] {
 }
 
 function extractBudget(text: string): string | undefined {
-  const match = text.match(/\$[\d,]+(\s*[-–]\s*\$[\d,]+)?/);
+  const match = text.match(/(\$|usd\s?)\s?[\d,]+(\s*[-–]\s*(\$|usd\s?)\s?[\d,]+)?/i);
+  if (match) {
+    return match[0].replace(/usd\s?/i, "$");
+  }
+  const hourlyMatch = text.match(/([\d,]+)\s?(?:usd)?\s?\/\s?hr/i);
+  if (hourlyMatch) {
+    return `$${hourlyMatch[1]}/hr`;
+  }
   return match ? match[0] : undefined;
+}
+
+function extractCoreDetails(text: string): string[] {
+  const details: string[] = [];
+  const normalized = text.toLowerCase();
+
+  if (normalized.includes("remote")) details.push("Remote");
+  if (normalized.includes("on-site") || normalized.includes("onsite")) details.push("On-site");
+  if (normalized.includes("contract")) details.push("Contract");
+  if (normalized.includes("full-time") || normalized.includes("full time")) details.push("Full-time");
+  if (normalized.includes("part-time") || normalized.includes("part time")) details.push("Part-time");
+  if (normalized.includes("hourly")) details.push("Hourly");
+  if (normalized.includes("fixed price") || normalized.includes("fixed-price")) details.push("Fixed-price");
+
+  const durationMatch = text.match(/(\d+\s?(weeks?|months?|days?))/i);
+  if (durationMatch) details.push(`Duration: ${durationMatch[1]}`);
+
+  return details;
+}
+
+function formatDescription(text: string, budget?: string, details: string[] = []): string {
+  const summaryParts = [...details];
+  if (budget) summaryParts.push(`Budget: ${budget}`);
+  if (summaryParts.length === 0) return text;
+  return `${text}\n\nDetails: ${summaryParts.join(" • ")}`;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -191,14 +273,28 @@ function formatTimeAgo(dateStr: string): string {
 
 export async function scrapeJobsForSkills(skills: string[]): Promise<JobPost[]> {
   if (!client || skills.length === 0) return [];
-  const query = skills.slice(0, 2).join(' OR ');
-  const xResults = await scrapeXPosts(`hiring ${query}`, 15);
-  const redditResults = await scrapeReddit(query, 10);
-  const fbResults = await scrapeFacebook(query, 5);
+  const query = buildSearchQuery(skills);
+  const xResults = await scrapeXPosts(query.x, 5);
+  const redditResults = await scrapeReddit(query.reddit, 5);
+  const fbResults = await scrapeFacebook(query.facebook, 5);
   
   const all = [...xResults, ...redditResults, ...fbResults];
   return all.reduce((acc, job) => {
     if (!acc.find(j => j.sourceUrl === job.sourceUrl)) acc.push(job);
     return acc;
-  }, [] as JobPost[]).slice(0, 50);
+  }, [] as JobPost[]).slice(0, 15);
+}
+
+function buildSearchQuery(skills: string[]): { x: string; reddit: string; facebook: string } {
+  const trimmedSkills = skills.filter(Boolean).slice(0, 3);
+  const skillQuery = trimmedSkills.length > 0 ? trimmedSkills.map((s) => `"${s}"`).join(" OR ") : "";
+  const hiringQuery = HIRING_PHRASES.map((phrase) => `"${phrase}"`).join(" OR ");
+  const base = skillQuery ? `(${skillQuery}) (${hiringQuery})` : hiringQuery;
+  const exclude = EXCLUDED_PHRASES.map((phrase) => `-"${phrase}"`).join(" ");
+
+  return {
+    x: `${base} ${exclude}`.trim(),
+    reddit: `${base} ${exclude}`.trim(),
+    facebook: `${base} ${exclude}`.trim()
+  };
 }
