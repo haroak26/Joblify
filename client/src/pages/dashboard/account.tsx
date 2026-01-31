@@ -67,16 +67,16 @@ const plans = [
     name: "Free",
     price: "$0",
     period: "forever",
-    features: ["10 skills maximum", "10 jobs per month", "Basic AI messages"],
+    features: ["10 skills maximum", "10 jobs scraped", "5 AI messages"],
     limits: { skills: 10, jobs: 10 },
   },
   {
     id: "plus",
-    name: "Plus",
+    name: "Pro",
     price: "$15",
     period: "per month",
-    features: ["Unlimited skills", "100 jobs per month", "2 schedules", "Priority support"],
-    limits: { skills: -1, jobs: 100 },
+    features: ["Unlimited skills", "300 jobs scraped", "500 AI messages", "2 schedules", "Priority support"],
+    limits: { skills: -1, jobs: 300 },
     popular: true,
   },
   {
@@ -84,7 +84,15 @@ const plans = [
     name: "Ultra",
     price: "$30",
     period: "per month",
-    features: ["Unlimited skills", "Unlimited jobs", "Unlimited schedules", "Priority support"],
+    features: ["Unlimited skills", "Unlimited jobs scraped", "Unlimited messages", "Unlimited schedules", "Priority support"],
+    limits: { skills: -1, jobs: -1 },
+  },
+  {
+    id: "beta",
+    name: "Beta Tester Lifetime",
+    price: "$100",
+    period: "one-time",
+    features: ["Unlimited skills", "Unlimited jobs scraped", "Unlimited messages", "Unlimited schedules", "Ultra access for life"],
     limits: { skills: -1, jobs: -1 },
   },
 ];
@@ -123,7 +131,7 @@ export default function Account() {
       if (error.code === "SKILLS_LIMIT") {
         toast({
           title: "Skills Limit Reached",
-          description: error.message || "Upgrade to Plus for unlimited skills.",
+          description: error.message || "Upgrade to Pro for unlimited skills.",
           variant: "destructive",
         });
       }
@@ -200,7 +208,7 @@ export default function Account() {
   const currentPlan = subscription?.plan || "free";
   const isPlus = currentPlan === "plus";
   const isUltra = currentPlan === "ultra";
-  const currentPlanLabel = currentPlan === "ultra" ? "Ultra" : currentPlan === "plus" ? "Plus" : "Free";
+  const currentPlanLabel = currentPlan === "ultra" ? "Ultra" : currentPlan === "plus" ? "Pro" : "Free";
   const cancellationDate = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : null;
@@ -278,12 +286,11 @@ export default function Account() {
                   key={plan.id}
                   className={`relative overflow-hidden rounded-2xl border p-6 sm:p-7 transition-all shadow-sm ${
                     isCurrent
-                      ? 'border-primary/40 bg-gradient-to-br from-primary/10 via-transparent to-transparent ring-1 ring-primary/20'
+                      ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
                       : 'border-border bg-background'
                   }`}
                   data-testid={`card-plan-${plan.id}`}
                 >
-                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
                   {isCurrent && (
                     <Badge
                       variant="secondary"

@@ -213,7 +213,7 @@ export const PLAN_LIMITS = {
   },
   plus: {
     maxSkills: Infinity,
-    maxJobsPerMonth: 100,
+    maxJobsPerMonth: 300,
     maxSchedules: 2,
     hasScheduleAccess: true,
   },

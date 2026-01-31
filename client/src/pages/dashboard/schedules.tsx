@@ -197,13 +197,13 @@ export default function Schedules() {
             </div>
             <h2 className="text-2xl font-bold mb-2" data-testid="text-schedules-locked">Schedules - Paid Feature</h2>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Automate your job discovery with scheduled scans. Upgrade to Plus or Ultra to unlock this feature 
+              Automate your job discovery with scheduled scans. Upgrade to Pro or Ultra to unlock this feature 
               and never miss a new opportunity.
             </p>
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Crown className="w-4 h-4 text-primary" />
-                <span>Plus includes 100 jobs/month, unlimited skills, and 2 schedules</span>
+                <span>Pro includes 300 jobs/month, unlimited skills, and 2 schedules</span>
               </div>
               <Button asChild className="gap-2" data-testid="button-upgrade-schedules">
                 <Link href="/dashboard/account">

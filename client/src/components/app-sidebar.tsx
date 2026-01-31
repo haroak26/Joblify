@@ -53,7 +53,7 @@ export function AppSidebar() {
   });
   
   const planValue = subscriptionQuery.data?.subscription?.plan;
-  const planLabel = planValue === "ultra" ? "Ultra" : planValue === "plus" ? "Plus" : "Free";
+  const planLabel = planValue === "ultra" ? "Ultra" : planValue === "plus" ? "Pro" : "Free";
 
   const isActive = (url: string) => {
     if (url === "/dashboard") {
