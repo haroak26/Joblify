@@ -594,12 +594,36 @@ function parseTimeAgo(timeStr: string): number {
 }
 
 function buildSearchQuery(skills: string[]): { x: string; reddit: string; facebook: string } {
-  const trimmedSkills = skills.filter(Boolean).slice(0, 5);
-  const skillQuery = trimmedSkills.length > 0 ? trimmedSkills.join(' OR ') : "";
-  
+  const expandedSkills = expandSkillTerms(skills);
+  const trimmedSkills = expandedSkills.slice(0, 8);
+  const skillQuery = trimmedSkills.length > 0 ? trimmedSkills.join(" OR ") : "";
+
   return {
     x: `(${skillQuery}) (hiring OR "looking for" OR freelance OR contract OR "need a" OR developer OR designer)`,
     reddit: skillQuery || "developer designer freelance",
-    facebook: `${skillQuery} hiring freelance`
+    facebook: `${skillQuery} hiring freelance`,
   };
+}
+
+function expandSkillTerms(skills: string[]): string[] {
+  const normalized = skills
+    .flatMap((skill) => {
+      const trimmed = skill.trim();
+      const parts = trimmed
+        .split(/[,/&+]| and | with /gi)
+        .flatMap((part) => part.split(/\s+/))
+        .map((part) => part.trim())
+        .filter(Boolean);
+      return [trimmed, ...parts];
+    })
+    .filter(Boolean)
+    .map((term) => (term.includes(" ") ? `"${term}"` : term));
+
+  const deduped: string[] = [];
+  for (const term of normalized) {
+    if (!deduped.includes(term)) {
+      deduped.push(term);
+    }
+  }
+  return deduped;
 }

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { FreelancerProfile, JobPost } from "@shared/schema";
 import {
   ArrowLeft,
@@ -75,6 +75,16 @@ export default function JobDetails() {
     },
   });
 
+  const markAppliedMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/jobs/${jobId}/apply`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    },
+  });
+
   const handleCopy = async () => {
     if (!comment) return;
     await navigator.clipboard.writeText(comment);
@@ -135,12 +145,23 @@ export default function JobDetails() {
             {job.source} • @{job.authorHandle || job.author}
           </p>
         </div>
-        <Button asChild variant="outline" className="gap-2 w-full sm:w-auto">
-          <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="w-4 h-4" />
-            View original post
-          </a>
-        </Button>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button
+            variant={job.applied ? "secondary" : "default"}
+            className="gap-2 w-full sm:w-auto"
+            disabled={job.applied || markAppliedMutation.isPending}
+            onClick={() => markAppliedMutation.mutate()}
+            data-testid="button-apply-job-details"
+          >
+            {job.applied ? "Applied" : "Mark Applied"}
+          </Button>
+          <Button asChild variant="outline" className="gap-2 w-full sm:w-auto">
+            <a href={job.sourceUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-4 h-4" />
+              View original post
+            </a>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -178,6 +199,11 @@ export default function JobDetails() {
                 {skill}
               </Badge>
             ))}
+            {job.applied && (
+              <Badge variant="outline" className="border-primary text-primary text-xs">
+                Applied
+              </Badge>
+            )}
           </div>
         </CardContent>
       </Card>

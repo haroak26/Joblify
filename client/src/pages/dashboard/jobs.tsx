@@ -111,6 +111,10 @@ export default function MyJobs() {
     markAppliedMutation.mutate(jobId);
   };
 
+  const handleApplyJob = (jobId: string) => {
+    markAppliedMutation.mutate(jobId);
+  };
+
   const hasSkills = profile.skills.length > 0;
   const hasJobs = jobs.length > 0;
 
@@ -208,6 +212,7 @@ export default function MyJobs() {
                   key={job.id}
                   job={job}
                   onSave={handleSaveJob}
+                  onApply={handleApplyJob}
                   onGenerateMessage={handleGenerateMessage}
                 />
               ))}

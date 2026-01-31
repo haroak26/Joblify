@@ -285,7 +285,7 @@ export async function registerRoutes(
       const isComment = messageType === "comment";
       
       const systemPrompt = isComment
-        ? `You are an expert at writing natural, human-like comments on social media posts about job opportunities. Write a SHORT comment (2-4 sentences max) that sounds genuine and casual - like a real person would write. Be conversational, not salesy. Show interest in the opportunity and briefly mention relevant experience. Never use generic phrases, corporate speak, or sound like a bot. The comment should feel authentic and match how real people engage on ${jobDescription.includes('reddit') ? 'Reddit' : jobDescription.includes('twitter') || jobDescription.includes('x.com') ? 'X/Twitter' : 'Facebook'}.`
+        ? `You write short, human-sounding comments on social posts about job opportunities. Sound like a real person: casual, warm, and specific. Keep it to 2-3 sentences, use contractions, and avoid hype or salesy language. Mention one relevant skill or similar work, then end with a simple next step (e.g., "happy to share examples"). Avoid clichés like "I noticed your post" or "great opportunity." Match the vibe of ${jobDescription.includes('reddit') ? 'Reddit' : jobDescription.includes('twitter') || jobDescription.includes('x.com') ? 'X/Twitter' : 'Facebook'}.`
         : `You are an expert at writing compelling freelance job application messages. Write a personalized outreach message for a job opportunity. The message should be ${tone} in tone. Keep it concise (150-250 words), highlight relevant skills, and include a clear call to action. Do not use generic phrases like "I noticed your post" - be specific and engaging.`;
 
       const userPrompt = isComment
@@ -293,7 +293,7 @@ export async function registerRoutes(
 My Skills: ${skills.join(", ")}
 ${userIntro ? `About Me (for context): ${userIntro}` : ""}
 
-Write a short, human-sounding comment expressing interest. Be casual and genuine.`
+Write a short, natural comment that references something from the post and one relevant skill. Keep it casual and grounded.`
         : `Job Title: ${jobTitle}
 Job Description: ${jobDescription}
 My Skills: ${skills.join(", ")}
@@ -598,9 +598,9 @@ function generateFallbackMessage(jobTitle: string, skills: string[], tone: strin
 
   if (isComment) {
     const comments = [
-      `This sounds like a great opportunity! I have experience with ${skillsList} and would love to help out. DM me if you're still looking!`,
-      `Hey, I'd be interested in this! Been working with ${skillsList} for a while now. Happy to chat if you need someone.`,
-      `Really cool project! I've got ${skillsList} experience and this seems like a good fit. Let me know if you want to connect.`,
+      `Hi! I’ve been working with ${skillsList} recently and this feels right up my alley. Happy to share a couple examples if that helps.`,
+      `Hey there — I work a lot with ${skillsList} and can jump in quickly. Want me to send a quick overview of similar work?`,
+      `I’ve got experience with ${skillsList} and can help keep this moving. If you’re open, I can DM a few relevant samples.`,
     ];
     return comments[Math.floor(Math.random() * comments.length)];
   }
