@@ -399,19 +399,31 @@ export class DatabaseStorage implements IStorage {
 
   async scrapeAndGenerateJobs(userId: string, skills: Skill[]): Promise<JobPost[]> {
     const skillNames = skills.map((s) => s.name);
+    const skillMatchers = buildSkillMatchers(skills);
     
     try {
       const scrapedJobs = await scrapeJobsForSkills(skillNames);
       if (scrapedJobs.length > 0) {
-        const matchedJobs = scrapedJobs.map(job => ({
-          ...job,
-          matchedSkills: job.matchedSkills.filter(ms =>
-            skillNames.some(sn =>
-              ms.toLowerCase().includes(sn.toLowerCase()) ||
-              sn.toLowerCase().includes(ms.toLowerCase())
-            )
-          )
-        })).filter(job => job.matchedSkills.length > 0 || job.description.toLowerCase().includes(skillNames[0]?.toLowerCase() || ''));
+        const matchedJobs = scrapedJobs.map(job => {
+          const text = `${job.title} ${job.description}`.toLowerCase();
+          const matchedFromText = skillMatchers
+            .filter(({ matcher }) => matcher.test(text))
+            .map(({ name }) => name);
+          const combinedSkills = Array.from(new Set([
+            ...job.matchedSkills.filter(ms =>
+              skillNames.some(sn =>
+                ms.toLowerCase().includes(sn.toLowerCase()) ||
+                sn.toLowerCase().includes(ms.toLowerCase())
+              )
+            ),
+            ...matchedFromText,
+          ]));
+
+          return {
+            ...job,
+            matchedSkills: combinedSkills,
+          };
+        }).filter(job => job.matchedSkills.length > 0);
 
         if (matchedJobs.length > 0) {
           return matchedJobs;
@@ -693,6 +705,25 @@ export class DatabaseStorage implements IStorage {
     const seenSet = new Set(seen.map(s => s.sourceUrl));
     return jobUrls.filter(url => !seenSet.has(url));
   }
+}
+
+function buildSkillMatchers(skills: Skill[]): { name: string; matcher: RegExp }[] {
+  return skills.map((skill) => {
+    const skillName = skill.name.trim();
+    const parts = skillName
+      .split(/[,/&+]| and | with /gi)
+      .flatMap((part) => part.split(/\s+/))
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const uniqueParts = Array.from(new Set([skillName, ...parts]));
+    const pattern = uniqueParts
+      .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+    return {
+      name: skillName,
+      matcher: new RegExp(`\\b(${pattern})\\b`, "i"),
+    };
+  });
 }
 
 export const storage = new DatabaseStorage();

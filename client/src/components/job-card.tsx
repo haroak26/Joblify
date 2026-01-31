@@ -17,6 +17,7 @@ import type { JobPost } from "@shared/schema";
 interface JobCardProps {
   job: JobPost;
   onSave: (jobId: string) => void;
+  onApply: (jobId: string) => void;
   onGenerateMessage: (job: JobPost) => void;
 }
 
@@ -38,7 +39,7 @@ const sourceBgColors = {
   facebook: "bg-blue-600/10",
 };
 
-export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
+export function JobCard({ job, onSave, onApply, onGenerateMessage }: JobCardProps) {
   const [, setLocation] = useLocation();
   const SourceIcon = sourceIcons[job.source];
 
@@ -141,6 +142,19 @@ export function JobCard({ job, onSave, onGenerateMessage }: JobCardProps) {
         >
           <Wand2 className="w-3.5 h-3.5" />
           Generate Message
+        </Button>
+        <Button
+          variant={job.applied ? "secondary" : "default"}
+          size="sm"
+          disabled={job.applied}
+          className="gap-2 h-9 px-4 font-medium w-full sm:w-auto justify-center"
+          onClick={(event) => {
+            event.stopPropagation();
+            onApply(job.id);
+          }}
+          data-testid={`button-apply-${job.id}`}
+        >
+          {job.applied ? "Applied" : "Mark Applied"}
         </Button>
         <a
           href={job.sourceUrl}
