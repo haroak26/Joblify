@@ -56,7 +56,7 @@ export function AppSidebar() {
   const planLabel = planValue === "ultra"
     ? "Ultra"
     : planValue === "plus"
-    ? "Pro"
+    ? "Plus"
     : planValue === "lifetime"
     ? "Lifetime"
     : "Free";

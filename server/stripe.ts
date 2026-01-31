@@ -142,9 +142,7 @@ export async function setupStripeRoutes(app: Express) {
     }
 
     try {
-      const payload = Buffer.isBuffer(req.body)
-        ? req.body
-        : req.rawBody;
+      const payload = req.rawBody ?? req.body;
 
       if (!payload || !Buffer.isBuffer(payload)) {
         console.error("Webhook error: raw body is missing or not a Buffer");

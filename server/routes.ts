@@ -68,7 +68,7 @@ export async function registerRoutes(
           current: data.skills.length,
           message: planLimits.maxSkills === Infinity
             ? "Skills limit reached."
-            : `Your plan allows up to ${skillCheck.limit} skills. Upgrade to Pro, Ultra, or Lifetime for unlimited skills.`
+            : `Your plan allows up to ${skillCheck.limit} skills. Upgrade to Plus, Ultra, or Lifetime for unlimited skills.`
         });
       }
       
@@ -121,7 +121,7 @@ export async function registerRoutes(
           current: skills.length,
           message: planLimits.maxSkills === Infinity
             ? "Skills limit reached."
-            : `Your plan allows up to ${skillCheck.limit} skills. Upgrade to Pro, Ultra, or Lifetime for unlimited skills.`
+            : `Your plan allows up to ${skillCheck.limit} skills. Upgrade to Plus, Ultra, or Lifetime for unlimited skills.`
         });
       }
       
@@ -204,7 +204,7 @@ export async function registerRoutes(
           code: "SCRAPE_LIMIT",
           remaining: scrapeCheck.remaining,
           limit: scrapeCheck.limit,
-          message: `You've reached your monthly job scraping limit of ${scrapeCheck.limit}. Upgrade to Pro, Ultra, or Lifetime for more.`
+          message: `You've reached your monthly job scraping limit of ${scrapeCheck.limit}. Upgrade to Plus, Ultra, or Lifetime for more.`
         });
       }
       
@@ -432,7 +432,7 @@ Write a ${tone} outreach message for this job opportunity.`;
 
       if (!limits.hasScheduleAccess) {
         return res.status(403).json({ 
-          error: "Schedule access requires Pro, Ultra, or Lifetime plan",
+          error: "Schedule access requires Plus, Ultra, or Lifetime plan",
           code: "PLAN_REQUIRED"
         });
       }
