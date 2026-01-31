@@ -53,13 +53,29 @@ export class WebhookHandlers {
         const userId = session.metadata?.userId;
         const plan = normalizePlan(session.metadata?.plan);
         if (userId && plan !== "free") {
+          const existingSubscription = await storage.getSubscription(userId);
+          const existingStripeSubscriptionId = existingSubscription?.stripeSubscriptionId;
+          const newStripeSubscriptionId = plan === "lifetime"
+            ? null
+            : typeof session.subscription === "string"
+            ? session.subscription
+            : session.subscription?.id ?? null;
+
+          if (
+            existingStripeSubscriptionId &&
+            (plan === "lifetime" || (newStripeSubscriptionId && existingStripeSubscriptionId !== newStripeSubscriptionId))
+          ) {
+            try {
+              const stripe = await getUncachableStripeClient();
+              await stripe.subscriptions.cancel(existingStripeSubscriptionId);
+            } catch (error) {
+              console.warn("Stripe subscription cancel error:", error);
+            }
+          }
+
           await storage.updateSubscription(userId, {
             stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
-            stripeSubscriptionId: plan === "lifetime"
-              ? null
-              : typeof session.subscription === "string"
-              ? session.subscription
-              : undefined,
+            stripeSubscriptionId: newStripeSubscriptionId,
             status: "active",
             plan,
           });
@@ -75,6 +91,12 @@ export class WebhookHandlers {
 
         if (customerId && plan) {
           const existing = await storage.getSubscriptionByCustomerId(customerId);
+          if (existing?.stripeSubscriptionId && existing.stripeSubscriptionId !== subscription.id) {
+            break;
+          }
+          if (existing?.plan === "lifetime" && !existing.stripeSubscriptionId) {
+            break;
+          }
           if (existing) {
             await storage.updateSubscription(existing.userId, {
               stripeSubscriptionId: subscription.id,
@@ -93,6 +115,12 @@ export class WebhookHandlers {
         const customerId = typeof subscription.customer === "string" ? subscription.customer : undefined;
         if (customerId) {
           const existing = await storage.getSubscriptionByCustomerId(customerId);
+          if (existing?.stripeSubscriptionId && existing.stripeSubscriptionId !== subscription.id) {
+            break;
+          }
+          if (existing?.plan === "lifetime" && !existing.stripeSubscriptionId) {
+            break;
+          }
           if (existing) {
             await storage.updateSubscription(existing.userId, {
               status: "cancelled",

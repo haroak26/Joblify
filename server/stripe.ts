@@ -166,6 +166,19 @@ export async function setupStripeRoutes(app: Express) {
         }
       }
 
+      const existingSubscription = await storage.getSubscription(userId);
+      const existingStripeSubscriptionId = existingSubscription?.stripeSubscriptionId;
+      if (
+        existingStripeSubscriptionId &&
+        (plan === "lifetime" || (stripeSubscriptionId && existingStripeSubscriptionId !== stripeSubscriptionId))
+      ) {
+        try {
+          await stripe.subscriptions.cancel(existingStripeSubscriptionId);
+        } catch (error) {
+          console.warn("Stripe subscription cancel error:", error);
+        }
+      }
+
       await storage.updateSubscription(userId, {
         plan,
         status,
