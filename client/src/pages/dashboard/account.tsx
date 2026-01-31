@@ -285,7 +285,10 @@ export default function Account() {
                 >
                   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 via-primary/30 to-transparent" />
                   {isCurrent && (
-                    <Badge variant="secondary" className="absolute -top-3 right-6 text-xs uppercase px-4 h-6 shadow-sm">
+                    <Badge
+                      variant="secondary"
+                      className="absolute -top-3 right-6 h-6 rounded-full border border-primary/30 bg-primary/10 px-3 text-[10px] font-semibold uppercase tracking-widest text-primary"
+                    >
                       {isCancelled ? "Cancelling" : "Active Plan"}
                     </Badge>
                   )}
@@ -314,7 +317,7 @@ export default function Account() {
                     {(plan.id === "plus" || plan.id === "ultra") && !isCurrent && (
                       <Button 
                         size="default"
-                        className="w-full font-bold shadow-md hover:shadow-lg" 
+                        className="w-full font-bold"
                         onClick={() => upgradeMutation.mutate(plan.id as "plus" | "ultra")}
                         disabled={upgradeMutation.isPending}
                         data-testid={`button-upgrade-${plan.id}`}

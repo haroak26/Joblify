@@ -28,21 +28,26 @@ export class WebhookHandlers {
     }
 
     const sync = await getStripeSync();
-    await sync.processWebhook(payload, signature);
-
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      return;
-    }
-
-    const stripe = await getUncachableStripeClient();
     let event: Stripe.Event;
 
     try {
-      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      await sync.processWebhook(payload, signature);
+      event = JSON.parse(payload.toString("utf8")) as Stripe.Event;
     } catch (error) {
-      console.error("Stripe webhook signature verification failed:", error);
-      return;
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      if (!webhookSecret) {
+        console.error("Stripe webhook signature verification failed:", error);
+        return;
+      }
+
+      const stripe = await getUncachableStripeClient();
+
+      try {
+        event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+      } catch (stripeError) {
+        console.error("Stripe webhook signature verification failed:", stripeError);
+        return;
+      }
     }
 
     switch (event.type) {
