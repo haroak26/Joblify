@@ -27,6 +27,7 @@ export interface IStorage {
   getJobs(userId: string): Promise<JobPost[]>;
   setJobs(userId: string, jobs: JobPost[]): Promise<void>;
   addJobs(userId: string, jobs: JobPost[]): Promise<JobPost[]>;
+  saveJobs(userId: string, jobs: JobPost[]): Promise<void>;
   clearUnsavedJobs(userId: string): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
@@ -276,6 +277,42 @@ export class DatabaseStorage implements IStorage {
     
     // Return the jobs that were actually added with scrapedAt timestamp
     return trulyNewJobs.map(job => ({ ...job, scrapedAt: new Date() }));
+  }
+  
+  async saveJobs(userId: string, newJobs: JobPost[]): Promise<void> {
+    if (newJobs.length === 0) return;
+    
+    // Get ALL existing job URLs to avoid duplicates
+    const existingJobs = await db.select({ sourceUrl: jobs.sourceUrl }).from(jobs).where(eq(jobs.userId, userId));
+    const existingUrls = new Set(existingJobs.map(j => j.sourceUrl));
+    
+    // Filter out duplicates against ALL existing jobs
+    const trulyNewJobs = newJobs.filter(job => !existingUrls.has(job.sourceUrl));
+    
+    if (trulyNewJobs.length > 0) {
+      const now = new Date();
+      await db.insert(jobs).values(
+        trulyNewJobs.map(job => ({
+          id: job.id,
+          userId,
+          title: job.title,
+          description: job.description,
+          source: job.source,
+          sourceUrl: job.sourceUrl,
+          author: job.author,
+          authorHandle: job.authorHandle || null,
+          postedAt: job.postedAt,
+          matchedSkills: job.matchedSkills,
+          budget: job.budget || null,
+          isRemote: job.isRemote,
+          saved: job.saved,
+          applied: job.applied,
+          relevanceScore: job.relevanceScore || 0,
+          rawData: job.rawData || null,
+          scrapedAt: now,
+        }))
+      );
+    }
   }
   
   async clearUnsavedJobs(userId: string): Promise<void> {

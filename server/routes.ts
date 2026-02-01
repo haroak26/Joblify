@@ -50,6 +50,7 @@ export async function registerRoutes(
       const schema = z.object({
         intro: z.string(),
         skills: z.array(skillSchema),
+        isComplete: z.boolean().optional(),
       });
       
       const data = schema.parse(req.body);
@@ -79,6 +80,14 @@ export async function registerRoutes(
       if (data.skills.length === 0) {
         // Only clear unsaved jobs when skills are empty, preserve saved/applied
         await storage.clearUnsavedJobs(userId);
+      }
+      
+      // Trigger scraping asynchronously if profile is complete and has skills
+      if (data.isComplete && data.skills.length > 0) {
+        const { scrapeJobs } = await import('./scrapers/index');
+        scrapeJobs(data.intro, data.skills)
+          .then(jobs => storage.saveJobs(userId, jobs))
+          .catch(err => console.error('Background scraping error:', err));
       }
       
       res.json(profile);
@@ -209,6 +218,45 @@ export async function registerRoutes(
       res.json({ jobs });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch jobs" });
+    }
+  });
+
+  app.post("/api/jobs/refresh", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      const usage = await storage.checkAndResetMonthlyUsage(userId);
+      
+      if (limits.maxJobsPerMonth !== Infinity && usage.jobsScrapedThisMonth >= limits.maxJobsPerMonth) {
+        return res.status(403).json({
+          error: 'Monthly job scraping limit reached',
+          code: 'SCRAPING_LIMIT',
+          limit: limits.maxJobsPerMonth
+        });
+      }
+      
+      const profile = await storage.getProfile(userId);
+      
+      if (!profile.skills.length) {
+        return res.status(400).json({ error: 'Please add skills first' });
+      }
+      
+      const { scrapeJobs } = await import('./scrapers/index');
+      const jobs = await scrapeJobs(profile.intro, profile.skills);
+      await storage.saveJobs(userId, jobs);
+      
+      // Increment usage (5 jobs max per scrape)
+      await storage.incrementJobsScraped(userId, jobs.length);
+      
+      res.json({ jobs, count: jobs.length });
+    } catch (error) {
+      console.error('Scraping error:', error);
+      res.status(500).json({ error: 'Failed to scrape jobs' });
     }
   });
 

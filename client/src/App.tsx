@@ -16,6 +16,7 @@ import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import VerifyEmail from "@/pages/verify-email";
+import Onboarding from "@/pages/onboarding";
 import DashboardHome from "@/pages/dashboard/home";
 import MyJobs from "@/pages/dashboard/jobs";
 import JobDetails from "@/pages/dashboard/job-details";
@@ -33,6 +34,11 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/onboarding">
+        <ProtectedRoute>
+          <Onboarding />
+        </ProtectedRoute>
+      </Route>
       <Route path="/dashboard">
         <ProtectedRoute>
           <DashboardLayout>
