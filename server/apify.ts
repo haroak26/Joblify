@@ -546,6 +546,7 @@ function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResu
         isRemote: isRemotePost(fullText),
         saved: false,
         applied: false,
+        relevanceScore: 0,
       };
     })
     .filter((job) => job.sourceUrl && job.sourceUrl.length > 0)

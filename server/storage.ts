@@ -312,6 +312,7 @@ export class DatabaseStorage implements IStorage {
         isRemote: updated.isRemote,
         saved: updated.saved,
         applied: updated.applied,
+        relevanceScore: updated.relevanceScore,
       };
     }
     return undefined;
@@ -340,6 +341,7 @@ export class DatabaseStorage implements IStorage {
         isRemote: updated.isRemote,
         saved: updated.saved,
         applied: updated.applied,
+        relevanceScore: updated.relevanceScore,
       };
     }
     return undefined;
@@ -361,6 +363,7 @@ export class DatabaseStorage implements IStorage {
         isRemote: true,
         saved: false,
         applied: false,
+        relevanceScore: 0,
       },
       {
         id: randomUUID(),
@@ -376,6 +379,7 @@ export class DatabaseStorage implements IStorage {
         isRemote: true,
         saved: false,
         applied: false,
+        relevanceScore: 0,
       },
       {
         id: randomUUID(),
@@ -390,6 +394,7 @@ export class DatabaseStorage implements IStorage {
         isRemote: true,
         saved: false,
         applied: false,
+        relevanceScore: 0,
       },
     ];
 
@@ -617,10 +622,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSchedule(userId: string, scheduleData: Omit<InsertSchedule, 'userId'>): Promise<Schedule> {
+    const days = (scheduleData.days || []) as string[];
     const nextRun = this.calculateNextRun(
       scheduleData.frequency || 'daily',
       scheduleData.time || '09:00',
-      scheduleData.days || []
+      days
     );
     const [schedule] = await db.insert(schedules)
       .values({
@@ -628,7 +634,7 @@ export class DatabaseStorage implements IStorage {
         name: scheduleData.name,
         frequency: scheduleData.frequency || 'daily',
         time: scheduleData.time || '09:00',
-        days: scheduleData.days || [],
+        days: days,
         platforms: scheduleData.platforms || ['reddit', 'x', 'facebook'],
         enabled: scheduleData.enabled ?? true,
         nextRun,
@@ -642,11 +648,12 @@ export class DatabaseStorage implements IStorage {
     if (!existing) return undefined;
     
     const shouldRecalculate = updates.frequency || updates.time || updates.lastRun || updates.days;
+    const days = ((updates.days || existing.days || []) as string[]);
     const nextRun = shouldRecalculate
       ? this.calculateNextRun(
           updates.frequency || existing.frequency,
           updates.time || existing.time,
-          updates.days || existing.days || []
+          days
         )
       : existing.nextRun;
     

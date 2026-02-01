@@ -169,6 +169,8 @@ export const jobPostSchema = z.object({
   isRemote: z.boolean().default(true),
   saved: z.boolean().default(false),
   applied: z.boolean().default(false),
+  relevanceScore: z.number().default(0),
+  rawData: z.any().optional(),
   scrapedAt: z.date().optional(),
 });
 

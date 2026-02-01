@@ -98,12 +98,13 @@ export class WebhookHandlers {
             break;
           }
           if (existing) {
+            const periodEnd = (subscription as { current_period_end?: number }).current_period_end;
             await storage.updateSubscription(existing.userId, {
               stripeSubscriptionId: subscription.id,
               status: subscription.status,
               plan,
-              currentPeriodEnd: subscription.current_period_end
-                ? new Date(subscription.current_period_end * 1000)
+              currentPeriodEnd: periodEnd
+                ? new Date(periodEnd * 1000)
                 : undefined,
             });
           }
