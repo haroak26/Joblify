@@ -10,7 +10,7 @@ import {
   Star,
   CheckCircle2
 } from "lucide-react";
-import { SiReddit, SiFacebook } from "react-icons/si";
+import { SiReddit } from "react-icons/si";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -18,7 +18,7 @@ const features = [
   {
     icon: Search,
     title: "Smart Scanning",
-    description: "Our engine monitors Reddit, X, and Facebook around the clock to catch new hiring posts."
+    description: "Our engine monitors Reddit and X around the clock to catch new hiring posts."
   },
   {
     icon: Zap,
@@ -35,7 +35,6 @@ const features = [
 const platforms = [
   { name: "Reddit", icon: SiReddit, color: "text-orange-500" },
   { name: "X", icon: () => <span className="font-bold">𝕏</span>, color: "text-foreground" },
-  { name: "Facebook", icon: SiFacebook, color: "text-blue-600" },
 ];
 
 const benefits = [
@@ -62,6 +61,9 @@ export default function Landing() {
             <span className="font-bold text-lg">Joblify</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/pricing">
+              <Button variant="ghost" size="sm">Pricing</Button>
+            </Link>
             <ThemeToggle />
             <Link href="/dashboard">
               <Button size="sm">{primaryCtaLabel}</Button>
@@ -196,7 +198,7 @@ export default function Landing() {
               <p className="text-xs uppercase text-muted-foreground mb-3">Step 2</p>
               <h3 className="text-xl font-semibold mb-3">Get matched posts</h3>
               <p className="text-muted-foreground">
-                Fresh feeds from Reddit, X, and Facebook surface the newest hiring posts for you.
+                Fresh feeds from Reddit and X surface the newest hiring posts for you.
               </p>
             </div>
             <div className="border rounded-2xl p-6 bg-background">

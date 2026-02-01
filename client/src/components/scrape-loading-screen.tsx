@@ -6,7 +6,6 @@ const steps: Array<{ step: Exclude<ScrapeStep, "idle" | "complete" | "error">; l
   { step: "defining", label: "Defining Requirements" },
   { step: "x", label: "Searching X" },
   { step: "reddit", label: "Searching Reddit" },
-  { step: "facebook", label: "Searching Facebook" },
 ];
 
 interface ScrapeLoadingScreenProps {

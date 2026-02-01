@@ -432,29 +432,28 @@ function normalizeUrl(rawUrl?: string): string {
   return '';
 }
 
-function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'): string {
+function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit'): string {
   const directUrl = normalizeUrl(item.url || item.tweetUrl || item.tweet_url || item.statusUrl || item.status_url);
   if (directUrl) return directUrl;
-  if (source === 'x' && item.id) {
-    const user = item.user as { screen_name?: string } | undefined;
-    const author = item.author as { userName?: string } | undefined;
-    const handle = user?.screen_name || (typeof author === 'object' ? author?.userName : undefined);
-    if (handle) {
-      return `https://x.com/${handle.replace(/^@/, "")}/status/${item.id}`;
-    }
-  }
+  
   if (source === 'x') {
     const user = item.user as { screen_name?: string } | undefined;
     const author = item.author as { userName?: string; name?: string } | undefined;
     const handle = user?.screen_name || (typeof author === 'object' ? author?.userName || author?.name : undefined);
-    const tweetId = item.id_str || item.tweetId || item.tweet_id;
+    const tweetId = item.id || item.id_str || item.tweetId || item.tweet_id;
     if (handle && tweetId) {
       return `https://x.com/${handle.replace(/^@/, "")}/status/${tweetId}`;
     }
+    // Fallback: if we have author as string and tweetId, use that
+    if (typeof item.author === 'string' && tweetId) {
+      return `https://x.com/${item.author.replace(/^@/, "")}/status/${tweetId}`;
+    }
   }
+  
   if (source === 'reddit' && item.permalink) {
     return item.permalink.startsWith('http') ? item.permalink : `https://reddit.com${item.permalink}`;
   }
+  
   return normalizeUrl(item.link || item.postUrl || item.post_url || item.permalink_url);
 }
 
@@ -470,37 +469,50 @@ function extractTextFromItem(item: ScrapedItem): { text: string; title: string; 
 function processItems(items: any[], source: 'x' | 'reddit', maxResults: number): JobPost[] {
   console.log(`Processing ${items.length} raw items from ${source}`);
   
-  const results = items
-    .filter((item: ScrapedItem) => {
-      const { fullText, title } = extractTextFromItem(item);
-      
-      // Basic text length check
-      if (fullText.length < 20) {
+  let filteredByTextLength = 0;
+  let filteredByForHire = 0;
+  let filteredByHiringSignal = 0;
+  let filteredByAdvice = 0;
+  let filteredByNoUrl = 0;
+  
+  const filtered = items.filter((item: ScrapedItem) => {
+    const { fullText, title } = extractTextFromItem(item);
+    
+    // Basic text length check
+    if (fullText.length < 20) {
+      filteredByTextLength++;
+      return false;
+    }
+    
+    // For Reddit, specifically check the title for [For Hire] patterns
+    if (source === 'reddit' && title) {
+      const titleNormalized = title.toLowerCase().trim();
+      // Exclude posts where title starts with [For Hire] or similar
+      if (titleNormalized.match(/^\s*\[?\s*for\s+hire\s*\]?/i)) {
+        filteredByForHire++;
         return false;
       }
-      
-      // For Reddit, specifically check the title for [For Hire] patterns
-      if (source === 'reddit' && title) {
-        const titleNormalized = title.toLowerCase().trim();
-        // Exclude posts where title starts with [For Hire] or similar
-        if (titleNormalized.match(/^\s*\[?\s*for\s+hire\s*\]?/i)) {
-          return false;
-        }
-      }
-      
-      // Must have hiring signals
-      if (!isHiringPost(fullText)) {
-        return false;
-      }
-      
-      // Skip advice posts
-      if (isAdvicePost(fullText)) {
-        return false;
-      }
-      
-      // Remote is optional - we prefer remote jobs but don't require it
-      return true;
-    })
+    }
+    
+    // Must have hiring signals
+    if (!isHiringPost(fullText)) {
+      filteredByHiringSignal++;
+      return false;
+    }
+    
+    // Skip advice posts
+    if (isAdvicePost(fullText)) {
+      filteredByAdvice++;
+      return false;
+    }
+    
+    // Remote is optional - we prefer remote jobs but don't require it
+    return true;
+  });
+  
+  console.log(`After content filtering: ${filtered.length} items (filtered: ${filteredByTextLength} too short, ${filteredByForHire} [For Hire], ${filteredByHiringSignal} no hiring signal, ${filteredByAdvice} advice posts)`);
+  
+  const results = filtered
     .map((item: ScrapedItem) => {
       const { text, title, fullText } = extractTextFromItem(item);
       
@@ -552,9 +564,18 @@ function processItems(items: any[], source: 'x' | 'reddit', maxResults: number):
         relevanceScore: 0,
       };
     })
-    .filter((job) => job.sourceUrl && job.sourceUrl.length > 0)
+    .filter((job) => {
+      if (!job.sourceUrl || job.sourceUrl.length === 0) {
+        filteredByNoUrl++;
+        return false;
+      }
+      return true;
+    })
     .slice(0, maxResults);
-    
+  
+  if (filteredByNoUrl > 0) {
+    console.log(`Filtered ${filteredByNoUrl} items due to missing sourceUrl`);
+  }
   console.log(`Processed ${results.length} valid job posts from ${source}`);
   return results;
 }

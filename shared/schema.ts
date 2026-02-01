@@ -106,7 +106,7 @@ export const schedules = pgTable("schedules", {
   frequency: text("frequency").notNull().default("daily"), // 'hourly', 'daily', 'weekly'
   time: text("time").notNull().default("09:00"),
   days: jsonb("days").default([]), // For weekly: ['monday', 'wednesday']
-  platforms: jsonb("platforms").notNull().default(["reddit", "x", "facebook"]),
+  platforms: jsonb("platforms").notNull().default(["reddit", "x"]),
   enabled: boolean("enabled").notNull().default(true),
   lastRun: timestamp("last_run"),
   nextRun: timestamp("next_run"),
