@@ -31,7 +31,7 @@ export function parseApiError(error: Error, defaultMessage = "An error occurred.
       return parsed.message || "You've reached your skills limit.";
     }
     if (parsed.code === "PLAN_REQUIRED") {
-      return parsed.error || "This feature requires a paid plan.";
+      return parsed.message || parsed.error || "This feature requires a paid plan.";
     }
     if (parsed.code === "SCHEDULE_LIMIT") {
       return parsed.message || "You've reached your schedule limit.";
