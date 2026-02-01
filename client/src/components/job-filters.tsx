@@ -8,9 +8,9 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Search, Filter, Calendar } from "lucide-react";
-import { SiReddit, SiFacebook } from "react-icons/si";
+import { SiReddit } from "react-icons/si";
 
-export type SourceFilter = "all" | "reddit" | "x" | "facebook";
+export type SourceFilter = "all" | "reddit" | "x";
 export type StatusFilter = "all" | "saved" | "applied";
 export type TimeFilter = "all" | "today" | "yesterday" | "week" | "month" | "year";
 
@@ -70,12 +70,6 @@ export function JobFilters({
                   X
                 </div>
               </SelectItem>
-              <SelectItem value="facebook">
-                <div className="flex items-center gap-2">
-                  <SiFacebook className="w-4 h-4 text-blue-600" />
-                  Facebook
-                </div>
-              </SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v: StatusFilter) => onStatusChange(v)}>
@@ -118,7 +112,6 @@ export function JobFilters({
           >
             {sourceFilter === "reddit" && "Reddit"}
             {sourceFilter === "x" && "X"}
-            {sourceFilter === "facebook" && "Facebook"}
             <span className="ml-1.5">×</span>
           </Badge>
         )}
