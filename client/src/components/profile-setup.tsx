@@ -45,6 +45,15 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
     setLocalSkills(skills);
   }, [skills]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localIntro !== intro) {
+        onIntroChange(localIntro);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [localIntro, intro, onIntroChange]);
+
   const suggestMutation = useMutation({
     mutationFn: async (introText: string) => {
       const response = await apiRequest("POST", "/api/suggest-skills", { intro: introText });
@@ -112,9 +121,7 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
   };
 
   const handleBlur = () => {
-    if (localIntro !== intro) {
-      onIntroChange(localIntro);
-    }
+    // Already handled by auto-save useEffect
   };
 
   const availableSuggestions = popularSkills.filter(
