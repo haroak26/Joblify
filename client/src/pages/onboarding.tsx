@@ -125,6 +125,7 @@ export default function Onboarding() {
                 skills={[]}
                 onIntroChange={handleIntroChange}
                 onSkillsChange={() => {}}
+                hideSkills={true}
               />
             </div>
           )}
@@ -137,6 +138,7 @@ export default function Onboarding() {
                 skills={profile.skills}
                 onIntroChange={handleIntroChange}
                 onSkillsChange={handleSkillsChange}
+                hideIntro={true}
               />
             </div>
           )}
