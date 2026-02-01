@@ -62,6 +62,7 @@ export const profiles = pgTable("profiles", {
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
   intro: text("intro").notNull().default(""),
   skills: jsonb("skills").notNull().default([]),
+  lastScrapedAt: timestamp("last_scraped_at"),
 });
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
@@ -86,6 +87,8 @@ export const jobs = pgTable("jobs", {
   isRemote: boolean("is_remote").notNull().default(true),
   saved: boolean("saved").notNull().default(false),
   applied: boolean("applied").notNull().default(false),
+  relevanceScore: integer("relevance_score").notNull().default(0),
+  rawData: jsonb("raw_data"),
   scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
 });
 

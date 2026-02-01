@@ -139,7 +139,7 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getProfile(userId: string): Promise<FreelancerProfile> {
+  async getProfile(userId: string): Promise<FreelancerProfile & { lastScrapedAt?: Date }> {
     const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
     if (!profile) {
       return { intro: "", skills: [] };
@@ -147,10 +147,11 @@ export class DatabaseStorage implements IStorage {
     return {
       intro: profile.intro,
       skills: (profile.skills as Skill[]) || [],
+      lastScrapedAt: profile.lastScrapedAt || undefined,
     };
   }
 
-  async setProfile(userId: string, data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
+  async setProfile(userId: string, data: Partial<FreelancerProfile & { lastScrapedAt?: Date }>): Promise<FreelancerProfile> {
     const current = await this.getProfile(userId);
     const updated = { ...current, ...data };
     
@@ -162,6 +163,7 @@ export class DatabaseStorage implements IStorage {
         .set({
           intro: updated.intro,
           skills: updated.skills,
+          lastScrapedAt: data.lastScrapedAt || existing.lastScrapedAt,
         })
         .where(eq(profiles.userId, userId));
     } else {
@@ -169,6 +171,7 @@ export class DatabaseStorage implements IStorage {
         userId,
         intro: updated.intro,
         skills: updated.skills,
+        lastScrapedAt: data.lastScrapedAt || null,
       });
     }
     
@@ -191,6 +194,8 @@ export class DatabaseStorage implements IStorage {
       isRemote: job.isRemote,
       saved: job.saved,
       applied: job.applied,
+      relevanceScore: job.relevanceScore,
+      rawData: job.rawData,
       scrapedAt: job.scrapedAt || undefined,
     }));
   }
@@ -229,6 +234,8 @@ export class DatabaseStorage implements IStorage {
           isRemote: job.isRemote,
           saved: job.saved,
           applied: job.applied,
+          relevanceScore: job.relevanceScore || 0,
+          rawData: job.rawData || null,
           scrapedAt: now,
         }))
       );
@@ -263,6 +270,8 @@ export class DatabaseStorage implements IStorage {
           isRemote: job.isRemote,
           saved: job.saved,
           applied: job.applied,
+          relevanceScore: job.relevanceScore || 0,
+          rawData: job.rawData || null,
           scrapedAt: now,
         }))
       );
