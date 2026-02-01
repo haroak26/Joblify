@@ -1,23 +1,21 @@
 # Joblify - Freelance Job Discovery Platform
 
-Joblify is an intelligent job discovery platform that automatically scrapes and matches freelance opportunities from X (Twitter) and Reddit based on your skills and experience.
+Joblify is an intelligent job discovery platform designed to help freelancers manage and track job opportunities based on their skills and experience.
 
 ## Features
 
-- 🔍 **Multi-Platform Scraping**: Automatically scrapes job postings from X and Reddit
-- 🎯 **Smart Filtering**: Filters out freelancer advertisements, showing only client job postings
-- 🤖 **AI-Powered Matching**: Matches jobs to your skills and experience
-- 📧 **Email Notifications**: Get notified when new jobs matching your profile are found
+- 🎯 **Job Management**: Save jobs, track applications, and manage your pipeline
+- 🤖 **AI-Powered Matching**: View jobs matched to your skills and experience
+- 📧 **Email Notifications**: Get notified when new jobs are added
 - ⏰ **Scheduled Searches**: Set up automated job searches on your schedule
-- 💾 **Job Management**: Save jobs, track applications, and manage your pipeline
 - 🚀 **AI Message Generation**: Generate personalized application messages with AI
+- 💼 **Subscription Plans**: Multiple tiers with different features and limits
 
 ## Tech Stack
 
 - **Backend**: Node.js + Express + TypeScript
 - **Frontend**: React + Vite + TypeScript + TailwindCSS
 - **Database**: PostgreSQL with Drizzle ORM
-- **Job Scraping**: Apify platform
 - **AI**: OpenAI GPT (or Poe API)
 - **Email**: Brevo (SendinBlue)
 - **Payments**: Stripe
@@ -28,7 +26,6 @@ Joblify is an intelligent job discovery platform that automatically scrapes and 
 
 - Node.js 20+ and npm
 - PostgreSQL database
-- Apify account (for job scraping)
 - OpenAI API key (for AI features)
 - Brevo account (for email notifications)
 - Stripe account (for payments, optional for development)
@@ -56,13 +53,11 @@ Joblify is an intelligent job discovery platform that automatically scrapes and 
    **Required variables:**
    - `DATABASE_URL`: PostgreSQL connection string
    - `SESSION_SECRET`: Random string for session encryption
-   - `APIFY_API_TOKEN`: Your Apify API token ([Get it here](https://console.apify.com/account/integrations))
    - `OPENAI_API_KEY`: Your OpenAI API key
    - `BREVO_API_KEY`: Your Brevo API key
    - `BREVO_SENDER_EMAIL`: Email address for notifications
    
    **Optional variables:**
-   - `APIFY_ENABLE_X`: Enable/disable X scraper (default: enabled)
    - `STRIPE_SECRET_KEY`: For payment processing
    - See `.env.example` for all options
 
@@ -88,35 +83,7 @@ Joblify is an intelligent job discovery platform that automatically scrapes and 
 
 See `.env.example` for a complete list of environment variables and their descriptions.
 
-### Key Configuration
-
-#### Job Scraping Sources
-
-The platform scrapes jobs from:
-- **Reddit**: Subreddits including r/hiring, r/forhire, r/slavelabour, r/freelance, r/designjobs, r/programmingjobs
-- **X (Twitter)**: Search-based scraping using hiring-related keywords
-
-**Important**: The platform automatically filters out "[For Hire]" posts (freelancers advertising) and only shows actual job postings from clients.
-
-#### X (Twitter) Scraper
-
-- Enabled by default
-- To disable: Set `APIFY_ENABLE_X=false`
-- Searches for: "hiring", "looking for", "freelance", "contract", etc.
-- Requires Apify token
-
-#### Apify Configuration
-
-Apify is used for web scraping. You'll need:
-1. Sign up at [apify.com](https://apify.com)
-2. Get your API token from [console.apify.com/account/integrations](https://console.apify.com/account/integrations)
-3. Add it to your `.env` file as `APIFY_API_TOKEN`
-
-Optional Apify settings:
-- `APIFY_ACTOR_X`: Override default X scraper actor
-- `APIFY_ACTOR_REDDIT`: Override default Reddit scraper actor
-- `APIFY_USE_PROXY`: Enable proxy usage
-- `APIFY_PROXY_GROUPS`: Comma-separated proxy groups
+## How It Works
 
 ## Usage
 
@@ -124,18 +91,17 @@ Optional Apify settings:
 2. **Set up your profile**:
    - Add your skills (React, Python, Design, etc.)
    - Write a short intro about your experience
-3. **Search for jobs**:
-   - Click "Search Jobs" to manually trigger a search
-   - Or set up automated schedules (requires Plus/Ultra/Lifetime plan)
-4. **Manage opportunities**:
-   - Save interesting jobs
+3. **Manage opportunities**:
+   - View and save interesting jobs
    - Mark jobs as applied
    - Generate AI-powered application messages
+4. **Set up schedules** (requires Plus/Ultra/Lifetime plan):
+   - Automate periodic updates
 
 ## Subscription Plans
 
-- **Free**: Limited monthly searches
-- **Plus**: More searches, automated schedules
+- **Free**: Limited features
+- **Plus**: More features, automated schedules
 - **Ultra**: Higher limits, priority support
 - **Lifetime**: Unlimited access forever
 
@@ -153,10 +119,9 @@ See the app's pricing page for current limits and pricing.
 │       ├── pages/          # Page components
 │       └── lib/            # Utilities
 ├── server/                 # Express backend
-│   ├── apify.ts           # Job scraping logic
 │   ├── storage.ts         # Database operations
 │   ├── routes.ts          # API routes
-│   ├── scheduler.ts       # Automated job searches
+│   ├── scheduler.ts       # Automated schedules
 │   └── brevo.ts           # Email service
 ├── shared/                 # Shared types and schemas
 │   └── schema.ts          # Drizzle schema
@@ -165,7 +130,6 @@ See the app's pricing page for current limits and pricing.
 
 ### Key Files
 
-- **`server/apify.ts`**: Web scraping configuration and job processing
 - **`server/storage.ts`**: All database operations
 - **`server/routes.ts`**: API endpoints
 - **`shared/schema.ts`**: Database schema and TypeScript types
@@ -182,17 +146,9 @@ See the app's pricing page for current limits and pricing.
 
 ### Jobs not appearing
 
-1. Check that `APIFY_API_TOKEN` is set correctly
-2. Verify your Apify account has credits
-3. Check console logs for scraping errors
-4. Ensure your profile has skills and intro text
-
-### X scraper returning 0 results
-
-1. X scraper is enabled by default - verify `APIFY_ENABLE_X` is not set to 'false'
-2. Check that Apify token is valid
-3. Review console logs for errors
-4. Try different skill keywords
+1. Ensure your profile has skills and intro text
+2. Check console logs for any errors
+3. Verify database connection
 
 ### Email notifications not working
 
