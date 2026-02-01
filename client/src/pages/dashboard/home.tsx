@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
+import { ScrapeLoadingScreen } from "@/components/scrape-loading-screen";
 import type { Skill, JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
+type ScrapeStatus = {
+  step: "idle" | "defining" | "x" | "reddit" | "facebook" | "complete" | "error";
+  label: string;
+};
 
 export default function DashboardHome() {
-  const [refreshStatus, setRefreshStatus] = useState<string | null>(null);
-
   const profileQuery = useQuery<FreelancerProfile>({
     queryKey: ["/api/profile"],
   });
@@ -59,11 +62,17 @@ export default function DashboardHome() {
     },
   });
 
+  const refreshStatusQuery = useQuery<{ status: ScrapeStatus }>({
+    queryKey: ["/api/jobs/refresh-status"],
+    enabled: refreshJobsMutation.isPending,
+    refetchInterval: refreshJobsMutation.isPending ? 1000 : false,
+  });
+
   const profile = profileQuery.data ?? { intro: "", skills: [] };
   const jobs = jobsQuery.data?.jobs ?? [];
   const savedJobs = jobs.filter(j => j.saved);
   const appliedJobs = jobs.filter(j => j.applied);
-  const refreshSteps = useMemo(() => ["Fetching X", "Fetching Reddit", "Fetching Facebook"], []);
+  const status = refreshStatusQuery.data?.status;
 
   const totalValue = jobs.reduce((sum, job) => {
     if (job.budget) {
@@ -85,22 +94,6 @@ export default function DashboardHome() {
 
   const hasSkills = profile.skills.length > 0;
   const isProfileComplete = profile.intro.length > 20 && hasSkills;
-
-  useEffect(() => {
-    if (!refreshJobsMutation.isPending) {
-      setRefreshStatus(null);
-      return;
-    }
-
-    let stepIndex = 0;
-    setRefreshStatus(refreshSteps[stepIndex]);
-    const interval = setInterval(() => {
-      stepIndex = (stepIndex + 1) % refreshSteps.length;
-      setRefreshStatus(refreshSteps[stepIndex]);
-    }, 1400);
-
-    return () => clearInterval(interval);
-  }, [refreshJobsMutation.isPending, refreshSteps]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
@@ -153,13 +146,8 @@ export default function DashboardHome() {
               ) : (
                 <Search className="w-4 h-4" />
               )}
-              Find Opportunities
+              Search Jobs
             </Button>
-            {refreshJobsMutation.isPending && (
-              <div className="text-sm text-muted-foreground" aria-live="polite">
-                {refreshStatus || "Fetching opportunities"} — Please keep this tab open.
-              </div>
-            )}
           </div>
         </div>
 
@@ -184,6 +172,11 @@ export default function DashboardHome() {
           )}
         </div>
       )}
+      <ScrapeLoadingScreen
+        isOpen={refreshJobsMutation.isPending}
+        statusStep={status?.step}
+        statusLabel={status?.label}
+      />
     </div>
   );
 }
