@@ -1,4 +1,4 @@
-export type ScrapeStep = "idle" | "defining" | "x" | "reddit" | "facebook" | "complete" | "error";
+export type ScrapeStep = "idle" | "defining" | "x" | "reddit" | "complete" | "error";
 
 export interface ScrapeStatus {
   step: ScrapeStep;

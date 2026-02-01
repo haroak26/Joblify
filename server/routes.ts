@@ -323,7 +323,7 @@ export async function registerRoutes(
       const isComment = messageType === "comment";
       
       const systemPrompt = isComment
-        ? `You write short, human-sounding comments on social posts about job opportunities. Sound like a real person: casual, warm, and specific. Keep it to 2-3 sentences, use contractions, and avoid hype or salesy language. Mention one relevant skill or similar work, then end with a simple next step (e.g., "happy to share examples"). Avoid clichés like "I noticed your post" or "great opportunity." Match the vibe of ${jobDescription.includes('reddit') ? 'Reddit' : jobDescription.includes('twitter') || jobDescription.includes('x.com') ? 'X/Twitter' : 'Facebook'}.`
+        ? `You write short, human-sounding comments on social posts about job opportunities. Sound like a real person: casual, warm, and specific. Keep it to 2-3 sentences, use contractions, and avoid hype or salesy language. Mention one relevant skill or similar work, then end with a simple next step (e.g., "happy to share examples"). Avoid clichés like "I noticed your post" or "great opportunity." Match the vibe of ${jobDescription.includes('reddit') ? 'Reddit' : 'X/Twitter'}.`
         : `You are an expert at writing compelling freelance job application messages. Write a personalized outreach message for a job opportunity. The message should be ${tone} in tone. Keep it concise (150-250 words), highlight relevant skills, and include a clear call to action. Do not use generic phrases like "I noticed your post" - be specific and engaging.`;
 
       const userPrompt = isComment
@@ -502,7 +502,7 @@ Write a ${tone} outreach message for this job opportunity.`;
         frequency: z.enum(["hourly", "daily", "weekly"]).default("daily"),
         time: z.string().default("09:00"),
         days: z.array(z.string()).default([]),
-        platforms: z.array(z.enum(["reddit", "x", "facebook"])).default(["reddit", "x", "facebook"]),
+        platforms: z.array(z.enum(["reddit", "x"])).default(["reddit", "x"]),
         enabled: z.boolean().default(true),
       });
       
@@ -528,7 +528,7 @@ Write a ${tone} outreach message for this job opportunity.`;
         frequency: z.enum(["hourly", "daily", "weekly"]).optional(),
         time: z.string().optional(),
         days: z.array(z.string()).optional(),
-        platforms: z.array(z.enum(["reddit", "x", "facebook"])).optional(),
+        platforms: z.array(z.enum(["reddit", "x"])).optional(),
         enabled: z.boolean().optional(),
       });
       
