@@ -159,7 +159,7 @@ export const jobPostSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  source: z.enum(["reddit", "x", "facebook"]),
+  source: z.enum(["reddit", "x"]),
   sourceUrl: z.string().url(),
   author: z.string(),
   authorHandle: z.string().optional(),

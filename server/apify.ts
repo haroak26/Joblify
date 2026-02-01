@@ -6,8 +6,8 @@ const apifyToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
 const client = apifyToken
   ? new ApifyClient({ token: apifyToken })
   : null;
-const enableXScraper = process.env.APIFY_ENABLE_X === 'true';
-const enableFacebookScraper = process.env.APIFY_ENABLE_FACEBOOK === 'true';
+// Enable X scraper by default unless explicitly disabled
+const enableXScraper = process.env.APIFY_ENABLE_X !== 'false';
 
 const useApifyProxy = process.env.APIFY_USE_PROXY === 'true';
 const apifyProxyGroups = process.env.APIFY_PROXY_GROUPS
@@ -35,15 +35,13 @@ function getProxyConfiguration() {
 // Default to well-known community actors if not specified
 const ACTORS = {
   X: process.env.APIFY_ACTOR_X || "quacker/twitter-scraper",
-  REDDIT: process.env.APIFY_ACTOR_REDDIT || "apify/reddit-scraper",
-  FACEBOOK: process.env.APIFY_ACTOR_FACEBOOK || "apify/facebook-pages-scraper"
+  REDDIT: process.env.APIFY_ACTOR_REDDIT || "apify/reddit-scraper"
 };
 
 // Hiring-related search terms for scraping queries
 const HIRING_SEARCH_TERMS = {
   X: 'hiring OR "looking for" OR freelance OR freelancer OR contract OR contractor OR "need a" OR "seeking" OR "job opportunity" OR gig OR "developer needed" OR "designer needed" OR "help wanted"',
-  REDDIT: "hiring OR freelance OR contract OR looking",
-  FACEBOOK: "hiring OR freelance OR contract OR job",
+  REDDIT: "hiring OR freelance OR contract OR looking"
 };
 
 interface ScrapedItem {
@@ -83,7 +81,7 @@ interface ScrapedItem {
 }
 
 export type ScrapeStatusUpdate = {
-  step: "defining" | "x" | "reddit" | "facebook";
+  step: "defining" | "x" | "reddit";
   label: string;
 };
 
@@ -181,45 +179,6 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
   }
 }
 
-export async function scrapeFacebook(query: string, maxResults: number = 20): Promise<JobPost[]> {
-  if (!client || !enableFacebookScraper) {
-    console.log('Facebook scraper disabled or Apify client not configured');
-    return [];
-  }
-  try {
-    // Flexible input schema that works with various Facebook scrapers.
-    // Different actors use different parameter names, so we provide multiple
-    // to ensure compatibility with whichever actor is configured.
-    const input = {
-      startUrls: [
-        { url: `https://www.facebook.com/search/posts/?q=${encodeURIComponent(query)}` }
-      ],
-      searchQueries: [query],     // Used by some Facebook scrapers
-      query: query,               // Generic query parameter
-      keyword: query,             // Used by some Facebook scrapers
-      maxPosts: maxResults * 2,   // Used by apify/facebook-pages-scraper
-      maxItems: maxResults * 2,   // Generic limit
-      resultsLimit: maxResults * 2,  // Used by some scrapers
-      maxPostComments: 0,
-      maxReviewComments: 0,
-      commentsMode: "NONE",
-      scrapePagePosts: false,
-      scrapeReviews: false,
-      proxyConfiguration: getProxyConfiguration()
-    };
-    
-    console.log(`Starting Facebook scraper (${ACTORS.FACEBOOK}) with query:`, query);
-    const run = await client.actor(ACTORS.FACEBOOK).call(input);
-    const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    console.log(`Facebook scraper returned ${items.length} items`);
-
-    return processItems(items, 'facebook', maxResults);
-  } catch (error) {
-    console.error('Error scraping Facebook:', error instanceof Error ? error.message : error);
-    return [];
-  }
-}
-
 const HIRING_PHRASES = [
   "hiring",
   "we're hiring",
@@ -237,7 +196,8 @@ const HIRING_PHRASES = [
   "budget",
   "rate",
   "[hiring]",
-  "[for hire]",
+  "[task]",
+  "[job]",
   "contractor",
   "developer needed",
   "designer needed",
@@ -246,7 +206,24 @@ const HIRING_PHRASES = [
   "job opportunity"
 ];
 
-const EXCLUDED_PHRASES = ["for hire", "available for work", "open to work", "looking for work", "seeking employment", "looking for job"];
+const EXCLUDED_PHRASES = [
+  "for hire", 
+  "[for hire]",
+  "available for work", 
+  "open to work", 
+  "looking for work", 
+  "seeking employment", 
+  "looking for job",
+  "i am a",
+  "i'm a",
+  "my services",
+  "offering services",
+  "available now"
+];
+
+// Maximum characters to check at the start of a title for pattern matching
+// This is enough to catch patterns like "[For Hire] - Software Developer" 
+const TITLE_PREFIX_CHECK_LENGTH = 100;
 const EXCLUDED_CONTEXTS = [
   "how to get",
   "tips for",
@@ -360,14 +337,25 @@ const STOPWORDS = new Set([
 
 function isHiringPost(text: string): boolean {
   const normalized = text.toLowerCase();
+  
+  // Check if this is a freelancer advertising their services (self-promotion)
+  // These posts should be EXCLUDED
+  const isSelfPromo = EXCLUDED_PHRASES.some((phrase) => normalized.includes(phrase.toLowerCase()));
+  if (isSelfPromo) {
+    return false; // Not a hiring post - it's a freelancer advertising
+  }
+  
+  // Check for patterns that indicate a freelancer post (typically at the start of title)
+  // Reddit posts often have [For Hire] or similar at the beginning
+  const titleStart = normalized.substring(0, TITLE_PREFIX_CHECK_LENGTH);
+  if (titleStart.match(/^\s*\[?\s*for\s+hire\s*\]?/i)) {
+    return false; // Title starts with "[For Hire]" - this is a freelancer advertising
+  }
+  
+  // Now check if it has hiring signals (employer looking for freelancer)
   const hasHiringSignal = HIRING_PHRASES.some((phrase) => normalized.includes(phrase.toLowerCase()));
-  const isSelfPromo = EXCLUDED_PHRASES.some((phrase) => {
-    const phrasePos = normalized.indexOf(phrase.toLowerCase());
-    if (phrasePos === -1) return false;
-    const beforePhrase = normalized.substring(Math.max(0, phrasePos - 10), phrasePos);
-    return !beforePhrase.includes("looking") && !beforePhrase.includes("need");
-  });
-  return hasHiringSignal && !isSelfPromo;
+  
+  return hasHiringSignal;
 }
 
 function isRemotePost(text: string): boolean {
@@ -470,25 +458,43 @@ function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'):
   return normalizeUrl(item.link || item.postUrl || item.post_url || item.permalink_url);
 }
 
-function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResults: number): JobPost[] {
+// Helper function to extract text and title from scraped items
+function extractTextFromItem(item: ScrapedItem): { text: string; title: string; fullText: string } {
+  const text = item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || 
+               item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
+  const title = item.title || '';
+  const fullText = title ? `${title}\n\n${text}` : text;
+  return { text, title, fullText };
+}
+
+function processItems(items: any[], source: 'x' | 'reddit', maxResults: number): JobPost[] {
   console.log(`Processing ${items.length} raw items from ${source}`);
   
   const results = items
     .filter((item: ScrapedItem) => {
-      const text = (item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.title || item.postText || item.post_text || item.message || item.content || '');
+      const { fullText, title } = extractTextFromItem(item);
       
       // Basic text length check
-      if (text.length < 20) {
+      if (fullText.length < 20) {
         return false;
       }
       
+      // For Reddit, specifically check the title for [For Hire] patterns
+      if (source === 'reddit' && title) {
+        const titleNormalized = title.toLowerCase().trim();
+        // Exclude posts where title starts with [For Hire] or similar
+        if (titleNormalized.match(/^\s*\[?\s*for\s+hire\s*\]?/i)) {
+          return false;
+        }
+      }
+      
       // Must have hiring signals
-      if (!isHiringPost(text)) {
+      if (!isHiringPost(fullText)) {
         return false;
       }
       
       // Skip advice posts
-      if (isAdvicePost(text)) {
+      if (isAdvicePost(fullText)) {
         return false;
       }
       
@@ -496,9 +502,7 @@ function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResu
       return true;
     })
     .map((item: ScrapedItem) => {
-      const text = item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
-      const title = item.title || '';
-      const fullText = title ? `${title}\n\n${text}` : text;
+      const { text, title, fullText } = extractTextFromItem(item);
       
       let author = 'Unknown';
       let handle = '';
@@ -778,12 +782,10 @@ export async function scrapeJobsForSkills(
   const xResults = await scrapeXPosts(query.x, 10);
   onStatus?.({ step: "reddit", label: "Searching Reddit" });
   const redditResults = await scrapeReddit(query.reddit, 10);
-  onStatus?.({ step: "facebook", label: "Searching Facebook" });
-  const fbResults = await scrapeFacebook(query.facebook, 10);
   
-  console.log(`Scraped: X=${xResults.length}, Reddit=${redditResults.length}, Facebook=${fbResults.length}`);
+  console.log(`Scraped: X=${xResults.length}, Reddit=${redditResults.length}`);
   
-  const all = [...redditResults, ...xResults, ...fbResults];
+  const all = [...redditResults, ...xResults];
   
   const unique = all.reduce((acc, job) => {
     if (!acc.find(j => j.sourceUrl === job.sourceUrl)) acc.push(job);
@@ -823,15 +825,14 @@ function parseTimeAgo(timeStr: string): number {
   }
 }
 
-function buildSearchQuery(skills: string[]): { x: string; reddit: string; facebook: string } {
+function buildSearchQuery(skills: string[]): { x: string; reddit: string } {
   const expandedSkills = expandSkillTerms(skills);
   const trimmedSkills = expandedSkills.slice(0, 8);
   const skillQuery = trimmedSkills.length > 0 ? trimmedSkills.join(" OR ") : "";
 
   return {
     x: `(${skillQuery}) (${HIRING_SEARCH_TERMS.X})`,
-    reddit: `${skillQuery} (${HIRING_SEARCH_TERMS.REDDIT})`,
-    facebook: `${skillQuery} (${HIRING_SEARCH_TERMS.FACEBOOK})`,
+    reddit: `${skillQuery} (${HIRING_SEARCH_TERMS.REDDIT})`
   };
 }
 

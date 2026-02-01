@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, Clock, Plus, Trash2, Play, Lock, Crown, Loader2 } from "lucide-react";
-import { SiReddit, SiX, SiFacebook } from "react-icons/si";
+import { SiReddit, SiX } from "react-icons/si";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -22,7 +22,7 @@ interface Schedule {
   frequency: "daily" | "weekly" | "hourly";
   time: string;
   days: string[];
-  platforms: ("reddit" | "x" | "facebook")[];
+  platforms: ("reddit" | "x")[];
   enabled: boolean;
   lastRun: string | null;
   nextRun: string | null;
@@ -40,7 +40,6 @@ interface SubscriptionResponse {
 const platformOptions = [
   { id: "reddit" as const, name: "Reddit", icon: SiReddit, color: "text-orange-500" },
   { id: "x" as const, name: "X (Twitter)", icon: SiX, color: "text-foreground" },
-  { id: "facebook" as const, name: "Facebook", icon: SiFacebook, color: "text-blue-600" },
 ];
 
 export default function Schedules() {
@@ -65,7 +64,7 @@ export default function Schedules() {
     name: "",
     frequency: "daily" as "daily" | "weekly" | "hourly",
     time: "09:00",
-    platforms: ["reddit", "x", "facebook"] as ("reddit" | "x" | "facebook")[],
+    platforms: ["reddit", "x"] as ("reddit" | "x")[],
   });
 
   const createMutation = useMutation({
@@ -75,7 +74,7 @@ export default function Schedules() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      setNewSchedule({ name: "", frequency: "daily", time: "09:00", platforms: ["reddit", "x", "facebook"] });
+      setNewSchedule({ name: "", frequency: "daily", time: "09:00", platforms: ["reddit", "x"] });
       setShowAddForm(false);
       toast({ title: "Schedule created", description: "Your schedule has been created successfully." });
     },
@@ -141,7 +140,7 @@ export default function Schedules() {
     runMutation.mutate(id);
   };
 
-  const togglePlatform = (platform: "reddit" | "x" | "facebook") => {
+  const togglePlatform = (platform: "reddit" | "x") => {
     setNewSchedule(prev => ({
       ...prev,
       platforms: prev.platforms.includes(platform)

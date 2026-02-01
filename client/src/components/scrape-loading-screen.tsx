@@ -1,6 +1,6 @@
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 
-type ScrapeStep = "idle" | "defining" | "x" | "reddit" | "facebook" | "complete" | "error";
+type ScrapeStep = "idle" | "defining" | "x" | "reddit" | "complete" | "error";
 
 const steps: Array<{ step: Exclude<ScrapeStep, "idle" | "complete" | "error">; label: string }> = [
   { step: "defining", label: "Defining Requirements" },

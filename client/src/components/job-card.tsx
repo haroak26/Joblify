@@ -11,7 +11,7 @@ import {
   MapPin,
   DollarSign
 } from "lucide-react";
-import { SiReddit, SiFacebook } from "react-icons/si";
+import { SiReddit } from "react-icons/si";
 import type { JobPost } from "@shared/schema";
 
 interface JobCardProps {
@@ -24,19 +24,16 @@ interface JobCardProps {
 const sourceIcons = {
   reddit: SiReddit,
   x: () => <span className="font-bold text-base">𝕏</span>,
-  facebook: SiFacebook,
 };
 
 const sourceColors = {
   reddit: "text-orange-500",
   x: "text-foreground",
-  facebook: "text-blue-600",
 };
 
 const sourceBgColors = {
   reddit: "bg-orange-500/10",
   x: "bg-muted",
-  facebook: "bg-blue-600/10",
 };
 
 export function JobCard({ job, onSave, onApply, onGenerateMessage }: JobCardProps) {

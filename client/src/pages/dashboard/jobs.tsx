@@ -15,7 +15,7 @@ import { parseApiError } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 type ScrapeStatus = {
-  step: "idle" | "defining" | "x" | "reddit" | "facebook" | "complete" | "error";
+  step: "idle" | "defining" | "x" | "reddit" | "complete" | "error";
   label: string;
 };
 

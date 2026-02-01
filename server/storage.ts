@@ -27,7 +27,7 @@ export interface IStorage {
   // Job methods
   getJobs(userId: string): Promise<JobPost[]>;
   setJobs(userId: string, jobs: JobPost[]): Promise<void>;
-  addJobs(userId: string, jobs: JobPost[]): Promise<void>;
+  addJobs(userId: string, jobs: JobPost[]): Promise<JobPost[]>;
   clearUnsavedJobs(userId: string): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
@@ -192,7 +192,7 @@ export class DatabaseStorage implements IStorage {
       id: job.id,
       title: job.title,
       description: job.description,
-      source: job.source as "reddit" | "x" | "facebook",
+      source: job.source as "reddit" | "x",
       sourceUrl: job.sourceUrl,
       author: job.author,
       authorHandle: job.authorHandle || undefined,
@@ -250,8 +250,8 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async addJobs(userId: string, newJobs: JobPost[]): Promise<void> {
-    if (newJobs.length === 0) return;
+  async addJobs(userId: string, newJobs: JobPost[]): Promise<JobPost[]> {
+    if (newJobs.length === 0) return [];
     
     // Get ALL existing job URLs to avoid duplicates
     const existingJobs = await db.select({ sourceUrl: jobs.sourceUrl }).from(jobs).where(eq(jobs.userId, userId));
@@ -284,6 +284,9 @@ export class DatabaseStorage implements IStorage {
         }))
       );
     }
+    
+    // Return the jobs that were actually added with scrapedAt timestamp
+    return trulyNewJobs.map(job => ({ ...job, scrapedAt: new Date() }));
   }
   
   async clearUnsavedJobs(userId: string): Promise<void> {
@@ -310,7 +313,7 @@ export class DatabaseStorage implements IStorage {
         id: updated.id,
         title: updated.title,
         description: updated.description,
-        source: updated.source as "reddit" | "x" | "facebook",
+        source: updated.source as "reddit" | "x",
         sourceUrl: updated.sourceUrl,
         author: updated.author,
         authorHandle: updated.authorHandle || undefined,
@@ -339,7 +342,7 @@ export class DatabaseStorage implements IStorage {
         id: updated.id,
         title: updated.title,
         description: updated.description,
-        source: updated.source as "reddit" | "x" | "facebook",
+        source: updated.source as "reddit" | "x",
         sourceUrl: updated.sourceUrl,
         author: updated.author,
         authorHandle: updated.authorHandle || undefined,
@@ -648,7 +651,7 @@ export class DatabaseStorage implements IStorage {
         frequency: scheduleData.frequency || 'daily',
         time: scheduleData.time || '09:00',
         days: days,
-        platforms: scheduleData.platforms || ['reddit', 'x', 'facebook'],
+        platforms: scheduleData.platforms || ['reddit', 'x'],
         enabled: scheduleData.enabled ?? true,
         nextRun,
       })
