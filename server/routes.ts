@@ -6,6 +6,7 @@ import { skillSchema, PLAN_LIMITS, normalizePlan } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
+import { clearScrapeStatus, getScrapeStatus, setScrapeStatus } from "./scrapeStatus";
 
 let poeClient: OpenAI | null = null;
 
@@ -194,13 +195,20 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/jobs/refresh-status", requireAuth, (req: Request, res) => {
+    const userId = req.session.userId!;
+    res.json({ status: getScrapeStatus(userId) });
+  });
+
   app.post("/api/jobs/refresh", requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      setScrapeStatus(userId, { step: "defining", label: "Defining Requirements" });
       
       // Check job scraping limit
       const scrapeCheck = await storage.canScrapeJobs(userId, 1);
       if (!scrapeCheck.allowed) {
+        setScrapeStatus(userId, { step: "error", label: "Search limit reached" });
         return res.status(403).json({ 
           error: "Job scraping limit reached", 
           code: "SCRAPE_LIMIT",
@@ -212,7 +220,9 @@ export async function registerRoutes(
       
       const profile = await storage.getProfile(userId);
       if (profile.skills.length > 0 || profile.intro.trim().length > 0) {
-        const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro);
+        const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro, (status) =>
+          setScrapeStatus(userId, status)
+        );
         const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
         const limitedJobs = jobs.slice(0, Math.max(0, remaining));
         
@@ -233,13 +243,18 @@ export async function registerRoutes(
         
         // Get all jobs (including saved/applied) to return
         const allJobs = await storage.getJobs(userId);
+        setScrapeStatus(userId, { step: "complete", label: "Search complete" });
         res.json({ jobs: allJobs, newCount: limitedJobs.length, message: "Jobs refreshed successfully" });
       } else {
+        setScrapeStatus(userId, { step: "error", label: "No profile details set" });
         res.json({ jobs: [], message: "No profile details set" });
       }
     } catch (error) {
       console.error("Error refreshing jobs:", error);
+      setScrapeStatus(userId, { step: "error", label: "Search failed" });
       res.status(500).json({ error: "Failed to refresh jobs" });
+    } finally {
+      setTimeout(() => clearScrapeStatus(userId), 30_000);
     }
   });
 

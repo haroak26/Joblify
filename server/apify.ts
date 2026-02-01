@@ -6,6 +6,8 @@ const apifyToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
 const client = apifyToken
   ? new ApifyClient({ token: apifyToken })
   : null;
+const enableXScraper = process.env.APIFY_ENABLE_X === 'true';
+const enableFacebookScraper = process.env.APIFY_ENABLE_FACEBOOK === 'true';
 
 const useApifyProxy = process.env.APIFY_USE_PROXY === 'true';
 const apifyProxyGroups = process.env.APIFY_PROXY_GROUPS
@@ -72,9 +74,14 @@ interface ScrapedItem {
   content?: string;
 }
 
+export type ScrapeStatusUpdate = {
+  step: "defining" | "x" | "reddit" | "facebook";
+  label: string;
+};
+
 export async function scrapeXPosts(query: string, maxResults: number = 50): Promise<JobPost[]> {
-  if (!client) {
-    console.log('Apify client not configured');
+  if (!client || !enableXScraper) {
+    console.log('X scraper disabled or Apify client not configured');
     return [];
   }
   try {
@@ -155,8 +162,8 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
 }
 
 export async function scrapeFacebook(query: string, maxResults: number = 20): Promise<JobPost[]> {
-  if (!client) {
-    console.log('Apify client not configured');
+  if (!client || !enableFacebookScraper) {
+    console.log('Facebook scraper disabled or Apify client not configured');
     return [];
   }
   try {
@@ -476,10 +483,10 @@ function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResu
       const description = formatDescription(fullText, budget, details);
       
       let postedAt = 'Recently';
-      if (item.created_utc) {
-        postedAt = formatTimeAgo(new Date(item.created_utc * 1000).toISOString());
+      if (item.created_utc !== undefined && item.created_utc !== null) {
+        postedAt = formatTimeAgoFromEpoch(item.created_utc);
       } else if (item.created_at || item.createdAt) {
-        postedAt = formatTimeAgo(item.created_at || item.createdAt || '');
+        postedAt = formatTimeAgo(String(item.created_at || item.createdAt || ''));
       }
 
       return {
@@ -701,7 +708,20 @@ function formatTimeAgo(dateStr: string): string {
   } catch { return 'Recently'; }
 }
 
-export async function scrapeJobsForSkills(skills: string[], intro: string): Promise<JobPost[]> {
+function formatTimeAgoFromEpoch(epochSeconds: number | string): string {
+  const epoch = Number(epochSeconds);
+  if (!Number.isFinite(epoch)) return 'Recently';
+  const date = new Date(epoch * 1000);
+  if (isNaN(date.getTime())) return 'Recently';
+  return formatTimeAgo(date.toISOString());
+}
+
+export async function scrapeJobsForSkills(
+  skills: string[],
+  intro: string,
+  onStatus?: (status: ScrapeStatusUpdate) => void
+): Promise<JobPost[]> {
+  onStatus?.({ step: "defining", label: "Defining Requirements" });
   const profileKeywords = buildProfileKeywords(skills, intro);
   if (!client || profileKeywords.length === 0) {
     console.log('No Apify client or no keywords provided');
@@ -711,15 +731,12 @@ export async function scrapeJobsForSkills(skills: string[], intro: string): Prom
   const query = buildSearchQuery(profileKeywords);
   console.log('Scraping jobs for skills:', skills.join(', '));
   
-  const results = await Promise.allSettled([
-    scrapeXPosts(query.x, 10),
-    scrapeReddit(query.reddit, 10),
-    scrapeFacebook(query.facebook, 10)
-  ]);
-  
-  const xResults = results[0].status === 'fulfilled' ? results[0].value : [];
-  const redditResults = results[1].status === 'fulfilled' ? results[1].value : [];
-  const fbResults = results[2].status === 'fulfilled' ? results[2].value : [];
+  onStatus?.({ step: "x", label: "Searching X" });
+  const xResults = await scrapeXPosts(query.x, 10);
+  onStatus?.({ step: "reddit", label: "Searching Reddit" });
+  const redditResults = await scrapeReddit(query.reddit, 10);
+  onStatus?.({ step: "facebook", label: "Searching Facebook" });
+  const fbResults = await scrapeFacebook(query.facebook, 10);
   
   console.log(`Scraped: X=${xResults.length}, Reddit=${redditResults.length}, Facebook=${fbResults.length}`);
   

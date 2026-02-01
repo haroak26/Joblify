@@ -7,7 +7,7 @@ import {
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { buildProfileKeywords, scrapeJobsForSkills } from "./apify";
+import { buildProfileKeywords, scrapeJobsForSkills, type ScrapeStatusUpdate } from "./apify";
 
 export interface IStorage {
   // User methods
@@ -31,7 +31,12 @@ export interface IStorage {
   clearUnsavedJobs(userId: string): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
-  scrapeAndGenerateJobs(userId: string, skills: Skill[], intro: string): Promise<JobPost[]>;
+  scrapeAndGenerateJobs(
+    userId: string,
+    skills: Skill[],
+    intro: string,
+    onStatus?: (status: ScrapeStatusUpdate) => void
+  ): Promise<JobPost[]>;
   
   // Subscription methods
   getSubscription(userId: string): Promise<Subscription | undefined>;
@@ -397,14 +402,19 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async scrapeAndGenerateJobs(userId: string, skills: Skill[], intro: string): Promise<JobPost[]> {
+  async scrapeAndGenerateJobs(
+    userId: string,
+    skills: Skill[],
+    intro: string,
+    onStatus?: (status: ScrapeStatusUpdate) => void
+  ): Promise<JobPost[]> {
     const skillNames = skills.map((s) => s.name);
     const skillMatchers = buildSkillMatchers(skills);
     const profileKeywords = buildProfileKeywords(skillNames, intro);
     const keywordMatchers = buildKeywordMatchers(profileKeywords);
     
     try {
-      const scrapedJobs = await scrapeJobsForSkills(skillNames, intro);
+      const scrapedJobs = await scrapeJobsForSkills(skillNames, intro, onStatus);
       if (scrapedJobs.length > 0) {
         const matchedJobs = scrapedJobs.map(job => {
           const text = `${job.title} ${job.description}`.toLowerCase();

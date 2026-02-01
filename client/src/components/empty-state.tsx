@@ -34,12 +34,12 @@ export function EmptyState({ type, onAction }: EmptyStateProps) {
         <h3 className="font-bold text-xl mb-2">No Jobs Yet</h3>
         <p className="text-muted-foreground max-w-md mx-auto mb-6 leading-relaxed">
           We're searching social platforms for opportunities that match your skills. 
-          Click refresh or try adding more skills.
+          Click search or try adding more skills.
         </p>
         {onAction && (
           <Button onClick={onAction} variant="secondary" className="gap-2" data-testid="button-refresh-jobs">
             <Search className="w-4 h-4" />
-            Refresh Jobs
+            Search Jobs
           </Button>
         )}
       </div>
