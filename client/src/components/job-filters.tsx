@@ -7,11 +7,12 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Calendar } from "lucide-react";
 import { SiReddit, SiFacebook } from "react-icons/si";
 
 export type SourceFilter = "all" | "reddit" | "x" | "facebook";
 export type StatusFilter = "all" | "saved" | "applied";
+export type TimeFilter = "all" | "today" | "yesterday" | "week" | "month" | "year";
 
 interface JobFiltersProps {
   searchQuery: string;
@@ -20,6 +21,8 @@ interface JobFiltersProps {
   onSourceChange: (source: SourceFilter) => void;
   statusFilter: StatusFilter;
   onStatusChange: (status: StatusFilter) => void;
+  timeFilter?: TimeFilter;
+  onTimeChange?: (time: TimeFilter) => void;
   jobCount: number;
 }
 
@@ -30,6 +33,8 @@ export function JobFilters({
   onSourceChange,
   statusFilter,
   onStatusChange,
+  timeFilter = "all",
+  onTimeChange,
   jobCount,
 }: JobFiltersProps) {
   return (
@@ -83,6 +88,22 @@ export function JobFilters({
               <SelectItem value="applied">Applied</SelectItem>
             </SelectContent>
           </Select>
+          {onTimeChange && (
+            <Select value={timeFilter} onValueChange={(v: TimeFilter) => onTimeChange(v)}>
+              <SelectTrigger className="w-40 h-10" data-testid="select-time">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Time" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="week">Past Week</SelectItem>
+                <SelectItem value="month">Past Month</SelectItem>
+                <SelectItem value="year">Past Year</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
@@ -109,6 +130,20 @@ export function JobFilters({
           >
             {statusFilter === "saved" && "Saved"}
             {statusFilter === "applied" && "Applied"}
+            <span className="ml-1.5">×</span>
+          </Badge>
+        )}
+        {timeFilter !== "all" && onTimeChange && (
+          <Badge
+            variant="secondary"
+            className="cursor-pointer rounded-md px-3 py-1"
+            onClick={() => onTimeChange("all")}
+          >
+            {timeFilter === "today" && "Today"}
+            {timeFilter === "yesterday" && "Yesterday"}
+            {timeFilter === "week" && "Past Week"}
+            {timeFilter === "month" && "Past Month"}
+            {timeFilter === "year" && "Past Year"}
             <span className="ml-1.5">×</span>
           </Badge>
         )}

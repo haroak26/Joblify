@@ -3,9 +3,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LayoutGrid, List, RefreshCw } from "lucide-react";
+import { LayoutGrid, List, RefreshCw, Calendar } from "lucide-react";
 import { JobCard } from "@/components/job-card";
-import { JobFilters, type SourceFilter, type StatusFilter } from "@/components/job-filters";
+import { JobFilters, type SourceFilter, type StatusFilter, type TimeFilter } from "@/components/job-filters";
 import { EmptyState } from "@/components/empty-state";
 import { JobListSkeleton } from "@/components/loading-skeleton";
 import { ScrapeLoadingScreen } from "@/components/scrape-loading-screen";
@@ -17,11 +17,64 @@ type ScrapeStatus = {
   label: string;
 };
 
+type TimeSection = "today" | "yesterday" | "week" | "month" | "year" | "older";
+
+function getTimeSection(scrapedAt: Date | string | undefined): TimeSection {
+  if (!scrapedAt) return "older";
+  
+  const date = typeof scrapedAt === "string" ? new Date(scrapedAt) : scrapedAt;
+  if (isNaN(date.getTime())) return "older";
+  
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const monthAgo = new Date(today);
+  monthAgo.setMonth(monthAgo.getMonth() - 1);
+  const yearAgo = new Date(today);
+  yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+  
+  if (date >= today) return "today";
+  if (date >= yesterday) return "yesterday";
+  if (date >= weekAgo) return "week";
+  if (date >= monthAgo) return "month";
+  if (date >= yearAgo) return "year";
+  return "older";
+}
+
+function getSectionLabel(section: TimeSection): string {
+  switch (section) {
+    case "today": return "Today";
+    case "yesterday": return "Yesterday";
+    case "week": return "Past Week";
+    case "month": return "Past Month";
+    case "year": return "Past Year";
+    case "older": return "Older";
+  }
+}
+
+function matchesTimeFilter(scrapedAt: Date | string | undefined, filter: TimeFilter): boolean {
+  if (filter === "all") return true;
+  const section = getTimeSection(scrapedAt);
+  
+  switch (filter) {
+    case "today": return section === "today";
+    case "yesterday": return section === "yesterday";
+    case "week": return section === "today" || section === "yesterday" || section === "week";
+    case "month": return section === "today" || section === "yesterday" || section === "week" || section === "month";
+    case "year": return section !== "older";
+    default: return true;
+  }
+}
+
 export default function MyJobs() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   
 
@@ -81,6 +134,7 @@ export default function MyJobs() {
       if (sourceFilter !== "all" && job.source !== sourceFilter) return false;
       if (statusFilter === "saved" && !job.saved) return false;
       if (statusFilter === "applied" && !job.applied) return false;
+      if (!matchesTimeFilter(job.scrapedAt, timeFilter)) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
@@ -91,7 +145,26 @@ export default function MyJobs() {
       }
       return true;
     });
-  }, [jobs, sourceFilter, statusFilter, searchQuery]);
+  }, [jobs, sourceFilter, statusFilter, timeFilter, searchQuery]);
+
+  // Group jobs by time section
+  const groupedJobs = useMemo(() => {
+    const groups: Record<TimeSection, JobPost[]> = {
+      today: [],
+      yesterday: [],
+      week: [],
+      month: [],
+      year: [],
+      older: [],
+    };
+    
+    filteredJobs.forEach((job) => {
+      const section = getTimeSection(job.scrapedAt);
+      groups[section].push(job);
+    });
+    
+    return groups;
+  }, [filteredJobs]);
 
   const handleSaveJob = (jobId: string) => {
     saveJobMutation.mutate(jobId);
@@ -111,6 +184,46 @@ export default function MyJobs() {
 
   const hasSkills = profile.skills.length > 0;
   const hasJobs = jobs.length > 0;
+
+  // Determine which sections to show - only sections with jobs
+  const sectionsToShow: TimeSection[] = useMemo(() => {
+    return (["today", "yesterday", "week", "month", "year", "older"] as TimeSection[]).filter(
+      (section) => groupedJobs[section].length > 0
+    );
+  }, [groupedJobs]);
+
+  const renderJobSection = (section: TimeSection, jobs: JobPost[]) => {
+    if (jobs.length === 0) return null;
+    
+    return (
+      <div key={section} className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold text-foreground">{getSectionLabel(section)}</h3>
+          <Badge variant="outline" className="rounded-md">
+            {jobs.length}
+          </Badge>
+        </div>
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid sm:grid-cols-2 gap-6"
+              : "space-y-6"
+          }
+        >
+          {jobs.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              onSave={handleSaveJob}
+              onApply={handleApplyJob}
+              onGenerateMessage={handleGenerateMessage}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
@@ -181,6 +294,8 @@ export default function MyJobs() {
               onSourceChange={setSourceFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
+              timeFilter={timeFilter}
+              onTimeChange={setTimeFilter}
               jobCount={filteredJobs.length}
             />
           </div>
@@ -188,23 +303,10 @@ export default function MyJobs() {
           {filteredJobs.length === 0 ? (
             <EmptyState type="no-results" />
           ) : (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid sm:grid-cols-2 gap-8"
-                  : "space-y-8"
-              }
-              data-testid="job-list"
-            >
-              {filteredJobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onSave={handleSaveJob}
-                  onApply={handleApplyJob}
-                  onGenerateMessage={handleGenerateMessage}
-                />
-              ))}
+            <div className="space-y-10" data-testid="job-list">
+              {sectionsToShow.map((section) =>
+                renderJobSection(section, groupedJobs[section])
+              )}
             </div>
           )}
         </div>

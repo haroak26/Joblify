@@ -38,6 +38,13 @@ const ACTORS = {
   FACEBOOK: "Lnz4QRVI89bcQAUGQ"         // Facebook search scraper
 };
 
+// Hiring-related search terms for scraping queries
+const HIRING_SEARCH_TERMS = {
+  X: 'hiring OR "looking for" OR freelance OR freelancer OR contract OR contractor OR "need a" OR "seeking" OR "job opportunity" OR gig OR "developer needed" OR "designer needed" OR "help wanted"',
+  REDDIT: "hiring OR freelance OR contract OR looking",
+  FACEBOOK: "hiring OR freelance OR contract OR job",
+};
+
 interface ScrapedItem {
   id?: string;
   id_str?: string;
@@ -85,16 +92,27 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
     return [];
   }
   try {
-    // Input schema for apidojo/tweet-scraper (verified from Apify docs)
-    // Uses: searchTerms (array), maxItems (not maxTweets), sort, tweetLanguage
+    // Input schema for G8hR9sp2nkjI2om8X X scraper (verified from Apify docs)
+    // Uses: query (string), maxItems, and optional filters
     const input = { 
-      searchTerms: [query],
       maxItems: maxResults,
-      sort: "Latest",
-      tweetLanguage: "en",
-      proxyConfiguration: getProxyConfiguration()
+      query: query,
+      username: "",
+      replies: "",
+      retweets: "",
+      quotes: "",
+      verified: "",
+      links: "",
+      media: "",
+      images: "",
+      videos: "",
+      nativeVideos: "",
+      proVideos: "",
+      news: "",
+      safe: "",
+      near: ""
     };
-    console.log('Starting X scraper');
+    console.log('Starting X scraper with query:', query);
     const run = await client.actor(ACTORS.X).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`X scraper returned ${items.length} items`);
@@ -121,6 +139,12 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
   }
   try {
     const maxPostsPerSubreddit = Math.max(5, Math.ceil((maxResults * 2) / REDDIT_SUBREDDITS.length));
+    
+    // Calculate a sinceDate that is 3 months ago for recent job posts
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const sinceDate = threeMonthsAgo.toISOString().split('T')[0];
+    
     const results = await Promise.allSettled(
       REDDIT_SUBREDDITS.map(async (subreddit) => {
         // Input schema for lqOcm2Bgsg4LGNATd Reddit actor (matches Apify docs example)
@@ -131,19 +155,19 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
           username: "",
           searchQuery: query,
           searchSubreddit: subreddit,
-          sort: "hot",
-          timeFilter: "all",
+          sort: "new",
+          timeFilter: "month",
           maxPosts: maxPostsPerSubreddit,
           maxComments: 0,
           includeComments: false,
-          sinceDate: "2025-01-01",
+          sinceDate,
           outputFormat: "markdown",
           includeImages: false,
           delaySeconds: 1,
           debugMode: false
         };
 
-        console.log(`Starting Reddit scraper for r/${subreddit}`);
+        console.log(`Starting Reddit scraper for r/${subreddit} with query: ${query}`);
         const run = await client.actor(ACTORS.REDDIT).call(input);
         const { items } = await client.dataset(run.defaultDatasetId).listItems();
         console.log(`Reddit scraper returned ${items.length} items for r/${subreddit}`);
@@ -173,8 +197,8 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
       cookies: [],
       function: "facebook_search_scraper",
       keyword: query,
-      filter_by_recent_posts: false,
-      since: "all_times",
+      filter_by_recent_posts: true,
+      since: "this_month",
       profile_urls: [],
       post_urls: [],
       post_urls_for_comments: [],
@@ -185,7 +209,7 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
       proxyConfiguration: getProxyConfiguration()
     };
     
-    console.log('Starting Facebook scraper');
+    console.log('Starting Facebook scraper with query:', query);
     const run = await client.actor(ACTORS.FACEBOOK).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`Facebook scraper returned ${items.length} items`);
@@ -448,10 +472,29 @@ function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'):
 }
 
 function processItems(items: any[], source: 'x' | 'reddit' | 'facebook', maxResults: number): JobPost[] {
+  console.log(`Processing ${items.length} raw items from ${source}`);
+  
   const results = items
     .filter((item: ScrapedItem) => {
       const text = (item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.title || item.postText || item.post_text || item.message || item.content || '');
-      return text.length > 20 && isHiringPost(text) && isRemotePost(text) && !isAdvicePost(text);
+      
+      // Basic text length check
+      if (text.length < 20) {
+        return false;
+      }
+      
+      // Must have hiring signals
+      if (!isHiringPost(text)) {
+        return false;
+      }
+      
+      // Skip advice posts
+      if (isAdvicePost(text)) {
+        return false;
+      }
+      
+      // Remote is optional - we prefer remote jobs but don't require it
+      return true;
     })
     .map((item: ScrapedItem) => {
       const text = item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
@@ -786,9 +829,9 @@ function buildSearchQuery(skills: string[]): { x: string; reddit: string; facebo
   const skillQuery = trimmedSkills.length > 0 ? trimmedSkills.join(" OR ") : "";
 
   return {
-    x: `(${skillQuery}) (hiring OR "looking for" OR freelance OR contract OR remote OR "work from home")`,
-    reddit: `${skillQuery} hiring remote`,
-    facebook: `${skillQuery} hiring remote`,
+    x: `(${skillQuery}) (${HIRING_SEARCH_TERMS.X})`,
+    reddit: `${skillQuery} (${HIRING_SEARCH_TERMS.REDDIT})`,
+    facebook: `${skillQuery} (${HIRING_SEARCH_TERMS.FACEBOOK})`,
   };
 }
 
