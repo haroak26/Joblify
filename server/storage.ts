@@ -141,11 +141,10 @@ export class DatabaseStorage implements IStorage {
       intro: profile.intro,
       skills,
       isComplete: skills.length > 0 && profile.intro.length >= 20,
-      lastScrapedAt: profile.lastScrapedAt || undefined,
     };
   }
 
-  async setProfile(userId: string, data: Partial<FreelancerProfile & { lastScrapedAt?: Date }>): Promise<FreelancerProfile> {
+  async setProfile(userId: string, data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
     const current = await this.getProfile(userId);
     const updatedIntro = data.intro ?? current.intro;
     const updatedSkills = data.skills ?? current.skills;
@@ -158,7 +157,6 @@ export class DatabaseStorage implements IStorage {
         .set({
           intro: updatedIntro,
           skills: updatedSkills,
-          lastScrapedAt: data.lastScrapedAt || existing.lastScrapedAt,
         })
         .where(eq(profiles.userId, userId));
     } else {
@@ -166,7 +164,6 @@ export class DatabaseStorage implements IStorage {
         userId,
         intro: updatedIntro,
         skills: updatedSkills,
-        lastScrapedAt: data.lastScrapedAt || null,
       });
     }
     

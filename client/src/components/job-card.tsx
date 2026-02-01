@@ -11,7 +11,6 @@ import {
   MapPin,
   DollarSign
 } from "lucide-react";
-import { SiReddit } from "react-icons/si";
 import type { JobPost } from "@shared/schema";
 
 interface JobCardProps {
@@ -21,24 +20,8 @@ interface JobCardProps {
   onGenerateMessage: (job: JobPost) => void;
 }
 
-const sourceIcons = {
-  reddit: SiReddit,
-  x: () => <span className="font-bold text-base">𝕏</span>,
-};
-
-const sourceColors = {
-  reddit: "text-orange-500",
-  x: "text-foreground",
-};
-
-const sourceBgColors = {
-  reddit: "bg-orange-500/10",
-  x: "bg-muted",
-};
-
 export function JobCard({ job, onSave, onApply, onGenerateMessage }: JobCardProps) {
   const [, setLocation] = useLocation();
-  const SourceIcon = sourceIcons[job.source];
 
   const handleGenerateClick = () => {
     onGenerateMessage(job);
@@ -68,8 +51,7 @@ export function JobCard({ job, onSave, onApply, onGenerateMessage }: JobCardProp
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md ${sourceBgColors[job.source]}`}>
-                <SourceIcon className={`w-3.5 h-3.5 ${sourceColors[job.source]}`} />
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted">
                 <span className="text-[11px] font-semibold uppercase tracking-wider">{job.source}</span>
               </div>
               {job.relevanceScore !== undefined && job.relevanceScore > 0 && (
