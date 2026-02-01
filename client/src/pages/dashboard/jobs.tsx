@@ -11,6 +11,7 @@ import { JobListSkeleton } from "@/components/loading-skeleton";
 import { ScrapeLoadingScreen } from "@/components/scrape-loading-screen";
 import type { JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { parseApiError } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 type ScrapeStatus = {
@@ -123,26 +124,10 @@ export default function MyJobs() {
       });
     },
     onError: (error: Error) => {
-      let errorMessage = "Failed to search for jobs. Please try again.";
-      try {
-        // Error format from apiRequest is "{status}: {json}" - extract JSON portion
-        const colonIndex = error.message.indexOf(': ');
-        const jsonStr = colonIndex >= 0 ? error.message.slice(colonIndex + 2) : error.message;
-        const parsed = JSON.parse(jsonStr);
-        if (parsed.code === "EMAIL_NOT_VERIFIED") {
-          errorMessage = "Please verify your email address to search for jobs.";
-        } else if (parsed.code === "SCRAPE_LIMIT") {
-          errorMessage = parsed.message || "You've reached your job search limit for this month.";
-        } else if (parsed.error || parsed.message) {
-          errorMessage = parsed.error || parsed.message;
-        }
-      } catch {
-        // Use default error message
-      }
       toast({
         variant: "destructive",
         title: "Search Failed",
-        description: errorMessage,
+        description: parseApiError(error, "Failed to search for jobs. Please try again."),
       });
     },
   });
