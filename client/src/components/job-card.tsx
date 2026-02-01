@@ -75,6 +75,11 @@ export function JobCard({ job, onSave, onApply, onGenerateMessage }: JobCardProp
                 <SourceIcon className={`w-3.5 h-3.5 ${sourceColors[job.source]}`} />
                 <span className="text-[11px] font-semibold uppercase tracking-wider">{job.source}</span>
               </div>
+              {job.relevanceScore !== undefined && job.relevanceScore > 0 && (
+                <Badge variant="outline" className="border-primary/30 text-primary text-[10px] h-5 px-1.5 font-bold">
+                  {job.relevanceScore}% MATCH
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">@{job.authorHandle || job.author}</span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />

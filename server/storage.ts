@@ -428,37 +428,42 @@ export class DatabaseStorage implements IStorage {
     onStatus?: (status: ScrapeStatusUpdate) => void
   ): Promise<JobPost[]> {
     const skillNames = skills.map((s) => s.name);
-    const skillMatchers = buildSkillMatchers(skills);
-    const profileKeywords = buildProfileKeywords(skillNames, intro);
-    const keywordMatchers = buildKeywordMatchers(profileKeywords);
     
     try {
       const scrapedJobs = await scrapeJobsForSkills(skillNames, intro, onStatus);
       if (scrapedJobs.length > 0) {
         const matchedJobs = scrapedJobs.map(job => {
           const text = `${job.title} ${job.description}`.toLowerCase();
-          const matchedFromText = skillMatchers
-            .filter(({ matcher }) => matcher.test(text))
-            .map(({ name }) => name);
-          const matchedFromKeywords = keywordMatchers
-            .filter(({ matcher }) => matcher.test(text))
-            .map(({ label }) => label);
-          const combinedSkills = Array.from(new Set([
-            ...job.matchedSkills.filter(ms =>
-              skillNames.some(sn =>
-                ms.toLowerCase().includes(sn.toLowerCase()) ||
-                sn.toLowerCase().includes(ms.toLowerCase())
-              )
-            ),
-            ...matchedFromText,
-            ...matchedFromKeywords,
-          ]));
+          
+          // Calculate a simple match score
+          // 1. Skill matches (primary)
+          const matchedSkills = job.matchedSkills.filter(ms =>
+            skillNames.some(sn =>
+              ms.toLowerCase().includes(sn.toLowerCase()) ||
+              sn.toLowerCase().includes(ms.toLowerCase())
+            )
+          );
+          
+          // 2. Text keyword matches (secondary)
+          let skillKeywordMatches = 0;
+          skillNames.forEach(skill => {
+            if (text.includes(skill.toLowerCase())) skillKeywordMatches++;
+          });
+
+          // Calculate score out of 100
+          // Each matched skill is worth 20 points (up to 60)
+          // Each text match is worth 10 points (up to 40)
+          const skillPoints = Math.min(60, matchedSkills.length * 20);
+          const keywordPoints = Math.min(40, skillKeywordMatches * 10);
+          const relevanceScore = skillPoints + keywordPoints;
 
           return {
             ...job,
-            matchedSkills: combinedSkills,
+            matchedSkills,
+            relevanceScore,
           };
-        }).filter(job => job.matchedSkills.length > 0);
+        }).filter(job => job.relevanceScore > 0)
+        .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
 
         if (matchedJobs.length > 0) {
           return matchedJobs;
