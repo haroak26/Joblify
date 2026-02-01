@@ -27,7 +27,7 @@ export interface IStorage {
   // Job methods
   getJobs(userId: string): Promise<JobPost[]>;
   setJobs(userId: string, jobs: JobPost[]): Promise<void>;
-  addJobs(userId: string, jobs: JobPost[]): Promise<void>;
+  addJobs(userId: string, jobs: JobPost[]): Promise<number>;
   clearUnsavedJobs(userId: string): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
@@ -250,8 +250,8 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async addJobs(userId: string, newJobs: JobPost[]): Promise<void> {
-    if (newJobs.length === 0) return;
+  async addJobs(userId: string, newJobs: JobPost[]): Promise<number> {
+    if (newJobs.length === 0) return 0;
     
     // Get ALL existing job URLs to avoid duplicates
     const existingJobs = await db.select({ sourceUrl: jobs.sourceUrl }).from(jobs).where(eq(jobs.userId, userId));
@@ -284,6 +284,8 @@ export class DatabaseStorage implements IStorage {
         }))
       );
     }
+    
+    return trulyNewJobs.length;
   }
   
   async clearUnsavedJobs(userId: string): Promise<void> {

@@ -6,7 +6,8 @@ const apifyToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
 const client = apifyToken
   ? new ApifyClient({ token: apifyToken })
   : null;
-const enableXScraper = process.env.APIFY_ENABLE_X === 'true';
+// Enable X scraper by default unless explicitly disabled
+const enableXScraper = process.env.APIFY_ENABLE_X !== 'false';
 
 const useApifyProxy = process.env.APIFY_USE_PROXY === 'true';
 const apifyProxyGroups = process.env.APIFY_PROXY_GROUPS

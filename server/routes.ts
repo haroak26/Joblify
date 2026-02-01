@@ -242,24 +242,27 @@ export async function registerRoutes(
         const limitedJobs = jobs.slice(0, 5);
         
         // Add new jobs without deleting saved/applied ones
-        await storage.addJobs(userId, limitedJobs);
+        const actuallyAddedCount = await storage.addJobs(userId, limitedJobs);
         
-        if (limitedJobs.length > 0) {
-          await storage.incrementJobsScraped(userId, limitedJobs.length);
+        if (actuallyAddedCount > 0) {
+          await storage.incrementJobsScraped(userId, actuallyAddedCount);
         }
 
-        if (limitedJobs.length > 0) {
+        if (actuallyAddedCount > 0) {
           const user = await storage.getUser(userId);
           if (user?.email) {
             const { sendJobScanEmail } = await import("./brevo");
-            await sendJobScanEmail(user.email, limitedJobs);
+            // Get the actually added jobs for the email
+            const allJobs = await storage.getJobs(userId);
+            const recentJobs = allJobs.slice(0, actuallyAddedCount);
+            await sendJobScanEmail(user.email, recentJobs);
           }
         }
         
         // Get all jobs (including saved/applied) to return
         const allJobs = await storage.getJobs(userId);
         setScrapeStatus(userId, { step: "complete", label: "Search complete" });
-        res.json({ jobs: allJobs, newCount: limitedJobs.length, message: "Jobs refreshed successfully" });
+        res.json({ jobs: allJobs, newCount: actuallyAddedCount, message: "Jobs refreshed successfully" });
       } else {
         setScrapeStatus(userId, { step: "error", label: "No profile details set" });
         res.json({ jobs: [], message: "No profile details set" });
