@@ -93,15 +93,16 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
     return [];
   }
   try {
-    // Flexible input schema that works with various X/Twitter scrapers
-    // Common patterns: searchTerms, queries, query, hashtags, keywords
+    // Flexible input schema that works with various X/Twitter scrapers.
+    // Different actors use different parameter names, so we provide multiple
+    // to ensure compatibility with whichever actor is configured.
     const input = { 
-      searchTerms: [query],
-      queries: [query],
-      query: query,
+      searchTerms: [query],  // Used by apidojo/tweet-scraper
+      queries: [query],      // Used by some tweet scrapers
+      query: query,          // Generic query parameter
       hashtags: [],
-      maxTweets: maxResults,
-      maxItems: maxResults,
+      maxTweets: maxResults, // Used by most tweet scrapers
+      maxItems: maxResults,  // Used by some scrapers
       addUserInfo: true,
       scrapeTweetReplies: false,
       proxyConfiguration: getProxyConfiguration()
@@ -141,23 +142,25 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
     
     const results = await Promise.allSettled(
       REDDIT_SUBREDDITS.map(async (subreddit) => {
-        // Flexible input schema that works with various Reddit scrapers
+        // Flexible input schema that works with various Reddit scrapers.
+        // Different actors use different parameter names, so we provide multiple
+        // to ensure compatibility with whichever actor is configured.
         const input = {
-          startUrls: [{ url: `https://www.reddit.com/r/${subreddit}/search/?q=${encodeURIComponent(query)}&sort=new&t=month` }],
-          subreddits: [subreddit],
-          subreddit: subreddit,
-          searchQuery: query,
-          searches: [{ term: query, subreddit, sort: "new" }],
-          maxItems: maxPostsPerSubreddit,
-          maxPosts: maxPostsPerSubreddit,
-          maxPostCount: maxPostsPerSubreddit,
+          startUrls: [{ url: `https://www.reddit.com/r/${subreddit}/search/?q=${encodeURIComponent(query)}&sort=new&t=month` }],  // URL-based scrapers
+          subreddits: [subreddit],      // Used by some scrapers (array)
+          subreddit: subreddit,         // Used by some scrapers (string)
+          searchQuery: query,           // Used by apify/reddit-scraper
+          searches: [{ term: query, subreddit, sort: "new" }],  // Used by some scrapers
+          maxItems: maxPostsPerSubreddit,      // Generic limit
+          maxPosts: maxPostsPerSubreddit,      // Used by apify/reddit-scraper
+          maxPostCount: maxPostsPerSubreddit,  // Used by some scrapers
           maxComments: 0,
           includeComments: false,
           sort: "new",
           time: "month",
           sinceDate,
           proxyConfiguration: getProxyConfiguration(),
-          proxy: getProxyConfiguration()
+          proxy: getProxyConfiguration()  // Some scrapers use 'proxy' instead
         };
 
         console.log(`Starting Reddit scraper (${ACTORS.REDDIT}) for r/${subreddit} with query: ${query}`);
@@ -184,17 +187,19 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
     return [];
   }
   try {
-    // Flexible input schema that works with various Facebook scrapers
+    // Flexible input schema that works with various Facebook scrapers.
+    // Different actors use different parameter names, so we provide multiple
+    // to ensure compatibility with whichever actor is configured.
     const input = {
       startUrls: [
         { url: `https://www.facebook.com/search/posts/?q=${encodeURIComponent(query)}` }
       ],
-      searchQueries: [query],
-      query: query,
-      keyword: query,
-      maxPosts: maxResults * 2,
-      maxItems: maxResults * 2,
-      resultsLimit: maxResults * 2,
+      searchQueries: [query],     // Used by some Facebook scrapers
+      query: query,               // Generic query parameter
+      keyword: query,             // Used by some Facebook scrapers
+      maxPosts: maxResults * 2,   // Used by apify/facebook-pages-scraper
+      maxItems: maxResults * 2,   // Generic limit
+      resultsLimit: maxResults * 2,  // Used by some scrapers
       maxPostComments: 0,
       maxReviewComments: 0,
       commentsMode: "NONE",
