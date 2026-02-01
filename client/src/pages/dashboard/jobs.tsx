@@ -102,6 +102,28 @@ export default function MyJobs() {
     },
   });
 
+  const refreshJobsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/jobs/refresh');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Jobs updated!',
+        description: `Found ${data.count} new opportunities`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = parseApiError(error);
+      toast({
+        title: 'Scraping failed',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    }
+  });
+
   const profile = profileQuery.data ?? { intro: "", skills: [] };
   const jobs = jobsQuery.data?.jobs ?? [];
 
@@ -216,6 +238,17 @@ export default function MyJobs() {
           <p className="text-base sm:text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          {hasSkills && (
+            <Button
+              onClick={() => refreshJobsMutation.mutate()}
+              disabled={refreshJobsMutation.isPending}
+              className="gap-2 w-full sm:w-auto"
+              data-testid="button-refresh-jobs"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? 'animate-spin' : ''}`} />
+              {refreshJobsMutation.isPending ? 'Searching...' : 'Search Jobs'}
+            </Button>
+          )}
           {hasJobs && (
             <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
               <Button

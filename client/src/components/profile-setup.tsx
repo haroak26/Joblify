@@ -29,9 +29,11 @@ interface ProfileSetupProps {
   skills: Skill[];
   onIntroChange: (intro: string) => void;
   onSkillsChange: (skills: Skill[]) => void;
+  hideIntro?: boolean;
+  hideSkills?: boolean;
 }
 
-export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: ProfileSetupProps) {
+export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange, hideIntro = false, hideSkills = false }: ProfileSetupProps) {
   const [localIntro, setLocalIntro] = useState(intro);
   const [localSkills, setLocalSkills] = useState<Skill[]>(skills);
   const [newSkill, setNewSkill] = useState("");
@@ -130,143 +132,147 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
 
   return (
     <div className="space-y-6">
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <User className="w-5 h-5 text-primary" />
-              Your Introduction
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Share what you do, the industries you know, and the outcomes you deliver. This powers better job matches and sharper outreach.
-            </p>
-          </div>
-          <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-            Step 1
-          </Badge>
-        </div>
-        <div className="space-y-4">
-          <Textarea
-            placeholder="Example: I'm a frontend developer with 5 years of experience building SaaS products. I specialize in React and TypeScript and help startups ship faster. I'm looking for product-led teams that need clean UI and fast iterations."
-            value={localIntro}
-            onChange={(e) => setLocalIntro(e.target.value)}
-            onBlur={handleBlur}
-            rows={5}
-            className="resize-none text-base"
-            data-testid="textarea-intro"
-          />
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>{localIntro.length} characters</span>
-              <span className="hidden sm:inline">Aim for 2-4 sentences.</span>
-            </div>
-            <Button
-              onClick={handleSuggestSkills}
-              disabled={suggestMutation.isPending || localIntro.length < 10}
-              variant="secondary"
-              size="lg"
-              className="gap-2"
-              data-testid="button-suggest-skills"
-            >
-              {suggestMutation.isPending ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Wand2 className="w-4 h-4" />
-              )}
-              Suggest skills
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <Sparkles className="w-5 h-5 text-primary" />
-              Your Skills
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Add the exact skills you want to be hired for. Joblify matches jobs to these signals first.
-            </p>
-          </div>
-          <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-            Step 2
-          </Badge>
-        </div>
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Input
-              placeholder="Add a skill (e.g., React, UI Design)"
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="min-w-[200px] flex-1"
-              data-testid="input-add-skill"
-            />
-            <Button
-              onClick={() => addSkill(newSkill)}
-              disabled={!newSkill.trim()}
-              data-testid="button-add-skill"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add skill
-            </Button>
-          </div>
-
-          {localSkills.length > 0 && (
-            <div className="flex flex-wrap gap-2" data-testid="skills-list">
-              {localSkills.map((skill) => (
-                <Badge
-                  key={skill.id}
-                  variant="secondary"
-                  className="gap-1.5 pr-1.5 py-1.5 text-sm"
-                  data-testid={`skill-badge-${skill.id}`}
-                >
-                  {skill.name}
-                  <button
-                    onClick={() => removeSkill(skill.id)}
-                    className="ml-1 p-0.5 rounded hover-elevate"
-                    data-testid={`button-remove-skill-${skill.id}`}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-
-          {localSkills.length === 0 && (
-            <div className="py-4 text-center border border-dashed rounded-lg" data-testid="text-no-skills">
-              <Sparkles className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground px-2">
-                No skills yet. Add 3-6 of your strongest ones to unlock better matches.
+      {!hideIntro && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <User className="w-5 h-5 text-primary" />
+                Your Introduction
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Share what you do, the industries you know, and the outcomes you deliver. This powers better job matches and sharper outreach.
               </p>
             </div>
-          )}
+            <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
+              Step 1
+            </Badge>
+          </div>
+          <div className="space-y-4">
+            <Textarea
+              placeholder="Example: I'm a frontend developer with 5 years of experience building SaaS products. I specialize in React and TypeScript and help startups ship faster. I'm looking for product-led teams that need clean UI and fast iterations."
+              value={localIntro}
+              onChange={(e) => setLocalIntro(e.target.value)}
+              onBlur={handleBlur}
+              rows={5}
+              className="resize-none text-base"
+              data-testid="textarea-intro"
+            />
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span>{localIntro.length} characters</span>
+                <span className="hidden sm:inline">Aim for 2-4 sentences.</span>
+              </div>
+              <Button
+                onClick={handleSuggestSkills}
+                disabled={suggestMutation.isPending || localIntro.length < 10}
+                variant="secondary"
+                size="lg"
+                className="gap-2"
+                data-testid="button-suggest-skills"
+              >
+                {suggestMutation.isPending ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Wand2 className="w-4 h-4" />
+                )}
+                Suggest skills
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
-          {availableSuggestions.length > 0 && (
-            <div className="pt-4 border-t">
-              <p className="text-sm text-muted-foreground mb-3">Popular skills:</p>
-              <div className="flex flex-wrap gap-2">
-                {availableSuggestions.slice(0, 8).map((skill) => (
-                  <Button
-                    key={skill}
+      {!hideSkills && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Your Skills
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Add the exact skills you want to be hired for. Joblify matches jobs to these signals first.
+              </p>
+            </div>
+            <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
+              Step 2
+            </Badge>
+          </div>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="Add a skill (e.g., React, UI Design)"
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="min-w-[200px] flex-1"
+                data-testid="input-add-skill"
+              />
+              <Button
+                onClick={() => addSkill(newSkill)}
+                disabled={!newSkill.trim()}
+                data-testid="button-add-skill"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add skill
+              </Button>
+            </div>
+
+            {localSkills.length > 0 && (
+              <div className="flex flex-wrap gap-2" data-testid="skills-list">
+                {localSkills.map((skill) => (
+                  <Badge
+                    key={skill.id}
                     variant="secondary"
-                    size="sm"
-                    onClick={() => addSkill(skill)}
-                    className="text-sm"
-                    data-testid={`button-suggest-${skill.toLowerCase().replace(/\s+/g, '-')}`}
+                    className="gap-1.5 pr-1.5 py-1.5 text-sm"
+                    data-testid={`skill-badge-${skill.id}`}
                   >
-                    <Plus className="w-3 h-3 mr-1" />
-                    {skill}
-                  </Button>
+                    {skill.name}
+                    <button
+                      onClick={() => removeSkill(skill.id)}
+                      className="ml-1 p-0.5 rounded hover-elevate"
+                      data-testid={`button-remove-skill-${skill.id}`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </Badge>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-      </section>
+            )}
+
+            {localSkills.length === 0 && (
+              <div className="py-4 text-center border border-dashed rounded-lg" data-testid="text-no-skills">
+                <Sparkles className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground/50" />
+                <p className="text-xs text-muted-foreground px-2">
+                  No skills yet. Add 3-6 of your strongest ones to unlock better matches.
+                </p>
+              </div>
+            )}
+
+            {availableSuggestions.length > 0 && (
+              <div className="pt-4 border-t">
+                <p className="text-sm text-muted-foreground mb-3">Popular skills:</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableSuggestions.slice(0, 8).map((skill) => (
+                    <Button
+                      key={skill}
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => addSkill(skill)}
+                      className="text-sm"
+                      data-testid={`button-suggest-${skill.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      {skill}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

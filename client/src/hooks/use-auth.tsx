@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       setStoredUser(data.user as StoredUser);
       queryClient.clear();
-      setLocation("/dashboard");
+      setLocation("/onboarding");
     } catch (error) {
       if (error instanceof Error) {
         throw error;
