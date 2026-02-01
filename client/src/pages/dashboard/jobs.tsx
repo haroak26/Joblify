@@ -185,17 +185,12 @@ export default function MyJobs() {
   const hasSkills = profile.skills.length > 0;
   const hasJobs = jobs.length > 0;
 
-  // Determine which sections to show based on filter
+  // Determine which sections to show - only sections with jobs
   const sectionsToShow: TimeSection[] = useMemo(() => {
-    if (timeFilter === "all") {
-      return (["today", "yesterday", "week", "month", "year", "older"] as TimeSection[]).filter(
-        (section) => groupedJobs[section].length > 0
-      );
-    }
     return (["today", "yesterday", "week", "month", "year", "older"] as TimeSection[]).filter(
       (section) => groupedJobs[section].length > 0
     );
-  }, [groupedJobs, timeFilter]);
+  }, [groupedJobs]);
 
   const renderJobSection = (section: TimeSection, jobs: JobPost[]) => {
     if (jobs.length === 0) return null;

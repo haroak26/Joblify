@@ -38,6 +38,13 @@ const ACTORS = {
   FACEBOOK: "Lnz4QRVI89bcQAUGQ"         // Facebook search scraper
 };
 
+// Hiring-related search terms for scraping queries
+const HIRING_SEARCH_TERMS = {
+  X: 'hiring OR "looking for" OR freelance OR freelancer OR contract OR contractor OR "need a" OR "seeking" OR "job opportunity" OR gig OR "developer needed" OR "designer needed" OR "help wanted"',
+  REDDIT: "hiring OR freelance OR contract OR looking",
+  FACEBOOK: "hiring OR freelance OR contract OR job",
+};
+
 interface ScrapedItem {
   id?: string;
   id_str?: string;
@@ -821,13 +828,10 @@ function buildSearchQuery(skills: string[]): { x: string; reddit: string; facebo
   const trimmedSkills = expandedSkills.slice(0, 8);
   const skillQuery = trimmedSkills.length > 0 ? trimmedSkills.join(" OR ") : "";
 
-  // Build comprehensive hiring query with multiple hiring signals
-  const hiringTerms = "hiring OR \"looking for\" OR freelance OR freelancer OR contract OR contractor OR \"need a\" OR \"seeking\" OR \"job opportunity\" OR gig OR \"developer needed\" OR \"designer needed\" OR \"help wanted\"";
-
   return {
-    x: `(${skillQuery}) (${hiringTerms})`,
-    reddit: `${skillQuery} (hiring OR freelance OR contract OR looking)`,
-    facebook: `${skillQuery} (hiring OR freelance OR contract OR job)`,
+    x: `(${skillQuery}) (${HIRING_SEARCH_TERMS.X})`,
+    reddit: `${skillQuery} (${HIRING_SEARCH_TERMS.REDDIT})`,
+    facebook: `${skillQuery} (${HIRING_SEARCH_TERMS.FACEBOOK})`,
   };
 }
 
