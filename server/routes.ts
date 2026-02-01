@@ -84,7 +84,9 @@ export async function registerRoutes(
         const skillsChanged = oldSkillNames !== newSkillNames;
         const introChanged = oldProfile.intro !== data.intro;
         
-        if (skillsChanged || (introChanged && !await storage.getScraperParameters(userId))) {
+        // Only regenerate if skills changed, or if intro changed and no parameters exist yet
+        const hasParameters = oldProfile && 'scraperParameters' in oldProfile && oldProfile.scraperParameters;
+        if (skillsChanged || (introChanged && !hasParameters)) {
           // Generate parameters in the background (don't wait)
           const { generateScraperParameters } = await import("./aiParameterGenerator");
           const skillNames = data.skills.map(s => s.name);
@@ -237,7 +239,7 @@ export async function registerRoutes(
       const userId = req.session.userId!;
       const profile = await storage.getProfile(userId);
       
-      if (profile.skills.length === 0 && !profile.intro) {
+      if (profile.skills.length === 0 || !profile.intro) {
         return res.status(400).json({ 
           error: "Profile incomplete", 
           message: "Please add skills and an introduction to generate scraper parameters" 

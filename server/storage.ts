@@ -193,7 +193,16 @@ export class DatabaseStorage implements IStorage {
     if (!profile || !profile.scraperParameters) {
       return null;
     }
-    return profile.scraperParameters as ScraperParameters;
+    
+    // Validate the stored data against the schema
+    try {
+      const { scraperParametersSchema } = await import("@shared/schema");
+      const validated = scraperParametersSchema.parse(profile.scraperParameters);
+      return validated;
+    } catch (error) {
+      console.error("Invalid scraper parameters in database:", error);
+      return null;
+    }
   }
 
   async setScraperParameters(userId: string, parameters: ScraperParameters): Promise<void> {

@@ -142,7 +142,7 @@ Return only the JSON, no explanation.`;
         searchKeywords: Array.isArray(parsed.reddit?.searchKeywords)
           ? parsed.reddit.searchKeywords.slice(0, 8)
           : generateDefaultKeywords(skills),
-        sort: parsed.reddit?.sort === "new" ? "new" : "new",
+        sort: "new",
         timeFilter: parsed.reddit?.timeFilter || "week",
       },
       x: {
