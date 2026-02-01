@@ -31,11 +31,12 @@ function getProxyConfiguration() {
   };
 }
 
-// Verified Apify actor IDs (as of 2025)
+// Apify actor IDs - can be overridden via environment variables
+// Default to well-known community actors if not specified
 const ACTORS = {
-  X: "G8hR9sp2nkjI2om8X",               // X scraper (required actor ID)
-  REDDIT: "lqOcm2Bgsg4LGNATd",          // Reddit scraper (required actor ID)
-  FACEBOOK: "Lnz4QRVI89bcQAUGQ"         // Facebook search scraper
+  X: process.env.APIFY_ACTOR_X || "quacker/twitter-scraper",
+  REDDIT: process.env.APIFY_ACTOR_REDDIT || "apify/reddit-scraper",
+  FACEBOOK: process.env.APIFY_ACTOR_FACEBOOK || "apify/facebook-pages-scraper"
 };
 
 // Hiring-related search terms for scraping queries
@@ -92,27 +93,21 @@ export async function scrapeXPosts(query: string, maxResults: number = 50): Prom
     return [];
   }
   try {
-    // Input schema for G8hR9sp2nkjI2om8X X scraper (verified from Apify docs)
-    // Uses: query (string), maxItems, and optional filters
+    // Flexible input schema that works with various X/Twitter scrapers.
+    // Different actors use different parameter names, so we provide multiple
+    // to ensure compatibility with whichever actor is configured.
     const input = { 
-      maxItems: maxResults,
-      query: query,
-      username: "",
-      replies: "",
-      retweets: "",
-      quotes: "",
-      verified: "",
-      links: "",
-      media: "",
-      images: "",
-      videos: "",
-      nativeVideos: "",
-      proVideos: "",
-      news: "",
-      safe: "",
-      near: ""
+      searchTerms: [query],  // Used by apidojo/tweet-scraper
+      queries: [query],      // Used by some tweet scrapers
+      query: query,          // Generic query parameter
+      hashtags: [],
+      maxTweets: maxResults, // Used by most tweet scrapers
+      maxItems: maxResults,  // Used by some scrapers
+      addUserInfo: true,
+      scrapeTweetReplies: false,
+      proxyConfiguration: getProxyConfiguration()
     };
-    console.log('Starting X scraper with query:', query);
+    console.log(`Starting X scraper (${ACTORS.X}) with query:`, query);
     const run = await client.actor(ACTORS.X).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`X scraper returned ${items.length} items`);
@@ -147,27 +142,28 @@ export async function scrapeReddit(query: string, maxResults: number = 20): Prom
     
     const results = await Promise.allSettled(
       REDDIT_SUBREDDITS.map(async (subreddit) => {
-        // Input schema for lqOcm2Bgsg4LGNATd Reddit actor (matches Apify docs example)
+        // Flexible input schema that works with various Reddit scrapers.
+        // Different actors use different parameter names, so we provide multiple
+        // to ensure compatibility with whichever actor is configured.
         const input = {
-          mode: "search",
-          subreddit,
-          postUrl: "",
-          username: "",
-          searchQuery: query,
-          searchSubreddit: subreddit,
-          sort: "new",
-          timeFilter: "month",
-          maxPosts: maxPostsPerSubreddit,
+          startUrls: [{ url: `https://www.reddit.com/r/${subreddit}/search/?q=${encodeURIComponent(query)}&sort=new&t=month` }],  // URL-based scrapers
+          subreddits: [subreddit],      // Used by some scrapers (array)
+          subreddit: subreddit,         // Used by some scrapers (string)
+          searchQuery: query,           // Used by apify/reddit-scraper
+          searches: [{ term: query, subreddit, sort: "new" }],  // Used by some scrapers
+          maxItems: maxPostsPerSubreddit,      // Generic limit
+          maxPosts: maxPostsPerSubreddit,      // Used by apify/reddit-scraper
+          maxPostCount: maxPostsPerSubreddit,  // Used by some scrapers
           maxComments: 0,
           includeComments: false,
+          sort: "new",
+          time: "month",
           sinceDate,
-          outputFormat: "markdown",
-          includeImages: false,
-          delaySeconds: 1,
-          debugMode: false
+          proxyConfiguration: getProxyConfiguration(),
+          proxy: getProxyConfiguration()  // Some scrapers use 'proxy' instead
         };
 
-        console.log(`Starting Reddit scraper for r/${subreddit} with query: ${query}`);
+        console.log(`Starting Reddit scraper (${ACTORS.REDDIT}) for r/${subreddit} with query: ${query}`);
         const run = await client.actor(ACTORS.REDDIT).call(input);
         const { items } = await client.dataset(run.defaultDatasetId).listItems();
         console.log(`Reddit scraper returned ${items.length} items for r/${subreddit}`);
@@ -191,25 +187,28 @@ export async function scrapeFacebook(query: string, maxResults: number = 20): Pr
     return [];
   }
   try {
-    // Input schema for Lnz4QRVI89bcQAUGQ (facebook_search_scraper)
-    // Uses: keyword, results_limit, min/max wait, proxyConfiguration
+    // Flexible input schema that works with various Facebook scrapers.
+    // Different actors use different parameter names, so we provide multiple
+    // to ensure compatibility with whichever actor is configured.
     const input = {
-      cookies: [],
-      function: "facebook_search_scraper",
-      keyword: query,
-      filter_by_recent_posts: true,
-      since: "this_month",
-      profile_urls: [],
-      post_urls: [],
-      post_urls_for_comments: [],
-      fetch_reaction_map: false,
-      results_limit: maxResults * 2,
-      min_wait_time_in_sec: 1,
-      max_wait_time_in_sec: 4,
+      startUrls: [
+        { url: `https://www.facebook.com/search/posts/?q=${encodeURIComponent(query)}` }
+      ],
+      searchQueries: [query],     // Used by some Facebook scrapers
+      query: query,               // Generic query parameter
+      keyword: query,             // Used by some Facebook scrapers
+      maxPosts: maxResults * 2,   // Used by apify/facebook-pages-scraper
+      maxItems: maxResults * 2,   // Generic limit
+      resultsLimit: maxResults * 2,  // Used by some scrapers
+      maxPostComments: 0,
+      maxReviewComments: 0,
+      commentsMode: "NONE",
+      scrapePagePosts: false,
+      scrapeReviews: false,
       proxyConfiguration: getProxyConfiguration()
     };
     
-    console.log('Starting Facebook scraper with query:', query);
+    console.log(`Starting Facebook scraper (${ACTORS.FACEBOOK}) with query:`, query);
     const run = await client.actor(ACTORS.FACEBOOK).call(input);
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
     console.log(`Facebook scraper returned ${items.length} items`);
