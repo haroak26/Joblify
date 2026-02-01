@@ -61,6 +61,9 @@ export default function Landing() {
             <span className="font-bold text-lg">Joblify</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/pricing">
+              <Button variant="ghost" size="sm">Pricing</Button>
+            </Link>
             <ThemeToggle />
             <Link href="/dashboard">
               <Button size="sm">{primaryCtaLabel}</Button>

@@ -10,6 +10,7 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Pricing from "@/pages/pricing";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
@@ -26,6 +27,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/pricing" component={Pricing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
