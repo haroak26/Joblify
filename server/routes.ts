@@ -6,7 +6,6 @@ import { skillSchema, PLAN_LIMITS, normalizePlan } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
-import { clearScrapeStatus, getScrapeStatus, setScrapeStatus } from "./scrapeStatus";
 
 let poeClient: OpenAI | null = null;
 
@@ -76,26 +75,6 @@ export async function registerRoutes(
       // Get old profile to check if skills changed
       const oldProfile = await storage.getProfile(userId);
       const profile = await storage.setProfile(userId, data);
-      
-      // Auto-generate scraper parameters if skills changed and profile is complete
-      if (data.skills.length > 0 && data.intro.length >= 20) {
-        const oldSkillNames = oldProfile.skills.map(s => s.name).sort().join(',');
-        const newSkillNames = data.skills.map(s => s.name).sort().join(',');
-        const skillsChanged = oldSkillNames !== newSkillNames;
-        const introChanged = oldProfile.intro !== data.intro;
-        
-        // Only regenerate if skills changed, or if intro changed and no parameters exist yet
-        const hasParameters = oldProfile && 'scraperParameters' in oldProfile && oldProfile.scraperParameters;
-        if (skillsChanged || (introChanged && !hasParameters)) {
-          // Generate parameters in the background (don't wait)
-          const { generateScraperParameters } = await import("./aiParameterGenerator");
-          const skillNames = data.skills.map(s => s.name);
-          
-          generateScraperParameters(skillNames, data.intro)
-            .then(params => storage.setScraperParameters(userId, params))
-            .catch(err => console.error("Background parameter generation failed:", err));
-        }
-      }
       
       if (data.skills.length === 0) {
         // Only clear unsaved jobs when skills are empty, preserve saved/applied
@@ -223,80 +202,6 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/scraper-parameters", requireAuth, async (req: Request, res) => {
-    try {
-      const userId = req.session.userId!;
-      const parameters = await storage.getScraperParameters(userId);
-      res.json({ parameters });
-    } catch (error) {
-      console.error("Error fetching scraper parameters:", error);
-      res.status(500).json({ error: "Failed to fetch scraper parameters" });
-    }
-  });
-
-  app.post("/api/scraper-parameters/generate", requireAuth, async (req: Request, res) => {
-    try {
-      const userId = req.session.userId!;
-      const profile = await storage.getProfile(userId);
-      
-      if (profile.skills.length === 0 || !profile.intro) {
-        return res.status(400).json({ 
-          error: "Profile incomplete", 
-          message: "Please add skills and an introduction to generate scraper parameters" 
-        });
-      }
-
-      const { generateScraperParameters } = await import("./aiParameterGenerator");
-      const skillNames = profile.skills.map(s => s.name);
-      
-      const parameters = await generateScraperParameters(
-        skillNames,
-        profile.intro
-      );
-
-      await storage.setScraperParameters(userId, parameters);
-      
-      res.json({ parameters });
-    } catch (error) {
-      console.error("Error generating scraper parameters:", error);
-      res.status(500).json({ error: "Failed to generate scraper parameters" });
-    }
-  });
-
-  app.post("/api/scraper-parameters", requireAuth, async (req: Request, res) => {
-    try {
-      const userId = req.session.userId!;
-      const schema = z.object({
-        reddit: z.object({
-          subreddits: z.array(z.string()),
-          searchKeywords: z.array(z.string()),
-          sort: z.enum(["new", "hot", "top", "relevance"]),
-          timeFilter: z.enum(["hour", "day", "week", "month", "year", "all"]),
-        }).optional(),
-        x: z.object({
-          queries: z.array(z.string()),
-          filters: z.object({
-            links: z.enum(["only", "none", ""]),
-            verified: z.enum(["only", "none", ""]),
-            safe: z.enum(["on", "off", ""]),
-          }),
-        }).optional(),
-      });
-
-      const parameters = schema.parse(req.body);
-      await storage.setScraperParameters(userId, { ...parameters, generatedAt: new Date() });
-      
-      res.json({ success: true, parameters });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid parameters", details: error.errors });
-      } else {
-        console.error("Error saving scraper parameters:", error);
-        res.status(500).json({ error: "Failed to save scraper parameters" });
-      }
-    }
-  });
-
   app.get("/api/jobs", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
@@ -304,68 +209,6 @@ export async function registerRoutes(
       res.json({ jobs });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch jobs" });
-    }
-  });
-
-  app.get("/api/jobs/refresh-status", requireAuth, (req: Request, res) => {
-    const userId = req.session.userId!;
-    res.json({ status: getScrapeStatus(userId) });
-  });
-
-  app.post("/api/jobs/refresh", requireVerifiedEmail, async (req: Request, res) => {
-    const userId = req.session.userId!;
-    try {
-      setScrapeStatus(userId, { step: "defining", label: "Defining Requirements" });
-      
-      // Check job scraping limit
-      const scrapeCheck = await storage.canScrapeJobs(userId, 1);
-      if (!scrapeCheck.allowed) {
-        setScrapeStatus(userId, { step: "error", label: "Search limit reached" });
-        return res.status(403).json({ 
-          error: "Job scraping limit reached", 
-          code: "SCRAPE_LIMIT",
-          remaining: scrapeCheck.remaining,
-          limit: scrapeCheck.limit,
-          message: `You've reached your monthly job scraping limit of ${scrapeCheck.limit}. Upgrade to Plus, Ultra, or Lifetime for more.`
-        });
-      }
-      
-      const profile = await storage.getProfile(userId);
-      if (profile.skills.length > 0 || profile.intro.trim().length > 0) {
-        const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro, (status) =>
-          setScrapeStatus(userId, status)
-        );
-        const limitedJobs = jobs.slice(0, 5);
-        
-        // Add new jobs without deleting saved/applied ones
-        const addedJobs = await storage.addJobs(userId, limitedJobs);
-        
-        if (addedJobs.length > 0) {
-          await storage.incrementJobsScraped(userId, addedJobs.length);
-        }
-
-        if (addedJobs.length > 0) {
-          const user = await storage.getUser(userId);
-          if (user?.email) {
-            const { sendJobScanEmail } = await import("./brevo");
-            await sendJobScanEmail(user.email, addedJobs);
-          }
-        }
-        
-        // Get all jobs (including saved/applied) to return
-        const allJobs = await storage.getJobs(userId);
-        setScrapeStatus(userId, { step: "complete", label: "Search complete" });
-        res.json({ jobs: allJobs, newCount: addedJobs.length, message: "Jobs refreshed successfully" });
-      } else {
-        setScrapeStatus(userId, { step: "error", label: "No profile details set" });
-        res.json({ jobs: [], message: "No profile details set" });
-      }
-    } catch (error) {
-      console.error("Error refreshing jobs:", error);
-      setScrapeStatus(userId, { step: "error", label: "Search failed" });
-      res.status(500).json({ error: "Failed to refresh jobs" });
-    } finally {
-      setTimeout(() => clearScrapeStatus(userId), 30_000);
     }
   });
 
@@ -497,18 +340,15 @@ Write a ${tone} outreach message for this job opportunity.`;
       res.json({
         usage: {
           skillsCount: profile.skills.length,
-          jobsScrapedThisMonth: userUsage.jobsScrapedThisMonth,
           monthResetDate: userUsage.monthResetDate,
         },
         limits: {
           maxSkills: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
-          maxJobsPerMonth: limits.maxJobsPerMonth === Infinity ? -1 : limits.maxJobsPerMonth,
           maxSchedules: limits.maxSchedules === Infinity ? -1 : limits.maxSchedules,
           hasScheduleAccess: limits.hasScheduleAccess,
         },
         remaining: {
           skills: limits.maxSkills === Infinity ? -1 : Math.max(0, limits.maxSkills - profile.skills.length),
-          jobsThisMonth: limits.maxJobsPerMonth === Infinity ? -1 : Math.max(0, limits.maxJobsPerMonth - userUsage.jobsScrapedThisMonth),
         }
       });
     } catch (error) {
@@ -667,56 +507,19 @@ Write a ${tone} outreach message for this job opportunity.`;
         return res.status(404).json({ error: "Schedule not found" });
       }
       
-      // Check scraping limit
-      const scrapeCheck = await storage.canScrapeJobs(userId, 1);
-      if (!scrapeCheck.allowed) {
-        return res.status(403).json({ 
-          error: "Job scraping limit reached",
-          code: "SCRAPE_LIMIT",
-          remaining: scrapeCheck.remaining,
-        });
-      }
-      
       // Run the schedule
       const profile = await storage.getProfile(userId);
       if (profile.skills.length === 0) {
         return res.status(400).json({ error: "No skills configured" });
       }
       
-      const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro);
-      
-      // Filter out seen jobs
-      const seenUrls = await storage.getSeenJobUrls(userId);
-      const newJobs = jobs.filter(job => !seenUrls.includes(job.sourceUrl));
-
-      const limitedJobs = newJobs.slice(0, 5);
-      
-      // Mark new jobs as seen
-      for (const job of limitedJobs) {
-        await storage.markJobAsSeen(userId, job.sourceUrl);
-      }
-      
-      // Add new jobs without deleting saved/applied ones
-      await storage.addJobs(userId, limitedJobs);
-      if (limitedJobs.length > 0) {
-        await storage.incrementJobsScraped(userId, limitedJobs.length);
-      }
-      
+      // Since scraping is removed, return empty result
       // Update schedule last run
       await storage.updateSchedule(userId, scheduleId, { lastRun: new Date() });
       
-      // Send email notification if there are new jobs
-      if (limitedJobs.length > 0) {
-        const user = await storage.getUser(userId);
-        if (user?.email) {
-          const { sendScheduleJobsEmail } = await import("./brevo");
-          await sendScheduleJobsEmail(user.email, schedule.name, limitedJobs);
-        }
-      }
-      
       // Get all jobs (including saved/applied) to return
       const allJobs = await storage.getJobs(userId);
-      res.json({ jobs: allJobs, newCount: limitedJobs.length, count: allJobs.length });
+      res.json({ jobs: allJobs, newCount: 0, count: allJobs.length });
     } catch (error) {
       console.error("Schedule run error:", error);
       res.status(500).json({ error: "Failed to run schedule" });

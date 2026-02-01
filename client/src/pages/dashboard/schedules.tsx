@@ -7,9 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, Clock, Plus, Trash2, Play, Lock, Crown, Loader2 } from "lucide-react";
-import { SiReddit, SiX } from "react-icons/si";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -22,7 +20,7 @@ interface Schedule {
   frequency: "daily" | "weekly" | "hourly";
   time: string;
   days: string[];
-  platforms: ("reddit" | "x")[];
+  platforms: string[];
   enabled: boolean;
   lastRun: string | null;
   nextRun: string | null;
@@ -36,11 +34,6 @@ interface SubscriptionResponse {
   subscription: { plan: string };
   limits: { hasScheduleAccess: boolean; maxSchedules: number };
 }
-
-const platformOptions = [
-  { id: "reddit" as const, name: "Reddit", icon: SiReddit, color: "text-orange-500" },
-  { id: "x" as const, name: "X (Twitter)", icon: SiX, color: "text-foreground" },
-];
 
 export default function Schedules() {
   const { toast } = useToast();
@@ -64,7 +57,7 @@ export default function Schedules() {
     name: "",
     frequency: "daily" as "daily" | "weekly" | "hourly",
     time: "09:00",
-    platforms: ["reddit", "x"] as ("reddit" | "x")[],
+    platforms: [] as string[],
   });
 
   const createMutation = useMutation({
@@ -74,7 +67,7 @@ export default function Schedules() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
-      setNewSchedule({ name: "", frequency: "daily", time: "09:00", platforms: ["reddit", "x"] });
+      setNewSchedule({ name: "", frequency: "daily", time: "09:00", platforms: [] });
       setShowAddForm(false);
       toast({ title: "Schedule created", description: "Your schedule has been created successfully." });
     },
@@ -132,21 +125,12 @@ export default function Schedules() {
   };
 
   const handleAddSchedule = () => {
-    if (!newSchedule.name || newSchedule.platforms.length === 0) return;
+    if (!newSchedule.name) return;
     createMutation.mutate(newSchedule);
   };
 
   const handleRunNow = (id: string) => {
     runMutation.mutate(id);
-  };
-
-  const togglePlatform = (platform: "reddit" | "x") => {
-    setNewSchedule(prev => ({
-      ...prev,
-      platforms: prev.platforms.includes(platform)
-        ? prev.platforms.filter(p => p !== platform)
-        : [...prev.platforms, platform],
-    }));
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -285,39 +269,13 @@ export default function Schedules() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Platforms to Scan</Label>
-              <div className="flex flex-wrap gap-3">
-                {platformOptions.map((platform) => (
-                  <label
-                    key={platform.id}
-                    className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                      newSchedule.platforms.includes(platform.id)
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-muted-foreground/50'
-                    }`}
-                    data-testid={`checkbox-platform-${platform.id}`}
-                  >
-                    <Checkbox
-                      checked={newSchedule.platforms.includes(platform.id)}
-                      onCheckedChange={() => togglePlatform(platform.id)}
-                    />
-                    <platform.icon className={`w-4 h-4 ${platform.color}`} />
-                    <span className="text-sm">{platform.name}</span>
-                  </label>
-                ))}
-              </div>
-              {newSchedule.platforms.length === 0 && (
-                <p className="text-sm text-destructive">Select at least one platform</p>
-              )}
-            </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
               <Button variant="outline" onClick={() => setShowAddForm(false)} className="w-full sm:w-auto" data-testid="button-cancel-schedule">
                 Cancel
               </Button>
               <Button 
                 onClick={handleAddSchedule} 
-                disabled={!newSchedule.name || newSchedule.platforms.length === 0 || createMutation.isPending}
+                disabled={!newSchedule.name || createMutation.isPending}
                 className="w-full sm:w-auto"
                 data-testid="button-save-schedule"
               >
@@ -362,14 +320,6 @@ export default function Schedules() {
                         <Badge variant={schedule.enabled ? "default" : "secondary"}>
                           {schedule.enabled ? "Active" : "Paused"}
                         </Badge>
-                        <div className="flex items-center gap-1">
-                          {schedule.platforms?.map((p) => {
-                            const platform = platformOptions.find(opt => opt.id === p);
-                            return platform ? (
-                              <platform.icon key={p} className={`w-4 h-4 ${platform.color}`} title={platform.name} />
-                            ) : null;
-                          })}
-                        </div>
                       </div>
                       <div className="text-sm text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
                         <span>{getFrequencyLabel(schedule.frequency)} at {schedule.time}</span>

@@ -6,16 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
-import { ScrapeLoadingScreen } from "@/components/scrape-loading-screen";
 import type { Skill, JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { parseApiError } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-type ScrapeStatus = {
-  step: "idle" | "defining" | "x" | "reddit" | "complete" | "error";
-  label: string;
-};
 
 export default function DashboardHome() {
   const [isEditing, setIsEditing] = useState(false);
@@ -56,41 +50,10 @@ export default function DashboardHome() {
     },
   });
 
-  const refreshJobsMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/jobs/refresh");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      const newCount = data?.newCount ?? 0;
-      toast({
-        title: "Search Complete",
-        description: newCount > 0 
-          ? `Found ${newCount} new job${newCount === 1 ? '' : 's'} matching your skills!`
-          : "No new jobs found matching your current skills. Try updating your profile.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Search Failed",
-        description: parseApiError(error, "Failed to search for jobs. Please try again."),
-      });
-    },
-  });
-
-  const refreshStatusQuery = useQuery<{ status: ScrapeStatus }>({
-    queryKey: ["/api/jobs/refresh-status"],
-    enabled: refreshJobsMutation.isPending,
-    refetchInterval: refreshJobsMutation.isPending ? 1000 : false,
-  });
-
   const profile = profileQuery.data ?? { intro: "", skills: [], isComplete: false };
   const jobs = jobsQuery.data?.jobs ?? [];
   const savedJobs = jobs.filter(j => j.saved);
   const appliedJobs = jobs.filter(j => j.applied);
-  const status = refreshStatusQuery.data?.status;
 
   const totalValue = jobs.reduce((sum, job) => {
     if (job.budget) {
@@ -168,19 +131,6 @@ export default function DashboardHome() {
                 Edit Profile
               </Button>
             )}
-            <Button
-              onClick={() => refreshJobsMutation.mutate()}
-              disabled={refreshJobsMutation.isPending || !hasSkills}
-              className="gap-3 px-6 w-full sm:w-auto"
-              data-testid="button-run-finder"
-            >
-              {refreshJobsMutation.isPending ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-              Search Jobs
-            </Button>
           </div>
         </div>
 
@@ -234,11 +184,6 @@ export default function DashboardHome() {
           )}
         </div>
       )}
-      <ScrapeLoadingScreen
-        isOpen={refreshJobsMutation.isPending}
-        statusStep={status?.step}
-        statusLabel={status?.label}
-      />
     </div>
   );
 }

@@ -1,13 +1,12 @@
 import { 
   type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, 
   type Subscription, type Usage, type PlanType, PLAN_LIMITS, normalizePlan,
-  type Schedule, type InsertSchedule, type SeenJob, type ScraperParameters,
+  type Schedule, type InsertSchedule, type SeenJob,
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs 
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { buildProfileKeywords, scrapeJobsForSkills, type ScrapeStatusUpdate } from "./apify";
 
 export interface IStorage {
   // User methods
@@ -23,8 +22,6 @@ export interface IStorage {
   // Profile methods
   getProfile(userId: string): Promise<FreelancerProfile>;
   setProfile(userId: string, profile: Partial<FreelancerProfile>): Promise<FreelancerProfile>;
-  getScraperParameters(userId: string): Promise<ScraperParameters | null>;
-  setScraperParameters(userId: string, parameters: ScraperParameters): Promise<void>;
   
   // Job methods
   getJobs(userId: string): Promise<JobPost[]>;
@@ -33,12 +30,6 @@ export interface IStorage {
   clearUnsavedJobs(userId: string): Promise<void>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
-  scrapeAndGenerateJobs(
-    userId: string,
-    skills: Skill[],
-    intro: string,
-    onStatus?: (status: ScrapeStatusUpdate) => void
-  ): Promise<JobPost[]>;
   
   // Subscription methods
   getSubscription(userId: string): Promise<Subscription | undefined>;
@@ -54,7 +45,6 @@ export interface IStorage {
   
   // Limit checking
   canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }>;
-  canScrapeJobs(userId: string, requestedCount: number): Promise<{ allowed: boolean; remaining: number; limit: number }>;
   
   // Schedule methods
   getSchedules(userId: string): Promise<Schedule[]>;
@@ -188,53 +178,13 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getScraperParameters(userId: string): Promise<ScraperParameters | null> {
-    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
-    if (!profile || !profile.scraperParameters) {
-      return null;
-    }
-    
-    // Validate the stored data against the schema
-    try {
-      const { scraperParametersSchema } = await import("@shared/schema");
-      const validated = scraperParametersSchema.parse(profile.scraperParameters);
-      return validated;
-    } catch (error) {
-      console.error("Invalid scraper parameters in database:", error);
-      return null;
-    }
-  }
-
-  async setScraperParameters(userId: string, parameters: ScraperParameters): Promise<void> {
-    const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
-    
-    if (existing) {
-      await db
-        .update(profiles)
-        .set({
-          scraperParameters: parameters,
-          parametersUpdatedAt: new Date(),
-        })
-        .where(eq(profiles.userId, userId));
-    } else {
-      // Create profile if it doesn't exist
-      await db.insert(profiles).values({
-        userId,
-        intro: "",
-        skills: [],
-        scraperParameters: parameters,
-        parametersUpdatedAt: new Date(),
-      });
-    }
-  }
-
   async getJobs(userId: string): Promise<JobPost[]> {
     const userJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
     return userJobs.map(job => ({
       id: job.id,
       title: job.title,
       description: job.description,
-      source: job.source as "reddit" | "x",
+      source: job.source,
       sourceUrl: job.sourceUrl,
       author: job.author,
       authorHandle: job.authorHandle || undefined,
@@ -474,74 +424,6 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async scrapeAndGenerateJobs(
-    userId: string,
-    skills: Skill[],
-    intro: string,
-    onStatus?: (status: ScrapeStatusUpdate) => void
-  ): Promise<JobPost[]> {
-    const skillNames = skills.map((s) => s.name);
-    
-    try {
-      // Try to use custom scraper parameters if available
-      const scraperParams = await this.getScraperParameters(userId);
-      let scrapedJobs: JobPost[];
-      
-      if (scraperParams && (scraperParams.reddit || scraperParams.x)) {
-        console.log(`Using custom scraper parameters for user ${userId}`);
-        const { scrapeJobsWithParameters } = await import("./apify");
-        scrapedJobs = await scrapeJobsWithParameters(scraperParams, onStatus);
-      } else {
-        // Fallback to default scraping
-        console.log(`Using default scraping for user ${userId}`);
-        scrapedJobs = await scrapeJobsForSkills(skillNames, intro, onStatus);
-      }
-      
-      if (scrapedJobs.length > 0) {
-        const matchedJobs = scrapedJobs.map(job => {
-          const text = `${job.title} ${job.description}`.toLowerCase();
-          
-          // Calculate a simple match score
-          // 1. Skill matches (primary)
-          const matchedSkills = job.matchedSkills.filter(ms =>
-            skillNames.some(sn =>
-              ms.toLowerCase().includes(sn.toLowerCase()) ||
-              sn.toLowerCase().includes(ms.toLowerCase())
-            )
-          );
-          
-          // 2. Text keyword matches (secondary)
-          let skillKeywordMatches = 0;
-          skillNames.forEach(skill => {
-            if (text.includes(skill.toLowerCase())) skillKeywordMatches++;
-          });
-
-          // Calculate score out of 100
-          // Each matched skill is worth 20 points (up to 60)
-          // Each text match is worth 10 points (up to 40)
-          const skillPoints = Math.min(60, matchedSkills.length * 20);
-          const keywordPoints = Math.min(40, skillKeywordMatches * 10);
-          const relevanceScore = skillPoints + keywordPoints;
-
-          return {
-            ...job,
-            matchedSkills,
-            relevanceScore,
-          };
-        }).filter(job => job.relevanceScore > 0)
-        .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
-
-        if (matchedJobs.length > 0) {
-          return matchedJobs;
-        }
-      }
-    } catch (error) {
-      console.error('Apify scraping failed:', error);
-    }
-
-    return [];
-  }
-
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
     return true;
@@ -646,31 +528,6 @@ export class DatabaseStorage implements IStorage {
       allowed: limits.maxSkills === Infinity || newSkillsCount <= limits.maxSkills,
       limit: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
       current: currentCount,
-    };
-  }
-
-  async canScrapeJobs(userId: string, requestedCount: number): Promise<{ allowed: boolean; remaining: number; limit: number }> {
-    await this.checkAndResetMonthlyUsage(userId);
-    
-    const subscription = await this.getSubscription(userId);
-    const plan = normalizePlan(subscription?.plan);
-    const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
-
-    if (limits.maxJobsPerMonth === Infinity) {
-      return {
-        allowed: true,
-        remaining: Infinity,
-        limit: Infinity,
-      };
-    }
-
-    const userUsage = await this.getUsage(userId);
-    const remaining = limits.maxJobsPerMonth - userUsage.jobsScrapedThisMonth;
-    
-    return {
-      allowed: remaining >= requestedCount,
-      remaining: Math.max(0, remaining),
-      limit: limits.maxJobsPerMonth,
     };
   }
 
