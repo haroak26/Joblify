@@ -73,7 +73,10 @@ export default function DashboardHome() {
     onError: (error: Error) => {
       let errorMessage = "Failed to search for jobs. Please try again.";
       try {
-        const parsed = JSON.parse(error.message.split(': ').slice(1).join(': '));
+        // Error format from apiRequest is "{status}: {json}" - extract JSON portion
+        const colonIndex = error.message.indexOf(': ');
+        const jsonStr = colonIndex >= 0 ? error.message.slice(colonIndex + 2) : error.message;
+        const parsed = JSON.parse(jsonStr);
         if (parsed.code === "EMAIL_NOT_VERIFIED") {
           errorMessage = "Please verify your email address to search for jobs.";
         } else if (parsed.code === "SCRAPE_LIMIT") {
