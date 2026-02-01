@@ -9,6 +9,7 @@ import { SkillsSkeleton } from "@/components/loading-skeleton";
 import { ScrapeLoadingScreen } from "@/components/scrape-loading-screen";
 import type { Skill, JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type ScrapeStatus = {
   step: "idle" | "defining" | "x" | "reddit" | "facebook" | "complete" | "error";
@@ -17,6 +18,7 @@ type ScrapeStatus = {
 
 export default function DashboardHome() {
   const [isEditing, setIsEditing] = useState(false);
+  const { toast } = useToast();
 
   const profileQuery = useQuery<FreelancerProfile>({
     queryKey: ["/api/profile"],
@@ -58,11 +60,35 @@ export default function DashboardHome() {
       const response = await apiRequest("POST", "/api/jobs/refresh");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      const newCount = data?.newCount ?? 0;
+      toast({
+        title: "Search Complete",
+        description: newCount > 0 
+          ? `Found ${newCount} new job${newCount === 1 ? '' : 's'} matching your skills!`
+          : "No new jobs found matching your current skills. Try updating your profile.",
+      });
     },
-    onError: () => {
-      // Error handled by UI
+    onError: (error: Error) => {
+      let errorMessage = "Failed to search for jobs. Please try again.";
+      try {
+        const parsed = JSON.parse(error.message.split(': ').slice(1).join(': '));
+        if (parsed.code === "EMAIL_NOT_VERIFIED") {
+          errorMessage = "Please verify your email address to search for jobs.";
+        } else if (parsed.code === "SCRAPE_LIMIT") {
+          errorMessage = parsed.message || "You've reached your job search limit for this month.";
+        } else if (parsed.error || parsed.message) {
+          errorMessage = parsed.error || parsed.message;
+        }
+      } catch {
+        // Use default error message
+      }
+      toast({
+        variant: "destructive",
+        title: "Search Failed",
+        description: errorMessage,
+      });
     },
   });
 
@@ -72,7 +98,7 @@ export default function DashboardHome() {
     refetchInterval: refreshJobsMutation.isPending ? 1000 : false,
   });
 
-  const profile = profileQuery.data ?? { intro: "", skills: [] };
+  const profile = profileQuery.data ?? { intro: "", skills: [], isComplete: false };
   const jobs = jobsQuery.data?.jobs ?? [];
   const savedJobs = jobs.filter(j => j.saved);
   const appliedJobs = jobs.filter(j => j.applied);
