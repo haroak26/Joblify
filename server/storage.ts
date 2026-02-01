@@ -191,6 +191,7 @@ export class DatabaseStorage implements IStorage {
       isRemote: job.isRemote,
       saved: job.saved,
       applied: job.applied,
+      scrapedAt: job.scrapedAt || undefined,
     }));
   }
 
@@ -211,6 +212,7 @@ export class DatabaseStorage implements IStorage {
     const trulyNewJobs = newJobs.filter(job => !existingUrls.has(job.sourceUrl));
     
     if (trulyNewJobs.length > 0) {
+      const now = new Date();
       await db.insert(jobs).values(
         trulyNewJobs.map(job => ({
           id: job.id,
@@ -227,6 +229,7 @@ export class DatabaseStorage implements IStorage {
           isRemote: job.isRemote,
           saved: job.saved,
           applied: job.applied,
+          scrapedAt: now,
         }))
       );
     }
@@ -243,6 +246,7 @@ export class DatabaseStorage implements IStorage {
     const trulyNewJobs = newJobs.filter(job => !existingUrls.has(job.sourceUrl));
     
     if (trulyNewJobs.length > 0) {
+      const now = new Date();
       await db.insert(jobs).values(
         trulyNewJobs.map(job => ({
           id: job.id,
@@ -259,6 +263,7 @@ export class DatabaseStorage implements IStorage {
           isRemote: job.isRemote,
           saved: job.saved,
           applied: job.applied,
+          scrapedAt: now,
         }))
       );
     }

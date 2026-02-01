@@ -86,6 +86,7 @@ export const jobs = pgTable("jobs", {
   isRemote: boolean("is_remote").notNull().default(true),
   saved: boolean("saved").notNull().default(false),
   applied: boolean("applied").notNull().default(false),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
 });
 
 export const jobsRelations = relations(jobs, ({ one }) => ({
@@ -165,6 +166,7 @@ export const jobPostSchema = z.object({
   isRemote: z.boolean().default(true),
   saved: z.boolean().default(false),
   applied: z.boolean().default(false),
+  scrapedAt: z.date().optional(),
 });
 
 export type JobPost = z.infer<typeof jobPostSchema>;
