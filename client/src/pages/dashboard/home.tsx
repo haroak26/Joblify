@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock } from "lucide-react";
+import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import { ScrapeLoadingScreen } from "@/components/scrape-loading-screen";
@@ -16,6 +16,8 @@ type ScrapeStatus = {
 };
 
 export default function DashboardHome() {
+  const [isEditing, setIsEditing] = useState(false);
+
   const profileQuery = useQuery<FreelancerProfile>({
     queryKey: ["/api/profile"],
   });
@@ -35,6 +37,7 @@ export default function DashboardHome() {
       const optimisticProfile: FreelancerProfile = {
         intro: nextProfile.intro ?? previousProfile?.intro ?? "",
         skills: nextProfile.skills ?? previousProfile?.skills ?? [],
+        isComplete: nextProfile.isComplete ?? previousProfile?.isComplete ?? false,
       };
       queryClient.setQueryData(["/api/profile"], optimisticProfile);
       return { previousProfile };
@@ -93,8 +96,13 @@ export default function DashboardHome() {
     updateProfileMutation.mutate({ ...profile, skills });
   };
 
+  const handleCompleteProfile = () => {
+    updateProfileMutation.mutate({ ...profile, isComplete: true });
+    setIsEditing(false);
+  };
+
   const hasSkills = profile.skills.length > 0;
-  const isProfileComplete = profile.intro.length > 20 && hasSkills;
+  const showProfileSetup = !profile.isComplete || isEditing;
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
@@ -135,7 +143,17 @@ export default function DashboardHome() {
             <h2 className="text-xl font-semibold">Ready to find work?</h2>
             <p className="text-base text-muted-foreground">Search social media for freelance opportunities matching your skills.</p>
           </div>
-          <div className="flex flex-col gap-2 items-start w-full sm:w-auto">
+          <div className="flex flex-wrap gap-3 items-start w-full sm:w-auto">
+            {!showProfileSetup && (
+              <Button
+                variant="outline"
+                className="gap-2 px-6 w-full sm:w-auto"
+                onClick={() => setIsEditing(true)}
+                data-testid="button-edit-profile"
+              >
+                Edit Profile
+              </Button>
+            )}
             <Button
               onClick={() => refreshJobsMutation.mutate()}
               disabled={refreshJobsMutation.isPending || !hasSkills}
@@ -159,15 +177,27 @@ export default function DashboardHome() {
         )}
       </div>
 
-  {!isProfileComplete && (
+      {showProfileSetup && (
         <div className="pt-10 border-t">
           {profileQuery.isLoading ? (
             <SkillsSkeleton />
           ) : (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Your Profile</h2>
-                <Badge variant="outline" className="text-xs">Incomplete</Badge>
+                <h2 className="text-xl font-semibold">
+                  {profile.isComplete ? "Edit Your Profile" : "Complete Your Profile"}
+                </h2>
+                {!profile.isComplete ? (
+                  <Badge variant="outline" className="text-xs">Incomplete</Badge>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Cancel
+                  </Button>
+                )}
               </div>
               <ProfileSetup
                 intro={profile.intro}
@@ -175,32 +205,19 @@ export default function DashboardHome() {
                 onIntroChange={handleIntroChange}
                 onSkillsChange={handleSkillsChange}
               />
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={handleCompleteProfile}
+                  disabled={updateProfileMutation.isPending || profile.intro.length < 20 || !hasSkills}
+                  className="gap-2 px-8"
+                  data-testid="button-complete-profile"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Save & Complete Profile
+                </Button>
+              </div>
             </div>
           )}
-        </div>
-      )}
-
-      {isProfileComplete && (
-        <div className="pt-10 border-t space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Your Profile</h2>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                // Logic to show/hide profile setup for editing
-                // For now, we just allow it to be visible or add a dedicated edit mode
-              }}
-            >
-              Edit Profile
-            </Button>
-          </div>
-          <ProfileSetup
-            intro={profile.intro}
-            skills={profile.skills}
-            onIntroChange={handleIntroChange}
-            onSkillsChange={handleSkillsChange}
-          />
         </div>
       )}
       <ScrapeLoadingScreen

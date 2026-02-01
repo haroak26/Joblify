@@ -190,6 +190,7 @@ export const freelancerProfileSchema = z.object({
   name: z.string().optional(),
   intro: z.string().default(""),
   skills: z.array(skillSchema).default([]),
+  isComplete: z.boolean().default(false),
 });
 
 export type FreelancerProfile = z.infer<typeof freelancerProfileSchema>;
