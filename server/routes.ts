@@ -172,13 +172,29 @@ export async function registerRoutes(
       let skills: string[] = [];
       
       try {
-        const parsed = JSON.parse(content);
-        skills = Array.isArray(parsed) ? parsed : (parsed.skills || []);
-      } catch {
-        skills = [];
+        // AI models sometimes wrap JSON in markdown blocks or return slightly different structures
+        const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleanContent);
+        
+        // Handle both ["skill1", "skill2"] and {"skills": ["skill1", "skill2"]} formats
+        if (Array.isArray(parsed)) {
+          skills = parsed;
+        } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.skills)) {
+          skills = parsed.skills;
+        } else if (parsed && typeof parsed === 'object') {
+          // Fallback for other object structures
+          skills = Object.values(parsed).find(val => Array.isArray(val)) || [];
+        }
+      } catch (e) {
+        console.error("Failed to parse AI skills response:", content, e);
+        // Simple regex fallback if JSON parsing fails
+        const matches = content.match(/"([^"]+)"/g);
+        if (matches) {
+          skills = matches.map(m => m.replace(/"/g, "")).filter(s => s.length > 2 && s.length < 30);
+        }
       }
       
-      res.json({ skills });
+      res.json({ skills: skills.slice(0, 10) });
     } catch (error) {
       console.error("Error suggesting skills:", error);
       res.status(500).json({ error: "Failed to suggest skills" });
