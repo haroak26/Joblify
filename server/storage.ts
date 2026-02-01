@@ -142,18 +142,21 @@ export class DatabaseStorage implements IStorage {
   async getProfile(userId: string): Promise<FreelancerProfile & { lastScrapedAt?: Date }> {
     const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
     if (!profile) {
-      return { intro: "", skills: [] };
+      return { intro: "", skills: [], isComplete: false };
     }
+    const skills = (profile.skills as Skill[]) || [];
     return {
       intro: profile.intro,
-      skills: (profile.skills as Skill[]) || [],
+      skills,
+      isComplete: skills.length > 0 && profile.intro.length >= 20,
       lastScrapedAt: profile.lastScrapedAt || undefined,
     };
   }
 
   async setProfile(userId: string, data: Partial<FreelancerProfile & { lastScrapedAt?: Date }>): Promise<FreelancerProfile> {
     const current = await this.getProfile(userId);
-    const updated = { ...current, ...data };
+    const updatedIntro = data.intro ?? current.intro;
+    const updatedSkills = data.skills ?? current.skills;
     
     const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
     
@@ -161,21 +164,26 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(profiles)
         .set({
-          intro: updated.intro,
-          skills: updated.skills,
+          intro: updatedIntro,
+          skills: updatedSkills,
           lastScrapedAt: data.lastScrapedAt || existing.lastScrapedAt,
         })
         .where(eq(profiles.userId, userId));
     } else {
       await db.insert(profiles).values({
         userId,
-        intro: updated.intro,
-        skills: updated.skills,
+        intro: updatedIntro,
+        skills: updatedSkills,
         lastScrapedAt: data.lastScrapedAt || null,
       });
     }
     
-    return updated;
+    // Compute isComplete based on the updated data
+    return {
+      intro: updatedIntro,
+      skills: updatedSkills,
+      isComplete: updatedSkills.length > 0 && updatedIntro.length >= 20,
+    };
   }
 
   async getJobs(userId: string): Promise<JobPost[]> {
