@@ -4,7 +4,15 @@ import type { Skill, JobPost } from '@shared/schema';
 import { randomUUID } from 'crypto';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || process.env.POE_API_KEY });
+// Validate API key is available
+const apiKey = process.env.OPENAI_API_KEY || process.env.POE_API_KEY;
+if (!apiKey) {
+  console.warn('WARNING: No OpenAI/POE API key found. AI features will not work.');
+}
+
+const openai = new OpenAI({ 
+  apiKey: apiKey || 'dummy-key-for-graceful-degradation'
+});
 
 interface ScraperParameters {
   redditQuery: string;
@@ -31,26 +39,36 @@ CRITICAL: Focus on HIRING posts (e.g., "looking for", "need a", "hiring") NOT jo
 Return a JSON object with:
 {
   "redditQuery": "search query for Reddit (focus on hiring keywords)",
-  "redditSubreddits": "comma-separated subreddit names (forhire, freelance_forhire, slavelabour, etc.)",
+  "redditSubreddits": "comma-separated subreddit names (forhire, freelance_forhire, etc.)",
   "xQuery": "search query for X/Twitter (focus on hiring keywords)"
 }
 
 Make queries specific to the user's skills but focused on HIRING opportunities.`;
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
-    response_format: { type: "json_object" }
-  });
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
 
-  const params = JSON.parse(response.choices[0].message.content || '{}');
-  
-  return {
-    redditQuery: params.redditQuery || `hiring ${skills[0]?.name || 'freelance'}`,
-    redditSubreddits: params.redditSubreddits || 'forhire+freelance_forhire+slavelabour',
-    xQuery: params.xQuery || `hiring ${skills[0]?.name || 'freelance'} freelance`
-  };
+    const params = JSON.parse(response.choices[0].message.content || '{}');
+    
+    return {
+      redditQuery: params.redditQuery || `hiring ${skills[0]?.name || 'freelance'}`,
+      redditSubreddits: params.redditSubreddits || 'forhire+freelance_forhire',
+      xQuery: params.xQuery || `hiring ${skills[0]?.name || 'freelance'} freelance`
+    };
+  } catch (error) {
+    console.error('Error generating scraper parameters:', error);
+    // Fallback to simple defaults
+    return {
+      redditQuery: `hiring ${skills[0]?.name || 'freelance'}`,
+      redditSubreddits: 'forhire+freelance_forhire',
+      xQuery: `hiring ${skills[0]?.name || 'freelance'} freelance`
+    };
+  }
 }
 
 /**
@@ -59,10 +77,19 @@ Make queries specific to the user's skills but focused on HIRING opportunities.`
 function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
   if (!item.title || !item.url) return null;
   
-  // Filter out job seeking posts
+  // Filter out job seeking posts - look for specific patterns indicating someone is offering their services
   const title = item.title.toLowerCase();
-  const seekingKeywords = ['available for hire', 'for hire', 'offering services', 'looking for work'];
-  if (seekingKeywords.some(kw => title.includes(kw))) return null;
+  const text = (item.selftext || '').toLowerCase();
+  const fullText = title + ' ' + text;
+  
+  // Patterns that indicate job seeking (offering services)
+  const seekingPatterns = [
+    /\b(?:i am|i'm|we are|we're)\s+(?:available for hire|for hire|offering)/i,
+    /\blooking for (?:work|gigs|projects|clients)/i,
+    /\boffering (?:my |our )?services/i,
+  ];
+  
+  if (seekingPatterns.some(pattern => pattern.test(fullText))) return null;
   
   const matchedSkills = userSkills
     .filter(skill => 
@@ -96,10 +123,17 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
 function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
   if (!item.text || !item.url) return null;
   
-  // Filter out job seeking posts
+  // Filter out job seeking posts - look for specific patterns indicating someone is offering their services
   const text = item.text.toLowerCase();
-  const seekingKeywords = ['available for hire', 'for hire', 'offering services', 'looking for work'];
-  if (seekingKeywords.some(kw => text.includes(kw))) return null;
+  
+  // Patterns that indicate job seeking (offering services)
+  const seekingPatterns = [
+    /\b(?:i am|i'm|we are|we're)\s+(?:available for hire|for hire|offering)/i,
+    /\blooking for (?:work|gigs|projects|clients)/i,
+    /\boffering (?:my |our )?services/i,
+  ];
+  
+  if (seekingPatterns.some(pattern => pattern.test(text))) return null;
   
   const matchedSkills = userSkills
     .filter(skill => item.text?.toLowerCase().includes(skill.name.toLowerCase()))

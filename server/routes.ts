@@ -87,7 +87,10 @@ export async function registerRoutes(
         const { scrapeJobs } = await import('./scrapers/index');
         scrapeJobs(data.intro, data.skills)
           .then(jobs => storage.saveJobs(userId, jobs))
-          .catch(err => console.error('Background scraping error:', err));
+          .catch(err => {
+            console.error('Background scraping error:', err);
+            // Could add error tracking service here (e.g., Sentry)
+          });
       }
       
       res.json(profile);

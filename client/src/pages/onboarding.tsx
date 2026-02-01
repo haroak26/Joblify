@@ -152,7 +152,9 @@ export default function Onboarding() {
               </p>
               <div className="border rounded-lg p-4 bg-muted/50">
                 <h4 className="font-medium mb-2">Your Profile Summary:</h4>
-                <p className="text-sm mb-2"><strong>Introduction:</strong> {profile.intro.substring(0, 100)}...</p>
+                <p className="text-sm mb-2">
+                  <strong>Introduction:</strong> {profile.intro.length > 100 ? profile.intro.substring(0, 100) + '...' : profile.intro}
+                </p>
                 <p className="text-sm"><strong>Skills:</strong> {profile.skills.map(s => s.name).join(', ')}</p>
               </div>
             </div>
