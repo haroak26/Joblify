@@ -63,6 +63,8 @@ export const profiles = pgTable("profiles", {
   intro: text("intro").notNull().default(""),
   skills: jsonb("skills").notNull().default([]),
   lastScrapedAt: timestamp("last_scraped_at"),
+  scraperParameters: jsonb("scraper_parameters"),
+  parametersUpdatedAt: timestamp("parameters_updated_at"),
 });
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
@@ -200,6 +202,27 @@ export const suggestSkillsSchema = z.object({
 });
 
 export type SuggestSkillsInput = z.infer<typeof suggestSkillsSchema>;
+
+// Scraper parameters types
+export const scraperParametersSchema = z.object({
+  reddit: z.object({
+    subreddits: z.array(z.string()).default([]),
+    searchKeywords: z.array(z.string()).default([]),
+    sort: z.enum(["new", "hot", "top", "relevance"]).default("new"),
+    timeFilter: z.enum(["hour", "day", "week", "month", "year", "all"]).default("week"),
+  }).optional(),
+  x: z.object({
+    queries: z.array(z.string()).default([]),
+    filters: z.object({
+      links: z.enum(["only", "none", ""]).default("only"),
+      verified: z.enum(["only", "none", ""]).default(""),
+      safe: z.enum(["on", "off", ""]).default("on"),
+    }).default({}),
+  }).optional(),
+  generatedAt: z.date().optional(),
+});
+
+export type ScraperParameters = z.infer<typeof scraperParametersSchema>;
 
 // Subscription types
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true });

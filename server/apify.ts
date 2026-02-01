@@ -1,5 +1,5 @@
 import { ApifyClient } from 'apify-client';
-import type { JobPost } from '@shared/schema';
+import type { JobPost, ScraperParameters } from '@shared/schema';
 import { randomUUID } from 'crypto';
 
 const apifyToken = process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN;
@@ -878,4 +878,75 @@ function expandSkillTerms(skills: string[]): string[] {
     }
   }
   return deduped;
+}
+
+/**
+ * Scrape jobs using user-specific scraper parameters
+ */
+export async function scrapeJobsWithParameters(
+  parameters: ScraperParameters,
+  onStatus?: (status: ScrapeStatusUpdate) => void
+): Promise<JobPost[]> {
+  if (!client) {
+    console.log('Apify client not configured');
+    return [];
+  }
+
+  onStatus?.({ step: "defining", label: "Using Custom Search Parameters" });
+  console.log('Scraping with custom parameters:', JSON.stringify(parameters, null, 2));
+
+  const allJobs: JobPost[] = [];
+
+  // Scrape X/Twitter if configured
+  if (parameters.x && parameters.x.queries.length > 0) {
+    onStatus?.({ step: "x", label: "Searching X" });
+    
+    for (const query of parameters.x.queries) {
+      try {
+        const xJobs = await scrapeXPosts(query, 10);
+        allJobs.push(...xJobs);
+        console.log(`X query "${query}" returned ${xJobs.length} jobs`);
+      } catch (error) {
+        console.error(`Error scraping X with query "${query}":`, error);
+      }
+    }
+  }
+
+  // Scrape Reddit if configured
+  if (parameters.reddit && (parameters.reddit.subreddits.length > 0 || parameters.reddit.searchKeywords.length > 0)) {
+    onStatus?.({ step: "reddit", label: "Searching Reddit" });
+    
+    // If we have search keywords, use them
+    if (parameters.reddit.searchKeywords.length > 0) {
+      for (const keyword of parameters.reddit.searchKeywords.slice(0, 3)) {
+        try {
+          const redditJobs = await scrapeReddit(keyword, 10);
+          allJobs.push(...redditJobs);
+          console.log(`Reddit keyword "${keyword}" returned ${redditJobs.length} jobs`);
+        } catch (error) {
+          console.error(`Error scraping Reddit with keyword "${keyword}":`, error);
+        }
+      }
+    } else {
+      // Fallback to general search
+      const redditJobs = await scrapeReddit("hiring freelance", 10);
+      allJobs.push(...redditJobs);
+    }
+  }
+
+  // Deduplicate by sourceUrl
+  const unique = allJobs.reduce((acc, job) => {
+    if (!acc.find(j => j.sourceUrl === job.sourceUrl)) acc.push(job);
+    return acc;
+  }, [] as JobPost[]);
+
+  // Sort by recency
+  unique.sort((a, b) => {
+    const timeA = parseTimeAgo(a.postedAt);
+    const timeB = parseTimeAgo(b.postedAt);
+    return timeA - timeB;
+  });
+
+  console.log(`Total unique jobs with parameters: ${unique.length}`);
+  return unique.slice(0, 30);
 }

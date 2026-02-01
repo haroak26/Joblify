@@ -1,7 +1,7 @@
 import { 
   type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, 
   type Subscription, type Usage, type PlanType, PLAN_LIMITS, normalizePlan,
-  type Schedule, type InsertSchedule, type SeenJob,
+  type Schedule, type InsertSchedule, type SeenJob, type ScraperParameters,
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs 
 } from "@shared/schema";
 import { db } from "./db";
@@ -23,6 +23,8 @@ export interface IStorage {
   // Profile methods
   getProfile(userId: string): Promise<FreelancerProfile>;
   setProfile(userId: string, profile: Partial<FreelancerProfile>): Promise<FreelancerProfile>;
+  getScraperParameters(userId: string): Promise<ScraperParameters | null>;
+  setScraperParameters(userId: string, parameters: ScraperParameters): Promise<void>;
   
   // Job methods
   getJobs(userId: string): Promise<JobPost[]>;
@@ -184,6 +186,37 @@ export class DatabaseStorage implements IStorage {
       skills: updatedSkills,
       isComplete: updatedSkills.length > 0 && updatedIntro.length >= 20,
     };
+  }
+
+  async getScraperParameters(userId: string): Promise<ScraperParameters | null> {
+    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+    if (!profile || !profile.scraperParameters) {
+      return null;
+    }
+    return profile.scraperParameters as ScraperParameters;
+  }
+
+  async setScraperParameters(userId: string, parameters: ScraperParameters): Promise<void> {
+    const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+    
+    if (existing) {
+      await db
+        .update(profiles)
+        .set({
+          scraperParameters: parameters,
+          parametersUpdatedAt: new Date(),
+        })
+        .where(eq(profiles.userId, userId));
+    } else {
+      // Create profile if it doesn't exist
+      await db.insert(profiles).values({
+        userId,
+        intro: "",
+        skills: [],
+        scraperParameters: parameters,
+        parametersUpdatedAt: new Date(),
+      });
+    }
   }
 
   async getJobs(userId: string): Promise<JobPost[]> {
@@ -441,7 +474,20 @@ export class DatabaseStorage implements IStorage {
     const skillNames = skills.map((s) => s.name);
     
     try {
-      const scrapedJobs = await scrapeJobsForSkills(skillNames, intro, onStatus);
+      // Try to use custom scraper parameters if available
+      const scraperParams = await this.getScraperParameters(userId);
+      let scrapedJobs: JobPost[];
+      
+      if (scraperParams && (scraperParams.reddit || scraperParams.x)) {
+        console.log(`Using custom scraper parameters for user ${userId}`);
+        const { scrapeJobsWithParameters } = await import("./apify");
+        scrapedJobs = await scrapeJobsWithParameters(scraperParams, onStatus);
+      } else {
+        // Fallback to default scraping
+        console.log(`Using default scraping for user ${userId}`);
+        scrapedJobs = await scrapeJobsForSkills(skillNames, intro, onStatus);
+      }
+      
       if (scrapedJobs.length > 0) {
         const matchedJobs = scrapedJobs.map(job => {
           const text = `${job.title} ${job.description}`.toLowerCase();

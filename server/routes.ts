@@ -73,7 +73,27 @@ export async function registerRoutes(
         });
       }
       
+      // Get old profile to check if skills changed
+      const oldProfile = await storage.getProfile(userId);
       const profile = await storage.setProfile(userId, data);
+      
+      // Auto-generate scraper parameters if skills changed and profile is complete
+      if (data.skills.length > 0 && data.intro.length >= 20) {
+        const oldSkillNames = oldProfile.skills.map(s => s.name).sort().join(',');
+        const newSkillNames = data.skills.map(s => s.name).sort().join(',');
+        const skillsChanged = oldSkillNames !== newSkillNames;
+        const introChanged = oldProfile.intro !== data.intro;
+        
+        if (skillsChanged || (introChanged && !await storage.getScraperParameters(userId))) {
+          // Generate parameters in the background (don't wait)
+          const { generateScraperParameters } = await import("./aiParameterGenerator");
+          const skillNames = data.skills.map(s => s.name);
+          
+          generateScraperParameters(skillNames, data.intro)
+            .then(params => storage.setScraperParameters(userId, params))
+            .catch(err => console.error("Background parameter generation failed:", err));
+        }
+      }
       
       if (data.skills.length === 0) {
         // Only clear unsaved jobs when skills are empty, preserve saved/applied
@@ -198,6 +218,80 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error suggesting skills:", error);
       res.status(500).json({ error: "Failed to suggest skills" });
+    }
+  });
+
+  app.get("/api/scraper-parameters", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const parameters = await storage.getScraperParameters(userId);
+      res.json({ parameters });
+    } catch (error) {
+      console.error("Error fetching scraper parameters:", error);
+      res.status(500).json({ error: "Failed to fetch scraper parameters" });
+    }
+  });
+
+  app.post("/api/scraper-parameters/generate", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const profile = await storage.getProfile(userId);
+      
+      if (profile.skills.length === 0 && !profile.intro) {
+        return res.status(400).json({ 
+          error: "Profile incomplete", 
+          message: "Please add skills and an introduction to generate scraper parameters" 
+        });
+      }
+
+      const { generateScraperParameters } = await import("./aiParameterGenerator");
+      const skillNames = profile.skills.map(s => s.name);
+      
+      const parameters = await generateScraperParameters(
+        skillNames,
+        profile.intro
+      );
+
+      await storage.setScraperParameters(userId, parameters);
+      
+      res.json({ parameters });
+    } catch (error) {
+      console.error("Error generating scraper parameters:", error);
+      res.status(500).json({ error: "Failed to generate scraper parameters" });
+    }
+  });
+
+  app.post("/api/scraper-parameters", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({
+        reddit: z.object({
+          subreddits: z.array(z.string()),
+          searchKeywords: z.array(z.string()),
+          sort: z.enum(["new", "hot", "top", "relevance"]),
+          timeFilter: z.enum(["hour", "day", "week", "month", "year", "all"]),
+        }).optional(),
+        x: z.object({
+          queries: z.array(z.string()),
+          filters: z.object({
+            links: z.enum(["only", "none", ""]),
+            verified: z.enum(["only", "none", ""]),
+            safe: z.enum(["on", "off", ""]),
+          }),
+        }).optional(),
+      });
+
+      const parameters = schema.parse(req.body);
+      await storage.setScraperParameters(userId, { ...parameters, generatedAt: new Date() });
+      
+      res.json({ success: true, parameters });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid parameters", details: error.errors });
+      } else {
+        console.error("Error saving scraper parameters:", error);
+        res.status(500).json({ error: "Failed to save scraper parameters" });
+      }
     }
   });
 
