@@ -25,20 +25,17 @@ async function runSchedule(scheduleId: string, userId: string, name: string) {
     await storage.markJobAsSeen(userId, job.sourceUrl);
   }
 
-  const actuallyAddedCount = await storage.addJobs(userId, limitedJobs);
-  if (actuallyAddedCount > 0) {
-    await storage.incrementJobsScraped(userId, actuallyAddedCount);
+  const addedJobs = await storage.addJobs(userId, limitedJobs);
+  if (addedJobs.length > 0) {
+    await storage.incrementJobsScraped(userId, addedJobs.length);
   }
 
   await storage.updateSchedule(userId, scheduleId, { lastRun: new Date() });
 
-  if (actuallyAddedCount > 0) {
+  if (addedJobs.length > 0) {
     const user = await storage.getUser(userId);
     if (user?.email) {
-      // Get the actually added jobs
-      const allJobs = await storage.getJobs(userId);
-      const recentJobs = allJobs.slice(0, actuallyAddedCount);
-      await sendScheduleJobsEmail(user.email, name, recentJobs);
+      await sendScheduleJobsEmail(user.email, name, addedJobs);
     }
   }
 }

@@ -220,6 +220,10 @@ const EXCLUDED_PHRASES = [
   "offering services",
   "available now"
 ];
+
+// Maximum characters to check at the start of a title for pattern matching
+// This is enough to catch patterns like "[For Hire] - Software Developer" 
+const TITLE_PREFIX_CHECK_LENGTH = 100;
 const EXCLUDED_CONTEXTS = [
   "how to get",
   "tips for",
@@ -343,7 +347,7 @@ function isHiringPost(text: string): boolean {
   
   // Check for patterns that indicate a freelancer post (typically at the start of title)
   // Reddit posts often have [For Hire] or similar at the beginning
-  const titleStart = normalized.substring(0, 100);
+  const titleStart = normalized.substring(0, TITLE_PREFIX_CHECK_LENGTH);
   if (titleStart.match(/^\s*\[?\s*for\s+hire\s*\]?/i)) {
     return false; // Title starts with "[For Hire]" - this is a freelancer advertising
   }
@@ -454,14 +458,21 @@ function buildSourceUrl(item: ScrapedItem, source: 'x' | 'reddit' | 'facebook'):
   return normalizeUrl(item.link || item.postUrl || item.post_url || item.permalink_url);
 }
 
+// Helper function to extract text and title from scraped items
+function extractTextFromItem(item: ScrapedItem): { text: string; title: string; fullText: string } {
+  const text = item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || 
+               item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
+  const title = item.title || '';
+  const fullText = title ? `${title}\n\n${text}` : text;
+  return { text, title, fullText };
+}
+
 function processItems(items: any[], source: 'x' | 'reddit', maxResults: number): JobPost[] {
   console.log(`Processing ${items.length} raw items from ${source}`);
   
   const results = items
     .filter((item: ScrapedItem) => {
-      const text = (item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.title || item.postText || item.post_text || item.message || item.content || '');
-      const title = item.title || '';
-      const fullText = title ? `${title}\n\n${text}` : text;
+      const { fullText, title } = extractTextFromItem(item);
       
       // Basic text length check
       if (fullText.length < 20) {
@@ -491,9 +502,7 @@ function processItems(items: any[], source: 'x' | 'reddit', maxResults: number):
       return true;
     })
     .map((item: ScrapedItem) => {
-      const text = item.text || item.full_text || item.fullText || item.tweetText || item.tweet_text || item.body || item.selftext || item.postText || item.post_text || item.message || item.content || '';
-      const title = item.title || '';
-      const fullText = title ? `${title}\n\n${text}` : text;
+      const { text, title, fullText } = extractTextFromItem(item);
       
       let author = 'Unknown';
       let handle = '';
