@@ -74,7 +74,12 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange }: P
   const addSkill = (skillName: string) => {
     const trimmed = skillName.trim();
     if (!trimmed) return;
-    if (localSkills.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) return;
+    
+    // Check if skill already exists (case-insensitive)
+    if (localSkills.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())) {
+      setNewSkill("");
+      return;
+    }
     
     const skill: Skill = {
       id: crypto.randomUUID(),

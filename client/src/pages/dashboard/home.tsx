@@ -158,18 +158,48 @@ export default function DashboardHome() {
         )}
       </div>
 
-      {!isProfileComplete && (
+  {!isProfileComplete && (
         <div className="pt-10 border-t">
           {profileQuery.isLoading ? (
             <SkillsSkeleton />
           ) : (
-            <ProfileSetup
-              intro={profile.intro}
-              skills={profile.skills}
-              onIntroChange={handleIntroChange}
-              onSkillsChange={handleSkillsChange}
-            />
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Your Profile</h2>
+                <Badge variant="outline" className="text-xs">Incomplete</Badge>
+              </div>
+              <ProfileSetup
+                intro={profile.intro}
+                skills={profile.skills}
+                onIntroChange={handleIntroChange}
+                onSkillsChange={handleSkillsChange}
+              />
+            </div>
           )}
+        </div>
+      )}
+
+      {isProfileComplete && (
+        <div className="pt-10 border-t space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Your Profile</h2>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => {
+                // Logic to show/hide profile setup for editing
+                // For now, we just allow it to be visible or add a dedicated edit mode
+              }}
+            >
+              Edit Profile
+            </Button>
+          </div>
+          <ProfileSetup
+            intro={profile.intro}
+            skills={profile.skills}
+            onIntroChange={handleIntroChange}
+            onSkillsChange={handleSkillsChange}
+          />
         </div>
       )}
       <ScrapeLoadingScreen
