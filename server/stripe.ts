@@ -114,7 +114,7 @@ export async function setupStripeRoutes(app: Express) {
     try {
       const stripe = await getUncachableStripeClient();
       const userId = req.session.userId!;
-      const sessionId = req.params.sessionId;
+      const sessionId = req.params.sessionId as string;
 
       const session = await stripe.checkout.sessions.retrieve(sessionId, {
         expand: ["subscription"],
@@ -131,7 +131,7 @@ export async function setupStripeRoutes(app: Express) {
       let plan = normalizePlan(session.metadata?.plan);
 
       if (plan === "free") {
-        const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 1 });
+        const lineItems = await stripe.checkout.sessions.listLineItems(sessionId as string, { limit: 1 });
         const priceId = lineItems.data[0]?.price?.id;
         plan = resolvePlanFromPrice(priceId) ?? "free";
       }
@@ -160,8 +160,9 @@ export async function setupStripeRoutes(app: Express) {
 
         if (subscription) {
           status = subscription.status;
-          currentPeriodEnd = subscription.current_period_end
-            ? new Date(subscription.current_period_end * 1000)
+          const periodEnd = (subscription as { current_period_end?: number }).current_period_end;
+          currentPeriodEnd = periodEnd
+            ? new Date(periodEnd * 1000)
             : undefined;
         }
       }
@@ -208,10 +209,11 @@ export async function setupStripeRoutes(app: Express) {
         cancel_at_period_end: true,
       });
 
+      const periodEnd = (updatedSubscription as { current_period_end?: number }).current_period_end;
       await storage.updateSubscription(userId, {
         status: "cancelled",
-        currentPeriodEnd: updatedSubscription.current_period_end
-          ? new Date(updatedSubscription.current_period_end * 1000)
+        currentPeriodEnd: periodEnd
+          ? new Date(periodEnd * 1000)
           : undefined,
       });
 

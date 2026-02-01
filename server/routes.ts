@@ -522,7 +522,7 @@ Write a ${tone} outreach message for this job opportunity.`;
   app.patch("/api/schedules/:id", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
-      const scheduleId = req.params.id;
+      const scheduleId = req.params.id as string;
       
       const schema = z.object({
         name: z.string().min(1).optional(),
@@ -553,7 +553,7 @@ Write a ${tone} outreach message for this job opportunity.`;
   app.delete("/api/schedules/:id", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
-      const scheduleId = req.params.id;
+      const scheduleId = req.params.id as string;
       
       await storage.deleteSchedule(userId, scheduleId);
       res.json({ success: true });
@@ -565,7 +565,7 @@ Write a ${tone} outreach message for this job opportunity.`;
   app.post("/api/schedules/:id/run", requireVerifiedEmail, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
-      const scheduleId = req.params.id;
+      const scheduleId = req.params.id as string;
       
       const schedule = await storage.getSchedule(userId, scheduleId);
       if (!schedule) {

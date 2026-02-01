@@ -55,7 +55,7 @@ function generateVerificationToken(): string {
 function createRateLimiter(windowMs: number, maxRequests: number) {
   const attempts = new Map<string, { count: number; resetAt: number }>();
   return (req: Request, res: Response): boolean => {
-    const key = req.ip;
+    const key = req.ip ?? "unknown";
     const now = Date.now();
     const entry = attempts.get(key);
     if (entry && entry.resetAt > now) {
