@@ -8,16 +8,10 @@ import { JobCard } from "@/components/job-card";
 import { JobFilters, type SourceFilter, type StatusFilter, type TimeFilter } from "@/components/job-filters";
 import { EmptyState } from "@/components/empty-state";
 import { JobListSkeleton } from "@/components/loading-skeleton";
-import { ScrapeLoadingScreen } from "@/components/scrape-loading-screen";
 import type { JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { parseApiError } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-type ScrapeStatus = {
-  step: "idle" | "defining" | "x" | "reddit" | "complete" | "error";
-  label: string;
-};
 
 type TimeSection = "today" | "yesterday" | "week" | "month" | "year" | "older";
 
@@ -108,39 +102,8 @@ export default function MyJobs() {
     },
   });
 
-  const refreshJobsMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/jobs/refresh");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      const newCount = data?.newCount ?? 0;
-      toast({
-        title: "Search Complete",
-        description: newCount > 0 
-          ? `Found ${newCount} new job${newCount === 1 ? '' : 's'} matching your skills!`
-          : "No new jobs found matching your current skills. Try updating your profile.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Search Failed",
-        description: parseApiError(error, "Failed to search for jobs. Please try again."),
-      });
-    },
-  });
-
-  const refreshStatusQuery = useQuery<{ status: ScrapeStatus }>({
-    queryKey: ["/api/jobs/refresh-status"],
-    enabled: refreshJobsMutation.isPending,
-    refetchInterval: refreshJobsMutation.isPending ? 1000 : false,
-  });
-
   const profile = profileQuery.data ?? { intro: "", skills: [] };
   const jobs = jobsQuery.data?.jobs ?? [];
-  const status = refreshStatusQuery.data?.status;
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -253,16 +216,6 @@ export default function MyJobs() {
           <p className="text-base sm:text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <Button
-            variant="outline"
-            onClick={() => refreshJobsMutation.mutate()}
-            disabled={refreshJobsMutation.isPending || !hasSkills}
-            className="gap-3 h-11 px-5 w-full sm:w-auto"
-            data-testid="button-refresh-jobs"
-          >
-            <RefreshCw className={`w-5 h-5 ${refreshJobsMutation.isPending ? "animate-spin" : ""}`} />
-            Search Jobs
-          </Button>
           {hasJobs && (
             <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
               <Button
@@ -293,10 +246,7 @@ export default function MyJobs() {
       ) : !hasSkills && !hasJobs ? (
         <EmptyState type="no-skills" />
       ) : !hasJobs ? (
-        <EmptyState
-          type="no-jobs"
-          onAction={() => refreshJobsMutation.mutate()}
-        />
+        <EmptyState type="no-jobs" />
       ) : (
         <div className="space-y-10">
           <div className="border-b pb-8">
@@ -324,11 +274,6 @@ export default function MyJobs() {
           )}
         </div>
       )}
-      <ScrapeLoadingScreen
-        isOpen={refreshJobsMutation.isPending}
-        statusStep={status?.step}
-        statusLabel={status?.label}
-      />
     </div>
   );
 }

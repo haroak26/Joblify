@@ -8,9 +8,8 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Search, Filter, Calendar } from "lucide-react";
-import { SiReddit } from "react-icons/si";
 
-export type SourceFilter = "all" | "reddit" | "x";
+export type SourceFilter = "all" | string;
 export type StatusFilter = "all" | "saved" | "applied";
 export type TimeFilter = "all" | "today" | "yesterday" | "week" | "month" | "year";
 
@@ -58,18 +57,6 @@ export function JobFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sources</SelectItem>
-              <SelectItem value="reddit">
-                <div className="flex items-center gap-2">
-                  <SiReddit className="w-4 h-4 text-orange-500" />
-                  Reddit
-                </div>
-              </SelectItem>
-              <SelectItem value="x">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">𝕏</span>
-                  X
-                </div>
-              </SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v: StatusFilter) => onStatusChange(v)}>
@@ -110,8 +97,7 @@ export function JobFilters({
             className="cursor-pointer rounded-md px-3 py-1"
             onClick={() => onSourceChange("all")}
           >
-            {sourceFilter === "reddit" && "Reddit"}
-            {sourceFilter === "x" && "X"}
+            {sourceFilter}
             <span className="ml-1.5">×</span>
           </Badge>
         )}

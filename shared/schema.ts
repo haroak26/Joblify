@@ -62,9 +62,6 @@ export const profiles = pgTable("profiles", {
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
   intro: text("intro").notNull().default(""),
   skills: jsonb("skills").notNull().default([]),
-  lastScrapedAt: timestamp("last_scraped_at"),
-  scraperParameters: jsonb("scraper_parameters"),
-  parametersUpdatedAt: timestamp("parameters_updated_at"),
 });
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
@@ -108,7 +105,7 @@ export const schedules = pgTable("schedules", {
   frequency: text("frequency").notNull().default("daily"), // 'hourly', 'daily', 'weekly'
   time: text("time").notNull().default("09:00"),
   days: jsonb("days").default([]), // For weekly: ['monday', 'wednesday']
-  platforms: jsonb("platforms").notNull().default(["reddit", "x"]),
+  platforms: jsonb("platforms").notNull().default([]),
   enabled: boolean("enabled").notNull().default(true),
   lastRun: timestamp("last_run"),
   nextRun: timestamp("next_run"),
@@ -161,7 +158,7 @@ export const jobPostSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  source: z.enum(["reddit", "x"]),
+  source: z.string(),
   sourceUrl: z.string().url(),
   author: z.string(),
   authorHandle: z.string().optional(),
@@ -203,26 +200,7 @@ export const suggestSkillsSchema = z.object({
 
 export type SuggestSkillsInput = z.infer<typeof suggestSkillsSchema>;
 
-// Scraper parameters types
-export const scraperParametersSchema = z.object({
-  reddit: z.object({
-    subreddits: z.array(z.string()).default([]),
-    searchKeywords: z.array(z.string()).default([]),
-    sort: z.enum(["new", "hot", "top", "relevance"]).default("new"),
-    timeFilter: z.enum(["hour", "day", "week", "month", "year", "all"]).default("week"),
-  }).optional(),
-  x: z.object({
-    queries: z.array(z.string()).default([]),
-    filters: z.object({
-      links: z.enum(["only", "none", ""]).default("only"),
-      verified: z.enum(["only", "none", ""]).default(""),
-      safe: z.enum(["on", "off", ""]).default("on"),
-    }).default({}),
-  }).optional(),
-  generatedAt: z.date().optional(),
-});
 
-export type ScraperParameters = z.infer<typeof scraperParametersSchema>;
 
 // Subscription types
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true });
