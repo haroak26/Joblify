@@ -239,8 +239,7 @@ export async function registerRoutes(
         const jobs = await storage.scrapeAndGenerateJobs(userId, profile.skills, profile.intro, (status) =>
           setScrapeStatus(userId, status)
         );
-        const remaining = scrapeCheck.remaining === Infinity ? jobs.length : scrapeCheck.remaining;
-        const limitedJobs = jobs.slice(0, Math.max(0, remaining));
+        const limitedJobs = jobs.slice(0, 5);
         
         // Add new jobs without deleting saved/applied ones
         await storage.addJobs(userId, limitedJobs);
@@ -594,8 +593,7 @@ Write a ${tone} outreach message for this job opportunity.`;
       const seenUrls = await storage.getSeenJobUrls(userId);
       const newJobs = jobs.filter(job => !seenUrls.includes(job.sourceUrl));
 
-      const remaining = scrapeCheck.remaining === Infinity ? newJobs.length : scrapeCheck.remaining;
-      const limitedJobs = newJobs.slice(0, Math.max(0, remaining));
+      const limitedJobs = newJobs.slice(0, 5);
       
       // Mark new jobs as seen
       for (const job of limitedJobs) {
