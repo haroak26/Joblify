@@ -139,18 +139,18 @@ export class DatabaseStorage implements IStorage {
     }
     const skills = (profile.skills as Skill[]) || [];
     return {
-      intro: profile.intro,
+      intro: profile.intro || "",
       skills,
-      isComplete: skills.length > 0 && profile.intro.length >= 20,
+      isComplete: profile.isComplete || false,
     };
   }
 
   async setProfile(userId: string, data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
-    const current = await this.getProfile(userId);
-    const updatedIntro = data.intro ?? current.intro;
-    const updatedSkills = data.skills ?? current.skills;
-    
     const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+    
+    const updatedIntro = data.intro !== undefined ? data.intro : (existing?.intro || "");
+    const updatedSkills = data.skills !== undefined ? data.skills : (existing?.skills as Skill[] || []);
+    const updatedIsComplete = data.isComplete !== undefined ? data.isComplete : (existing?.isComplete || false);
     
     if (existing) {
       await db
@@ -158,6 +158,7 @@ export class DatabaseStorage implements IStorage {
         .set({
           intro: updatedIntro,
           skills: updatedSkills,
+          isComplete: updatedIsComplete,
         })
         .where(eq(profiles.userId, userId));
     } else {
@@ -165,14 +166,14 @@ export class DatabaseStorage implements IStorage {
         userId,
         intro: updatedIntro,
         skills: updatedSkills,
+        isComplete: updatedIsComplete,
       });
     }
     
-    // Compute isComplete based on the updated data
     return {
       intro: updatedIntro,
       skills: updatedSkills,
-      isComplete: updatedSkills.length > 0 && updatedIntro.length >= 20,
+      isComplete: updatedIsComplete,
     };
   }
 

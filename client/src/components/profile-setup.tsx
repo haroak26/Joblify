@@ -49,12 +49,12 @@ export function ProfileSetup({ intro, skills, onIntroChange, onSkillsChange, hid
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (localIntro !== intro) {
+      if (localIntro !== intro && localIntro !== undefined) {
         onIntroChange(localIntro);
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [localIntro, intro, onIntroChange]);
+  }, [localIntro]);
 
   const suggestMutation = useMutation({
     mutationFn: async (introText: string) => {
