@@ -7,8 +7,8 @@ import { tmpdir } from "os";
 import { join } from "path";
 
 export const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.POE_API_KEY,
+  baseURL: process.env.POE_API_BASE_URL ?? "https://api.poe.com/v1",
 });
 
 export type AudioFormat = "wav" | "mp3" | "webm" | "mp4" | "ogg" | "unknown";
@@ -118,7 +118,7 @@ export async function voiceChat(
 ): Promise<{ transcript: string; audioResponse: Buffer }> {
   const audioBase64 = audioBuffer.toString("base64");
   const response = await openai.chat.completions.create({
-    model: "gpt-audio",
+    model: "gpt-5-nano",
     modalities: ["text", "audio"],
     audio: { voice, format: outputFormat },
     messages: [{
@@ -154,7 +154,7 @@ export async function voiceChatStream(
 ): Promise<AsyncIterable<{ type: "transcript" | "audio"; data: string }>> {
   const audioBase64 = audioBuffer.toString("base64");
   const stream = await openai.chat.completions.create({
-    model: "gpt-audio",
+    model: "gpt-5-nano",
     modalities: ["text", "audio"],
     audio: { voice, format: "pcm16" },
     messages: [{
@@ -190,7 +190,7 @@ export async function textToSpeech(
   format: "wav" | "mp3" | "flac" | "opus" | "pcm16" = "wav"
 ): Promise<Buffer> {
   const response = await openai.chat.completions.create({
-    model: "gpt-audio",
+    model: "gpt-5-nano",
     modalities: ["text", "audio"],
     audio: { voice, format },
     messages: [
@@ -212,7 +212,7 @@ export async function textToSpeechStream(
   voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy"
 ): Promise<AsyncIterable<string>> {
   const stream = await openai.chat.completions.create({
-    model: "gpt-audio",
+    model: "gpt-5-nano",
     modalities: ["text", "audio"],
     audio: { voice, format: "pcm16" },
     messages: [
