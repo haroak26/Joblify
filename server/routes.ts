@@ -98,9 +98,10 @@ export async function registerRoutes(
         console.log('[API] Triggering background scraping for user:', userId);
         const { scrapeJobs } = await import('./scrapers/index');
         scrapeJobs(data.intro, data.skills)
-          .then(jobs => {
+          .then(async (jobs) => {
             console.log('[API] Background scraping completed for user:', userId, '- jobs found:', jobs.length);
-            return storage.saveJobs(userId, jobs);
+            await storage.saveJobs(userId, jobs);
+            await storage.setProfile(userId, { lastScrapedAt: new Date() });
           })
           .catch(err => {
             console.error('[API] Background scraping error for user:', userId, err);

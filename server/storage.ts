@@ -132,17 +132,18 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getProfile(userId: string): Promise<FreelancerProfile & { lastScrapedAt?: Date }> {
+  async getProfile(userId: string): Promise<FreelancerProfile & { lastScrapedAt?: Date | null }> {
     try {
       const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
       if (!profile) {
-        return { intro: "", skills: [], isComplete: false };
+        return { intro: "", skills: [], isComplete: false, lastScrapedAt: null };
       }
       const skills = (profile.skills as Skill[]) || [];
       return {
         intro: profile.intro || "",
         skills,
         isComplete: profile.isComplete || false,
+        lastScrapedAt: profile.lastScrapedAt,
       };
     } catch (error) {
       console.error('[Storage] Error fetching profile for user', userId, error);
@@ -150,13 +151,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async setProfile(userId: string, data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
+  async setProfile(userId: string, data: Partial<FreelancerProfile & { lastScrapedAt?: Date | null }>): Promise<FreelancerProfile & { lastScrapedAt?: Date | null }> {
     try {
       const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
       
       const updatedIntro = data.intro !== undefined ? data.intro : (existing?.intro || "");
       const updatedSkills = data.skills !== undefined ? data.skills : (existing?.skills as Skill[] || []);
       const updatedIsComplete = data.isComplete !== undefined ? data.isComplete : (existing?.isComplete || false);
+      const updatedLastScrapedAt = data.lastScrapedAt !== undefined ? data.lastScrapedAt : (existing?.lastScrapedAt || null);
       
       if (existing) {
         await db
@@ -165,6 +167,7 @@ export class DatabaseStorage implements IStorage {
             intro: updatedIntro,
             skills: updatedSkills,
             isComplete: updatedIsComplete,
+            lastScrapedAt: updatedLastScrapedAt,
           })
           .where(eq(profiles.userId, userId));
       } else {
@@ -173,15 +176,15 @@ export class DatabaseStorage implements IStorage {
           intro: updatedIntro,
           skills: updatedSkills,
           isComplete: updatedIsComplete,
+          lastScrapedAt: updatedLastScrapedAt,
         });
       }
-      
-      console.log('[Storage] Profile updated for user', userId, '- skills count:', updatedSkills.length);
       
       return {
         intro: updatedIntro,
         skills: updatedSkills,
         isComplete: updatedIsComplete,
+        lastScrapedAt: updatedLastScrapedAt,
       };
     } catch (error) {
       console.error('[Storage] Error setting profile for user', userId, error);

@@ -63,6 +63,7 @@ export const profiles = pgTable("profiles", {
   intro: text("intro").notNull().default(""),
   skills: jsonb("skills").notNull().default([]),
   isComplete: boolean("is_complete").notNull().default(false),
+  lastScrapedAt: timestamp("last_scraped_at"),
 });
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
