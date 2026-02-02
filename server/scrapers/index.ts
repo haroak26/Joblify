@@ -37,6 +37,8 @@ Generate optimized search queries for Reddit and X (Twitter) to find posts from 
 
 CRITICAL: Focus on HIRING posts (e.g., "looking for", "need a", "hiring") NOT job seeking posts (e.g., "available for hire", "offering services", "looking for work").
 
+Optimize the "redditQuery" and "xQuery" for the Apify actors lqOcm2Bgsg4LGNATd (Reddit) and G8hR9sp2nkjI2om8X (X).
+
 Return a JSON object with:
 {
   "redditQuery": "search query for Reddit (focus on hiring keywords)",
