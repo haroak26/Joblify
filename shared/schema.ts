@@ -62,6 +62,7 @@ export const profiles = pgTable("profiles", {
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
   intro: text("intro").notNull().default(""),
   skills: jsonb("skills").notNull().default([]),
+  isComplete: boolean("is_complete").notNull().default(false),
 });
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
