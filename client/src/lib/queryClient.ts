@@ -2,8 +2,21 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const text = await res.text();
+    let errorData;
+    try {
+      errorData = JSON.parse(text);
+    } catch {
+      throw new Error(`${res.status}: ${text || res.statusText}`);
+    }
+    
+    // Handle email verification required
+    if (res.status === 403 && errorData.code === 'EMAIL_NOT_VERIFIED') {
+      window.location.href = '/verify-email';
+      throw new Error(errorData.message || 'Email verification required');
+    }
+    
+    throw new Error(errorData.error || errorData.message || `${res.status}: ${text || res.statusText}`);
   }
 }
 
