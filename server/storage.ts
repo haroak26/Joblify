@@ -133,48 +133,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProfile(userId: string): Promise<FreelancerProfile & { lastScrapedAt?: Date }> {
-    const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
-    if (!profile) {
-      return { intro: "", skills: [], isComplete: false };
+    try {
+      const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+      if (!profile) {
+        return { intro: "", skills: [], isComplete: false };
+      }
+      const skills = (profile.skills as Skill[]) || [];
+      return {
+        intro: profile.intro || "",
+        skills,
+        isComplete: profile.isComplete || false,
+      };
+    } catch (error) {
+      console.error('[Storage] Error fetching profile for user', userId, error);
+      throw error;
     }
-    const skills = (profile.skills as Skill[]) || [];
-    return {
-      intro: profile.intro || "",
-      skills,
-      isComplete: profile.isComplete || false,
-    };
   }
 
   async setProfile(userId: string, data: Partial<FreelancerProfile>): Promise<FreelancerProfile> {
-    const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
-    
-    const updatedIntro = data.intro !== undefined ? data.intro : (existing?.intro || "");
-    const updatedSkills = data.skills !== undefined ? data.skills : (existing?.skills as Skill[] || []);
-    const updatedIsComplete = data.isComplete !== undefined ? data.isComplete : (existing?.isComplete || false);
-    
-    if (existing) {
-      await db
-        .update(profiles)
-        .set({
+    try {
+      const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
+      
+      const updatedIntro = data.intro !== undefined ? data.intro : (existing?.intro || "");
+      const updatedSkills = data.skills !== undefined ? data.skills : (existing?.skills as Skill[] || []);
+      const updatedIsComplete = data.isComplete !== undefined ? data.isComplete : (existing?.isComplete || false);
+      
+      if (existing) {
+        await db
+          .update(profiles)
+          .set({
+            intro: updatedIntro,
+            skills: updatedSkills,
+            isComplete: updatedIsComplete,
+          })
+          .where(eq(profiles.userId, userId));
+      } else {
+        await db.insert(profiles).values({
+          userId,
           intro: updatedIntro,
           skills: updatedSkills,
           isComplete: updatedIsComplete,
-        })
-        .where(eq(profiles.userId, userId));
-    } else {
-      await db.insert(profiles).values({
-        userId,
+        });
+      }
+      
+      console.log('[Storage] Profile updated for user', userId, '- skills count:', updatedSkills.length);
+      
+      return {
         intro: updatedIntro,
         skills: updatedSkills,
         isComplete: updatedIsComplete,
-      });
+      };
+    } catch (error) {
+      console.error('[Storage] Error setting profile for user', userId, error);
+      throw error;
     }
-    
-    return {
-      intro: updatedIntro,
-      skills: updatedSkills,
-      isComplete: updatedIsComplete,
-    };
   }
 
   async getJobs(userId: string): Promise<JobPost[]> {
@@ -551,19 +563,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Limit checking
-  async canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }> {
-    const subscription = await this.getSubscription(userId);
-    const plan = normalizePlan(subscription?.plan);
-    const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
-    
-    const profile = await this.getProfile(userId);
-    const currentCount = profile.skills.length;
-    
-    return {
-      allowed: limits.maxSkills === Infinity || newSkillsCount <= limits.maxSkills,
-      limit: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
-      current: currentCount,
-    };
+  async canAddSkills(userId: string, totalSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }> {
+    try {
+      const subscription = await this.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+      
+      const profile = await this.getProfile(userId);
+      const currentCount = profile.skills.length;
+      
+      return {
+        allowed: limits.maxSkills === Infinity || totalSkillsCount <= limits.maxSkills,
+        limit: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
+        current: currentCount,
+      };
+    } catch (error) {
+      console.error('[Storage] Error checking skill limits for user', userId, error);
+      throw error;
+    }
   }
 
   // Schedule methods
