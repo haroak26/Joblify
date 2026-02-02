@@ -14,10 +14,10 @@ function getPoeClient(): OpenAI {
     return poeClient;
   }
 
-  const apiKey = process.env.POE_API_KEY ?? process.env.OPENAI_API_KEY;
+  const apiKey = process.env.POE_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "Missing Poe API credentials. Set POE_API_KEY (preferred) or OPENAI_API_KEY."
+      "Missing Poe API credentials. Set POE_API_KEY."
     );
   }
 

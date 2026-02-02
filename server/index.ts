@@ -14,7 +14,6 @@ function validateEnvVars() {
   };
 
   const optional = {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     POE_API_KEY: process.env.POE_API_KEY,
     APIFY_TOKEN: process.env.APIFY_TOKEN,
     BREVO_API_KEY: process.env.BREVO_API_KEY,
@@ -45,7 +44,7 @@ function validateEnvVars() {
   if (warnings.length > 0) {
     console.warn('[Startup] WARNING: Missing optional environment variables:', warnings.join(', '));
     console.warn('[Startup] Some features may not work correctly:');
-    if (!optional.OPENAI_API_KEY && !optional.POE_API_KEY) {
+    if (!optional.POE_API_KEY) {
       console.warn('[Startup]   - AI features (skill suggestions, message generation) will not work');
     }
     if (!optional.APIFY_TOKEN) {
