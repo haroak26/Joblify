@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -98,10 +98,11 @@ export default function Register() {
   const passwordValue = step2Form.watch("password");
   const showPasswordChecker = passwordValue && passwordValue.length > 0;
 
-  if (!isLoading && user) {
-    setLocation("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && user) {
+      setLocation("/dashboard");
+    }
+  }, [user, isLoading, setLocation]);
 
   if (isLoading) {
     return (
@@ -109,6 +110,10 @@ export default function Register() {
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (user) {
+    return null;
   }
 
   const handleStep1Next = async (data: Step1Data) => {

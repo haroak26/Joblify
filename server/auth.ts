@@ -104,7 +104,7 @@ export function setupAuth(app: Express) {
       }
 
       // Username is optional - we can generate from email if not provided
-      const finalUsername = username || email.split('@')[0] + Math.random().toString(36).substring(2, 6);
+      const finalUsername = username || email.split('@')[0] + randomBytes(3).toString('hex');
 
       if (finalUsername.length < 3) {
         return res.status(400).json({ error: "Username must be at least 3 characters" });
