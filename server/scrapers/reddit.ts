@@ -8,6 +8,7 @@ interface RedditScraperParams {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const SCRAPER_TIMEOUT = 60000; // 60 seconds
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -45,7 +46,7 @@ export async function scrapeRedditJobs(params: RedditScraperParams) {
       console.log(`[Reddit Scraper] Attempt ${attempt}/${MAX_RETRIES} - Query: "${params.searchQuery}"`);
       
       const run = await client.actor("lqOcm2Bgsg4LGNATd").call(input, {
-        timeout: 60000, // 60 second timeout
+        timeout: SCRAPER_TIMEOUT,
       });
       
       const { items } = await client.dataset(run.defaultDatasetId).listItems();

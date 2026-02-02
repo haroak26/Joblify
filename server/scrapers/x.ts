@@ -7,6 +7,7 @@ interface XScraperParams {
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const SCRAPER_TIMEOUT = 60000; // 60 seconds
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -47,7 +48,7 @@ export async function scrapeXJobs(params: XScraperParams) {
       console.log(`[X Scraper] Attempt ${attempt}/${MAX_RETRIES} - Query: "${params.query}"`);
       
       const run = await client.actor("G8hR9sp2nkjI2om8X").call(input, {
-        timeout: 60000, // 60 second timeout
+        timeout: SCRAPER_TIMEOUT,
       });
       
       const { items } = await client.dataset(run.defaultDatasetId).listItems();

@@ -563,7 +563,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Limit checking
-  async canAddSkills(userId: string, totalSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }> {
+  async canAddSkills(userId: string, desiredTotalSkills: number): Promise<{ allowed: boolean; limit: number; current: number }> {
     try {
       const subscription = await this.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
@@ -573,7 +573,7 @@ export class DatabaseStorage implements IStorage {
       const currentCount = profile.skills.length;
       
       return {
-        allowed: limits.maxSkills === Infinity || totalSkillsCount <= limits.maxSkills,
+        allowed: limits.maxSkills === Infinity || desiredTotalSkills <= limits.maxSkills,
         limit: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
         current: currentCount,
       };
