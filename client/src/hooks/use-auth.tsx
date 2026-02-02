@@ -5,6 +5,7 @@ import { clearStoredUser, getStoredUser, setStoredUser, type StoredUser } from "
 
 interface User {
   id: string;
+  name?: string;
   username: string;
   email: string;
   emailVerified: boolean;
@@ -14,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string, intro?: string, skills?: any[]) => Promise<void>;
   logout: () => Promise<void>;
   resendVerification: () => Promise<void>;
 }
@@ -75,12 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (email: string, password: string, name?: string, intro?: string, skills?: any[]) => {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ email, password, name, intro, skills }),
         credentials: "include",
       });
       const data = await response.json();
@@ -90,7 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       setStoredUser(data.user as StoredUser);
       queryClient.clear();
-      setLocation("/onboarding");
+      
+      // Navigate based on whether profile is complete
+      if (intro && skills && skills.length > 0) {
+        setLocation("/verify-email");
+      } else {
+        setLocation("/onboarding");
+      }
     } catch (error) {
       if (error instanceof Error) {
         throw error;
