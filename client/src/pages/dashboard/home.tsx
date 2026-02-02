@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock, Sparkles } from "lucide-react";
+import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock, Sparkles, Loader2 } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, JobPost, FreelancerProfile } from "@shared/schema";
@@ -150,7 +150,11 @@ export default function DashboardHome() {
                 className="gap-2 px-6 w-full sm:w-auto"
                 data-testid="button-search-jobs"
               >
-                <Search className={`w-4 h-4 ${refreshJobsMutation.isPending ? 'animate-spin' : ''}`} />
+                {refreshJobsMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
                 {refreshJobsMutation.isPending ? 'Searching...' : 'Search Jobs'}
               </Button>
             )}

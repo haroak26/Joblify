@@ -547,11 +547,16 @@ export default function Account() {
                 <span className="text-muted-foreground">
                   Usage resets on{" "}
                   <span className="font-semibold text-foreground">
-                    {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
-                      month: 'long', 
-                      day: 'numeric', 
-                      year: 'numeric' 
-                    })}
+                    {(() => {
+                      const resetDate = new Date(usageData.usage.monthResetDate);
+                      const nextMonth = new Date(resetDate);
+                      nextMonth.setMonth(nextMonth.getMonth() + 1);
+                      return nextMonth.toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                      });
+                    })()}
                   </span>
                 </span>
               </div>
