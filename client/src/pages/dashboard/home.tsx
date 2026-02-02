@@ -50,6 +50,28 @@ export default function DashboardHome() {
     },
   });
 
+  const refreshJobsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/jobs/refresh');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Jobs updated!',
+        description: `Found ${data.count} new opportunities`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = parseApiError(error);
+      toast({
+        title: 'Scraping failed',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    }
+  });
+
   const profile = profileQuery.data ?? { intro: "", skills: [], isComplete: false };
   const jobs = jobsQuery.data?.jobs ?? [];
   const savedJobs = jobs.filter(j => j.saved);
@@ -121,6 +143,17 @@ export default function DashboardHome() {
             <p className="text-base text-muted-foreground">Search social media for freelance opportunities matching your skills.</p>
           </div>
           <div className="flex flex-wrap gap-3 items-start w-full sm:w-auto">
+            {hasSkills && (
+              <Button
+                onClick={() => refreshJobsMutation.mutate()}
+                disabled={refreshJobsMutation.isPending}
+                className="gap-2 px-6 w-full sm:w-auto"
+                data-testid="button-search-jobs"
+              >
+                <Search className={`w-4 h-4 ${refreshJobsMutation.isPending ? 'animate-spin' : ''}`} />
+                {refreshJobsMutation.isPending ? 'Searching...' : 'Search Jobs'}
+              </Button>
+            )}
             {!showProfileSetup && (
               <Button
                 variant="outline"

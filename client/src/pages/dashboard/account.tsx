@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Briefcase } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Briefcase, Sparkles, Clock, TrendingUp } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
@@ -315,7 +315,7 @@ export default function Account() {
         </section>
 
         {/* Subscription Section */}
-        <section className="space-y-8">
+        <section className="space-y-8" id="subscription-section">
           <h2 className="text-xl font-semibold flex items-center gap-3 border-b pb-4">
             <CreditCard className="w-6 h-6 text-primary" />
             Subscription & Billing
@@ -418,38 +418,157 @@ export default function Account() {
         <section className="space-y-8">
           <h2 className="text-xl font-semibold flex items-center gap-3 border-b pb-4">
             <BarChart3 className="w-6 h-6 text-primary" />
-            Usage Overview
+            Usage & Credits
           </h2>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm font-bold">
-                <span className="text-muted-foreground uppercase tracking-wider">Job Scrapes</span>
-                  <span className="text-primary">
-                    {usageData?.usage.jobsScrapedThisMonth || 0}/
-                    {maxJobs === -1 ? "Unlimited" : maxJobs || 0}
+          
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Job Scrapes Card */}
+            <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-primary" />
+                  Job Searches
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  This month's usage
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-3xl font-bold text-primary">
+                    {usageData?.usage.jobsScrapedThisMonth || 0}
+                  </span>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    / {maxJobs === -1 ? "∞" : maxJobs || 0}
                   </span>
                 </div>
-                <Progress value={jobsUsedPercent} className="h-2 bg-muted shadow-inner" />
-            </div>
-            
+                <Progress 
+                  value={maxJobs === -1 ? 0 : jobsUsedPercent} 
+                  className="h-2.5 bg-muted/50" 
+                />
+                <p className="text-xs text-muted-foreground">
+                  {maxJobs === -1 
+                    ? "Unlimited searches available" 
+                    : `${Math.max(0, maxJobs - (usageData?.usage.jobsScrapedThisMonth || 0))} searches remaining`
+                  }
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Skills Limit Card - Only show for Free plan */}
             {!isPlus && !isUltra && !isLifetime && (
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm font-bold">
-                  <span className="text-muted-foreground uppercase tracking-wider">Skills Limit</span>
-                  <span className="text-primary">
-                    {usageData?.usage.skillsCount || 0}/
-                    {maxSkills === -1 ? "Unlimited" : maxSkills || 0}
-                  </span>
-                </div>
-                <Progress value={skillsUsedPercent} className="h-2 bg-muted shadow-inner" />
-              </div>
+              <Card className="border-2 border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-600" />
+                    Skills
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Profile skills limit
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-3xl font-bold text-amber-600">
+                      {usageData?.usage.skillsCount || 0}
+                    </span>
+                    <span className="text-sm text-muted-foreground font-medium">
+                      / {maxSkills === -1 ? "∞" : maxSkills || 0}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={maxSkills === -1 ? 0 : skillsUsedPercent} 
+                    className="h-2.5 bg-muted/50" 
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {maxSkills === -1 
+                      ? "Unlimited skills available" 
+                      : `${Math.max(0, maxSkills - (usageData?.usage.skillsCount || 0))} skills remaining`
+                    }
+                  </p>
+                </CardContent>
+              </Card>
             )}
+
+            {/* Current Plan Card */}
+            <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  Current Plan
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Active subscription
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-primary capitalize">
+                    {currentPlanLabel}
+                  </span>
+                  {subscription?.status === "active" && (
+                    <Badge variant="secondary" className="text-xs">Active</Badge>
+                  )}
+                </div>
+                <div className="space-y-1.5 text-xs text-muted-foreground">
+                  {(isPlus || isUltra || isLifetime) ? (
+                    <>
+                      <p className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-green-600" />
+                        Unlimited skills
+                      </p>
+                      <p className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-green-600" />
+                        {isUltra || isLifetime ? "Unlimited" : "300"} job searches/month
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-muted-foreground/50" />
+                        {maxSkills} skills maximum
+                      </p>
+                      <p className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-muted-foreground/50" />
+                        {maxJobs} job searches/month
+                      </p>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
+          {/* Reset Date Info */}
           {usageData && (
-            <div className="text-center pt-2">
-              <p className="text-xs text-muted-foreground font-medium bg-muted/30 py-2 px-4 rounded-full inline-block">
-                Usage resets on {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-              </p>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg border border-dashed">
+              <div className="flex items-center gap-3 text-sm">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  Usage resets on{" "}
+                  <span className="font-semibold text-foreground">
+                    {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+                      month: 'long', 
+                      day: 'numeric', 
+                      year: 'numeric' 
+                    })}
+                  </span>
+                </span>
+              </div>
+              {!isPlus && !isUltra && !isLifetime && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const element = document.getElementById('subscription-section');
+                    element?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="gap-2"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  Upgrade for More
+                </Button>
+              )}
             </div>
           )}
         </section>
