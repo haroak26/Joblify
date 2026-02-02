@@ -185,6 +185,7 @@ function extractBudget(text: string): string | undefined {
 
 /**
  * Main scraping function - returns max 5 jobs per run
+ * Implements graceful degradation: if one scraper fails, continues with results from the other
  */
 export async function scrapeJobs(intro: string, skills: Skill[]): Promise<JobPost[]> {
   if (!skills.length) {
@@ -197,41 +198,58 @@ export async function scrapeJobs(intro: string, skills: Skill[]): Promise<JobPos
   const params = await generateScraperParameters(intro, skills);
   console.log('[Scraper] Generated parameters:', params);
   
+  // Use Promise.allSettled for graceful degradation - if one fails, continue with the other
   const [redditResults, xResults] = await Promise.allSettled([
     scrapeRedditJobs({
       searchQuery: params.redditQuery,
       subreddit: params.redditSubreddits,
       maxPosts: 5
+    }).catch((error) => {
+      console.error('[Scraper] Reddit scraper caught error:', error.message);
+      return []; // Return empty array on error for graceful degradation
     }),
     scrapeXJobs({
       query: params.xQuery,
       maxItems: 5
+    }).catch((error) => {
+      console.error('[Scraper] X scraper caught error:', error.message);
+      return []; // Return empty array on error for graceful degradation
     })
   ]);
   
   const allJobs: JobPost[] = [];
+  let scrapersSucceeded = 0;
+  let scrapersFailed = 0;
   
   if (redditResults.status === 'fulfilled') {
-    console.log('[Scraper] Reddit scraping succeeded - raw items:', redditResults.value.length);
-    const parsedReddit = redditResults.value
+    const redditItems = redditResults.value || [];
+    console.log('[Scraper] Reddit scraping succeeded - raw items:', redditItems.length);
+    const parsedReddit = redditItems
       .map((item: any) => parseRedditJob(item, skills))
       .filter((job): job is JobPost => job !== null);
     console.log('[Scraper] Reddit jobs after parsing and filtering:', parsedReddit.length);
     allJobs.push(...parsedReddit);
+    scrapersSucceeded++;
   } else {
-    console.error('[Scraper] Reddit scraping failed:', redditResults.reason);
+    console.error('[Scraper] Reddit scraping failed:', redditResults.reason?.message || redditResults.reason);
+    scrapersFailed++;
   }
   
   if (xResults.status === 'fulfilled') {
-    console.log('[Scraper] X scraping succeeded - raw items:', xResults.value.length);
-    const parsedX = xResults.value
+    const xItems = xResults.value || [];
+    console.log('[Scraper] X scraping succeeded - raw items:', xItems.length);
+    const parsedX = xItems
       .map((item: any) => parseXJob(item, skills))
       .filter((job): job is JobPost => job !== null);
     console.log('[Scraper] X jobs after parsing and filtering:', parsedX.length);
     allJobs.push(...parsedX);
+    scrapersSucceeded++;
   } else {
-    console.error('[Scraper] X scraping failed:', xResults.reason);
+    console.error('[Scraper] X scraping failed:', xResults.reason?.message || xResults.reason);
+    scrapersFailed++;
   }
+  
+  console.log(`[Scraper] Scraping complete - ${scrapersSucceeded} succeeded, ${scrapersFailed} failed`);
   
   // Sort by relevance and return max 5
   const sortedJobs = allJobs
@@ -239,5 +257,11 @@ export async function scrapeJobs(intro: string, skills: Skill[]): Promise<JobPos
     .slice(0, 5);
   
   console.log('[Scraper] Final job count after sorting and limiting:', sortedJobs.length);
+  
+  // If both scrapers failed and we have no jobs, log a warning but don't throw
+  if (scrapersSucceeded === 0) {
+    console.warn('[Scraper] WARNING: All scrapers failed, returning empty results');
+  }
+  
   return sortedJobs;
 }
