@@ -6,6 +6,65 @@ import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
 import { startScheduleRunner } from "./scheduler";
 
+// Validate critical environment variables
+function validateEnvVars() {
+  const required = {
+    DATABASE_URL: process.env.DATABASE_URL,
+    SESSION_SECRET: process.env.SESSION_SECRET,
+  };
+
+  const optional = {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    POE_API_KEY: process.env.POE_API_KEY,
+    APIFY_TOKEN: process.env.APIFY_TOKEN,
+    BREVO_API_KEY: process.env.BREVO_API_KEY,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  };
+
+  const missing: string[] = [];
+  
+  for (const [key, value] of Object.entries(required)) {
+    if (!value) {
+      missing.push(key);
+    }
+  }
+
+  if (missing.length > 0) {
+    console.error('[Startup] CRITICAL: Missing required environment variables:', missing.join(', '));
+    console.error('[Startup] Application cannot start without these variables.');
+    process.exit(1);
+  }
+
+  const warnings: string[] = [];
+  for (const [key, value] of Object.entries(optional)) {
+    if (!value) {
+      warnings.push(key);
+    }
+  }
+
+  if (warnings.length > 0) {
+    console.warn('[Startup] WARNING: Missing optional environment variables:', warnings.join(', '));
+    console.warn('[Startup] Some features may not work correctly:');
+    if (!optional.OPENAI_API_KEY && !optional.POE_API_KEY) {
+      console.warn('[Startup]   - AI features (skill suggestions, message generation) will not work');
+    }
+    if (!optional.APIFY_TOKEN) {
+      console.warn('[Startup]   - Job scraping from Reddit and X will not work');
+    }
+    if (!optional.BREVO_API_KEY) {
+      console.warn('[Startup]   - Email notifications will not work');
+    }
+    if (!optional.STRIPE_SECRET_KEY) {
+      console.warn('[Startup]   - Payment processing will not work');
+    }
+  }
+
+  console.log('[Startup] Environment validation completed');
+}
+
+// Validate environment before starting
+validateEnvVars();
+
 const app = express();
 const httpServer = createServer(app);
 

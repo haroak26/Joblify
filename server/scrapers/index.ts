@@ -46,6 +46,7 @@ Return a JSON object with:
 Make queries specific to the user's skills but focused on HIRING opportunities.`;
 
   try {
+    console.log('[Scraper] Generating search parameters with AI');
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
@@ -54,6 +55,7 @@ Make queries specific to the user's skills but focused on HIRING opportunities.`
     });
 
     const params = JSON.parse(response.choices[0].message.content || '{}');
+    console.log('[Scraper] AI-generated parameters:', params);
     
     return {
       redditQuery: params.redditQuery || `hiring ${skills[0]?.name || 'freelance'}`,
@@ -61,13 +63,15 @@ Make queries specific to the user's skills but focused on HIRING opportunities.`
       xQuery: params.xQuery || `hiring ${skills[0]?.name || 'freelance'} freelance`
     };
   } catch (error) {
-    console.error('Error generating scraper parameters:', error);
+    console.error('[Scraper] Error generating scraper parameters:', error);
     // Fallback to simple defaults
-    return {
+    const fallbackParams = {
       redditQuery: `hiring ${skills[0]?.name || 'freelance'}`,
       redditSubreddits: 'forhire+freelance_forhire',
       xQuery: `hiring ${skills[0]?.name || 'freelance'} freelance`
     };
+    console.log('[Scraper] Using fallback parameters:', fallbackParams);
+    return fallbackParams;
   }
 }
 
@@ -180,9 +184,15 @@ function extractBudget(text: string): string | undefined {
  * Main scraping function - returns max 5 jobs per run
  */
 export async function scrapeJobs(intro: string, skills: Skill[]): Promise<JobPost[]> {
-  if (!skills.length) return [];
+  if (!skills.length) {
+    console.log('[Scraper] No skills provided, returning empty results');
+    return [];
+  }
+  
+  console.log('[Scraper] Starting job scraping - skills count:', skills.length);
   
   const params = await generateScraperParameters(intro, skills);
+  console.log('[Scraper] Generated parameters:', params);
   
   const [redditResults, xResults] = await Promise.allSettled([
     scrapeRedditJobs({
@@ -199,21 +209,32 @@ export async function scrapeJobs(intro: string, skills: Skill[]): Promise<JobPos
   const allJobs: JobPost[] = [];
   
   if (redditResults.status === 'fulfilled') {
+    console.log('[Scraper] Reddit scraping succeeded - raw items:', redditResults.value.length);
     const parsedReddit = redditResults.value
       .map((item: any) => parseRedditJob(item, skills))
       .filter((job): job is JobPost => job !== null);
+    console.log('[Scraper] Reddit jobs after parsing and filtering:', parsedReddit.length);
     allJobs.push(...parsedReddit);
+  } else {
+    console.error('[Scraper] Reddit scraping failed:', redditResults.reason);
   }
   
   if (xResults.status === 'fulfilled') {
+    console.log('[Scraper] X scraping succeeded - raw items:', xResults.value.length);
     const parsedX = xResults.value
       .map((item: any) => parseXJob(item, skills))
       .filter((job): job is JobPost => job !== null);
+    console.log('[Scraper] X jobs after parsing and filtering:', parsedX.length);
     allJobs.push(...parsedX);
+  } else {
+    console.error('[Scraper] X scraping failed:', xResults.reason);
   }
   
   // Sort by relevance and return max 5
-  return allJobs
+  const sortedJobs = allJobs
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
     .slice(0, 5);
+  
+  console.log('[Scraper] Final job count after sorting and limiting:', sortedJobs.length);
+  return sortedJobs;
 }

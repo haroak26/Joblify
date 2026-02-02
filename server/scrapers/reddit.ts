@@ -6,10 +6,23 @@ interface RedditScraperParams {
   maxPosts?: number;
 }
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+const SCRAPER_TIMEOUT = 60000; // 60 seconds
+
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function scrapeRedditJobs(params: RedditScraperParams) {
-  const client = new ApifyClient({
-    token: process.env.APIFY_TOKEN,
-  });
+  const token = process.env.APIFY_TOKEN;
+  
+  if (!token) {
+    console.error('[Reddit Scraper] APIFY_TOKEN not configured');
+    throw new Error('APIFY_TOKEN environment variable is not set');
+  }
+
+  const client = new ApifyClient({ token });
 
   const input = {
     mode: "search",
@@ -26,8 +39,32 @@ export async function scrapeRedditJobs(params: RedditScraperParams) {
     debugMode: false
   };
 
-  const run = await client.actor("lqOcm2Bgsg4LGNATd").call(input);
-  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+  let lastError: Error | null = null;
   
-  return items;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[Reddit Scraper] Attempt ${attempt}/${MAX_RETRIES} - Query: "${params.searchQuery}"`);
+      
+      const run = await client.actor("lqOcm2Bgsg4LGNATd").call(input, {
+        timeout: SCRAPER_TIMEOUT,
+      });
+      
+      const { items } = await client.dataset(run.defaultDatasetId).listItems();
+      console.log(`[Reddit Scraper] Success - Found ${items.length} items`);
+      
+      return items;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`[Reddit Scraper] Attempt ${attempt}/${MAX_RETRIES} failed:`, lastError.message);
+      
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`[Reddit Scraper] Retrying in ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
+  }
+  
+  console.error('[Reddit Scraper] All retry attempts exhausted');
+  throw lastError || new Error('Reddit scraping failed after all retries');
 }

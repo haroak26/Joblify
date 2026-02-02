@@ -35,18 +35,25 @@ export async function registerRoutes(
 ): Promise<Server> {
   
   app.get("/api/profile", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching profile for user:', userId);
       const profile = await storage.getProfile(userId);
       res.json(profile);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch profile" });
+      console.error('[API] Error fetching profile for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch profile",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "PROFILE_FETCH_ERROR"
+      });
     }
   });
 
   app.post("/api/profile", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Updating profile for user:', userId);
       const schema = z.object({
         intro: z.string(),
         skills: z.array(skillSchema),
@@ -54,6 +61,7 @@ export async function registerRoutes(
       });
       
       const data = schema.parse(req.body);
+      console.log('[API] Profile data validated - skills:', data.skills.length, 'intro length:', data.intro.length);
       
       const subscription = await storage.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
@@ -62,6 +70,7 @@ export async function registerRoutes(
       // Check skills limit
       const skillCheck = await storage.canAddSkills(userId, data.skills.length);
       if (!skillCheck.allowed) {
+        console.log('[API] Skills limit exceeded for user:', userId, '- limit:', skillCheck.limit, 'attempted:', data.skills.length);
         return res.status(403).json({ 
           error: "Skills limit reached", 
           code: "SKILLS_LIMIT",
@@ -76,19 +85,25 @@ export async function registerRoutes(
       // Get old profile to check if skills changed
       const oldProfile = await storage.getProfile(userId);
       const profile = await storage.setProfile(userId, data);
+      console.log('[API] Profile saved successfully for user:', userId);
       
       if (data.skills.length === 0) {
         // Only clear unsaved jobs when skills are empty, preserve saved/applied
         await storage.clearUnsavedJobs(userId);
+        console.log('[API] Cleared unsaved jobs for user:', userId);
       }
       
       // Trigger scraping asynchronously if profile is complete and has skills
       if (data.isComplete && data.skills.length > 0) {
+        console.log('[API] Triggering background scraping for user:', userId);
         const { scrapeJobs } = await import('./scrapers/index');
         scrapeJobs(data.intro, data.skills)
-          .then(jobs => storage.saveJobs(userId, jobs))
+          .then(jobs => {
+            console.log('[API] Background scraping completed for user:', userId, '- jobs found:', jobs.length);
+            return storage.saveJobs(userId, jobs);
+          })
           .catch(err => {
-            console.error('Background scraping error:', err);
+            console.error('[API] Background scraping error for user:', userId, err);
             // Could add error tracking service here (e.g., Sentry)
           });
       }
@@ -96,31 +111,49 @@ export async function registerRoutes(
       res.json(profile);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid profile data", details: error.errors });
+        console.error('[API] Profile validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid profile data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
       } else {
-        res.status(500).json({ error: "Failed to save profile" });
+        console.error('[API] Error saving profile for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to save profile",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "PROFILE_SAVE_ERROR"
+        });
       }
     }
   });
 
   app.get("/api/skills", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching skills for user:', userId);
       const profile = await storage.getProfile(userId);
       res.json({ skills: profile.skills });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch skills" });
+      console.error('[API] Error fetching skills for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch skills",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "SKILLS_FETCH_ERROR"
+      });
     }
   });
 
   app.post("/api/skills", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Updating skills for user:', userId);
       const schema = z.object({
         skills: z.array(skillSchema),
       });
       
       const { skills } = schema.parse(req.body);
+      console.log('[API] Skills validated - count:', skills.length);
       
       const subscription = await storage.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
@@ -129,6 +162,7 @@ export async function registerRoutes(
       // Check skills limit
       const skillCheck = await storage.canAddSkills(userId, skills.length);
       if (!skillCheck.allowed) {
+        console.log('[API] Skills limit exceeded for user:', userId, '- limit:', skillCheck.limit, 'attempted:', skills.length);
         return res.status(403).json({ 
           error: "Skills limit reached", 
           code: "SKILLS_LIMIT",
@@ -142,29 +176,44 @@ export async function registerRoutes(
       
       const profile = await storage.getProfile(userId);
       const updated = await storage.setProfile(userId, { ...profile, skills });
+      console.log('[API] Skills saved successfully for user:', userId);
       
       if (skills.length === 0) {
         // Only clear unsaved jobs when skills are empty, preserve saved/applied
         await storage.clearUnsavedJobs(userId);
+        console.log('[API] Cleared unsaved jobs for user:', userId);
       }
       
       res.json({ skills: updated.skills });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid skills data", details: error.errors });
+        console.error('[API] Skills validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid skills data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
       } else {
-        res.status(500).json({ error: "Failed to save skills" });
+        console.error('[API] Error saving skills for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to save skills",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "SKILLS_SAVE_ERROR"
+        });
       }
     }
   });
 
   app.post("/api/suggest-skills", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
+      console.log('[API] Suggesting skills for user:', userId);
       const schema = z.object({
         intro: z.string().min(10),
       });
       
       const { intro } = schema.parse(req.body);
+      console.log('[API] Intro validated - length:', intro.length);
       
       const response = await getPoeClient().chat.completions.create({
         model: "gpt-5-nano",
@@ -181,6 +230,7 @@ export async function registerRoutes(
         max_tokens: 200,
       });
       
+      console.log('[API] AI response received for user:', userId);
       const content = response.choices[0]?.message?.content || '{"skills":[]}';
       let skills: string[] = [];
       
@@ -198,8 +248,9 @@ export async function registerRoutes(
           // Fallback for other object structures
           skills = Object.values(parsed).find(val => Array.isArray(val)) || [];
         }
+        console.log('[API] Parsed AI skills for user:', userId, '- count:', skills.length);
       } catch (e) {
-        console.error("Failed to parse AI skills response:", content, e);
+        console.error('[API] Failed to parse AI skills response for user:', userId, content, e);
         // Simple regex fallback if JSON parsing fails
         const matches = content.match(/"([^"]+)"/g);
         if (matches) {
@@ -209,24 +260,44 @@ export async function registerRoutes(
       
       res.json({ skills: skills.slice(0, 10) });
     } catch (error) {
-      console.error("Error suggesting skills:", error);
-      res.status(500).json({ error: "Failed to suggest skills" });
+      console.error('[API] Error suggesting skills for user:', userId, error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          error: "Invalid input", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        res.status(500).json({ 
+          error: "Failed to suggest skills",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
     }
   });
 
   app.get("/api/jobs", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching jobs for user:', userId);
       const jobs = await storage.getJobs(userId);
+      console.log('[API] Found', jobs.length, 'jobs for user:', userId);
       res.json({ jobs });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch jobs" });
+      console.error('[API] Error fetching jobs for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch jobs",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "JOBS_FETCH_ERROR"
+      });
     }
   });
 
   app.post("/api/jobs/refresh", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Refreshing jobs for user:', userId);
       
       // Check plan limits
       const subscription = await storage.getSubscription(userId);
@@ -236,66 +307,97 @@ export async function registerRoutes(
       const usage = await storage.checkAndResetMonthlyUsage(userId);
       
       if (limits.maxJobsPerMonth !== Infinity && usage.jobsScrapedThisMonth >= limits.maxJobsPerMonth) {
+        console.log('[API] Scraping limit reached for user:', userId, '- limit:', limits.maxJobsPerMonth);
         return res.status(403).json({
           error: 'Monthly job scraping limit reached',
           code: 'SCRAPING_LIMIT',
-          limit: limits.maxJobsPerMonth
+          limit: limits.maxJobsPerMonth,
+          current: usage.jobsScrapedThisMonth
         });
       }
       
       const profile = await storage.getProfile(userId);
       
       if (!profile.skills.length) {
-        return res.status(400).json({ error: 'Please add skills first' });
+        console.log('[API] No skills configured for user:', userId);
+        return res.status(400).json({ 
+          error: 'Please add skills first',
+          code: 'NO_SKILLS'
+        });
       }
       
+      console.log('[API] Starting job scraping for user:', userId, '- skills:', profile.skills.length);
       const { scrapeJobs } = await import('./scrapers/index');
       const jobs = await scrapeJobs(profile.intro, profile.skills);
+      console.log('[API] Scraping completed for user:', userId, '- jobs found:', jobs.length);
+      
       await storage.saveJobs(userId, jobs);
       
       // Increment usage (5 jobs max per scrape)
       await storage.incrementJobsScraped(userId, jobs.length);
+      console.log('[API] Jobs saved and usage updated for user:', userId);
       
       res.json({ jobs, count: jobs.length });
     } catch (error) {
-      console.error('Scraping error:', error);
-      res.status(500).json({ error: 'Failed to scrape jobs' });
+      console.error('[API] Scraping error for user:', userId, error);
+      res.status(500).json({ 
+        error: 'Failed to scrape jobs',
+        message: error instanceof Error ? error.message : "Scraping service unavailable",
+        code: "SCRAPING_ERROR"
+      });
     }
   });
 
   app.post("/api/jobs/:id/save", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
     try {
-      const userId = req.session.userId!;
-      const id = req.params.id as string;
+      console.log('[API] Toggling save status for job:', id, 'user:', userId);
       const job = await storage.saveJob(userId, id);
       if (job) {
+        console.log('[API] Job save status toggled:', id, 'saved:', job.saved);
         res.json({ job });
       } else {
-        res.status(404).json({ error: "Job not found" });
+        console.log('[API] Job not found:', id, 'user:', userId);
+        res.status(404).json({ error: "Job not found", code: "JOB_NOT_FOUND" });
       }
     } catch (error) {
-      res.status(500).json({ error: "Failed to save job" });
+      console.error('[API] Error saving job:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to save job",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "JOB_SAVE_ERROR"
+      });
     }
   });
 
   app.post("/api/jobs/:id/apply", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
     try {
-      const userId = req.session.userId!;
-      const id = req.params.id as string;
+      console.log('[API] Marking job as applied:', id, 'user:', userId);
       const job = await storage.markJobApplied(userId, id);
       if (job) {
+        console.log('[API] Job marked as applied:', id);
         res.json({ job });
       } else {
-        res.status(404).json({ error: "Job not found" });
+        console.log('[API] Job not found:', id, 'user:', userId);
+        res.status(404).json({ error: "Job not found", code: "JOB_NOT_FOUND" });
       }
     } catch (error) {
-      res.status(500).json({ error: "Failed to mark job as applied" });
+      console.error('[API] Error marking job as applied:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to mark job as applied",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "JOB_APPLY_ERROR"
+      });
     }
   });
 
   app.post("/api/generate-message", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Generating message for user:', userId);
       const schema = z.object({
         jobTitle: z.string(),
         jobDescription: z.string(),
@@ -306,6 +408,7 @@ export async function registerRoutes(
       });
 
       const { jobTitle, jobDescription, skills, tone, messageType, intro } = schema.parse(req.body);
+      console.log('[API] Message generation params - type:', messageType, 'tone:', tone, 'skills:', skills.length);
 
       const profile = await storage.getProfile(userId);
       const userIntro = intro || profile.intro || "";
@@ -340,24 +443,28 @@ Write a ${tone} outreach message for this job opportunity.`;
       });
 
       const message = response.choices[0]?.message?.content || generateFallbackMessage(jobTitle, skills, tone, userIntro, isComment);
+      console.log('[API] Message generated successfully for user:', userId);
 
       res.json({ message });
     } catch (error) {
-      console.error("Error generating message:", error);
+      console.error('[API] Error generating message for user:', userId, error);
       const { jobTitle, skills, tone, messageType } = req.body;
       const message = generateFallbackMessage(jobTitle || "this opportunity", skills || [], tone || "professional", "", messageType === "comment");
+      console.log('[API] Using fallback message for user:', userId);
       res.json({ message });
     }
   });
 
   // Subscription endpoints
   app.get("/api/subscription", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching subscription for user:', userId);
       let subscription = await storage.getSubscription(userId);
       
       // Create subscription if not exists (for existing users)
       if (!subscription) {
+        console.log('[API] Creating default subscription for user:', userId);
         subscription = await storage.createSubscription(userId, "free");
       }
       
@@ -374,14 +481,20 @@ Write a ${tone} outreach message for this job opportunity.`;
         }
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch subscription" });
+      console.error('[API] Error fetching subscription for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch subscription",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "SUBSCRIPTION_FETCH_ERROR"
+      });
     }
   });
 
   // Usage endpoints
   app.get("/api/usage", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching usage for user:', userId);
       const userUsage = await storage.checkAndResetMonthlyUsage(userId);
       const subscription = await storage.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
@@ -403,7 +516,12 @@ Write a ${tone} outreach message for this job opportunity.`;
         }
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch usage" });
+      console.error('[API] Error fetching usage for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch usage",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "USAGE_FETCH_ERROR"
+      });
     }
   });
 
