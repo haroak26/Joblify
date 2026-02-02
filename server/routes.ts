@@ -278,12 +278,19 @@ export async function registerRoutes(
   });
 
   app.get("/api/jobs", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching jobs for user:', userId);
       const jobs = await storage.getJobs(userId);
+      console.log('[API] Found', jobs.length, 'jobs for user:', userId);
       res.json({ jobs });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch jobs" });
+      console.error('[API] Error fetching jobs for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch jobs",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "JOBS_FETCH_ERROR"
+      });
     }
   });
 
@@ -342,38 +349,55 @@ export async function registerRoutes(
   });
 
   app.post("/api/jobs/:id/save", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
     try {
-      const userId = req.session.userId!;
-      const id = req.params.id as string;
+      console.log('[API] Toggling save status for job:', id, 'user:', userId);
       const job = await storage.saveJob(userId, id);
       if (job) {
+        console.log('[API] Job save status toggled:', id, 'saved:', job.saved);
         res.json({ job });
       } else {
-        res.status(404).json({ error: "Job not found" });
+        console.log('[API] Job not found:', id, 'user:', userId);
+        res.status(404).json({ error: "Job not found", code: "JOB_NOT_FOUND" });
       }
     } catch (error) {
-      res.status(500).json({ error: "Failed to save job" });
+      console.error('[API] Error saving job:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to save job",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "JOB_SAVE_ERROR"
+      });
     }
   });
 
   app.post("/api/jobs/:id/apply", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
     try {
-      const userId = req.session.userId!;
-      const id = req.params.id as string;
+      console.log('[API] Marking job as applied:', id, 'user:', userId);
       const job = await storage.markJobApplied(userId, id);
       if (job) {
+        console.log('[API] Job marked as applied:', id);
         res.json({ job });
       } else {
-        res.status(404).json({ error: "Job not found" });
+        console.log('[API] Job not found:', id, 'user:', userId);
+        res.status(404).json({ error: "Job not found", code: "JOB_NOT_FOUND" });
       }
     } catch (error) {
-      res.status(500).json({ error: "Failed to mark job as applied" });
+      console.error('[API] Error marking job as applied:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to mark job as applied",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "JOB_APPLY_ERROR"
+      });
     }
   });
 
   app.post("/api/generate-message", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Generating message for user:', userId);
       const schema = z.object({
         jobTitle: z.string(),
         jobDescription: z.string(),
@@ -384,6 +408,7 @@ export async function registerRoutes(
       });
 
       const { jobTitle, jobDescription, skills, tone, messageType, intro } = schema.parse(req.body);
+      console.log('[API] Message generation params - type:', messageType, 'tone:', tone, 'skills:', skills.length);
 
       const profile = await storage.getProfile(userId);
       const userIntro = intro || profile.intro || "";
@@ -418,24 +443,28 @@ Write a ${tone} outreach message for this job opportunity.`;
       });
 
       const message = response.choices[0]?.message?.content || generateFallbackMessage(jobTitle, skills, tone, userIntro, isComment);
+      console.log('[API] Message generated successfully for user:', userId);
 
       res.json({ message });
     } catch (error) {
-      console.error("Error generating message:", error);
+      console.error('[API] Error generating message for user:', userId, error);
       const { jobTitle, skills, tone, messageType } = req.body;
       const message = generateFallbackMessage(jobTitle || "this opportunity", skills || [], tone || "professional", "", messageType === "comment");
+      console.log('[API] Using fallback message for user:', userId);
       res.json({ message });
     }
   });
 
   // Subscription endpoints
   app.get("/api/subscription", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching subscription for user:', userId);
       let subscription = await storage.getSubscription(userId);
       
       // Create subscription if not exists (for existing users)
       if (!subscription) {
+        console.log('[API] Creating default subscription for user:', userId);
         subscription = await storage.createSubscription(userId, "free");
       }
       
@@ -452,14 +481,20 @@ Write a ${tone} outreach message for this job opportunity.`;
         }
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch subscription" });
+      console.error('[API] Error fetching subscription for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch subscription",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "SUBSCRIPTION_FETCH_ERROR"
+      });
     }
   });
 
   // Usage endpoints
   app.get("/api/usage", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
     try {
-      const userId = req.session.userId!;
+      console.log('[API] Fetching usage for user:', userId);
       const userUsage = await storage.checkAndResetMonthlyUsage(userId);
       const subscription = await storage.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
@@ -481,7 +516,12 @@ Write a ${tone} outreach message for this job opportunity.`;
         }
       });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch usage" });
+      console.error('[API] Error fetching usage for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch usage",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "USAGE_FETCH_ERROR"
+      });
     }
   });
 
