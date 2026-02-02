@@ -21,11 +21,17 @@ export async function scrapeXJobs(params: XScraperParams) {
     throw new Error('APIFY_TOKEN environment variable is not set');
   }
 
+  // Validate input parameters
+  if (!params.query || params.query.trim().length === 0) {
+    console.error('[X Scraper] Invalid query - cannot be empty');
+    throw new Error('Search query cannot be empty');
+  }
+
   const client = new ApifyClient({ token });
 
   const input = {
     maxItems: params.maxItems || 5,
-    query: params.query,
+    query: params.query.trim(),
     replies: "",
     retweets: "",
     quotes: "",
@@ -51,10 +57,19 @@ export async function scrapeXJobs(params: XScraperParams) {
         timeout: SCRAPER_TIMEOUT,
       });
       
+      if (!run || !run.defaultDatasetId) {
+        throw new Error('Scraper run failed - no dataset returned');
+      }
+      
       const { items } = await client.dataset(run.defaultDatasetId).listItems();
       console.log(`[X Scraper] Success - Found ${items.length} items`);
       
-      return items;
+      // Handle empty results gracefully
+      if (!items || items.length === 0) {
+        console.log('[X Scraper] No items found in results');
+      }
+      
+      return items || [];
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error(`[X Scraper] Attempt ${attempt}/${MAX_RETRIES} failed:`, lastError.message);

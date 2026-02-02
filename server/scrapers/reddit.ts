@@ -24,6 +24,12 @@ export async function scrapeRedditJobs(params: RedditScraperParams) {
 
   const client = new ApifyClient({ token });
 
+  // Validate input parameters
+  if (!params.searchQuery || params.searchQuery.trim().length === 0) {
+    console.error('[Reddit Scraper] Invalid searchQuery - cannot be empty');
+    throw new Error('Search query cannot be empty');
+  }
+
   const input = {
     mode: "search",
     searchQuery: params.searchQuery,
@@ -33,7 +39,7 @@ export async function scrapeRedditJobs(params: RedditScraperParams) {
     maxPosts: params.maxPosts || 5,
     maxComments: 0,
     includeComments: false,
-    outputFormat: "json",
+    outputFormat: "text", // Valid values: "markdown", "html", "text"
     includeImages: false,
     delaySeconds: 1,
     debugMode: false
@@ -49,10 +55,19 @@ export async function scrapeRedditJobs(params: RedditScraperParams) {
         timeout: SCRAPER_TIMEOUT,
       });
       
+      if (!run || !run.defaultDatasetId) {
+        throw new Error('Scraper run failed - no dataset returned');
+      }
+      
       const { items } = await client.dataset(run.defaultDatasetId).listItems();
       console.log(`[Reddit Scraper] Success - Found ${items.length} items`);
       
-      return items;
+      // Handle empty results gracefully
+      if (!items || items.length === 0) {
+        console.log('[Reddit Scraper] No items found in results');
+      }
+      
+      return items || [];
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error(`[Reddit Scraper] Attempt ${attempt}/${MAX_RETRIES} failed:`, lastError.message);

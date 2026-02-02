@@ -278,7 +278,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", requireAuth, async (req: Request, res) => {
+  app.get("/api/jobs", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       console.log('[API] Fetching jobs for user:', userId);
@@ -395,7 +395,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/generate-message", requireAuth, async (req: Request, res) => {
+  app.post("/api/generate-message", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       console.log('[API] Generating message for user:', userId);
@@ -565,7 +565,7 @@ Write a ${tone} outreach message for this job opportunity.`;
   });
 
   // Schedule endpoints
-  app.get("/api/schedules", requireAuth, async (req: Request, res) => {
+  app.get("/api/schedules", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const userSchedules = await storage.getSchedules(userId);
@@ -624,7 +624,7 @@ Write a ${tone} outreach message for this job opportunity.`;
     }
   });
 
-  app.patch("/api/schedules/:id", requireAuth, async (req: Request, res) => {
+  app.patch("/api/schedules/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const scheduleId = req.params.id as string;
@@ -655,7 +655,7 @@ Write a ${tone} outreach message for this job opportunity.`;
     }
   });
 
-  app.delete("/api/schedules/:id", requireAuth, async (req: Request, res) => {
+  app.delete("/api/schedules/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const scheduleId = req.params.id as string;

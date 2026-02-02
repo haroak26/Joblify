@@ -2,6 +2,7 @@ const AUTH_STORAGE_KEY = "joblify-user";
 
 export interface StoredUser {
   id: string;
+  name?: string;
   username: string;
   email: string;
   emailVerified: boolean;

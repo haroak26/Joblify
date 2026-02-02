@@ -97,13 +97,16 @@ export function setupAuth(app: Express) {
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       if (!authLimiter(req, res)) return;
-      const { username, email, password } = req.body;
+      const { name, username, email, password, intro, skills } = req.body;
 
-      if (!username || !email || !password) {
-        return res.status(400).json({ error: "Username, email, and password are required" });
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
       }
 
-      if (username.length < 3) {
+      // Username is optional - we can generate from email if not provided
+      const finalUsername = username || email.split('@')[0] + randomBytes(3).toString('hex');
+
+      if (finalUsername.length < 3) {
         return res.status(400).json({ error: "Username must be at least 3 characters" });
       }
 
@@ -117,7 +120,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: passwordCheck.message });
       }
 
-      const existingUsername = await storage.getUserByUsername(username);
+      const existingUsername = await storage.getUserByUsername(finalUsername);
       if (existingUsername) {
         return res.status(400).json({ error: "Username already taken" });
       }
@@ -131,11 +134,21 @@ export function setupAuth(app: Express) {
       const verificationToken = generateVerificationToken();
       
       const user = await storage.createUser({
-        username,
+        name,
+        username: finalUsername,
         email,
         password: hashedPassword,
         verificationToken,
       });
+
+      // If intro and skills are provided (from multi-step form), save them to profile
+      if (intro || skills) {
+        await storage.setProfile(user.id, {
+          intro: intro || '',
+          skills: skills || [],
+          isComplete: !!(intro && skills && skills.length > 0),
+        });
+      }
 
       req.session.userId = user.id;
 
@@ -148,6 +161,7 @@ export function setupAuth(app: Express) {
       res.json({
         user: {
           id: user.id,
+          name: user.name,
           username: user.username,
           email: user.email,
           emailVerified: user.emailVerified,
@@ -186,6 +200,7 @@ export function setupAuth(app: Express) {
       res.json({
         user: {
           id: user.id,
+          name: user.name,
           username: user.username,
           email: user.email,
           emailVerified: user.emailVerified,
@@ -220,6 +235,7 @@ export function setupAuth(app: Express) {
     res.json({
       user: {
         id: user.id,
+        name: user.name,
         username: user.username,
         email: user.email,
         emailVerified: user.emailVerified,
