@@ -42,7 +42,7 @@ Optimize the "redditQuery" and "xQuery" for the Apify actors lqOcm2Bgsg4LGNATd (
 Return a JSON object with:
 {
   "redditQuery": "search query for Reddit (focus on hiring keywords)",
-  "redditSubreddits": "comma-separated subreddit names (forhire, freelance_forhire, etc.)",
+  "redditSubreddits": "plus-separated subreddit names like forhire+freelance_forhire (use + not comma)",
   "xQuery": "search query for X/Twitter (focus on hiring keywords)"
 }
 
@@ -60,18 +60,27 @@ Make queries specific to the user's skills but focused on HIRING opportunities.`
     const params = JSON.parse(response.choices[0].message.content || '{}');
     console.log('[Scraper] AI-generated parameters:', params);
     
+    // Clean up subreddit format - ensure it's plus-separated, not comma-separated
+    let redditSubreddits = params.redditSubreddits || 'forhire+freelance_forhire';
+    if (redditSubreddits.includes(',')) {
+      // Convert comma-separated to plus-separated
+      redditSubreddits = redditSubreddits.split(',').map((s: string) => s.trim()).join('+');
+      console.log('[Scraper] Converted subreddits from comma to plus format:', redditSubreddits);
+    }
+    
     return {
       redditQuery: params.redditQuery || `hiring ${skills[0]?.name || 'freelance'}`,
-      redditSubreddits: params.redditSubreddits || 'forhire+freelance_forhire',
+      redditSubreddits,
       xQuery: params.xQuery || `hiring ${skills[0]?.name || 'freelance'} freelance`
     };
   } catch (error) {
     console.error('[Scraper] Error generating scraper parameters:', error);
-    // Fallback to simple defaults
+    // Fallback to simple defaults focused on hiring
+    const skillName = skills[0]?.name || 'developer';
     const fallbackParams = {
-      redditQuery: `hiring ${skills[0]?.name || 'freelance'}`,
-      redditSubreddits: 'forhire+freelance_forhire',
-      xQuery: `hiring ${skills[0]?.name || 'freelance'} freelance`
+      redditQuery: `hiring ${skillName}`,
+      redditSubreddits: 'forhire+freelance_forhire+remotejobs',
+      xQuery: `hiring ${skillName} freelance remote`
     };
     console.log('[Scraper] Using fallback parameters:', fallbackParams);
     return fallbackParams;

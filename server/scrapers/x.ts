@@ -32,6 +32,7 @@ export async function scrapeXJobs(params: XScraperParams) {
   const input = {
     maxItems: params.maxItems || 5,
     query: params.query.trim(),
+    outputFormat: "text", // Valid values: "markdown", "html", "text"
     replies: "",
     retweets: "",
     quotes: "",
