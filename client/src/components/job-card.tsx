@@ -38,6 +38,18 @@ export function JobCard({ job, onSave, onApply, onGenerateMessage }: JobCardProp
     }
   };
 
+  // Check if job was posted within last 24 hours
+  const isFreshPost = () => {
+    try {
+      const postedDate = new Date(job.postedAt);
+      const now = new Date();
+      const hoursSincePost = (now.getTime() - postedDate.getTime()) / (1000 * 60 * 60);
+      return hoursSincePost <= 24;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <Card
       className="hover-elevate overflow-visible border-sidebar-border/50 shadow-sm cursor-pointer transition-transform"
@@ -54,6 +66,11 @@ export function JobCard({ job, onSave, onApply, onGenerateMessage }: JobCardProp
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted">
                 <span className="text-[11px] font-semibold uppercase tracking-wider">{job.source}</span>
               </div>
+              {isFreshPost() && (
+                <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px] h-5 px-1.5 font-bold">
+                  🌟 FRESH
+                </Badge>
+              )}
               {job.relevanceScore !== undefined && job.relevanceScore > 0 && (
                 <Badge variant="outline" className="border-primary/30 text-primary text-[10px] h-5 px-1.5 font-bold">
                   {job.relevanceScore}% MATCH

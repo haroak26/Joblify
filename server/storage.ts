@@ -2,10 +2,11 @@ import {
   type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, 
   type Subscription, type Usage, type PlanType, PLAN_LIMITS, normalizePlan,
   type Schedule, type InsertSchedule, type SeenJob,
-  users, profiles, jobs, subscriptions, usage, schedules, seenJobs 
+  type JobCache, type InsertJobCache,
+  users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache 
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray, lte, isNotNull } from "drizzle-orm";
+import { eq, and, inArray, lte, isNotNull, gte, or, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -29,6 +30,7 @@ export interface IStorage {
   addJobs(userId: string, jobs: JobPost[]): Promise<JobPost[]>;
   saveJobs(userId: string, jobs: JobPost[]): Promise<void>;
   clearUnsavedJobs(userId: string): Promise<void>;
+  cleanupOldJobs(userId: string): Promise<number>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
   
@@ -59,6 +61,12 @@ export interface IStorage {
   markJobAsSeen(userId: string, sourceUrl: string): Promise<void>;
   getSeenJobUrls(userId: string): Promise<string[]>;
   filterUnseenJobs(userId: string, jobUrls: string[]): Promise<string[]>;
+  
+  // Job cache methods
+  saveToJobCache(jobs: Omit<InsertJobCache, 'expiresAt'>[]): Promise<JobCache[]>;
+  searchJobCache(tags: string[], limit?: number): Promise<JobCache[]>;
+  cleanupExpiredCachedJobs(): Promise<number>;
+  getCachedJobByUrl(sourceUrl: string): Promise<JobCache | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -194,6 +202,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobs(userId: string): Promise<JobPost[]> {
+    // Clean up old jobs synchronously to avoid race conditions
+    await this.cleanupOldJobs(userId);
+    
     const userJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
     return userJobs.map(job => ({
       id: job.id,
@@ -341,6 +352,33 @@ export class DatabaseStorage implements IStorage {
       const idsToDelete = jobsToDelete.map(j => j.id);
       await db.delete(jobs).where(and(eq(jobs.userId, userId), inArray(jobs.id, idsToDelete)));
     }
+  }
+
+  async cleanupOldJobs(userId: string): Promise<number> {
+    // Delete unsaved/unapplied jobs older than 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Get jobs to delete: older than 7 days, not saved, not applied
+    const oldJobs = await db
+      .select()
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.userId, userId),
+          lte(jobs.scrapedAt, sevenDaysAgo),
+          eq(jobs.saved, false),
+          eq(jobs.applied, false)
+        )
+      );
+    
+    if (oldJobs.length > 0) {
+      const idsToDelete = oldJobs.map(j => j.id);
+      await db.delete(jobs).where(and(eq(jobs.userId, userId), inArray(jobs.id, idsToDelete)));
+      console.log(`[Storage] Cleaned up ${oldJobs.length} old jobs for user ${userId}`);
+    }
+    
+    return oldJobs.length;
   }
 
   async saveJob(userId: string, jobId: string): Promise<JobPost | undefined> {
@@ -725,6 +763,103 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(seenJobs.userId, userId), inArray(seenJobs.sourceUrl, jobUrls)));
     const seenSet = new Set(seen.map(s => s.sourceUrl));
     return jobUrls.filter(url => !seenSet.has(url));
+  }
+
+  // Job cache methods
+  async saveToJobCache(jobs: Omit<InsertJobCache, 'expiresAt'>[]): Promise<JobCache[]> {
+    if (jobs.length === 0) return [];
+    
+    const savedJobs: JobCache[] = [];
+    
+    for (const job of jobs) {
+      try {
+        // Calculate expiration: 7 days after the post was originally published
+        const postedDate = new Date(job.postedAt);
+        const expiresAt = new Date(postedDate);
+        expiresAt.setDate(expiresAt.getDate() + 7);
+        
+        // Insert or update on conflict (sourceUrl is unique)
+        const [saved] = await db
+          .insert(jobCache)
+          .values({
+            ...job,
+            expiresAt,
+          })
+          .onConflictDoUpdate({
+            target: jobCache.sourceUrl,
+            set: {
+              title: job.title,
+              description: job.description,
+              tags: job.tags,
+              budget: job.budget,
+              // Update scrapedAt to track when we last saw/refreshed this job in our scrapers
+              // This helps us understand cache freshness even if the job itself is older
+              scrapedAt: new Date(),
+            },
+          })
+          .returning();
+        
+        if (saved) {
+          savedJobs.push(saved);
+        }
+      } catch (error) {
+        console.error('[Storage] Error saving job to cache:', job.sourceUrl, error);
+        // Continue with other jobs even if one fails
+      }
+    }
+    
+    return savedJobs;
+  }
+
+  async searchJobCache(tags: string[], limit: number = 20): Promise<JobCache[]> {
+    if (tags.length === 0) return [];
+    
+    const now = new Date();
+    
+    // Search for jobs that:
+    // 1. Haven't expired yet (expiresAt > now)
+    // 2. Have at least one matching tag
+    // We use PostgreSQL's JSONB operators for efficient tag matching
+    const tagConditions = tags.map(tag => 
+      sql`${jobCache.tags}::jsonb @> ${JSON.stringify([tag.toLowerCase()])}`
+    );
+    
+    const results = await db
+      .select()
+      .from(jobCache)
+      .where(
+        and(
+          gte(jobCache.expiresAt, now),
+          or(...tagConditions)
+        )
+      )
+      .orderBy(sql`${jobCache.scrapedAt} DESC`)
+      .limit(limit);
+    
+    return results;
+  }
+
+  async cleanupExpiredCachedJobs(): Promise<number> {
+    const now = new Date();
+    
+    const result = await db
+      .delete(jobCache)
+      .where(lte(jobCache.expiresAt, now))
+      .returning({ id: jobCache.id });
+    
+    const deletedCount = result.length;
+    console.log(`[Storage] Cleaned up ${deletedCount} expired cached jobs`);
+    
+    return deletedCount;
+  }
+
+  async getCachedJobByUrl(sourceUrl: string): Promise<JobCache | undefined> {
+    const [cached] = await db
+      .select()
+      .from(jobCache)
+      .where(eq(jobCache.sourceUrl, sourceUrl));
+    
+    return cached || undefined;
   }
 }
 
