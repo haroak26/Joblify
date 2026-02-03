@@ -4,8 +4,9 @@ import {
   type Schedule, type InsertSchedule, type SeenJob,
   type JobCache, type InsertJobCache,
   type Resume, type InsertResume, type ChatConversation, type InsertChatConversation,
+  type CoverLetter, type InsertCoverLetter,
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache,
-  resumes, chatConversations, resumeDataSchema
+  resumes, chatConversations, coverLetters, resumeDataSchema
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull, gte, or, sql, count } from "drizzle-orm";
@@ -86,6 +87,13 @@ export interface IStorage {
   // AI Usage methods
   incrementAiEdits(userId: string): Promise<void>;
   canUseAiEdit(userId: string): Promise<boolean>;
+  
+  // Cover letter methods
+  getCoverLetter(id: string): Promise<CoverLetter | undefined>;
+  getCoverLetters(userId: string): Promise<CoverLetter[]>;
+  createCoverLetter(data: InsertCoverLetter): Promise<CoverLetter>;
+  updateCoverLetter(id: string, content: string): Promise<CoverLetter>;
+  deleteCoverLetter(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -987,6 +995,46 @@ export class DatabaseStorage implements IStorage {
     const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
     
     return userUsage.aiEditsThisMonth < planLimits.maxAiEditsPerMonth;
+  }
+  
+  // Cover letter methods
+  async getCoverLetter(id: string): Promise<CoverLetter | undefined> {
+    const [coverLetter] = await db
+      .select()
+      .from(coverLetters)
+      .where(eq(coverLetters.id, id));
+    return coverLetter || undefined;
+  }
+  
+  async getCoverLetters(userId: string): Promise<CoverLetter[]> {
+    return await db
+      .select()
+      .from(coverLetters)
+      .where(eq(coverLetters.userId, userId));
+  }
+  
+  async createCoverLetter(data: InsertCoverLetter): Promise<CoverLetter> {
+    const [coverLetter] = await db
+      .insert(coverLetters)
+      .values(data)
+      .returning();
+    return coverLetter;
+  }
+  
+  async updateCoverLetter(id: string, content: string): Promise<CoverLetter> {
+    const [coverLetter] = await db
+      .update(coverLetters)
+      .set({
+        content,
+        updatedAt: new Date(),
+      })
+      .where(eq(coverLetters.id, id))
+      .returning();
+    return coverLetter;
+  }
+  
+  async deleteCoverLetter(id: string): Promise<void> {
+    await db.delete(coverLetters).where(eq(coverLetters.id, id));
   }
 }
 

@@ -3,9 +3,15 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { skillSchema, PLAN_LIMITS, normalizePlan, resumeDataSchema } from "@shared/schema";
+import type { ResumeData } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
+import multer from 'multer';
+import PDFDocument from 'pdfkit';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import pdf from 'pdf-parse';
+import mammoth from 'mammoth';
 
 let poeClient: OpenAI | null = null;
 
@@ -28,8 +34,6 @@ function getPoeClient(): OpenAI {
 
   return poeClient;
 }
-
-import type { ResumeData } from "@shared/schema";
 
 /**
  * Merges extracted resume data from AI into existing resume data
@@ -58,6 +62,82 @@ function mergeResumeData(
   }
   
   return merged;
+}
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || 
+        file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and DOCX files are allowed'));
+    }
+  }
+});
+
+// Convert resume data to text for ATS analysis
+function resumeDataToText(resumeData: ResumeData): string {
+  const parts: string[] = [];
+  
+  // Personal Info
+  const { personalInfo } = resumeData;
+  if (personalInfo.name) parts.push(personalInfo.name);
+  if (personalInfo.email) parts.push(personalInfo.email);
+  if (personalInfo.phone) parts.push(personalInfo.phone);
+  if (personalInfo.location) parts.push(personalInfo.location);
+  
+  // Summary
+  if (resumeData.summary) {
+    parts.push('\nSUMMARY\n' + resumeData.summary);
+  }
+  
+  // Experience
+  if (resumeData.experience?.length > 0) {
+    parts.push('\nEXPERIENCE');
+    resumeData.experience.forEach(exp => {
+      parts.push(`\n${exp.title} at ${exp.company}`);
+      parts.push(`${exp.location} | ${exp.startDate} - ${exp.endDate || 'Present'}`);
+      exp.description.forEach(desc => parts.push(`• ${desc}`));
+    });
+  }
+  
+  // Education
+  if (resumeData.education?.length > 0) {
+    parts.push('\nEDUCATION');
+    resumeData.education.forEach(edu => {
+      parts.push(`\n${edu.degree} in ${edu.field}`);
+      parts.push(`${edu.school} | ${edu.graduationDate}`);
+      if (edu.gpa) parts.push(`GPA: ${edu.gpa}`);
+    });
+  }
+  
+  // Skills
+  if (resumeData.skills?.length > 0) {
+    parts.push('\nSKILLS\n' + resumeData.skills.join(', '));
+  }
+  
+  // Certifications
+  if (resumeData.certifications?.length > 0) {
+    parts.push('\nCERTIFICATIONS');
+    resumeData.certifications.forEach(cert => {
+      parts.push(`\n${cert.name} - ${cert.issuer} (${cert.date})`);
+    });
+  }
+  
+  // Projects
+  if (resumeData.projects?.length > 0) {
+    parts.push('\nPROJECTS');
+    resumeData.projects.forEach(proj => {
+      parts.push(`\n${proj.name}`);
+      parts.push(proj.description);
+      parts.push(`Technologies: ${proj.technologies.join(', ')}`);
+    });
+  }
+  
+  return parts.join('\n');
 }
 
 export async function registerRoutes(
@@ -1447,6 +1527,831 @@ Write a ${tone} outreach message for this job opportunity.`;
     } catch (error) {
       console.error("Schedule run error:", error);
       res.status(500).json({ error: "Failed to run schedule" });
+    }
+  });
+
+  // ============================================
+  // ATS Scanner Endpoints
+  // ============================================
+
+  const ATS_ANALYSIS_PROMPT = `You are an ATS (Applicant Tracking System) analyzer. Analyze this resume and provide:
+
+1. ATS Compatibility Score (0-100)
+2. Important keywords found
+3. Missing keywords that should be included
+4. Specific suggestions to improve ATS compatibility
+
+Consider:
+- Use of standard section headers (Experience, Education, Skills)
+- Keyword density
+- Formatting clarity
+- Industry-standard terms
+- Lack of tables/images/complex formatting
+
+Return JSON format:
+{
+  "score": 85,
+  "keywords": ["javascript", "react", "python"],
+  "missingKeywords": ["agile", "scrum"],
+  "suggestions": ["Add more action verbs", "Include certifications section"]
+}`;
+
+  app.post("/api/ats/scan", requireAuth, requireVerifiedEmail, upload.single('file'), async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] ATS scan file upload for user:', userId);
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded", code: "NO_FILE" });
+      }
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!limits.hasAtsScanner) {
+        console.log('[API] ATS scanner not available for plan:', plan);
+        return res.status(403).json({
+          error: 'ATS scanner not available',
+          code: 'ATS_NOT_AVAILABLE',
+          message: `Upgrade to ${plan === 'free' ? 'Plus' : 'a higher'} plan to access ATS scanner.`
+        });
+      }
+
+      let parsedText = '';
+      
+      // Parse file based on type
+      if (req.file.mimetype === 'application/pdf') {
+        const pdfData = await pdf(req.file.buffer);
+        parsedText = pdfData.text;
+      } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+        parsedText = result.value;
+      } else {
+        return res.status(400).json({ error: "Invalid file type", code: "INVALID_FILE_TYPE" });
+      }
+
+      if (!parsedText.trim()) {
+        return res.status(400).json({ error: "Could not extract text from file", code: "PARSE_ERROR" });
+      }
+
+      // Send to AI for analysis
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: ATS_ANALYSIS_PROMPT
+          },
+          {
+            role: "user",
+            content: `Analyze this resume:\n\n${parsedText}`
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const aiResponse = response.choices[0]?.message?.content || '{}';
+      let analysis = { score: 0, keywords: [], missingKeywords: [], suggestions: [] };
+
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        analysis = JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error('[API] Failed to parse ATS analysis:', parseError);
+      }
+
+      console.log('[API] ATS scan completed for user:', userId, 'score:', analysis.score);
+      res.json({ 
+        score: analysis.score || 0,
+        keywords: analysis.keywords || [],
+        missingKeywords: analysis.missingKeywords || [],
+        suggestions: analysis.suggestions || [],
+        parsedText 
+      });
+    } catch (error) {
+      console.error('[API] Error in ATS scan for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to scan resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "ATS_SCAN_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/ats/analyze", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] ATS analyze for user:', userId);
+      const schema = z.object({
+        resumeId: z.string(),
+      });
+      
+      const { resumeId } = schema.parse(req.body);
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!limits.hasAtsScanner) {
+        console.log('[API] ATS scanner not available for plan:', plan);
+        return res.status(403).json({
+          error: 'ATS scanner not available',
+          code: 'ATS_NOT_AVAILABLE',
+          message: `Upgrade to ${plan === 'free' ? 'Plus' : 'a higher'} plan to access ATS scanner.`
+        });
+      }
+
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Convert resume data to text
+      const resumeText = resumeDataToText(resume.resumeData);
+
+      // Send to AI for analysis
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: ATS_ANALYSIS_PROMPT
+          },
+          {
+            role: "user",
+            content: `Analyze this resume:\n\n${resumeText}`
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const aiResponse = response.choices[0]?.message?.content || '{}';
+      let analysis = { score: 0, keywords: [], missingKeywords: [], suggestions: [] };
+
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        analysis = JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error('[API] Failed to parse ATS analysis:', parseError);
+      }
+
+      console.log('[API] ATS analysis completed for user:', userId, 'resume:', resumeId, 'score:', analysis.score);
+      res.json({ 
+        score: analysis.score || 0,
+        keywords: analysis.keywords || [],
+        missingKeywords: analysis.missingKeywords || [],
+        suggestions: analysis.suggestions || []
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] ATS analyze validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error in ATS analyze for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to analyze resume",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "ATS_ANALYZE_ERROR"
+        });
+      }
+    }
+  });
+
+  // ============================================
+  // Cover Letter Endpoints
+  // ============================================
+
+  const COVER_LETTER_PROMPT = `You are a professional cover letter writer. Generate a compelling cover letter based on:
+
+Resume: {resumeData}
+Job Description: {jobDescription}
+Tone: {tone}
+
+Requirements:
+- Personalized to the job description
+- Highlights relevant experience from resume
+- {tone} tone throughout
+- Professional format with proper greeting and closing
+- 250-400 words
+- Include specific examples from their experience
+
+Return ONLY the cover letter text, no JSON.`;
+
+  app.post("/api/cover-letter/generate", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Generating cover letter for user:', userId);
+      const schema = z.object({
+        resumeId: z.string(),
+        jobDescription: z.string().min(10, "Job description is required"),
+        tone: z.enum(['professional', 'enthusiastic', 'creative']).default('professional'),
+      });
+      
+      const { resumeId, jobDescription, tone } = schema.parse(req.body);
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!limits.hasCoverLetterGenerator) {
+        console.log('[API] Cover letter generator not available for plan:', plan);
+        return res.status(403).json({
+          error: 'Cover letter generator not available',
+          code: 'COVER_LETTER_NOT_AVAILABLE',
+          message: `Upgrade to ${plan === 'free' ? 'Plus' : 'a higher'} plan to access cover letter generator.`
+        });
+      }
+
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Convert resume to text
+      const resumeText = resumeDataToText(resume.resumeData);
+
+      // Generate cover letter using AI
+      const prompt = COVER_LETTER_PROMPT
+        .replace('{resumeData}', resumeText)
+        .replace('{jobDescription}', jobDescription)
+        .replace(/{tone}/g, tone);
+
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: prompt
+          },
+          {
+            role: "user",
+            content: "Generate the cover letter now."
+          }
+        ],
+        max_tokens: 800,
+      });
+
+      const content = response.choices[0]?.message?.content || '';
+      
+      // Save to database
+      const coverLetter = await storage.createCoverLetter({
+        userId,
+        resumeId,
+        content,
+        jobDescription,
+      });
+
+      console.log('[API] Cover letter generated:', coverLetter.id, 'user:', userId);
+      res.json({ id: coverLetter.id, content: coverLetter.content });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Cover letter validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error generating cover letter for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to generate cover letter",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "COVER_LETTER_GENERATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.get("/api/cover-letter/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Fetching cover letter:', id, 'user:', userId);
+      const coverLetter = await storage.getCoverLetter(id);
+      
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      res.json({ coverLetter });
+    } catch (error) {
+      console.error('[API] Error fetching cover letter:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch cover letter",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTER_FETCH_ERROR"
+      });
+    }
+  });
+
+  app.put("/api/cover-letter/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Updating cover letter:', id, 'user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+      });
+      
+      const { content } = schema.parse(req.body);
+
+      const coverLetter = await storage.getCoverLetter(id);
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      const updated = await storage.updateCoverLetter(id, content);
+      console.log('[API] Cover letter updated:', id, 'user:', userId);
+      res.json({ coverLetter: updated });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Cover letter validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error updating cover letter:', id, 'user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to update cover letter",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "COVER_LETTER_UPDATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.delete("/api/cover-letter/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Deleting cover letter:', id, 'user:', userId);
+      const coverLetter = await storage.getCoverLetter(id);
+      
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      await storage.deleteCoverLetter(id);
+      console.log('[API] Cover letter deleted:', id, 'user:', userId);
+      res.json({ message: "Cover letter deleted successfully" });
+    } catch (error) {
+      console.error('[API] Error deleting cover letter:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to delete cover letter",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTER_DELETE_ERROR"
+      });
+    }
+  });
+
+  app.get("/api/cover-letters", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Fetching cover letters for user:', userId);
+      const coverLetters = await storage.getCoverLetters(userId);
+      res.json({ coverLetters });
+    } catch (error) {
+      console.error('[API] Error fetching cover letters for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch cover letters",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTERS_FETCH_ERROR"
+      });
+    }
+  });
+
+  // ============================================
+  // Export Endpoints
+  // ============================================
+
+  app.post("/api/export/pdf/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Exporting resume as PDF:', id, 'user:', userId);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(id);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!(limits.allowedFormats as readonly string[]).includes('pdf')) {
+        console.log('[API] PDF export not available for plan:', plan);
+        return res.status(403).json({
+          error: 'PDF export not available',
+          code: 'PDF_NOT_AVAILABLE',
+          message: `Upgrade to access PDF export.`
+        });
+      }
+
+      // Generate PDF
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${resume.title.replace(/[^a-z0-9]/gi, '_')}.pdf"`);
+        res.send(pdfBuffer);
+        console.log('[API] PDF exported successfully:', id, 'user:', userId);
+      });
+
+      const { resumeData } = resume;
+
+      // Title
+      doc.fontSize(24).text(resumeData.personalInfo.name || 'Resume', { align: 'center' });
+      doc.moveDown(0.5);
+
+      // Contact Info
+      doc.fontSize(10);
+      const contact = [];
+      if (resumeData.personalInfo.email) contact.push(resumeData.personalInfo.email);
+      if (resumeData.personalInfo.phone) contact.push(resumeData.personalInfo.phone);
+      if (resumeData.personalInfo.location) contact.push(resumeData.personalInfo.location);
+      if (contact.length > 0) {
+        doc.text(contact.join(' | '), { align: 'center' });
+      }
+      if (resumeData.personalInfo.linkedin || resumeData.personalInfo.website) {
+        const links = [];
+        if (resumeData.personalInfo.linkedin) links.push(resumeData.personalInfo.linkedin);
+        if (resumeData.personalInfo.website) links.push(resumeData.personalInfo.website);
+        doc.text(links.join(' | '), { align: 'center' });
+      }
+      doc.moveDown();
+
+      // Summary
+      if (resumeData.summary) {
+        doc.fontSize(14).text('SUMMARY', { underline: true });
+        doc.fontSize(10).moveDown(0.3);
+        doc.text(resumeData.summary);
+        doc.moveDown();
+      }
+
+      // Experience
+      if (resumeData.experience?.length > 0) {
+        doc.fontSize(14).text('EXPERIENCE', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.experience.forEach((exp) => {
+          doc.fontSize(12).text(`${exp.title} at ${exp.company}`);
+          doc.fontSize(10).text(`${exp.location} | ${exp.startDate} - ${exp.endDate || 'Present'}`);
+          doc.moveDown(0.2);
+          exp.description.forEach((desc) => {
+            doc.text(`• ${desc}`, { indent: 20 });
+          });
+          doc.moveDown();
+        });
+      }
+
+      // Education
+      if (resumeData.education?.length > 0) {
+        doc.fontSize(14).text('EDUCATION', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.education.forEach((edu) => {
+          doc.fontSize(12).text(`${edu.degree} in ${edu.field}`);
+          doc.fontSize(10).text(`${edu.school} | ${edu.graduationDate}`);
+          if (edu.gpa) doc.text(`GPA: ${edu.gpa}`);
+          doc.moveDown();
+        });
+      }
+
+      // Skills
+      if (resumeData.skills?.length > 0) {
+        doc.fontSize(14).text('SKILLS', { underline: true });
+        doc.fontSize(10).moveDown(0.3);
+        doc.text(resumeData.skills.join(', '));
+        doc.moveDown();
+      }
+
+      // Certifications
+      if (resumeData.certifications?.length > 0) {
+        doc.fontSize(14).text('CERTIFICATIONS', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.certifications.forEach((cert) => {
+          doc.fontSize(10).text(`${cert.name} - ${cert.issuer} (${cert.date})`);
+        });
+        doc.moveDown();
+      }
+
+      // Projects
+      if (resumeData.projects?.length > 0) {
+        doc.fontSize(14).text('PROJECTS', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.projects.forEach((proj) => {
+          doc.fontSize(12).text(proj.name);
+          doc.fontSize(10).text(proj.description);
+          doc.text(`Technologies: ${proj.technologies.join(', ')}`);
+          if (proj.url) doc.text(`URL: ${proj.url}`);
+          doc.moveDown();
+        });
+      }
+
+      doc.end();
+    } catch (error) {
+      console.error('[API] Error exporting PDF:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to export PDF",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "PDF_EXPORT_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/export/docx/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Exporting resume as DOCX:', id, 'user:', userId);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(id);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!(limits.allowedFormats as readonly string[]).includes('docx')) {
+        console.log('[API] DOCX export not available for plan:', plan);
+        return res.status(403).json({
+          error: 'DOCX export not available',
+          code: 'DOCX_NOT_AVAILABLE',
+          message: `Upgrade to access DOCX export.`
+        });
+      }
+
+      const { resumeData } = resume;
+      const sections: Paragraph[] = [];
+
+      // Title
+      sections.push(
+        new Paragraph({
+          text: resumeData.personalInfo.name || 'Resume',
+          heading: HeadingLevel.HEADING_1,
+          alignment: 'center',
+        })
+      );
+
+      // Contact Info
+      const contact = [];
+      if (resumeData.personalInfo.email) contact.push(resumeData.personalInfo.email);
+      if (resumeData.personalInfo.phone) contact.push(resumeData.personalInfo.phone);
+      if (resumeData.personalInfo.location) contact.push(resumeData.personalInfo.location);
+      if (contact.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: contact.join(' | '),
+            alignment: 'center',
+          })
+        );
+      }
+
+      if (resumeData.personalInfo.linkedin || resumeData.personalInfo.website) {
+        const links = [];
+        if (resumeData.personalInfo.linkedin) links.push(resumeData.personalInfo.linkedin);
+        if (resumeData.personalInfo.website) links.push(resumeData.personalInfo.website);
+        sections.push(
+          new Paragraph({
+            text: links.join(' | '),
+            alignment: 'center',
+          })
+        );
+      }
+
+      sections.push(new Paragraph({ text: '' })); // Empty line
+
+      // Summary
+      if (resumeData.summary) {
+        sections.push(
+          new Paragraph({
+            text: 'SUMMARY',
+            heading: HeadingLevel.HEADING_2,
+          }),
+          new Paragraph({ text: resumeData.summary }),
+          new Paragraph({ text: '' })
+        );
+      }
+
+      // Experience
+      if (resumeData.experience?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'EXPERIENCE',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.experience.forEach((exp) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${exp.title} at ${exp.company}`, bold: true }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${exp.location} | ${exp.startDate} - ${exp.endDate || 'Present'}`, italics: true }),
+              ],
+            })
+          );
+          exp.description.forEach((desc) => {
+            sections.push(new Paragraph({ text: `• ${desc}` }));
+          });
+          sections.push(new Paragraph({ text: '' }));
+        });
+      }
+
+      // Education
+      if (resumeData.education?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'EDUCATION',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.education.forEach((edu) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${edu.degree} in ${edu.field}`, bold: true }),
+              ],
+            }),
+            new Paragraph({ text: `${edu.school} | ${edu.graduationDate}` })
+          );
+          if (edu.gpa) {
+            sections.push(new Paragraph({ text: `GPA: ${edu.gpa}` }));
+          }
+          sections.push(new Paragraph({ text: '' }));
+        });
+      }
+
+      // Skills
+      if (resumeData.skills?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'SKILLS',
+            heading: HeadingLevel.HEADING_2,
+          }),
+          new Paragraph({ text: resumeData.skills.join(', ') }),
+          new Paragraph({ text: '' })
+        );
+      }
+
+      // Certifications
+      if (resumeData.certifications?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'CERTIFICATIONS',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.certifications.forEach((cert) => {
+          sections.push(new Paragraph({ text: `${cert.name} - ${cert.issuer} (${cert.date})` }));
+        });
+        sections.push(new Paragraph({ text: '' }));
+      }
+
+      // Projects
+      if (resumeData.projects?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'PROJECTS',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.projects.forEach((proj) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: proj.name, bold: true }),
+              ],
+            }),
+            new Paragraph({ text: proj.description }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `Technologies: ${proj.technologies.join(', ')}`, italics: true }),
+              ],
+            })
+          );
+          if (proj.url) {
+            sections.push(new Paragraph({ text: `URL: ${proj.url}` }));
+          }
+          sections.push(new Paragraph({ text: '' }));
+        });
+      }
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: sections,
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="${resume.title.replace(/[^a-z0-9]/gi, '_')}.docx"`);
+      res.send(buffer);
+      console.log('[API] DOCX exported successfully:', id, 'user:', userId);
+    } catch (error) {
+      console.error('[API] Error exporting DOCX:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to export DOCX",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "DOCX_EXPORT_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/export/cover-letter/pdf/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Exporting cover letter as PDF:', id, 'user:', userId);
+      
+      // Validate user owns the cover letter
+      const coverLetter = await storage.getCoverLetter(id);
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Generate PDF
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="cover_letter.pdf"`);
+        res.send(pdfBuffer);
+        console.log('[API] Cover letter PDF exported successfully:', id, 'user:', userId);
+      });
+
+      doc.fontSize(12).text(coverLetter.content, {
+        align: 'left',
+        lineGap: 5,
+      });
+
+      doc.end();
+    } catch (error) {
+      console.error('[API] Error exporting cover letter PDF:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to export cover letter PDF",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTER_PDF_EXPORT_ERROR"
+      });
     }
   });
 
