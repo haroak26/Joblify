@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { JobCard } from "@/components/job-card";
 import { JobFilters, type SourceFilter, type StatusFilter, type TimeFilter } from "@/components/job-filters";
 import { EmptyState } from "@/components/empty-state";
 import { JobListSkeleton } from "@/components/loading-skeleton";
+import { SearchLoadingOverlay } from "@/components/search-loading-overlay";
 import type { JobPost, FreelancerProfile } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { parseApiError } from "@/lib/utils";
@@ -102,19 +103,42 @@ export default function MyJobs() {
     },
   });
 
+  // Use ref to track if search was started (for background processing)
+  const searchStartedRef = useRef(false);
+  
+  // Check for ongoing search on mount (in case user navigated away and back)
+  useEffect(() => {
+    const ongoingSearch = sessionStorage.getItem('jobSearchInProgress');
+    if (ongoingSearch === 'true' && !refreshJobsMutation.isPending) {
+      // Search might have completed while user was away, refresh jobs
+      queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
+      sessionStorage.removeItem('jobSearchInProgress');
+    }
+  }, []);
+
   const refreshJobsMutation = useMutation({
     mutationFn: async () => {
+      // Mark search as in progress (persists across tab switches)
+      sessionStorage.setItem('jobSearchInProgress', 'true');
+      searchStartedRef.current = true;
+      
       const response = await apiRequest('POST', '/api/jobs/refresh');
       return response.json();
     },
     onSuccess: (data) => {
+      sessionStorage.removeItem('jobSearchInProgress');
+      searchStartedRef.current = false;
       toast({
         title: 'Jobs updated!',
-        description: `Found ${data.count} new opportunities`
+        description: data.count > 0 
+          ? `Found ${data.count} new ${data.count === 1 ? 'opportunity' : 'opportunities'}`
+          : 'Search completed. Try again later for new opportunities.'
       });
       queryClient.invalidateQueries({ queryKey: ['/api/jobs'] });
     },
     onError: (error: any) => {
+      sessionStorage.removeItem('jobSearchInProgress');
+      searchStartedRef.current = false;
       const errorMessage = parseApiError(error);
       toast({
         title: 'Scraping failed',
@@ -224,36 +248,40 @@ export default function MyJobs() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8 flex-wrap">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-jobs-heading">
-            My Jobs
-            {hasJobs && (
-              <span className="block sm:inline sm:ml-4 text-muted-foreground font-normal text-lg sm:text-xl">
-                ({jobs.length})
-              </span>
-            )}
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          {hasSkills && (
-            <Button
-              onClick={() => refreshJobsMutation.mutate()}
-              disabled={refreshJobsMutation.isPending}
-              className="gap-2 w-full sm:w-auto"
-              data-testid="button-refresh-jobs"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? 'animate-spin' : ''}`} />
-              {refreshJobsMutation.isPending ? 'Searching...' : 'Search Jobs'}
-            </Button>
-          )}
-          {hasJobs && (
-            <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
+    <>
+      {/* Search Loading Overlay */}
+      <SearchLoadingOverlay isSearching={refreshJobsMutation.isPending} />
+      
+      <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8 flex-wrap">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-jobs-heading">
+              My Jobs
+              {hasJobs && (
+                <span className="block sm:inline sm:ml-4 text-muted-foreground font-normal text-lg sm:text-xl">
+                  ({jobs.length})
+                </span>
+              )}
+            </h1>
+            <p className="text-base sm:text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            {hasSkills && (
               <Button
-                variant={viewMode === "list" ? "secondary" : "ghost"}
-                size="icon"
+                onClick={() => refreshJobsMutation.mutate()}
+                disabled={refreshJobsMutation.isPending}
+                className="gap-2 w-full sm:w-auto"
+                data-testid="button-refresh-jobs"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? 'animate-spin' : ''}`} />
+                {refreshJobsMutation.isPending ? 'Searching...' : 'Search Jobs'}
+              </Button>
+            )}
+            {hasJobs && (
+              <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="icon"
                 className="h-9 w-9"
                 onClick={() => setViewMode("list")}
                 data-testid="button-view-list"
@@ -308,5 +336,6 @@ export default function MyJobs() {
         </div>
       )}
     </div>
+    </>
   );
 }

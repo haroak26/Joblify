@@ -327,14 +327,24 @@ export async function registerRoutes(
         });
       }
       
-      console.log('[API] Starting job scraping for user:', userId, '- skills:', profile.skills.length);
+      // Calculate how many jobs user can still receive based on plan limits
+      const defaultJobsPerScan = 5;
+      let maxJobsToReturn = defaultJobsPerScan;
+      
+      if (limits.maxJobsPerMonth !== Infinity) {
+        const remainingJobs = limits.maxJobsPerMonth - usage.jobsScrapedThisMonth;
+        maxJobsToReturn = Math.min(defaultJobsPerScan, remainingJobs);
+        console.log('[API] Plan-aware job limit for user:', userId, '- remaining:', remainingJobs, 'returning max:', maxJobsToReturn);
+      }
+      
+      console.log('[API] Starting job scraping for user:', userId, '- skills:', profile.skills.length, 'maxJobs:', maxJobsToReturn);
       const { scrapeJobs } = await import('./scrapers/index');
-      const jobs = await scrapeJobs(profile.intro, profile.skills);
+      const jobs = await scrapeJobs(profile.intro, profile.skills, maxJobsToReturn);
       console.log('[API] Scraping completed for user:', userId, '- jobs found:', jobs.length);
       
       await storage.saveJobs(userId, jobs);
       
-      // Increment usage (5 jobs max per scrape)
+      // Increment usage by actual jobs found
       await storage.incrementJobsScraped(userId, jobs.length);
       console.log('[API] Jobs saved and usage updated for user:', userId);
       
