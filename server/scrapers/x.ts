@@ -8,6 +8,12 @@ interface XScraperParams {
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 const SCRAPER_TIMEOUT = 60000; // 60 seconds
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_TIMEOUT = 300000; // 5 minutes
+
+// Circuit breaker state
+let circuitBreakerFailures = 0;
+let circuitBreakerOpenUntil = 0;
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -19,6 +25,14 @@ export async function scrapeXJobs(params: XScraperParams) {
   if (!token) {
     console.error('[X Scraper] APIFY_TOKEN not configured');
     throw new Error('APIFY_TOKEN environment variable is not set');
+  }
+
+  // Check circuit breaker
+  const now = Date.now();
+  if (circuitBreakerOpenUntil > now) {
+    const waitTime = Math.round((circuitBreakerOpenUntil - now) / 1000);
+    console.warn(`[X Scraper] Circuit breaker is open. Waiting ${waitTime}s before retry.`);
+    throw new Error(`Circuit breaker open. Try again in ${waitTime} seconds.`);
   }
 
   // Validate input parameters
@@ -64,6 +78,9 @@ export async function scrapeXJobs(params: XScraperParams) {
       const { items } = await client.dataset(run.defaultDatasetId).listItems();
       console.log(`[X Scraper] Success - Found ${items.length} items`);
       
+      // Reset circuit breaker on success
+      circuitBreakerFailures = 0;
+      
       // Handle empty results gracefully
       if (!items || items.length === 0) {
         console.log('[X Scraper] No items found in results');
@@ -80,6 +97,13 @@ export async function scrapeXJobs(params: XScraperParams) {
         await sleep(delay);
       }
     }
+  }
+  
+  // Increment circuit breaker failures
+  circuitBreakerFailures++;
+  if (circuitBreakerFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+    circuitBreakerOpenUntil = Date.now() + CIRCUIT_BREAKER_TIMEOUT;
+    console.error(`[X Scraper] Circuit breaker opened until ${new Date(circuitBreakerOpenUntil).toISOString()}`);
   }
   
   console.error('[X Scraper] All retry attempts exhausted');
