@@ -3,10 +3,12 @@ import {
   type Subscription, type Usage, type PlanType, PLAN_LIMITS, normalizePlan,
   type Schedule, type InsertSchedule, type SeenJob,
   type JobCache, type InsertJobCache,
-  users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache 
+  type Resume, type InsertResume, type ChatConversation, type InsertChatConversation,
+  users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache,
+  resumes, chatConversations, resumeDataSchema
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray, lte, isNotNull, gte, or, sql } from "drizzle-orm";
+import { eq, and, inArray, lte, isNotNull, gte, or, sql, count } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -67,6 +69,23 @@ export interface IStorage {
   searchJobCache(tags: string[], limit?: number): Promise<JobCache[]>;
   cleanupExpiredCachedJobs(): Promise<number>;
   getCachedJobByUrl(sourceUrl: string): Promise<JobCache | undefined>;
+  
+  // Resume methods
+  getResumes(userId: string): Promise<Resume[]>;
+  getResume(id: string): Promise<Resume | undefined>;
+  createResume(userId: string, data: InsertResume): Promise<Resume>;
+  updateResume(id: string, updates: Partial<InsertResume>): Promise<Resume>;
+  deleteResume(id: string): Promise<void>;
+  countUserResumes(userId: string): Promise<number>;
+  
+  // Chat methods
+  getChatConversation(resumeId: string): Promise<ChatConversation | undefined>;
+  createChatConversation(userId: string, resumeId: string): Promise<ChatConversation>;
+  updateChatConversation(id: string, messages: unknown[]): Promise<ChatConversation>;
+  
+  // AI Usage methods
+  incrementAiEdits(userId: string): Promise<void>;
+  canUseAiEdit(userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -860,6 +879,114 @@ export class DatabaseStorage implements IStorage {
       .where(eq(jobCache.sourceUrl, sourceUrl));
     
     return cached || undefined;
+  }
+  
+  // Resume methods
+  async getResumes(userId: string): Promise<Resume[]> {
+    const userResumes = await db
+      .select()
+      .from(resumes)
+      .where(eq(resumes.userId, userId))
+      .orderBy(sql`${resumes.updatedAt} DESC`);
+    return userResumes;
+  }
+  
+  async getResume(id: string): Promise<Resume | undefined> {
+    const [resume] = await db
+      .select()
+      .from(resumes)
+      .where(eq(resumes.id, id));
+    return resume || undefined;
+  }
+  
+  async createResume(userId: string, data: InsertResume): Promise<Resume> {
+    const [resume] = await db
+      .insert(resumes)
+      .values({
+        userId,
+        title: data.title,
+        template: data.template || 'modern',
+        resumeData: data.resumeData,
+      })
+      .returning();
+    return resume;
+  }
+  
+  async updateResume(id: string, updates: Partial<InsertResume>): Promise<Resume> {
+    const [resume] = await db
+      .update(resumes)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(resumes.id, id))
+      .returning();
+    return resume;
+  }
+  
+  async deleteResume(id: string): Promise<void> {
+    await db.delete(resumes).where(eq(resumes.id, id));
+  }
+  
+  async countUserResumes(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(resumes)
+      .where(eq(resumes.userId, userId));
+    return result[0]?.count || 0;
+  }
+  
+  // Chat methods
+  async getChatConversation(resumeId: string): Promise<ChatConversation | undefined> {
+    const [conversation] = await db
+      .select()
+      .from(chatConversations)
+      .where(eq(chatConversations.resumeId, resumeId));
+    return conversation || undefined;
+  }
+  
+  async createChatConversation(userId: string, resumeId: string): Promise<ChatConversation> {
+    const [conversation] = await db
+      .insert(chatConversations)
+      .values({
+        userId,
+        resumeId,
+        messages: [],
+      })
+      .returning();
+    return conversation;
+  }
+  
+  async updateChatConversation(id: string, messages: unknown[]): Promise<ChatConversation> {
+    const [conversation] = await db
+      .update(chatConversations)
+      .set({
+        messages,
+        updatedAt: new Date(),
+      })
+      .where(eq(chatConversations.id, id))
+      .returning();
+    return conversation;
+  }
+  
+  // AI Usage methods
+  async incrementAiEdits(userId: string): Promise<void> {
+    const userUsage = await this.getUsage(userId);
+    await db
+      .update(usage)
+      .set({
+        aiEditsThisMonth: userUsage.aiEditsThisMonth + 1,
+      })
+      .where(eq(usage.userId, userId));
+  }
+  
+  async canUseAiEdit(userId: string): Promise<boolean> {
+    const userUsage = await this.checkAndResetMonthlyUsage(userId);
+    const subscription = await this.getSubscription(userId);
+    const plan = normalizePlan(subscription?.plan);
+    const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+    
+    return userUsage.aiEditsThisMonth < planLimits.maxAiEditsPerMonth;
   }
 }
 

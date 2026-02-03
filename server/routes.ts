@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { skillSchema, PLAN_LIMITS, normalizePlan } from "@shared/schema";
+import { skillSchema, PLAN_LIMITS, normalizePlan, resumeDataSchema } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
@@ -277,6 +277,729 @@ export async function registerRoutes(
       }
     }
   });
+
+  // ============================================
+  // Resume Management Endpoints
+  // ============================================
+  
+  app.get("/api/resumes", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Fetching resumes for user:', userId);
+      const resumes = await storage.getResumes(userId);
+      res.json({ resumes });
+    } catch (error) {
+      console.error('[API] Error fetching resumes for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch resumes",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUMES_FETCH_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/resumes", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Creating resume for user:', userId);
+      const schema = z.object({
+        title: z.string().min(1, "Title is required"),
+        template: z.enum(['modern', 'classic', 'creative']).optional().default('modern'),
+      });
+      
+      const data = schema.parse(req.body);
+      
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      const resumeCount = await storage.countUserResumes(userId);
+      
+      if (limits.maxResumes !== Infinity && resumeCount >= limits.maxResumes) {
+        console.log('[API] Resume limit reached for user:', userId, '- limit:', limits.maxResumes);
+        return res.status(403).json({
+          error: 'Resume limit reached',
+          code: 'RESUME_LIMIT',
+          limit: limits.maxResumes,
+          current: resumeCount,
+          message: `Your ${plan} plan allows up to ${limits.maxResumes} resume(s). Upgrade to create more.`
+        });
+      }
+      
+      // Create empty resume data structure
+      const emptyResumeData = {
+        personalInfo: {
+          name: "",
+          email: "",
+          phone: "",
+          location: "",
+          linkedin: "",
+          website: "",
+        },
+        summary: "",
+        experience: [],
+        education: [],
+        skills: [],
+        certifications: [],
+        projects: [],
+      };
+      
+      const resume = await storage.createResume(userId, {
+        userId,
+        title: data.title,
+        template: data.template,
+        resumeData: emptyResumeData,
+      });
+      
+      console.log('[API] Resume created:', resume.id, 'user:', userId);
+      res.json({ resume });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Resume validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid resume data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error creating resume for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to create resume",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "RESUME_CREATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.get("/api/resumes/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Fetching resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      res.json({ resume });
+    } catch (error) {
+      console.error('[API] Error fetching resume:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUME_FETCH_ERROR"
+      });
+    }
+  });
+
+  app.put("/api/resumes/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Updating resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      const schema = z.object({
+        title: z.string().min(1).optional(),
+        template: z.enum(['modern', 'classic', 'creative']).optional(),
+        resumeData: z.any().optional(),
+      });
+      
+      const updates = schema.parse(req.body);
+      const updated = await storage.updateResume(id, updates);
+      
+      console.log('[API] Resume updated:', id, 'user:', userId);
+      res.json({ resume: updated });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Resume validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid resume data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error updating resume:', id, 'user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to update resume",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "RESUME_UPDATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.delete("/api/resumes/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Deleting resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      await storage.deleteResume(id);
+      console.log('[API] Resume deleted:', id, 'user:', userId);
+      res.json({ message: "Resume deleted successfully" });
+    } catch (error) {
+      console.error('[API] Error deleting resume:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to delete resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUME_DELETE_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/resumes/:id/duplicate", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Duplicating resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      const resumeCount = await storage.countUserResumes(userId);
+      
+      if (limits.maxResumes !== Infinity && resumeCount >= limits.maxResumes) {
+        console.log('[API] Resume limit reached for user:', userId, '- limit:', limits.maxResumes);
+        return res.status(403).json({
+          error: 'Resume limit reached',
+          code: 'RESUME_LIMIT',
+          limit: limits.maxResumes,
+          current: resumeCount,
+          message: `Your ${plan} plan allows up to ${limits.maxResumes} resume(s). Upgrade to create more.`
+        });
+      }
+      
+      const newResume = await storage.createResume(userId, {
+        userId,
+        title: `${resume.title} (Copy)`,
+        template: resume.template,
+        resumeData: resume.resumeData,
+      });
+      
+      console.log('[API] Resume duplicated:', id, '-> new id:', newResume.id, 'user:', userId);
+      res.json({ resume: newResume });
+    } catch (error) {
+      console.error('[API] Error duplicating resume:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to duplicate resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUME_DUPLICATE_ERROR"
+      });
+    }
+  });
+
+  // ============================================
+  // AI Chat Endpoints
+  // ============================================
+  
+  const RESUME_CHAT_SYSTEM_PROMPT = `You are a professional resume builder assistant. Help users create great resumes through natural conversation.
+
+Your goals:
+1. Ask about their experience, education, and skills one section at a time
+2. Extract structured information from their responses
+3. Provide helpful suggestions to improve their resume content
+4. Be encouraging and professional
+
+When the user provides information, respond in this format:
+{
+  "message": "Your conversational response to the user",
+  "extracted_data": {
+    // Include any resume fields you can extract from their response
+    // e.g., "experience": [{"company": "Google", "title": "Engineer", ...}]
+  }
+}
+
+Start by asking about their current or target job title.`;
+
+  app.post("/api/chat/resume/:id/message", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const resumeId = req.params.id as string;
+    try {
+      console.log('[API] Chat message for resume:', resumeId, 'user:', userId);
+      const schema = z.object({
+        message: z.string().min(1, "Message is required"),
+      });
+      
+      const { message } = schema.parse(req.body);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        console.log('[API] Resume not found:', resumeId);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', resumeId, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      // Get or create chat conversation
+      let conversation = await storage.getChatConversation(resumeId);
+      if (!conversation) {
+        conversation = await storage.createChatConversation(userId, resumeId);
+        console.log('[API] Created new chat conversation for resume:', resumeId);
+      }
+      
+      // Build messages array
+      const messages = conversation.messages as Array<{ role: string; content: string }>;
+      const chatMessages = [
+        { role: "system" as const, content: RESUME_CHAT_SYSTEM_PROMPT },
+        ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+        { role: "user" as const, content: message },
+      ];
+      
+      // Send to AI
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: chatMessages,
+        max_tokens: 1000,
+      });
+      
+      const aiResponse = response.choices[0]?.message?.content || "I'm sorry, I couldn't process that.";
+      console.log('[API] AI response received for resume:', resumeId);
+      
+      // Save messages to conversation
+      const updatedMessages = [
+        ...messages,
+        { role: "user", content: message, timestamp: new Date().toISOString() },
+        { role: "assistant", content: aiResponse, timestamp: new Date().toISOString() },
+      ];
+      
+      await storage.updateChatConversation(conversation.id, updatedMessages);
+      
+      // Try to parse AI response for extracted data
+      let extractedData = null;
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleanContent);
+        if (parsed.extracted_data) {
+          extractedData = parsed.extracted_data;
+          
+          // Update resume with extracted data
+          const currentData = resume.resumeData;
+          const updatedResumeData = { ...currentData };
+          
+          // Merge extracted data into resume
+          for (const [key, value] of Object.entries(extractedData)) {
+            if (Array.isArray(value) && Array.isArray(currentData[key as keyof typeof currentData])) {
+              updatedResumeData[key as keyof typeof currentData] = [...(currentData[key as keyof typeof currentData] as unknown[]), ...value] as never;
+            } else if (value) {
+              updatedResumeData[key as keyof typeof currentData] = value as never;
+            }
+          }
+          
+          // Validate the updated data
+          const validatedData = resumeDataSchema.parse(updatedResumeData);
+          await storage.updateResume(resumeId, { resumeData: validatedData });
+          console.log('[API] Resume updated with extracted data:', resumeId);
+        }
+      } catch (parseError) {
+        // If parsing fails, just send the response as-is
+        console.log('[API] Could not parse AI response for data extraction:', parseError);
+      }
+      
+      res.json({ 
+        response: aiResponse,
+        extractedData,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Chat validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid message data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error in chat for resume:', resumeId, 'user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to process chat message",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "CHAT_ERROR"
+        });
+      }
+    }
+  });
+
+  app.get("/api/chat/resume/:id/history", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const resumeId = req.params.id as string;
+    try {
+      console.log('[API] Fetching chat history for resume:', resumeId, 'user:', userId);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        console.log('[API] Resume not found:', resumeId);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', resumeId, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      const conversation = await storage.getChatConversation(resumeId);
+      const messages = conversation?.messages || [];
+      
+      res.json({ messages });
+    } catch (error) {
+      console.error('[API] Error fetching chat history for resume:', resumeId, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch chat history",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "CHAT_HISTORY_ERROR"
+      });
+    }
+  });
+
+  // ============================================
+  // AI Enhancement Endpoints
+  // ============================================
+  
+  app.post("/api/ai/improve-content", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI improve content for user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+        section: z.string().min(1, "Section is required"),
+      });
+      
+      const { content, section } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional resume editor. Improve the following ${section} section to be more professional, impactful, and ATS-friendly. Keep the same information but make it more compelling. Return only the improved content without any explanations.`
+          },
+          {
+            role: "user",
+            content,
+          }
+        ],
+        max_tokens: 500,
+      });
+      
+      const improved = response.choices[0]?.message?.content || content;
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI content improved for user:', userId);
+      
+      res.json({ improved });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI improve validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error improving content for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to improve content",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  app.post("/api/ai/suggest-keywords", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI suggest keywords for user:', userId);
+      const schema = z.object({
+        jobTitle: z.string().min(1, "Job title is required"),
+        industry: z.string().optional(),
+      });
+      
+      const { jobTitle, industry } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const industryContext = industry ? ` in the ${industry} industry` : '';
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a resume keyword expert. Suggest 10-15 relevant keywords and skills for a ${jobTitle}${industryContext} that would help a resume pass ATS systems. Return only a JSON array of keywords, nothing else. Example: ["Python", "Machine Learning", "Data Analysis"]`
+          },
+          {
+            role: "user",
+            content: `Job title: ${jobTitle}${industryContext}`
+          }
+        ],
+        max_tokens: 300,
+      });
+      
+      const content = response.choices[0]?.message?.content || '[]';
+      let keywords: string[] = [];
+      
+      try {
+        const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleanContent);
+        keywords = Array.isArray(parsed) ? parsed : [];
+      } catch (parseError) {
+        console.error('[API] Failed to parse AI keywords response:', parseError);
+      }
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI keywords suggested for user:', userId);
+      
+      res.json({ keywords });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI keywords validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error suggesting keywords for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to suggest keywords",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  app.post("/api/ai/check-grammar", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI check grammar for user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+      });
+      
+      const { content } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a grammar and spelling checker. Check the following text for grammar and spelling errors. Return a JSON object with: { "corrected": "the corrected text", "changes": ["list of changes made"] }. If no changes are needed, return the original text with an empty changes array.`
+          },
+          {
+            role: "user",
+            content,
+          }
+        ],
+        max_tokens: 500,
+      });
+      
+      const aiResponse = response.choices[0]?.message?.content || '{}';
+      let result = { corrected: content, changes: [] as string[] };
+      
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleanContent);
+        result = {
+          corrected: parsed.corrected || content,
+          changes: parsed.changes || [],
+        };
+      } catch (parseError) {
+        console.error('[API] Failed to parse AI grammar response:', parseError);
+      }
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI grammar check completed for user:', userId);
+      
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI grammar validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error checking grammar for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to check grammar",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  app.post("/api/ai/adjust-tone", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI adjust tone for user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+        tone: z.enum(['professional', 'creative', 'technical']),
+      });
+      
+      const { content, tone } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const toneDescriptions = {
+        professional: "formal, corporate, and business-appropriate",
+        creative: "engaging, unique, and personality-driven",
+        technical: "precise, detailed, and industry-specific"
+      };
+      
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional writer. Rewrite the following text in a ${toneDescriptions[tone]} tone. Keep the same information but adjust the language and style. Return only the rewritten text without any explanations.`
+          },
+          {
+            role: "user",
+            content,
+          }
+        ],
+        max_tokens: 500,
+      });
+      
+      const rewritten = response.choices[0]?.message?.content || content;
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI tone adjusted for user:', userId, 'tone:', tone);
+      
+      res.json({ rewritten });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI tone validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error adjusting tone for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to adjust tone",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  // ============================================
+  // Job Management Endpoints (Legacy - will be removed)
+  // ============================================
 
   app.get("/api/jobs", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;

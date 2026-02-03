@@ -359,12 +359,54 @@ export type CachedJob = z.infer<typeof cachedJobSchema>;
 // Resume Builder Tables
 // ============================================
 
+// Resume types and schemas (defined before tables to use in type annotations)
+export const resumeDataSchema = z.object({
+  personalInfo: z.object({
+    name: z.string().default(""),
+    email: z.string().email().optional().or(z.literal("")),
+    phone: z.string().default(""),
+    location: z.string().default(""),
+    linkedin: z.string().url().optional().or(z.literal("")),
+    website: z.string().url().optional().or(z.literal("")),
+  }),
+  summary: z.string().default(""),
+  experience: z.array(z.object({
+    company: z.string(),
+    title: z.string(),
+    location: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullable(),
+    description: z.array(z.string()),
+  })).default([]),
+  education: z.array(z.object({
+    school: z.string(),
+    degree: z.string(),
+    field: z.string(),
+    graduationDate: z.string(),
+    gpa: z.string().optional(),
+  })).default([]),
+  skills: z.array(z.string()).default([]),
+  certifications: z.array(z.object({
+    name: z.string(),
+    issuer: z.string(),
+    date: z.string(),
+  })).optional().default([]),
+  projects: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    technologies: z.array(z.string()),
+    url: z.string().url().optional().or(z.literal("")),
+  })).optional().default([]),
+});
+
+export type ResumeData = z.infer<typeof resumeDataSchema>;
+
 export const resumes = pgTable("resumes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   template: varchar("template").notNull().default("modern"), // 'modern', 'classic', 'creative'
-  resumeData: jsonb("resume_data").notNull(),
+  resumeData: jsonb("resume_data").notNull().$type<ResumeData>(),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
 });
@@ -418,48 +460,6 @@ export const coverLettersRelations = relations(coverLetters, ({ one }) => ({
     references: [resumes.id],
   }),
 }));
-
-// Resume types and schemas
-export const resumeDataSchema = z.object({
-  personalInfo: z.object({
-    name: z.string().default(""),
-    email: z.string().email().optional().or(z.literal("")),
-    phone: z.string().default(""),
-    location: z.string().default(""),
-    linkedin: z.string().url().optional().or(z.literal("")),
-    website: z.string().url().optional().or(z.literal("")),
-  }),
-  summary: z.string().default(""),
-  experience: z.array(z.object({
-    company: z.string(),
-    title: z.string(),
-    location: z.string(),
-    startDate: z.string(),
-    endDate: z.string().nullable(),
-    description: z.array(z.string()),
-  })).default([]),
-  education: z.array(z.object({
-    school: z.string(),
-    degree: z.string(),
-    field: z.string(),
-    graduationDate: z.string(),
-    gpa: z.string().optional(),
-  })).default([]),
-  skills: z.array(z.string()).default([]),
-  certifications: z.array(z.object({
-    name: z.string(),
-    issuer: z.string(),
-    date: z.string(),
-  })).optional().default([]),
-  projects: z.array(z.object({
-    name: z.string(),
-    description: z.string(),
-    technologies: z.array(z.string()),
-    url: z.string().url().optional().or(z.literal("")),
-  })).optional().default([]),
-});
-
-export type ResumeData = z.infer<typeof resumeDataSchema>;
 
 export const insertResumeSchema = createInsertSchema(resumes).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertResume = z.infer<typeof insertResumeSchema>;
