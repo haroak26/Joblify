@@ -792,7 +792,9 @@ export class DatabaseStorage implements IStorage {
               description: job.description,
               tags: job.tags,
               budget: job.budget,
-              scrapedAt: new Date(), // Refresh timestamp - tracks when we last encountered this job
+              // Update scrapedAt to track when we last saw/refreshed this job in our scrapers
+              // This helps us understand cache freshness even if the job itself is older
+              scrapedAt: new Date(),
             },
           })
           .returning();
