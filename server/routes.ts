@@ -217,7 +217,7 @@ export async function registerRoutes(
       console.log('[API] Intro validated - length:', intro.length);
       
       const response = await getPoeClient().chat.completions.create({
-        model: "gpt-5-nano",
+        model: "claude-3.5-haiku",
         messages: [
           {
             role: "system",
@@ -445,7 +445,7 @@ Write a ${tone} outreach message for this job opportunity.`;
 
       const poeClient = getPoeClient();
       const response = await poeClient.chat.completions.create({
-        model: "gpt-5-nano",
+        model: "claude-3.5-haiku",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }

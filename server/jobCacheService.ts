@@ -40,7 +40,7 @@ Return ONLY a JSON array of lowercase tags, nothing else.
 Example: ["web development", "react", "frontend", "remote", "freelance"]`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-nano',
+      model: 'claude-3.5-haiku',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
       response_format: { type: "json_object" }
@@ -253,7 +253,7 @@ Return ONLY a JSON array of lowercase tags.
 Example: ["web development", "design", "marketing"]`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-nano',
+      model: 'claude-3.5-haiku',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
       max_tokens: 100,

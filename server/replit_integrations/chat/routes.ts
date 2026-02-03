@@ -82,7 +82,7 @@ export function registerChatRoutes(app: Express): void {
 
       // Stream response from Poe
       const stream = await openai.chat.completions.create({
-        model: "gpt-5-nano",
+        model: "claude-3.5-haiku",
         messages: chatMessages,
         stream: true,
         max_completion_tokens: 2048,
