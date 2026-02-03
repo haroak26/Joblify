@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Briefcase, Wand2, Calendar, LogOut, Sparkles, User } from "lucide-react";
+import { Home, FileText, Scan, Mail, LogOut, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -29,19 +29,19 @@ const mainMenuItems = [
     icon: Home,
   },
   {
-    title: "Jobs",
-    url: "/dashboard/jobs",
-    icon: Briefcase,
+    title: "My Resumes",
+    url: "/dashboard/resumes",
+    icon: FileText,
   },
   {
-    title: "Generator",
-    url: "/dashboard/generator",
-    icon: Wand2,
+    title: "ATS Scanner",
+    url: "/dashboard/ats-scanner",
+    icon: Scan,
   },
   {
-    title: "Schedules",
-    url: "/dashboard/schedules",
-    icon: Calendar,
+    title: "Cover Letters",
+    url: "/dashboard/cover-letter",
+    icon: Mail,
   },
 ];
 
@@ -81,7 +81,7 @@ export function AppSidebar() {
         <Link href={logoHref}>
           <div className="flex items-center gap-3 cursor-pointer group" data-testid="link-logo">
             <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-              <Briefcase className="w-4 h-4 text-primary-foreground" />
+              <FileText className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="font-bold text-lg tracking-tight text-sidebar-foreground" data-testid="text-sidebar-logo">
               Joblify

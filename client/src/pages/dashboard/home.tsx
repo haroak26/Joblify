@@ -1,188 +1,181 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Briefcase, DollarSign, Search, RefreshCw, TrendingUp, Clock, Sparkles } from "lucide-react";
-import { ProfileSetup } from "@/components/profile-setup";
-import { SkillsSkeleton } from "@/components/loading-skeleton";
-import type { Skill, JobPost, FreelancerProfile } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { parseApiError } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { FileText, Plus, Scan, Mail, ArrowRight } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function DashboardHome() {
-  const [isEditing, setIsEditing] = useState(false);
-  const { toast } = useToast();
-
-  const profileQuery = useQuery<FreelancerProfile>({
-    queryKey: ["/api/profile"],
+  const { user } = useAuth();
+  
+  const { data: resumes, isLoading: resumesLoading } = useQuery({
+    queryKey: ["/api/resumes"],
   });
 
-  const jobsQuery = useQuery<{ jobs: JobPost[] }>({
-    queryKey: ["/api/jobs"],
+  const { data: subscription } = useQuery({
+    queryKey: ["/api/subscription"],
   });
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (profile: Partial<FreelancerProfile>) => {
-      const response = await apiRequest("POST", "/api/profile", profile);
-      return response.json();
-    },
-    onMutate: async (nextProfile) => {
-      await queryClient.cancelQueries({ queryKey: ["/api/profile"] });
-      const previousProfile = queryClient.getQueryData<FreelancerProfile>(["/api/profile"]);
-      const optimisticProfile: FreelancerProfile = {
-        intro: nextProfile.intro ?? previousProfile?.intro ?? "",
-        skills: nextProfile.skills ?? previousProfile?.skills ?? [],
-        isComplete: nextProfile.isComplete ?? previousProfile?.isComplete ?? false,
-      };
-      queryClient.setQueryData(["/api/profile"], optimisticProfile);
-      return { previousProfile };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousProfile) {
-        queryClient.setQueryData(["/api/profile"], context.previousProfile);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-    },
-  });
-
-  const profile = profileQuery.data ?? { intro: "", skills: [], isComplete: false };
-  const jobs = jobsQuery.data?.jobs ?? [];
-  const savedJobs = jobs.filter(j => j.saved);
-  const appliedJobs = jobs.filter(j => j.applied);
-
-  const totalValue = jobs.reduce((sum, job) => {
-    if (job.budget) {
-      const match = job.budget.match(/\$?([\d,]+)/);
-      if (match) {
-        return sum + parseInt(match[1].replace(',', ''));
-      }
-    }
-    return sum;
-  }, 0);
-
-  const handleIntroChange = (intro: string) => {
-    updateProfileMutation.mutate({ ...profile, intro });
-  };
-
-  const handleSkillsChange = (skills: Skill[]) => {
-    updateProfileMutation.mutate({ ...profile, skills });
-  };
-
-  const handleCompleteProfile = () => {
-    updateProfileMutation.mutate({ ...profile, isComplete: true });
-    setIsEditing(false);
-  };
-
-  const hasSkills = profile.skills.length > 0;
-  const showProfileSetup = !profile.isComplete || isEditing;
+  const resumeCount = resumes?.length || 0;
+  const maxResumes = subscription?.limits?.maxResumes === -1 ? '∞' : subscription?.limits?.maxResumes;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-home-heading">Dashboard</h1>
-        <p className="text-muted-foreground text-base sm:text-lg">Welcome back! Here's a quick look at your freelance funnel.</p>
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.username}!</h1>
+        <p className="text-muted-foreground">Build your perfect resume with AI assistance</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-        {[
-          { label: "Opportunities", value: jobs.length, icon: Briefcase },
-          { label: "Est. Value", value: `$${totalValue.toLocaleString()}`, icon: DollarSign },
-          { label: "Saved", value: savedJobs.length, icon: TrendingUp },
-          { label: "Applied", value: appliedJobs.length, icon: Clock },
-        ].map((stat) => (
-          <Card key={stat.label} className="border border-border/60 bg-card/80 shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <stat.icon className="w-5 h-5" />
-                <span className="text-xs font-medium uppercase tracking-wider">{stat.label}</span>
+      {/* Quick Stats */}
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">My Resumes</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{resumeCount} / {maxResumes}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {maxResumes === '∞' ? 'Unlimited plan' : `${maxResumes - resumeCount} remaining`}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Plan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold capitalize">
+              {subscription?.subscription?.plan || 'Free'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {subscription?.limits?.maxAiEditsPerMonth === -1 
+                ? 'Unlimited AI edits' 
+                : `${subscription?.limits?.maxAiEditsPerMonth || 5} AI edits/month`
+              }
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Quick Action</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/resumes/new">
+              <Button className="w-full">
+                <Plus className="w-4 h-4 mr-2" />
+                New Resume
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <Card className="hover:border-primary transition-colors cursor-pointer">
+          <Link href="/dashboard/resumes">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">My Resumes</CardTitle>
               </div>
+              <CardDescription>View and manage all your resumes</CardDescription>
             </CardHeader>
             <CardContent>
-              <p
-                className="text-3xl sm:text-4xl font-bold"
-                data-testid={`text-${stat.label.toLowerCase().replace(" ", "-")}`}
-              >
-                {stat.value}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="pt-10 border-t space-y-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8 flex-wrap">
-          <div className="space-y-2">
-            <h2 className="text-xl font-semibold">Ready to find work?</h2>
-            <p className="text-base text-muted-foreground">Search social media for freelance opportunities matching your skills.</p>
-          </div>
-          <div className="flex flex-wrap gap-3 items-start w-full sm:w-auto">
-            {!showProfileSetup && (
-              <Button
-                variant="outline"
-                className="gap-2 px-6 w-full sm:w-auto"
-                onClick={() => setIsEditing(true)}
-                data-testid="button-edit-profile"
-              >
-                Edit Profile
+              <Button variant="ghost" className="w-full justify-between">
+                View all
+                <ArrowRight className="h-4 w-4" />
               </Button>
-            )}
-          </div>
-        </div>
+            </CardContent>
+          </Link>
+        </Card>
 
-        {!hasSkills && (
-          <div className="p-6 bg-muted/50 rounded-xl text-base text-muted-foreground border border-dashed text-center">
-            Add skills below to start finding opportunities.
-          </div>
-        )}
+        <Card className="hover:border-primary transition-colors cursor-pointer">
+          <Link href="/dashboard/ats-scanner">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Scan className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">ATS Scanner</CardTitle>
+              </div>
+              <CardDescription>Optimize your resume for applicant tracking systems</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" className="w-full justify-between">
+                Scan resume
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Link>
+        </Card>
+
+        <Card className="hover:border-primary transition-colors cursor-pointer">
+          <Link href="/dashboard/cover-letter">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Cover Letters</CardTitle>
+              </div>
+              <CardDescription>Generate AI-powered cover letters</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="ghost" className="w-full justify-between">
+                Create letter
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Link>
+        </Card>
       </div>
 
-      {showProfileSetup && (
-        <div className="pt-10 border-t">
-          {profileQuery.isLoading ? (
-            <SkillsSkeleton />
-          ) : (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">
-                  {profile.isComplete ? "Edit Your Profile" : "Complete Your Profile"}
-                </h2>
-                {!profile.isComplete ? (
-                  <Badge variant="outline" className="text-xs">Incomplete</Badge>
-                ) : (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setIsEditing(false)}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </div>
-              <ProfileSetup
-                intro={profile.intro}
-                skills={profile.skills}
-                onIntroChange={handleIntroChange}
-                onSkillsChange={handleSkillsChange}
-              />
-              <div className="flex justify-end pt-4">
-                <Button
-                  onClick={handleCompleteProfile}
-                  disabled={updateProfileMutation.isPending || profile.intro.length < 20 || !hasSkills}
-                  className="gap-2 px-8"
-                  data-testid="button-complete-profile"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Save & Complete Profile
-                </Button>
-              </div>
+      {/* Recent Resumes */}
+      {resumeCount > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Resumes</CardTitle>
+            <CardDescription>Your recently updated resumes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {resumes?.slice(0, 5).map((resume: any) => (
+                <Link key={resume.id} href={`/dashboard/resumes/${resume.id}/edit`}>
+                  <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{resume.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Updated {new Date(resume.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      Edit
+                    </Button>
+                  </div>
+                </Link>
+              ))}
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {resumeCount === 0 && (
+        <Card className="p-12 text-center">
+          <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-xl font-semibold mb-2">No resumes yet</h3>
+          <p className="text-muted-foreground mb-6">
+            Get started by creating your first AI-powered resume
+          </p>
+          <Link href="/dashboard/resumes/new">
+            <Button size="lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Your First Resume
+            </Button>
+          </Link>
+        </Card>
       )}
     </div>
   );
