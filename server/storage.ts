@@ -30,6 +30,7 @@ export interface IStorage {
   addJobs(userId: string, jobs: JobPost[]): Promise<JobPost[]>;
   saveJobs(userId: string, jobs: JobPost[]): Promise<void>;
   clearUnsavedJobs(userId: string): Promise<void>;
+  cleanupOldJobs(userId: string): Promise<number>;
   saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
   markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
   
@@ -201,6 +202,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobs(userId: string): Promise<JobPost[]> {
+    // Clean up old jobs first (run in background, don't await)
+    this.cleanupOldJobs(userId).catch(err => 
+      console.error('[Storage] Background cleanup failed:', err)
+    );
+    
     const userJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
     return userJobs.map(job => ({
       id: job.id,
@@ -348,6 +354,33 @@ export class DatabaseStorage implements IStorage {
       const idsToDelete = jobsToDelete.map(j => j.id);
       await db.delete(jobs).where(and(eq(jobs.userId, userId), inArray(jobs.id, idsToDelete)));
     }
+  }
+
+  async cleanupOldJobs(userId: string): Promise<number> {
+    // Delete unsaved/unapplied jobs older than 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Get jobs to delete: older than 7 days, not saved, not applied
+    const oldJobs = await db
+      .select()
+      .from(jobs)
+      .where(
+        and(
+          eq(jobs.userId, userId),
+          lte(jobs.scrapedAt, sevenDaysAgo),
+          eq(jobs.saved, false),
+          eq(jobs.applied, false)
+        )
+      );
+    
+    if (oldJobs.length > 0) {
+      const idsToDelete = oldJobs.map(j => j.id);
+      await db.delete(jobs).where(and(eq(jobs.userId, userId), inArray(jobs.id, idsToDelete)));
+      console.log(`[Storage] Cleaned up ${oldJobs.length} old jobs for user ${userId}`);
+    }
+    
+    return oldJobs.length;
   }
 
   async saveJob(userId: string, jobId: string): Promise<JobPost | undefined> {
