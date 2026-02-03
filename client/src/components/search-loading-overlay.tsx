@@ -115,7 +115,7 @@ export function SearchLoadingOverlay({ isSearching, onComplete }: SearchLoadingO
             {/* Info Message */}
             <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                💡 You can switch tabs or close this page - the search will continue in the background.
+                💡 You can switch tabs - the search continues on the server and results will appear when you return.
               </p>
             </div>
           </div>

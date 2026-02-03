@@ -113,9 +113,15 @@ function getBroadKeyword(skill: string): string {
     return SKILL_TO_BROAD_KEYWORD[skillLower];
   }
   
-  // Check for partial matches
+  // Check for partial matches - only match if skill is a complete word within the key
+  // This avoids false matches like "go" matching "google"
   for (const [key, value] of Object.entries(SKILL_TO_BROAD_KEYWORD)) {
-    if (skillLower.includes(key) || key.includes(skillLower)) {
+    // Check if skill is the key or starts/ends with the key followed by a space or common separator
+    const keyWords = key.split(/[\s/]+/);
+    const skillWords = skillLower.split(/[\s/]+/);
+    
+    // Match if any skill word exactly matches any key word
+    if (skillWords.some(sw => keyWords.includes(sw))) {
       return value;
     }
   }
@@ -297,7 +303,7 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
     author: item.author || 'unknown',
     authorHandle: item.author,
     postedAt: new Date(item.created_utc * 1000).toISOString(),
-    matchedSkills: matchedSkills.length > 0 ? matchedSkills : ['General'],
+    matchedSkills, // Return actual matched skills (may be empty for generic hiring posts)
     budget: extractBudget(item.title + ' ' + (item.selftext || '')),
     isRemote: true,
     saved: false,
@@ -363,7 +369,7 @@ function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
     author: item.author?.name || 'unknown',
     authorHandle: item.author?.userName,
     postedAt: new Date(item.createdAt).toISOString(),
-    matchedSkills: matchedSkills.length > 0 ? matchedSkills : ['General'],
+    matchedSkills, // Return actual matched skills (may be empty for generic hiring posts)
     budget: extractBudget(item.text),
     isRemote: true,
     saved: false,
@@ -457,8 +463,11 @@ export async function scrapeJobs(intro: string, skills: Skill[], maxJobs: number
   console.log('[Scraper] Generated parameters:', params);
   
   // Fetch more items than needed to ensure we have enough after filtering
-  const fetchMultiplier = 3;
-  const fetchCount = Math.min(maxJobs * fetchMultiplier, 15);
+  // We fetch 3x the target because many items get filtered out (job seekers, no skill match, etc.)
+  // Cap at 15 items per source to limit API costs while still getting diverse results
+  const FETCH_MULTIPLIER = 3;
+  const MAX_ITEMS_PER_SOURCE = 15;
+  const fetchCount = Math.min(maxJobs * FETCH_MULTIPLIER, MAX_ITEMS_PER_SOURCE);
   
   // Use Promise.allSettled for graceful degradation - if one fails, continue with the other
   const [redditResults, xResults] = await Promise.allSettled([
