@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Briefcase } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Briefcase, Zap, Clock, Award, TrendingUp } from "lucide-react";
 import { ProfileSetup } from "@/components/profile-setup";
 import { SkillsSkeleton } from "@/components/loading-skeleton";
 import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
@@ -414,44 +414,121 @@ export default function Account() {
           </div>
         </section>
 
-        {/* Usage Tracker Section */}
-        <section className="space-y-8">
-          <h2 className="text-xl font-semibold flex items-center gap-3 border-b pb-4">
-            <BarChart3 className="w-6 h-6 text-primary" />
-            Usage Overview
-          </h2>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm font-bold">
-                <span className="text-muted-foreground uppercase tracking-wider">Job Scrapes</span>
-                  <span className="text-primary">
-                    {usageData?.usage.jobsScrapedThisMonth || 0}/
-                    {maxJobs === -1 ? "Unlimited" : maxJobs || 0}
-                  </span>
-                </div>
-                <Progress value={jobsUsedPercent} className="h-2 bg-muted shadow-inner" />
-            </div>
-            
-            {!isPlus && !isUltra && !isLifetime && (
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm font-bold">
-                  <span className="text-muted-foreground uppercase tracking-wider">Skills Limit</span>
-                  <span className="text-primary">
-                    {usageData?.usage.skillsCount || 0}/
-                    {maxSkills === -1 ? "Unlimited" : maxSkills || 0}
-                  </span>
-                </div>
-                <Progress value={skillsUsedPercent} className="h-2 bg-muted shadow-inner" />
-              </div>
+        {/* Usage Tracker Section - Redesigned */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b pb-4">
+            <h2 className="text-xl font-semibold flex items-center gap-3">
+              <BarChart3 className="w-6 h-6 text-primary" />
+              Usage Overview
+            </h2>
+            {usageData && (
+              <Badge variant="outline" className="gap-1.5 px-3 py-1">
+                <Clock className="w-3.5 h-3.5" />
+                Resets {(() => {
+                  const resetDate = new Date(usageData.usage.monthResetDate);
+                  // Add one month properly
+                  const nextMonth = new Date(resetDate);
+                  nextMonth.setMonth(nextMonth.getMonth() + 1);
+                  return nextMonth.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                })()}
+              </Badge>
             )}
           </div>
-          {usageData && (
-            <div className="text-center pt-2">
-              <p className="text-xs text-muted-foreground font-medium bg-muted/30 py-2 px-4 rounded-full inline-block">
-                Usage resets on {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-              </p>
-            </div>
-          )}
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Job Scrapes Card */}
+            <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -mr-16 -mt-16" />
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Zap className="w-5 h-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-base font-medium">Job Scrapes</CardTitle>
+                  </div>
+                  <Badge 
+                    variant={jobsUsedPercent >= 90 ? "destructive" : jobsUsedPercent >= 70 ? "default" : "secondary"}
+                    className="font-semibold"
+                  >
+                    {usageData?.usage.jobsScrapedThisMonth || 0}/{maxJobs === -1 ? "∞" : maxJobs || 0}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Progress 
+                  value={jobsUsedPercent} 
+                  className="h-3 bg-muted shadow-inner"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {maxJobs === -1 
+                    ? "Unlimited job searches available"
+                    : `${usageData?.remaining.jobsThisMonth || 0} searches remaining this month`
+                  }
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Skills Card - Only show for free tier */}
+            {!isPlus && !isUltra && !isLifetime && (
+              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full -mr-16 -mt-16" />
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-blue-500/10 rounded-lg">
+                        <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <CardTitle className="text-base font-medium">Skills Limit</CardTitle>
+                    </div>
+                    <Badge 
+                      variant={skillsUsedPercent >= 90 ? "destructive" : skillsUsedPercent >= 70 ? "default" : "secondary"}
+                      className="font-semibold"
+                    >
+                      {usageData?.usage.skillsCount || 0}/{maxSkills === -1 ? "∞" : maxSkills || 0}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Progress 
+                    value={skillsUsedPercent} 
+                    className="h-3 bg-muted shadow-inner"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {usageData?.remaining.skills || 0} skill slots available
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Placeholder card for paid tiers to maintain grid */}
+            {(isPlus || isUltra || isLifetime) && (
+              <Card className="relative overflow-hidden border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-transparent hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <TrendingUp className="w-5 h-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-base font-medium">Premium Benefits</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Unlimited skills</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>{maxJobs === -1 ? "Unlimited" : "Extended"} job searches</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-green-500" />
+                    <span>Priority support</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </section>
 
         {/* Work Profile Section */}
