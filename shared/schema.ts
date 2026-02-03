@@ -32,6 +32,7 @@ export const usage = pgTable("usage", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
   jobsScrapedThisMonth: integer("jobs_scraped_this_month").notNull().default(0),
+  aiEditsThisMonth: integer("ai_edits_this_month").notNull().default(0),
   monthResetDate: timestamp("month_reset_date").notNull().default(sql`NOW()`),
 });
 
@@ -56,6 +57,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   usage: one(usage),
   schedules: many(schedules),
   seenJobs: many(seenJobs),
+  resumes: many(resumes),
+  chatConversations: many(chatConversations),
+  coverLetters: many(coverLetters),
 }));
 
 export const profiles = pgTable("profiles", {
@@ -242,24 +246,48 @@ export const PLAN_LIMITS = {
     maxJobsPerMonth: 10,
     maxSchedules: 0,
     hasScheduleAccess: false,
+    // Resume builder limits
+    maxResumes: 1,
+    maxAiEditsPerMonth: 5,
+    hasAtsScanner: false,
+    hasCoverLetterGenerator: false,
+    allowedFormats: ['pdf'] as const,
   },
   plus: {
     maxSkills: Infinity,
     maxJobsPerMonth: 300,
     maxSchedules: 2,
     hasScheduleAccess: true,
+    // Resume builder limits
+    maxResumes: 5,
+    maxAiEditsPerMonth: 100,
+    hasAtsScanner: true,
+    hasCoverLetterGenerator: false,
+    allowedFormats: ['pdf', 'docx'] as const,
   },
   ultra: {
     maxSkills: Infinity,
     maxJobsPerMonth: Infinity,
     maxSchedules: Infinity,
     hasScheduleAccess: true,
+    // Resume builder limits
+    maxResumes: Infinity,
+    maxAiEditsPerMonth: Infinity,
+    hasAtsScanner: true,
+    hasCoverLetterGenerator: true,
+    allowedFormats: ['pdf', 'docx'] as const,
   },
   lifetime: {
     maxSkills: Infinity,
     maxJobsPerMonth: Infinity,
     maxSchedules: Infinity,
     hasScheduleAccess: true,
+    // Resume builder limits
+    maxResumes: Infinity,
+    maxAiEditsPerMonth: Infinity,
+    hasAtsScanner: true,
+    hasCoverLetterGenerator: true,
+    allowedFormats: ['pdf', 'docx'] as const,
   },
 } as const;
 
@@ -326,3 +354,129 @@ export const cachedJobSchema = z.object({
 });
 
 export type CachedJob = z.infer<typeof cachedJobSchema>;
+
+// ============================================
+// Resume Builder Tables
+// ============================================
+
+export const resumes = pgTable("resumes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  template: varchar("template").notNull().default("modern"), // 'modern', 'classic', 'creative'
+  resumeData: jsonb("resume_data").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const resumesRelations = relations(resumes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [resumes.userId],
+    references: [users.id],
+  }),
+  chatConversations: many(chatConversations),
+  coverLetters: many(coverLetters),
+}));
+
+export const chatConversations = pgTable("chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  resumeId: varchar("resume_id").references(() => resumes.id, { onDelete: "cascade" }),
+  messages: jsonb("messages").notNull().default([]),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const chatConversationsRelations = relations(chatConversations, ({ one }) => ({
+  user: one(users, {
+    fields: [chatConversations.userId],
+    references: [users.id],
+  }),
+  resume: one(resumes, {
+    fields: [chatConversations.resumeId],
+    references: [resumes.id],
+  }),
+}));
+
+export const coverLetters = pgTable("cover_letters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  resumeId: varchar("resume_id").references(() => resumes.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  jobDescription: text("job_description"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const coverLettersRelations = relations(coverLetters, ({ one }) => ({
+  user: one(users, {
+    fields: [coverLetters.userId],
+    references: [users.id],
+  }),
+  resume: one(resumes, {
+    fields: [coverLetters.resumeId],
+    references: [resumes.id],
+  }),
+}));
+
+// Resume types and schemas
+export const resumeDataSchema = z.object({
+  personalInfo: z.object({
+    name: z.string().default(""),
+    email: z.string().email().optional().or(z.literal("")),
+    phone: z.string().default(""),
+    location: z.string().default(""),
+    linkedin: z.string().url().optional().or(z.literal("")),
+    website: z.string().url().optional().or(z.literal("")),
+  }),
+  summary: z.string().default(""),
+  experience: z.array(z.object({
+    company: z.string(),
+    title: z.string(),
+    location: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullable(),
+    description: z.array(z.string()),
+  })).default([]),
+  education: z.array(z.object({
+    school: z.string(),
+    degree: z.string(),
+    field: z.string(),
+    graduationDate: z.string(),
+    gpa: z.string().optional(),
+  })).default([]),
+  skills: z.array(z.string()).default([]),
+  certifications: z.array(z.object({
+    name: z.string(),
+    issuer: z.string(),
+    date: z.string(),
+  })).optional().default([]),
+  projects: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    technologies: z.array(z.string()),
+    url: z.string().url().optional().or(z.literal("")),
+  })).optional().default([]),
+});
+
+export type ResumeData = z.infer<typeof resumeDataSchema>;
+
+export const insertResumeSchema = createInsertSchema(resumes).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertResume = z.infer<typeof insertResumeSchema>;
+export type Resume = typeof resumes.$inferSelect;
+
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+
+export const insertCoverLetterSchema = createInsertSchema(coverLetters).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCoverLetter = z.infer<typeof insertCoverLetterSchema>;
+export type CoverLetter = typeof coverLetters.$inferSelect;
+
+export const chatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+  timestamp: z.string(),
+});
+
+export type ChatMessage = z.infer<typeof chatMessageSchema>;

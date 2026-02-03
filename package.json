@@ -78,7 +78,12 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.25.76",
-    "zod-validation-error": "^3.5.4"
+    "zod-validation-error": "^3.5.4",
+    "pdf-parse": "^1.1.1",
+    "mammoth": "^1.7.2",
+    "pdfkit": "^0.14.0",
+    "docx": "^8.5.0",
+    "jspdf": "^2.5.1"
   },
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.4.4",
