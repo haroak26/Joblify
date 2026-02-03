@@ -255,6 +255,34 @@ function isPostRecent(postedAt: Date): boolean {
 }
 
 /**
+ * Parse and validate a date from scraper data
+ * Handles various edge cases and returns both Date object and ISO string
+ */
+function parseAndValidateDate(dateValue: any, fallbackToNow: boolean = true): { date: Date; isoString: string } {
+  let date: Date;
+  
+  try {
+    if (dateValue !== null && dateValue !== undefined && dateValue !== '') {
+      date = new Date(dateValue);
+      if (isNaN(date.getTime())) {
+        console.warn('[Scraper] Invalid date value, using current time');
+        date = new Date();
+      }
+    } else {
+      date = fallbackToNow ? new Date() : new Date(0);
+    }
+  } catch (error) {
+    console.warn('[Scraper] Date parsing error, using current time:', error);
+    date = fallbackToNow ? new Date() : new Date(0);
+  }
+  
+  return {
+    date,
+    isoString: date.toISOString()
+  };
+}
+
+/**
  * Parse and normalize scraped data into JobPost format
  * Uses more lenient skill matching to ensure jobs are returned
  */
@@ -306,25 +334,11 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
   
   console.log('[Scraper] Reddit - Matched job:', title.substring(0, 50), 'Skills:', matchedSkills.join(', ') || 'none (hiring post)');
   
-  // Parse and validate date - handle invalid dates gracefully
-  let postedAt: string;
-  let postedDate: Date;
-  try {
-    // Explicitly check for null/undefined to handle edge cases like 0 (valid Unix timestamp)
-    const timestamp = (item.created_utc !== null && item.created_utc !== undefined) 
-      ? item.created_utc * 1000 
-      : Date.now();
-    postedDate = new Date(timestamp);
-    if (isNaN(postedDate.getTime())) {
-      console.warn('[Scraper] Reddit - Invalid date for post, using current time:', item.title.substring(0, 50));
-      postedDate = new Date();
-    }
-    postedAt = postedDate.toISOString();
-  } catch (error) {
-    console.warn('[Scraper] Reddit - Date parsing error, using current time:', error);
-    postedDate = new Date();
-    postedAt = postedDate.toISOString();
-  }
+  // Parse and validate date using helper function
+  const timestamp = (item.created_utc !== null && item.created_utc !== undefined) 
+    ? item.created_utc * 1000 
+    : Date.now();
+  const { date: postedDate, isoString: postedAt } = parseAndValidateDate(timestamp);
   
   // Filter out posts older than 7 days
   if (!isPostRecent(postedDate)) {
@@ -398,25 +412,11 @@ function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
   
   console.log('[Scraper] X - Matched job:', text.substring(0, 50), 'Skills:', matchedSkills.join(', ') || 'none (hiring post)');
   
-  // Parse and validate date - handle invalid dates gracefully
-  let postedAt: string;
-  let postedDate: Date;
-  try {
-    // Explicitly check for null/undefined to handle edge cases like empty strings
-    const dateValue = (item.createdAt !== null && item.createdAt !== undefined && item.createdAt !== '') 
-      ? item.createdAt 
-      : Date.now();
-    postedDate = new Date(dateValue);
-    if (isNaN(postedDate.getTime())) {
-      console.warn('[Scraper] X - Invalid date for post, using current time:', text.substring(0, 50));
-      postedDate = new Date();
-    }
-    postedAt = postedDate.toISOString();
-  } catch (error) {
-    console.warn('[Scraper] X - Date parsing error, using current time:', error);
-    postedDate = new Date();
-    postedAt = postedDate.toISOString();
-  }
+  // Parse and validate date using helper function
+  const dateValue = (item.createdAt !== null && item.createdAt !== undefined && item.createdAt !== '') 
+    ? item.createdAt 
+    : Date.now();
+  const { date: postedDate, isoString: postedAt } = parseAndValidateDate(dateValue);
   
   // Filter out posts older than 7 days
   if (!isPostRecent(postedDate)) {

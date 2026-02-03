@@ -154,8 +154,7 @@ export const jobCache = pgTable("job_cache", {
   scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`), // When we first scraped it
   expiresAt: timestamp("expires_at").notNull(), // postedAt + 7 days
 }, (table) => ({
-  sourceUrlIdx: uniqueIndex("job_cache_source_url_idx").on(table.sourceUrl),
-  expiresAtIdx: index("job_cache_expires_at_idx").on(table.expiresAt), // Regular index, not unique
+  expiresAtIdx: index("job_cache_expires_at_idx").on(table.expiresAt), // Regular index for efficient cleanup queries
 }));
 
 export const insertUserSchema = createInsertSchema(users).pick({
