@@ -23,6 +23,11 @@ import JobDetails from "@/pages/dashboard/job-details";
 import Generator from "@/pages/dashboard/generator";
 import Schedules from "@/pages/dashboard/schedules";
 import Account from "@/pages/dashboard/account";
+import ResumeDashboard from "@/pages/dashboard/resumes";
+import ResumeEditor from "@/pages/dashboard/resume-editor";
+import ResumeChat from "@/pages/dashboard/resume-chat";
+import AtsScanner from "@/pages/dashboard/ats-scanner";
+import CoverLetterGenerator from "@/pages/dashboard/cover-letter";
 
 function Router() {
   return (
@@ -78,6 +83,48 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <Account />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resumes">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeDashboard />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resumes/:id/edit">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeEditor />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resumes/:id/chat">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeChat />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resumes/new">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeChat />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/ats-scanner">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <AtsScanner />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/cover-letter">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <CoverLetterGenerator />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
