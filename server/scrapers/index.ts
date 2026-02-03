@@ -3,7 +3,7 @@ import { scrapeXJobs } from './x';
 import type { Skill, JobPost } from '@shared/schema';
 import { randomUUID } from 'crypto';
 import OpenAI from 'openai';
-import { searchCachedJobs, saveJobsToCache } from './jobCacheService';
+import { searchCachedJobs, saveJobsToCache } from '../jobCacheService';
 
 // Validate API key is available
 const apiKey = process.env.POE_API_KEY;
