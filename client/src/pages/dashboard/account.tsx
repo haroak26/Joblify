@@ -424,7 +424,13 @@ export default function Account() {
             {usageData && (
               <Badge variant="outline" className="gap-1.5 px-3 py-1">
                 <Clock className="w-3.5 h-3.5" />
-                Resets {new Date(new Date(usageData.usage.monthResetDate).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                Resets {(() => {
+                  const resetDate = new Date(usageData.usage.monthResetDate);
+                  // Add one month properly
+                  const nextMonth = new Date(resetDate);
+                  nextMonth.setMonth(nextMonth.getMonth() + 1);
+                  return nextMonth.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                })()}
               </Badge>
             )}
           </div>
