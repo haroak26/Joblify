@@ -294,6 +294,22 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
   
   console.log('[Scraper] Reddit - Matched job:', title.substring(0, 50), 'Skills:', matchedSkills.join(', ') || 'none (hiring post)');
   
+  // Parse and validate date - handle invalid dates gracefully
+  let postedAt: string;
+  try {
+    const timestamp = item.created_utc ? item.created_utc * 1000 : Date.now();
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      console.warn('[Scraper] Reddit - Invalid date for post, using current time:', item.title.substring(0, 50));
+      postedAt = new Date().toISOString();
+    } else {
+      postedAt = date.toISOString();
+    }
+  } catch (error) {
+    console.warn('[Scraper] Reddit - Date parsing error, using current time:', error);
+    postedAt = new Date().toISOString();
+  }
+  
   return {
     id: randomUUID(),
     title: item.title,
@@ -302,7 +318,7 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
     sourceUrl: item.url,
     author: item.author || 'unknown',
     authorHandle: item.author,
-    postedAt: new Date(item.created_utc * 1000).toISOString(),
+    postedAt,
     matchedSkills, // Return actual matched skills (may be empty for generic hiring posts)
     budget: extractBudget(item.title + ' ' + (item.selftext || '')),
     isRemote: true,
@@ -360,6 +376,21 @@ function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
   
   console.log('[Scraper] X - Matched job:', text.substring(0, 50), 'Skills:', matchedSkills.join(', ') || 'none (hiring post)');
   
+  // Parse and validate date - handle invalid dates gracefully
+  let postedAt: string;
+  try {
+    const date = new Date(item.createdAt || Date.now());
+    if (isNaN(date.getTime())) {
+      console.warn('[Scraper] X - Invalid date for post, using current time:', text.substring(0, 50));
+      postedAt = new Date().toISOString();
+    } else {
+      postedAt = date.toISOString();
+    }
+  } catch (error) {
+    console.warn('[Scraper] X - Date parsing error, using current time:', error);
+    postedAt = new Date().toISOString();
+  }
+  
   return {
     id: randomUUID(),
     title: item.text.substring(0, 100) + (item.text.length > 100 ? '...' : ''),
@@ -368,7 +399,7 @@ function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
     sourceUrl: item.url,
     author: item.author?.name || 'unknown',
     authorHandle: item.author?.userName,
-    postedAt: new Date(item.createdAt).toISOString(),
+    postedAt,
     matchedSkills, // Return actual matched skills (may be empty for generic hiring posts)
     budget: extractBudget(item.text),
     isRemote: true,

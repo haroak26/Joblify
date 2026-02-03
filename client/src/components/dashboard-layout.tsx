@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
+import { SearchLoadingOverlay } from "@/components/search-loading-overlay";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
@@ -55,6 +56,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
+      {/* Search Loading Overlay */}
+      <SearchLoadingOverlay isSearching={refreshJobsMutation.isPending} />
+      
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">

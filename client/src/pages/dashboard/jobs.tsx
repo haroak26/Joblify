@@ -307,7 +307,7 @@ export default function MyJobs() {
       ) : !hasSkills && !hasJobs ? (
         <EmptyState type="no-skills" />
       ) : !hasJobs ? (
-        <EmptyState type="no-jobs" />
+        <EmptyState type="no-jobs" onAction={() => refreshJobsMutation.mutate()} />
       ) : (
         <div className="space-y-10">
           <div className="border-b pb-8">
