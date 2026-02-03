@@ -13,13 +13,13 @@ const plans = [
     price: "$0",
     period: "forever",
     features: [
-      "10 skills maximum",
-      "10 jobs scraped per month",
-      "5 AI messages per month",
-      "Basic job matching",
-      "Community support"
+      "1 resume",
+      "5 AI edits per month",
+      "Basic templates",
+      "PDF download",
+      "Email support"
     ],
-    cta: "Get Started",
+    cta: "Get Started Free",
     ctaHref: "/register",
     popular: false,
   },
@@ -29,12 +29,12 @@ const plans = [
     price: "$15",
     period: "per month",
     features: [
-      "Unlimited skills",
-      "300 jobs scraped per month",
-      "500 AI messages per month",
-      "2 scheduled scans",
-      "Priority support",
-      "Advanced job matching"
+      "5 resumes",
+      "100 AI edits per month",
+      "All templates",
+      "PDF & DOCX download",
+      "ATS scanner",
+      "Priority email support"
     ],
     cta: "Upgrade to Plus",
     ctaHref: "/dashboard/account",
@@ -46,13 +46,13 @@ const plans = [
     price: "$30",
     period: "per month",
     features: [
-      "Unlimited skills",
-      "Unlimited jobs scraped",
-      "Unlimited AI messages",
-      "Unlimited scheduled scans",
-      "Priority support",
-      "Advanced job matching",
-      "Early access to new features"
+      "Unlimited resumes",
+      "Unlimited AI edits",
+      "All templates",
+      "PDF & DOCX download",
+      "ATS scanner",
+      "Cover letter generator",
+      "Priority support"
     ],
     cta: "Upgrade to Ultra",
     ctaHref: "/dashboard/account",
@@ -64,14 +64,13 @@ const plans = [
     price: "$100",
     period: "one-time payment",
     features: [
-      "Unlimited skills",
-      "Unlimited jobs scraped",
-      "Unlimited AI messages",
-      "Unlimited scheduled scans",
-      "Priority support",
-      "Advanced job matching",
-      "Ultra access for life",
-      "Support indie development"
+      "Unlimited resumes",
+      "Unlimited AI edits",
+      "All templates",
+      "PDF & DOCX download",
+      "ATS scanner",
+      "Cover letter generator",
+      "Ultra access for life"
     ],
     cta: "Get Lifetime Access",
     ctaHref: "/dashboard/account",
@@ -115,7 +114,7 @@ export default function Pricing() {
             <span className="text-primary block mt-1">fits your needs</span>
           </h1>
           <p className="text-base sm:text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Start free and upgrade as you grow. All plans include access to our AI-powered job matching engine.
+            Start free and upgrade as you grow. All plans include access to our AI-powered resume builder.
           </p>
         </div>
       </section>
@@ -191,17 +190,17 @@ export default function Pricing() {
               </p>
             </div>
             <div>
-              <h3 className="font-semibold text-lg mb-2">What happens when I hit my job limit?</h3>
+              <h3 className="font-semibold text-lg mb-2">What happens when I hit my edit limit?</h3>
               <p className="text-muted-foreground">
                 On the Free plan, you'll need to wait for your monthly limit to reset. 
-                Upgrade to Plus or Ultra for higher or unlimited job scraping.
+                Upgrade to Plus or Ultra for higher or unlimited AI edits.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold text-lg mb-2">What platforms do you scan?</h3>
+              <h3 className="font-semibold text-lg mb-2">What file formats can I export?</h3>
               <p className="text-muted-foreground">
-                We currently scan Reddit and X (Twitter) for freelance job opportunities. 
-                We're constantly working to add more platforms.
+                Free users can export as PDF. Plus, Ultra, and Lifetime users can export as both PDF and DOCX 
+                formats for maximum compatibility.
               </p>
             </div>
             <div>
@@ -218,9 +217,9 @@ export default function Pricing() {
       {/* CTA Section */}
       <section className="py-16 px-4 sm:px-6 border-t">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to find your next gig?</h2>
+          <h2 className="text-3xl font-bold mb-4">Ready to build your resume?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join hundreds of freelancers discovering opportunities before everyone else.
+            Join thousands of job seekers creating professional resumes with AI.
           </p>
           <Link href="/register">
             <Button size="lg" className="gap-2">
