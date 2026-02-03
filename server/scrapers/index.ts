@@ -3,6 +3,7 @@ import { scrapeXJobs } from './x';
 import type { Skill, JobPost } from '@shared/schema';
 import { randomUUID } from 'crypto';
 import OpenAI from 'openai';
+import { searchCachedJobs, saveJobsToCache } from './jobCacheService';
 
 // Validate API key is available
 const apiKey = process.env.POE_API_KEY;
@@ -527,7 +528,6 @@ export async function scrapeJobs(intro: string, skills: Skill[], maxJobs: number
   // Step 1: Try to get jobs from cache first (unless bypassed)
   if (!bypassCache) {
     try {
-      const { searchCachedJobs } = await import('./jobCacheService');
       const { jobs: cachedJobs, fromCache } = await searchCachedJobs(intro, skills, maxJobs);
       
       if (fromCache && cachedJobs.length >= maxJobs) {
@@ -562,7 +562,6 @@ export async function scrapeJobs(intro: string, skills: Skill[], maxJobs: number
   
   // Step 3: Save scraped jobs to cache for future use
   try {
-    const { saveJobsToCache } = await import('./jobCacheService');
     await saveJobsToCache(freshJobs);
     console.log(`[Scraper] Saved ${freshJobs.length} jobs to cache for future use`);
   } catch (error) {

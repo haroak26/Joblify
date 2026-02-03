@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, jsonb, integer, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, jsonb, integer, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -155,7 +155,7 @@ export const jobCache = pgTable("job_cache", {
   expiresAt: timestamp("expires_at").notNull(), // postedAt + 7 days
 }, (table) => ({
   sourceUrlIdx: uniqueIndex("job_cache_source_url_idx").on(table.sourceUrl),
-  expiresAtIdx: uniqueIndex("job_cache_expires_at_idx").on(table.expiresAt),
+  expiresAtIdx: index("job_cache_expires_at_idx").on(table.expiresAt), // Regular index, not unique
 }));
 
 export const insertUserSchema = createInsertSchema(users).pick({

@@ -202,10 +202,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobs(userId: string): Promise<JobPost[]> {
-    // Clean up old jobs first (run in background, don't await)
-    this.cleanupOldJobs(userId).catch(err => 
-      console.error('[Storage] Background cleanup failed:', err)
-    );
+    // Clean up old jobs synchronously to avoid race conditions
+    await this.cleanupOldJobs(userId);
     
     const userJobs = await db.select().from(jobs).where(eq(jobs.userId, userId));
     return userJobs.map(job => ({

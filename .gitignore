@@ -10,3 +10,5 @@ vite.config.ts.*
 cookies.txt
 cookies2.txt
 *.cookie
+test-*.ts
+test-*.js
