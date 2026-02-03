@@ -29,6 +29,37 @@ function getPoeClient(): OpenAI {
   return poeClient;
 }
 
+import type { ResumeData } from "@shared/schema";
+
+/**
+ * Merges extracted resume data from AI into existing resume data
+ * Appends arrays and replaces other values
+ */
+function mergeResumeData(
+  currentData: ResumeData,
+  extractedData: Record<string, unknown>
+): ResumeData {
+  const merged = { ...currentData };
+  
+  for (const [key, value] of Object.entries(extractedData)) {
+    if (!value) continue;
+    
+    const typedKey = key as keyof ResumeData;
+    const currentValue = currentData[typedKey];
+    
+    // For array fields, append new items
+    if (Array.isArray(value) && Array.isArray(currentValue)) {
+      (merged[typedKey] as unknown[]) = [...currentValue, ...value];
+    }
+    // For other fields, replace with new value
+    else if (typedKey in merged) {
+      (merged[typedKey] as unknown) = value;
+    }
+  }
+  
+  return merged;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -421,7 +452,7 @@ export async function registerRoutes(
       const schema = z.object({
         title: z.string().min(1).optional(),
         template: z.enum(['modern', 'classic', 'creative']).optional(),
-        resumeData: z.any().optional(),
+        resumeData: resumeDataSchema.optional(),
       });
       
       const updates = schema.parse(req.body);
@@ -620,21 +651,11 @@ Start by asking about their current or target job title.`;
         if (parsed.extracted_data) {
           extractedData = parsed.extracted_data;
           
-          // Update resume with extracted data
-          const currentData = resume.resumeData;
-          const updatedResumeData = { ...currentData };
+          // Merge extracted data into existing resume data
+          const mergedData = mergeResumeData(resume.resumeData, extractedData);
           
-          // Merge extracted data into resume
-          for (const [key, value] of Object.entries(extractedData)) {
-            if (Array.isArray(value) && Array.isArray(currentData[key as keyof typeof currentData])) {
-              updatedResumeData[key as keyof typeof currentData] = [...(currentData[key as keyof typeof currentData] as unknown[]), ...value] as never;
-            } else if (value) {
-              updatedResumeData[key as keyof typeof currentData] = value as never;
-            }
-          }
-          
-          // Validate the updated data
-          const validatedData = resumeDataSchema.parse(updatedResumeData);
+          // Validate the merged data
+          const validatedData = resumeDataSchema.parse(mergedData);
           await storage.updateResume(resumeId, { resumeData: validatedData });
           console.log('[API] Resume updated with extracted data:', resumeId);
         }
