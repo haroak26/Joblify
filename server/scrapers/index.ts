@@ -26,19 +26,19 @@ interface ScraperParameters {
 // Map of specific skills to broader search terms for X
 const SKILL_TO_BROAD_KEYWORD: Record<string, string> = {
   // Frontend/Web
-  'frontend designer': 'webdeveloper',
-  'frontend developer': 'webdeveloper',
-  'react': 'webdeveloper',
-  'react developer': 'webdeveloper',
-  'vue': 'webdeveloper',
-  'angular': 'webdeveloper',
-  'javascript': 'webdeveloper',
-  'typescript': 'webdeveloper',
-  'html': 'webdeveloper',
-  'css': 'webdeveloper',
-  'tailwind': 'webdeveloper',
-  'next.js': 'webdeveloper',
-  'nextjs': 'webdeveloper',
+  'frontend designer': 'developer',
+  'frontend developer': 'developer',
+  'react': 'developer',
+  'react developer': 'developer',
+  'vue': 'developer',
+  'angular': 'developer',
+  'javascript': 'developer',
+  'typescript': 'developer',
+  'html': 'developer',
+  'css': 'developer',
+  'tailwind': 'developer',
+  'next.js': 'developer',
+  'nextjs': 'developer',
   // Backend
   'backend developer': 'developer',
   'node.js': 'developer',
@@ -61,12 +61,12 @@ const SKILL_TO_BROAD_KEYWORD: Record<string, string> = {
   'adobe xd': 'designer',
   'product designer': 'designer',
   // Mobile
-  'ios developer': 'mobile developer',
-  'android developer': 'mobile developer',
-  'react native': 'mobile developer',
-  'flutter': 'mobile developer',
-  'swift': 'mobile developer',
-  'kotlin': 'mobile developer',
+  'ios developer': 'developer',
+  'android developer': 'developer',
+  'react native': 'developer',
+  'flutter': 'developer',
+  'swift': 'developer',
+  'kotlin': 'developer',
   // Data
   'data analyst': 'data',
   'data scientist': 'data',
@@ -145,38 +145,39 @@ User Profile:
 Introduction: ${intro}
 Skills: ${skillNames}
 
-Generate SIMPLE, BROAD search queries that find hiring posts on Reddit and X (Twitter). Keep queries short and focused on hiring keywords.
+Generate EXTREMELY SIMPLE search queries that find hiring posts on Reddit and X (Twitter).
 
-IMPORTANT GUIDELINES:
-1. Use simple hiring phrases: "hiring", "looking for", "need", "seeking"
-2. Include 1-2 main skills max (e.g., "hiring react developer", "need freelancer")
-3. DO NOT over-specify or combine too many skills
-4. Keep queries under 6 words
-5. Use common job-related terms
-6. For X/Twitter: Use VERY broad terms to maximize results (we filter with AI later)
+CRITICAL RULES:
+1. Reddit query: Use ONLY 1-2 words max. Examples: "hiring", "freelance", "looking for"
+2. DO NOT use AND, OR, or complex operators
+3. DO NOT combine multiple skills in one query
+4. Keep queries as simple as possible to avoid 404 errors
+5. For X/Twitter: Use broad single-word terms
 
-EXAMPLES OF GOOD QUERIES:
-- "hiring react developer"
-- "need freelance writer"
-- "looking for designer"
-- "seeking python developer"
-- For X: "hiring ${broadKeyword}" or "need ${broadKeyword} freelance"
+GOOD EXAMPLES:
+- Reddit: "hiring" or "freelance" or "looking for"
+- X: "freelance" or "hiring"
+
+BAD EXAMPLES (DO NOT USE):
+- "hiring react developer AND frontend"
+- "need freelance writer with SEO"
+- Any query with multiple conditions
 
 Return a JSON object with:
 {
-  "redditQuery": "short hiring-focused query (max 6 words)",
+  "redditQuery": "hiring",
   "redditSubreddits": "${EXPANDED_SUBREDDITS}",
-  "xQuery": "hiring ${broadKeyword} freelance"
+  "xQuery": "freelance"
 }
 
-Keep it simple and broad to maximize results.`;
+Keep it absolutely minimal - single words work best.`;
 
   try {
     console.log('[Scraper] Generating search parameters with AI');
     const response = await openai.chat.completions.create({
       model: 'gpt-5-nano',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
+      temperature: 0.3, // Lower temperature for more consistent, simpler outputs
       response_format: { type: "json_object" }
     });
 
@@ -184,18 +185,18 @@ Keep it simple and broad to maximize results.`;
     console.log('[Scraper] AI-generated parameters:', params);
     
     return {
-      redditQuery: params.redditQuery || `hiring ${topSkill}`,
+      redditQuery: params.redditQuery || 'hiring',
       redditSubreddits: params.redditSubreddits || EXPANDED_SUBREDDITS,
-      xQuery: `hiring ${broadKeyword} freelance`, // Always use broad keyword for X
+      xQuery: params.xQuery || 'freelance',
       xBroadKeyword: broadKeyword
     };
   } catch (error) {
     console.error('[Scraper] Error generating scraper parameters:', error);
-    // Fallback to simple, proven defaults based on top skill
+    // Fallback to ultra-simple, proven defaults
     const fallbackParams = {
-      redditQuery: `hiring ${topSkill}`,
+      redditQuery: 'hiring',
       redditSubreddits: EXPANDED_SUBREDDITS,
-      xQuery: `hiring ${broadKeyword} freelance`,
+      xQuery: 'freelance',
       xBroadKeyword: broadKeyword
     };
     console.log('[Scraper] Using fallback parameters:', fallbackParams);
@@ -593,6 +594,9 @@ async function performScraping(intro: string, skills: Skill[], maxJobs: number):
       searchQuery: params.redditQuery,
       subreddit: params.redditSubreddits,
       maxPosts: fetchCount
+    }, {
+      perSubreddit: true, // Search each subreddit individually to avoid 404s
+      enableFallback: true // Use direct Reddit API if Apify fails
     }).catch((error) => {
       console.error('[Scraper] Reddit scraper caught error:', error.message);
       return []; // Return empty array on error for graceful degradation
