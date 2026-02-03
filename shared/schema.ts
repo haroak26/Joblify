@@ -137,6 +137,27 @@ export const seenJobsRelations = relations(seenJobs, ({ one }) => ({
   }),
 }));
 
+// Global job cache - stores all scraped jobs with tags for reuse across users
+export const jobCache = pgTable("job_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  source: text("source").notNull(), // 'reddit', 'x'
+  sourceUrl: text("source_url").notNull().unique(), // Unique constraint - one job per URL
+  author: text("author").notNull(),
+  authorHandle: text("author_handle"),
+  postedAt: timestamp("posted_at").notNull(), // Original post date from platform
+  budget: text("budget"),
+  isRemote: boolean("is_remote").notNull().default(true),
+  tags: jsonb("tags").notNull().default([]), // AI-generated tags/categories ["web development", "react", "frontend"]
+  rawData: jsonb("raw_data"),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`), // When we first scraped it
+  expiresAt: timestamp("expires_at").notNull(), // postedAt + 7 days
+}, (table) => ({
+  sourceUrlIdx: uniqueIndex("job_cache_source_url_idx").on(table.sourceUrl),
+  expiresAtIdx: uniqueIndex("job_cache_expires_at_idx").on(table.expiresAt),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   email: true,
@@ -282,3 +303,27 @@ export const scheduleSchema = z.object({
 export const insertSeenJobSchema = createInsertSchema(seenJobs).omit({ id: true, seenAt: true });
 export type InsertSeenJob = z.infer<typeof insertSeenJobSchema>;
 export type SeenJob = typeof seenJobs.$inferSelect;
+
+// Job cache types
+export const insertJobCacheSchema = createInsertSchema(jobCache).omit({ id: true, scrapedAt: true, expiresAt: true });
+export type InsertJobCache = z.infer<typeof insertJobCacheSchema>;
+export type JobCache = typeof jobCache.$inferSelect;
+
+export const cachedJobSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  source: z.string(),
+  sourceUrl: z.string().url(),
+  author: z.string(),
+  authorHandle: z.string().optional(),
+  postedAt: z.date(),
+  budget: z.string().optional(),
+  isRemote: z.boolean().default(true),
+  tags: z.array(z.string()),
+  rawData: z.any().optional(),
+  scrapedAt: z.date(),
+  expiresAt: z.date(),
+});
+
+export type CachedJob = z.infer<typeof cachedJobSchema>;

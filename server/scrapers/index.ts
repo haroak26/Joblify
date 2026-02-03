@@ -243,6 +243,17 @@ function getSkillVariants(skill: string): string[] {
 }
 
 /**
+ * Check if a post is within the maximum age limit (7 days)
+ */
+function isPostRecent(postedAt: Date): boolean {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  return postedAt >= sevenDaysAgo;
+}
+
+/**
  * Parse and normalize scraped data into JobPost format
  * Uses more lenient skill matching to ensure jobs are returned
  */
@@ -296,21 +307,28 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
   
   // Parse and validate date - handle invalid dates gracefully
   let postedAt: string;
+  let postedDate: Date;
   try {
     // Explicitly check for null/undefined to handle edge cases like 0 (valid Unix timestamp)
     const timestamp = (item.created_utc !== null && item.created_utc !== undefined) 
       ? item.created_utc * 1000 
       : Date.now();
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
+    postedDate = new Date(timestamp);
+    if (isNaN(postedDate.getTime())) {
       console.warn('[Scraper] Reddit - Invalid date for post, using current time:', item.title.substring(0, 50));
-      postedAt = new Date().toISOString();
-    } else {
-      postedAt = date.toISOString();
+      postedDate = new Date();
     }
+    postedAt = postedDate.toISOString();
   } catch (error) {
     console.warn('[Scraper] Reddit - Date parsing error, using current time:', error);
-    postedAt = new Date().toISOString();
+    postedDate = new Date();
+    postedAt = postedDate.toISOString();
+  }
+  
+  // Filter out posts older than 7 days
+  if (!isPostRecent(postedDate)) {
+    console.log('[Scraper] Reddit - Post too old (>7 days):', title.substring(0, 50));
+    return null;
   }
   
   return {
@@ -381,21 +399,28 @@ function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
   
   // Parse and validate date - handle invalid dates gracefully
   let postedAt: string;
+  let postedDate: Date;
   try {
     // Explicitly check for null/undefined to handle edge cases like empty strings
     const dateValue = (item.createdAt !== null && item.createdAt !== undefined && item.createdAt !== '') 
       ? item.createdAt 
       : Date.now();
-    const date = new Date(dateValue);
-    if (isNaN(date.getTime())) {
+    postedDate = new Date(dateValue);
+    if (isNaN(postedDate.getTime())) {
       console.warn('[Scraper] X - Invalid date for post, using current time:', text.substring(0, 50));
-      postedAt = new Date().toISOString();
-    } else {
-      postedAt = date.toISOString();
+      postedDate = new Date();
     }
+    postedAt = postedDate.toISOString();
   } catch (error) {
     console.warn('[Scraper] X - Date parsing error, using current time:', error);
-    postedAt = new Date().toISOString();
+    postedDate = new Date();
+    postedAt = postedDate.toISOString();
+  }
+  
+  // Filter out posts older than 7 days
+  if (!isPostRecent(postedDate)) {
+    console.log('[Scraper] X - Post too old (>7 days):', text.substring(0, 50));
+    return null;
   }
   
   return {
@@ -479,12 +504,14 @@ Only include posts that are clearly hiring. If unsure, exclude.`;
 
 /**
  * Main scraping function - returns max jobs based on plan limits
+ * Implements cache-first approach: checks cache first, only scrapes if needed
  * Implements graceful degradation: if one scraper fails, continues with results from the other
  * @param intro - User's introduction/bio
  * @param skills - User's skills array
  * @param maxJobs - Maximum jobs to return (respects plan limits). Default is 5.
+ * @param bypassCache - If true, skip cache and force fresh scraping. Default is false.
  */
-export async function scrapeJobs(intro: string, skills: Skill[], maxJobs: number = 5): Promise<JobPost[]> {
+export async function scrapeJobs(intro: string, skills: Skill[], maxJobs: number = 5, bypassCache: boolean = false): Promise<JobPost[]> {
   if (!skills.length) {
     console.log('[Scraper] No skills provided, returning empty results');
     return [];
@@ -495,7 +522,61 @@ export async function scrapeJobs(intro: string, skills: Skill[], maxJobs: number
     return [];
   }
   
-  console.log('[Scraper] Starting job scraping - skills count:', skills.length, 'maxJobs:', maxJobs);
+  console.log('[Scraper] Starting job scraping - skills count:', skills.length, 'maxJobs:', maxJobs, 'bypassCache:', bypassCache);
+  
+  // Step 1: Try to get jobs from cache first (unless bypassed)
+  if (!bypassCache) {
+    try {
+      const { searchCachedJobs } = await import('./jobCacheService');
+      const { jobs: cachedJobs, fromCache } = await searchCachedJobs(intro, skills, maxJobs);
+      
+      if (fromCache && cachedJobs.length >= maxJobs) {
+        console.log(`[Scraper] Found ${cachedJobs.length} jobs from cache, skipping API calls`);
+        return cachedJobs.slice(0, maxJobs);
+      } else if (fromCache && cachedJobs.length > 0) {
+        console.log(`[Scraper] Found ${cachedJobs.length} jobs from cache, need ${maxJobs - cachedJobs.length} more from API`);
+        // We'll supplement cache results with fresh scraping below
+        const freshJobsNeeded = maxJobs - cachedJobs.length;
+        const freshJobs = await performScraping(intro, skills, freshJobsNeeded);
+        
+        // Combine and deduplicate by sourceUrl
+        const combinedJobs = [...cachedJobs, ...freshJobs];
+        const seenUrls = new Set<string>();
+        const uniqueJobs = combinedJobs.filter(job => {
+          if (seenUrls.has(job.sourceUrl)) return false;
+          seenUrls.add(job.sourceUrl);
+          return true;
+        });
+        
+        return uniqueJobs.slice(0, maxJobs);
+      }
+      
+      console.log('[Scraper] Cache returned insufficient results, performing fresh scraping');
+    } catch (error) {
+      console.error('[Scraper] Error checking cache, falling back to fresh scraping:', error);
+    }
+  }
+  
+  // Step 2: Perform fresh scraping
+  const freshJobs = await performScraping(intro, skills, maxJobs);
+  
+  // Step 3: Save scraped jobs to cache for future use
+  try {
+    const { saveJobsToCache } = await import('./jobCacheService');
+    await saveJobsToCache(freshJobs);
+    console.log(`[Scraper] Saved ${freshJobs.length} jobs to cache for future use`);
+  } catch (error) {
+    console.error('[Scraper] Error saving to cache (non-fatal):', error);
+    // Don't fail the whole operation if caching fails
+  }
+  
+  return freshJobs;
+}
+
+/**
+ * Perform actual scraping from Apify sources
+ */
+async function performScraping(intro: string, skills: Skill[], maxJobs: number): Promise<JobPost[]> {
   
   const params = await generateScraperParameters(intro, skills);
   console.log('[Scraper] Generated parameters:', params);
