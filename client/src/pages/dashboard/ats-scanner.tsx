@@ -27,7 +27,11 @@ export default function AtsScanner() {
       <h1 className="text-3xl font-bold">ATS Scanner</h1>
       
       <Card className="p-6">
+        <label htmlFor="resume-file-upload" className="block mb-2 font-semibold">
+          Upload Resume
+        </label>
         <input
+          id="resume-file-upload"
           type="file"
           accept=".pdf,.docx"
           onChange={(e) => setFile(e.target.files?.[0] || null)}

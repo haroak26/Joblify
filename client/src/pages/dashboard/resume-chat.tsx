@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -48,8 +48,13 @@ export default function ResumeChat() {
     },
   });
 
-  if (!id && !createMutation.isPending) {
-    createMutation.mutate();
+  useEffect(() => {
+    if (!id && !createMutation.isPending && !createMutation.isSuccess) {
+      createMutation.mutate();
+    }
+  }, [id]);
+
+  if (!id) {
     return <div>Creating resume...</div>;
   }
 
