@@ -33,7 +33,7 @@ export async function scrapeRedditJobs(params: RedditScraperParams) {
   const input = {
     mode: "search",
     searchQuery: params.searchQuery,
-    searchSubreddit: params.subreddit || "forhire+freelance_forhire",
+    searchSubreddit: (params.subreddit || "forhire+freelance_forhire").replace(/,/g, '+'),
     sort: "new",
     timeFilter: "week",
     maxPosts: params.maxPosts || 5,

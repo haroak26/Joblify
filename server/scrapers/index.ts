@@ -27,26 +27,35 @@ interface ScraperParameters {
 export async function generateScraperParameters(intro: string, skills: Skill[]): Promise<ScraperParameters> {
   const skillNames = skills.map(s => s.name).join(', ');
   
-  const prompt = `You are a search query optimizer for finding freelance hiring posts (people looking to HIRE freelancers, NOT job seekers).
+  const prompt = `You are a search query optimizer for finding freelance hiring posts (people looking to HIRE freelancers).
 
 User Profile:
 Introduction: ${intro}
 Skills: ${skillNames}
 
-Generate optimized search queries for Reddit and X (Twitter) to find posts from people/companies looking to hire freelancers with these skills.
+Generate SIMPLE, BROAD search queries that find hiring posts on Reddit and X (Twitter). Keep queries short and focused on hiring keywords.
 
-CRITICAL: Focus on HIRING posts (e.g., "looking for", "need a", "hiring") NOT job seeking posts (e.g., "available for hire", "offering services", "looking for work").
+IMPORTANT GUIDELINES:
+1. Use simple hiring phrases: "hiring", "looking for", "need", "seeking"
+2. Include 1-2 main skills max (e.g., "hiring react developer", "need freelancer")
+3. DO NOT over-specify or combine too many skills
+4. Keep queries under 6 words
+5. Use common job-related terms
 
-Optimize the "redditQuery" and "xQuery" for the Apify actors lqOcm2Bgsg4LGNATd (Reddit) and G8hR9sp2nkjI2om8X (X).
+EXAMPLES OF GOOD QUERIES:
+- "hiring react developer"
+- "need freelance writer"
+- "looking for designer"
+- "seeking python developer"
 
 Return a JSON object with:
 {
-  "redditQuery": "search query for Reddit (focus on hiring keywords)",
-  "redditSubreddits": "comma-separated subreddit names (forhire, freelance_forhire, etc.)",
-  "xQuery": "search query for X/Twitter (focus on hiring keywords)"
+  "redditQuery": "short hiring-focused query (max 6 words)",
+  "redditSubreddits": "forhire,freelance_forhire,hiring",
+  "xQuery": "short hiring-focused query (max 6 words)"
 }
 
-Make queries specific to the user's skills but focused on HIRING opportunities.`;
+Keep it simple and broad to maximize results.`;
 
   try {
     console.log('[Scraper] Generating search parameters with AI');
@@ -61,17 +70,18 @@ Make queries specific to the user's skills but focused on HIRING opportunities.`
     console.log('[Scraper] AI-generated parameters:', params);
     
     return {
-      redditQuery: params.redditQuery || `hiring ${skills[0]?.name || 'freelance'}`,
-      redditSubreddits: params.redditSubreddits || 'forhire+freelance_forhire',
-      xQuery: params.xQuery || `hiring ${skills[0]?.name || 'freelance'} freelance`
+      redditQuery: params.redditQuery || `hiring ${skills[0]?.name || 'developer'}`,
+      redditSubreddits: params.redditSubreddits || 'forhire,freelance_forhire,hiring',
+      xQuery: params.xQuery || `hiring ${skills[0]?.name || 'developer'} freelancer`
     };
   } catch (error) {
     console.error('[Scraper] Error generating scraper parameters:', error);
-    // Fallback to simple defaults
+    // Fallback to simple, proven defaults based on top skill
+    const topSkill = skills[0]?.name || 'developer';
     const fallbackParams = {
-      redditQuery: `hiring ${skills[0]?.name || 'freelance'}`,
-      redditSubreddits: 'forhire+freelance_forhire',
-      xQuery: `hiring ${skills[0]?.name || 'freelance'} freelance`
+      redditQuery: `hiring ${topSkill}`,
+      redditSubreddits: 'forhire,freelance_forhire,hiring',
+      xQuery: `hiring ${topSkill} freelancer`
     };
     console.log('[Scraper] Using fallback parameters:', fallbackParams);
     return fallbackParams;
@@ -84,28 +94,42 @@ Make queries specific to the user's skills but focused on HIRING opportunities.`
 function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
   if (!item.title || !item.url) return null;
   
-  // Filter out job seeking posts - look for specific patterns indicating someone is offering their services
+  // More lenient filtering - only exclude obvious job seeking posts
   const title = item.title.toLowerCase();
   const text = (item.selftext || '').toLowerCase();
   const fullText = title + ' ' + text;
   
-  // Patterns that indicate job seeking (offering services)
+  // Only filter out very explicit job seeking patterns (where someone is clearly offering their own services)
   const seekingPatterns = [
-    /\b(?:i am|i'm|we are|we're)\s+(?:available for hire|for hire|offering)/i,
-    /\blooking for (?:work|gigs|projects|clients)/i,
-    /\boffering (?:my |our )?services/i,
+    /\b(?:i am|i'm)\s+(?:a|an)\s+\w+\s+(?:available for hire|for hire|seeking (?:work|clients))/i,
+    /\b(?:i am|i'm)\s+offering\s+(?:my\s+)?services/i,
+    /\bhire me\b/i,
   ];
   
-  if (seekingPatterns.some(pattern => pattern.test(fullText))) return null;
+  if (seekingPatterns.some(pattern => pattern.test(fullText))) {
+    console.log('[Scraper] Reddit - Filtered out job seeking post:', title.substring(0, 50));
+    return null;
+  }
   
+  // Match skills - be more flexible with partial matches
   const matchedSkills = userSkills
-    .filter(skill => 
-      item.title?.toLowerCase().includes(skill.name.toLowerCase()) ||
-      item.selftext?.toLowerCase().includes(skill.name.toLowerCase())
-    )
+    .filter(skill => {
+      const skillLower = skill.name.toLowerCase();
+      const titleLower = title;
+      const textLower = text;
+      
+      // Check for exact match or skill as part of a word
+      return titleLower.includes(skillLower) || textLower.includes(skillLower);
+    })
     .map(s => s.name);
   
-  if (matchedSkills.length === 0) return null;
+  // If no skills matched, still log it but filter it out
+  if (matchedSkills.length === 0) {
+    console.log('[Scraper] Reddit - No skill match:', title.substring(0, 50));
+    return null;
+  }
+  
+  console.log('[Scraper] Reddit - Matched job:', title.substring(0, 50), 'Skills:', matchedSkills.join(', '));
   
   return {
     id: randomUUID(),
@@ -130,23 +154,36 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
 function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
   if (!item.text || !item.url) return null;
   
-  // Filter out job seeking posts - look for specific patterns indicating someone is offering their services
+  // More lenient filtering - only exclude obvious job seeking posts
   const text = item.text.toLowerCase();
   
-  // Patterns that indicate job seeking (offering services)
+  // Only filter out very explicit job seeking patterns (where someone is clearly offering their own services)
   const seekingPatterns = [
-    /\b(?:i am|i'm|we are|we're)\s+(?:available for hire|for hire|offering)/i,
-    /\blooking for (?:work|gigs|projects|clients)/i,
-    /\boffering (?:my |our )?services/i,
+    /\b(?:i am|i'm)\s+(?:a|an)\s+\w+\s+(?:available for hire|for hire|seeking (?:work|clients))/i,
+    /\b(?:i am|i'm)\s+offering\s+(?:my\s+)?services/i,
+    /\bhire me\b/i,
   ];
   
-  if (seekingPatterns.some(pattern => pattern.test(text))) return null;
+  if (seekingPatterns.some(pattern => pattern.test(text))) {
+    console.log('[Scraper] X - Filtered out job seeking post:', text.substring(0, 50));
+    return null;
+  }
   
+  // Match skills - be more flexible with partial matches
   const matchedSkills = userSkills
-    .filter(skill => item.text?.toLowerCase().includes(skill.name.toLowerCase()))
+    .filter(skill => {
+      const skillLower = skill.name.toLowerCase();
+      return text.includes(skillLower);
+    })
     .map(s => s.name);
   
-  if (matchedSkills.length === 0) return null;
+  // If no skills matched, still log it but filter it out
+  if (matchedSkills.length === 0) {
+    console.log('[Scraper] X - No skill match:', text.substring(0, 50));
+    return null;
+  }
+  
+  console.log('[Scraper] X - Matched job:', text.substring(0, 50), 'Skills:', matchedSkills.join(', '));
   
   return {
     id: randomUUID(),
