@@ -8,6 +8,7 @@ interface RedditScraperParams {
 
 interface RedditScraperOptions {
   perSubreddit?: boolean; // If true, search each subreddit individually
+  enableFallback?: boolean; // If true, use direct Reddit API as fallback
 }
 
 const MAX_RETRIES = 3;
@@ -76,7 +77,14 @@ export async function scrapeRedditJobs(params: RedditScraperParams, options: Red
   }
 
   // Single subreddit search (or combined)
-  return scrapeRedditJobsSingle(params);
+  return scrapeRedditJobsSingle(params).catch(async (error) => {
+    // If Apify fails and fallback is enabled, try direct Reddit API
+    if (options.enableFallback) {
+      console.warn('[Reddit Scraper] Apify failed, trying direct Reddit API fallback');
+      return scrapeRedditDirectAPI(params);
+    }
+    throw error;
+  });
 }
 
 async function scrapeRedditJobsSingle(params: RedditScraperParams) {
@@ -149,4 +157,52 @@ async function scrapeRedditJobsSingle(params: RedditScraperParams) {
   
   console.error('[Reddit Scraper] All retry attempts exhausted');
   throw lastError || new Error('Reddit scraping failed after all retries');
+}
+
+/**
+ * Fallback: Direct Reddit JSON API scraper
+ * Used when Apify scraper fails
+ */
+async function scrapeRedditDirectAPI(params: RedditScraperParams): Promise<any[]> {
+  console.log('[Reddit Scraper] Using direct Reddit JSON API fallback');
+  
+  try {
+    const subreddit = params.subreddit || 'forhire';
+    const searchQuery = encodeURIComponent(params.searchQuery);
+    const url = `https://www.reddit.com/r/${subreddit}/search.json?q=${searchQuery}&sort=new&limit=${params.maxPosts || 5}&t=week`;
+    
+    console.log('[Reddit Scraper] Fetching from:', url);
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Joblify/1.0 (Freelance Job Aggregator)'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Reddit API returned ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const posts = data?.data?.children || [];
+    
+    console.log(`[Reddit Scraper] Direct API returned ${posts.length} posts`);
+    
+    // Transform Reddit API format to match Apify format
+    const items = posts.map((post: any) => ({
+      title: post.data.title,
+      selftext: post.data.selftext,
+      url: `https://reddit.com${post.data.permalink}`,
+      author: post.data.author,
+      created_utc: post.data.created_utc,
+      subreddit: post.data.subreddit,
+      score: post.data.score,
+      num_comments: post.data.num_comments
+    }));
+    
+    return items;
+  } catch (error) {
+    console.error('[Reddit Scraper] Direct API fallback failed:', error);
+    return []; // Return empty array rather than throwing
+  }
 }

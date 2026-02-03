@@ -595,7 +595,8 @@ async function performScraping(intro: string, skills: Skill[], maxJobs: number):
       subreddit: params.redditSubreddits,
       maxPosts: fetchCount
     }, {
-      perSubreddit: true // Search each subreddit individually to avoid 404s
+      perSubreddit: true, // Search each subreddit individually to avoid 404s
+      enableFallback: true // Use direct Reddit API if Apify fails
     }).catch((error) => {
       console.error('[Scraper] Reddit scraper caught error:', error.message);
       return []; // Return empty array on error for graceful degradation
