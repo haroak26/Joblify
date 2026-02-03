@@ -51,7 +51,7 @@ export async function scrapeRedditJobs(params: RedditScraperParams, options: Red
 
   // Split subreddits and search individually if requested
   if (options.perSubreddit && params.subreddit) {
-    const subreddits = params.subreddit.split(/[,+]/);
+    const subreddits = params.subreddit.split(/\s*[,+]\s*/).filter(s => s.trim().length > 0);
     if (subreddits.length > 1) {
       console.log(`[Reddit Scraper] Searching ${subreddits.length} subreddits individually`);
       const postsPerSubreddit = Math.ceil((params.maxPosts || 5) / subreddits.length);
@@ -167,7 +167,16 @@ async function scrapeRedditDirectAPI(params: RedditScraperParams): Promise<any[]
   console.log('[Reddit Scraper] Using direct Reddit JSON API fallback');
   
   try {
-    const subreddit = params.subreddit || 'forhire';
+    // Validate and sanitize subreddit name
+    const subredditRaw = params.subreddit || 'forhire';
+    const subreddit = subredditRaw.split(/[,+]/)[0].trim(); // Use first subreddit only
+    
+    // Security: Only allow alphanumeric characters and underscores in subreddit name
+    if (!/^[a-zA-Z0-9_]+$/.test(subreddit)) {
+      console.error('[Reddit Scraper] Invalid subreddit name:', subreddit);
+      throw new Error('Invalid subreddit name');
+    }
+    
     const searchQuery = encodeURIComponent(params.searchQuery);
     const url = `https://www.reddit.com/r/${subreddit}/search.json?q=${searchQuery}&sort=new&limit=${params.maxPosts || 5}&t=week`;
     
