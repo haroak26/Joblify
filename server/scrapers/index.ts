@@ -297,7 +297,10 @@ function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
   // Parse and validate date - handle invalid dates gracefully
   let postedAt: string;
   try {
-    const timestamp = item.created_utc ? item.created_utc * 1000 : Date.now();
+    // Explicitly check for null/undefined to handle edge cases like 0 (valid Unix timestamp)
+    const timestamp = (item.created_utc !== null && item.created_utc !== undefined) 
+      ? item.created_utc * 1000 
+      : Date.now();
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
       console.warn('[Scraper] Reddit - Invalid date for post, using current time:', item.title.substring(0, 50));
@@ -379,7 +382,11 @@ function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
   // Parse and validate date - handle invalid dates gracefully
   let postedAt: string;
   try {
-    const date = new Date(item.createdAt || Date.now());
+    // Explicitly check for null/undefined to handle edge cases like empty strings
+    const dateValue = (item.createdAt !== null && item.createdAt !== undefined && item.createdAt !== '') 
+      ? item.createdAt 
+      : Date.now();
+    const date = new Date(dateValue);
     if (isNaN(date.getTime())) {
       console.warn('[Scraper] X - Invalid date for post, using current time:', text.substring(0, 50));
       postedAt = new Date().toISOString();
