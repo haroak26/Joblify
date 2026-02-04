@@ -15,10 +15,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Briefcase, Zap, Clock, Award, TrendingUp } from "lucide-react";
-import { ProfileSetup } from "@/components/profile-setup";
-import { SkillsSkeleton } from "@/components/loading-skeleton";
-import type { Skill, FreelancerProfile, Subscription, Usage } from "@shared/schema";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp } from "lucide-react";
+import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -101,37 +99,12 @@ export default function Account() {
     queryKey: ["/api/auth/me"],
   });
 
-  const profileQuery = useQuery<FreelancerProfile>({
-    queryKey: ["/api/profile"],
-  });
-
   const subscriptionQuery = useQuery<SubscriptionResponse>({
     queryKey: ["/api/subscription"],
   });
 
   const usageQuery = useQuery<UsageResponse>({
     queryKey: ["/api/usage"],
-  });
-
-  const updateProfileMutation = useMutation({
-    mutationFn: async (profile: Partial<FreelancerProfile>) => {
-      const response = await apiRequest("POST", "/api/profile", profile);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
-    },
-    onError: (error: any) => {
-      if (error.code === "SKILLS_LIMIT") {
-        toast({
-          title: "Skills Limit Reached",
-          description: error.message || "Upgrade to Plus for unlimited skills.",
-          variant: "destructive",
-        });
-      }
-    },
   });
 
   const upgradeMutation = useMutation({
@@ -197,7 +170,6 @@ export default function Account() {
     },
   });
 
-  const profile = profileQuery.data ?? { intro: "", skills: [] };
   const subscription = subscriptionQuery.data?.subscription;
   const normalizedPlan = normalizePlan(subscription?.plan);
   const usageData = usageQuery.data;
@@ -252,14 +224,6 @@ export default function Account() {
       syncCheckoutMutation.mutate(sessionId);
     }
   }, [hasSyncedCheckout, syncCheckoutMutation]);
-
-  const handleIntroChange = (intro: string) => {
-    updateProfileMutation.mutate({ ...profile, intro });
-  };
-
-  const handleSkillsChange = (skills: Skill[]) => {
-    updateProfileMutation.mutate({ ...profile, skills });
-  };
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
@@ -513,24 +477,6 @@ export default function Account() {
               </Card>
             )}
           </div>
-        </section>
-
-        {/* Work Profile Section */}
-        <section className="space-y-6 pt-10 border-t">
-          <h2 className="text-xl font-semibold flex items-center gap-3 border-b pb-4">
-            <Briefcase className="w-6 h-6 text-primary" />
-            Work Profile
-          </h2>
-          {profileQuery.isLoading ? (
-            <SkillsSkeleton />
-          ) : (
-            <ProfileSetup
-              intro={profile.intro}
-              skills={profile.skills}
-              onIntroChange={handleIntroChange}
-              onSkillsChange={handleSkillsChange}
-            />
-          )}
         </section>
 
         {/* Danger Zone Section */}
