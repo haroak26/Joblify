@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Download } from "lucide-react";
+import { ResumeEditorSkeleton } from "@/components/loading-skeleton";
 
 export default function ResumeEditor() {
   const { id } = useParams();
   const queryClient = useQueryClient();
 
-  const { data: resume } = useQuery<any>({
+  const { data: resume, isLoading } = useQuery<any>({
     queryKey: [`/api/resumes/${id}`],
   });
 
@@ -39,7 +40,7 @@ export default function ResumeEditor() {
     a.click();
   };
 
-  if (!resume) return <div>Loading...</div>;
+  if (isLoading || !resume) return <ResumeEditorSkeleton />;
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">

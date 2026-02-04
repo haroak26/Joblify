@@ -248,12 +248,20 @@ export default function Account() {
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Username</p>
-              <p className="text-lg font-semibold" data-testid="text-username">{user?.username || "Loading..."}</p>
+              {userQuery.isLoading ? (
+                <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+              ) : (
+                <p className="text-lg font-semibold" data-testid="text-username">{user?.username}</p>
+              )}
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Email Address</p>
               <div className="flex items-center gap-3">
-                <p className="text-lg font-semibold truncate" data-testid="text-email">{user?.email || "Loading..."}</p>
+                {userQuery.isLoading ? (
+                  <div className="h-6 w-48 bg-muted animate-pulse rounded" />
+                ) : (
+                  <p className="text-lg font-semibold truncate" data-testid="text-email">{user?.email}</p>
+                )}
                 {user?.emailVerified ? (
                   <Badge variant="secondary" className="text-xs uppercase h-6 px-3">Verified</Badge>
                 ) : (

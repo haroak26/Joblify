@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import type { Resume } from "@shared/schema";
+import { ResumeListSkeleton } from "@/components/loading-skeleton";
 
 export default function ResumeDashboard() {
   const [, navigate] = useLocation();
@@ -141,7 +142,7 @@ export default function ResumeDashboard() {
       </div>
 
       {isLoading ? (
-        <div>Loading...</div>
+        <ResumeListSkeleton />
       ) : resumes.length === 0 ? (
         <Card className="p-12 text-center">
           <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
