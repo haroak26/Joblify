@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, FileText, Scan, Mail, LogOut, User, Sparkles, ExternalLink } from "lucide-react";
+import { Home, FileText, Scan, Mail, User, Sparkles, ExternalLink, Briefcase } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { normalizePlan } from "@shared/schema";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface SubscriptionResponse {
   subscription: { plan: string };
@@ -68,8 +69,6 @@ export function AppSidebar() {
     ? "Ultra"
     : planValue === "plus"
     ? "Plus"
-    : planValue === "lifetime"
-    ? "Lifetime"
     : "Free";
 
   const isActive = (url: string) => {
@@ -90,8 +89,8 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <Link href={logoHref}>
           <div className="flex items-center gap-3 cursor-pointer group" data-testid="link-logo">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-              <FileText className="w-4 h-4 text-primary-foreground" />
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Briefcase className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="font-bold text-lg tracking-tight text-sidebar-foreground" data-testid="text-sidebar-logo">
               Joblify
@@ -146,14 +145,10 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => logout()}
-                  className="h-9 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
-                  data-testid="button-logout"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="text-sm">Log out</span>
-                </SidebarMenuButton>
+                <div className="h-9 px-3 rounded-md flex items-center gap-2">
+                  <ThemeToggle />
+                  <span className="text-sm text-sidebar-foreground/70">Theme</span>
+                </div>
               </SidebarMenuItem>
             </SidebarMenu>
 

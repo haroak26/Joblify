@@ -92,36 +92,6 @@ const plans = [
     ctaHref: "/dashboard/account",
     popular: false,
   },
-  {
-    id: "lifetime",
-    name: "Lifetime",
-    price: "$100",
-    period: "one-time payment",
-    features: [
-      "Unlimited resumes",
-      "Unlimited AI edits",
-      "Unlimited job imports",
-      "All templates",
-      "PDF & DOCX download",
-      "ATS scanner",
-      "LinkedIn import",
-      "Cover letter generator",
-      "Resume & cover letter tailoring",
-      "Ultra access for life"
-    ],
-    whatYouGet: [
-      "Everything in Ultra plan",
-      "One-time payment, no recurring fees",
-      "Lifetime access to all future features",
-      "Unlimited everything forever",
-      "Special early adopter badge",
-      "VIP priority support",
-      "All future premium features included"
-    ],
-    cta: "Get Lifetime Access",
-    ctaHref: "/dashboard/account",
-    popular: false,
-  },
 ];
 
 export default function Pricing() {

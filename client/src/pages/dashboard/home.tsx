@@ -50,7 +50,7 @@ export default function DashboardHome() {
               {subscription?.subscription?.plan || 'Free'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {subscription?.subscription?.plan === 'ultra' || subscription?.subscription?.plan === 'lifetime'
+              {subscription?.subscription?.plan === 'ultra'
                 ? 'All features unlocked' 
                 : 'Upgrade for more features'
               }

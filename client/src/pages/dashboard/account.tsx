@@ -91,15 +91,6 @@ const plans = [
     features: ["Unlimited resumes", "Unlimited AI edits", "Unlimited imports", "All formats", "ATS scanner", "LinkedIn import", "Cover letters", "Resume tailoring"],
     limits: { skills: -1, jobs: -1 },
   },
-  {
-    id: "lifetime",
-    name: "Beta Tester Lifetime",
-    price: "$100",
-    period: "one-time",
-    billingSuffix: "",
-    features: ["Everything in Ultra", "Lifetime access", "All future features", "VIP support"],
-    limits: { skills: -1, jobs: -1 },
-  },
 ];
 
 export default function Account() {
