@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, FileText, Download, Upload } from "lucide-react";
+import { Plus, FileText, Upload } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import {
