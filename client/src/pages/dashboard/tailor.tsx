@@ -18,9 +18,10 @@ export default function TailorPage() {
   const { toast } = useToast();
 
   // Fetch user's jobs
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery<any[]>({
+  const { data: jobsData, isLoading: jobsLoading } = useQuery<{ jobs: any[] }>({
     queryKey: ["/api/jobs"],
   });
+  const jobs = jobsData?.jobs ?? [];
 
   // Fetch user's resumes
   const { data: resumes = [], isLoading: resumesLoading } = useQuery<any[]>({
