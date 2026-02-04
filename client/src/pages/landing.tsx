@@ -32,12 +32,6 @@ const features = [
   }
 ];
 
-const platforms = [
-  { name: "Multiple Templates", icon: () => <span className="font-bold">📄</span>, color: "text-foreground" },
-  { name: "AI Enhancement", icon: () => <span className="font-bold">✨</span>, color: "text-foreground" },
-  { name: "Cover Letters", icon: () => <span className="font-bold">📝</span>, color: "text-foreground" },
-];
-
 const benefits = [
   "Build resumes through natural conversation",
   "AI suggests improvements and keywords",
@@ -136,20 +130,6 @@ export default function Landing() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Platforms */}
-      <section className="py-8 border-y bg-muted/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
-            {platforms.map((p) => (
-              <div key={p.name} className="flex items-center gap-2">
-                {p.icon()}
-                <span className="font-medium">{p.name}</span>
-              </div>
-            ))}
           </div>
         </div>
       </section>

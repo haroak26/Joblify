@@ -26,6 +26,7 @@ import Account from "@/pages/dashboard/account";
 import ResumeDashboard from "@/pages/dashboard/resumes";
 import ResumeEditor from "@/pages/dashboard/resume-editor";
 import ResumeChat from "@/pages/dashboard/resume-chat";
+import ResumeBuilderWizard from "@/pages/dashboard/resume-builder-wizard";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetterGenerator from "@/pages/dashboard/cover-letter";
 
@@ -110,7 +111,7 @@ function Router() {
       <Route path="/dashboard/resumes/new">
         <ProtectedRoute>
           <DashboardLayout>
-            <ResumeChat />
+            <ResumeBuilderWizard />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

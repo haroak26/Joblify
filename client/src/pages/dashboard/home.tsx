@@ -27,32 +27,52 @@ export default function DashboardHome() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
+      <div className="grid gap-4 md:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Resumes</CardTitle>
+            <CardTitle className="text-sm font-medium">Resume Usage</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{resumeCount} / {maxResumes}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {maxResumes === '∞' ? 'Unlimited plan' : `${maxResumes - resumeCount} remaining`}
+              {maxResumes === '∞' ? 'Unlimited resumes available' : `${maxResumes - resumeCount} slots remaining`}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Plan</CardTitle>
+            <CardTitle className="text-sm font-medium">Current Plan</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold capitalize">
               {subscription?.subscription?.plan || 'Free'}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
+              {subscription?.subscription?.plan === 'ultra' || subscription?.subscription?.plan === 'lifetime'
+                ? 'All features unlocked' 
+                : 'Upgrade for more features'
+              }
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">AI Edits</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
               {subscription?.limits?.maxAiEditsPerMonth === -1 
-                ? 'Unlimited AI edits' 
-                : `${subscription?.limits?.maxAiEditsPerMonth || 5} AI edits/month`
+                ? '∞' 
+                : subscription?.limits?.maxAiEditsPerMonth || 5
+              }
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {subscription?.limits?.maxAiEditsPerMonth === -1 
+                ? 'Unlimited AI assistance' 
+                : 'per month'
               }
             </p>
           </CardContent>
@@ -64,7 +84,7 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent>
             <Link href="/dashboard/resumes/new">
-              <Button className="w-full">
+              <Button className="w-full" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 New Resume
               </Button>
