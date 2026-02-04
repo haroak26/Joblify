@@ -2,14 +2,18 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Copy, Download, Loader2, Sparkles, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CoverLetterGenerator() {
   const [resumeId, setResumeId] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [tone, setTone] = useState<"professional" | "enthusiastic" | "creative">("professional");
   const [result, setResult] = useState<any>(null);
+  const { toast } = useToast();
 
   const { data: resumes = [] } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
@@ -28,60 +32,179 @@ export default function CoverLetterGenerator() {
     onSuccess: (data) => setResult(data),
   });
 
+  const copyToClipboard = () => {
+    if (result?.content) {
+      navigator.clipboard.writeText(result.content);
+      toast({
+        title: "Copied!",
+        description: "Cover letter copied to clipboard",
+      });
+    }
+  };
+
+  const downloadAsText = () => {
+    if (result?.content) {
+      const blob = new Blob([result.content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cover-letter.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Downloaded!",
+        description: "Cover letter saved as text file",
+      });
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Cover Letter Generator</h1>
+      <div>
+        <h1 className="text-3xl font-bold">Cover Letter Generator</h1>
+        <p className="text-muted-foreground mt-2">
+          Create a personalized cover letter using AI based on your resume and the job description
+        </p>
+      </div>
       
-      <Card className="p-6 space-y-4">
-        <div>
-          <label className="font-semibold">Select Resume</label>
-          <Select value={resumeId} onValueChange={setResumeId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose a resume" />
-            </SelectTrigger>
-            <SelectContent>
-              {resumes.map((r: any) => (
-                <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Generate Your Cover Letter</CardTitle>
+          <CardDescription>
+            Fill in the details below to create a tailored cover letter
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="resume-select">Select Resume *</Label>
+            <Select value={resumeId} onValueChange={setResumeId}>
+              <SelectTrigger id="resume-select">
+                <SelectValue placeholder="Choose a resume to base your letter on" />
+              </SelectTrigger>
+              <SelectContent>
+                {resumes.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground">
+                    No resumes found. Create one first.
+                  </div>
+                ) : (
+                  resumes.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        {r.title}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div>
-          <label className="font-semibold">Job Description</label>
-          <Textarea
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste the job description here..."
-            rows={6}
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="job-description">Job Description *</Label>
+            <Textarea
+              id="job-description"
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste the complete job description here, including requirements, responsibilities, and company information..."
+              rows={8}
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Include as much detail as possible for a more tailored cover letter
+            </p>
+          </div>
 
-        <div>
-          <label className="font-semibold">Tone</label>
-          <Select value={tone} onValueChange={(v: any) => setTone(v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="professional">Professional</SelectItem>
-              <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
-              <SelectItem value="creative">Creative</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="tone-select">Writing Tone *</Label>
+            <Select value={tone} onValueChange={(v: any) => setTone(v)}>
+              <SelectTrigger id="tone-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="professional">
+                  <div>
+                    <div className="font-medium">Professional</div>
+                    <div className="text-xs text-muted-foreground">Formal and business-oriented</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="enthusiastic">
+                  <div>
+                    <div className="font-medium">Enthusiastic</div>
+                    <div className="text-xs text-muted-foreground">Energetic and passionate</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="creative">
+                  <div>
+                    <div className="font-medium">Creative</div>
+                    <div className="text-xs text-muted-foreground">Unique and expressive</div>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Button
-          onClick={() => generateMutation.mutate()}
-          disabled={!resumeId || !jobDescription || generateMutation.isPending}
-        >
-          Generate Cover Letter
-        </Button>
+          <Button
+            onClick={() => generateMutation.mutate()}
+            disabled={!resumeId || !jobDescription || generateMutation.isPending}
+            className="w-full"
+            size="lg"
+          >
+            {generateMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating Cover Letter...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Cover Letter
+              </>
+            )}
+          </Button>
+        </CardContent>
       </Card>
 
       {result && (
-        <Card className="p-6">
-          <Textarea value={result.content} rows={20} readOnly />
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Your Cover Letter</CardTitle>
+                <CardDescription>
+                  AI-generated cover letter based on your inputs
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyToClipboard}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadAsText}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Textarea 
+              value={result.content} 
+              rows={24}
+              readOnly
+              className="font-serif text-sm leading-relaxed"
+            />
+          </CardContent>
         </Card>
       )}
     </div>

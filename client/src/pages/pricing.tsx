@@ -19,6 +19,13 @@ const plans = [
       "PDF download",
       "Email support"
     ],
+    whatYouGet: [
+      "Create and store 1 professional resume",
+      "Get 5 AI-powered edits monthly to enhance your content",
+      "Access to basic resume templates",
+      "Export your resume as PDF",
+      "Email support for any questions"
+    ],
     cta: "Get Started Free",
     ctaHref: "/register",
     popular: false,
@@ -34,6 +41,14 @@ const plans = [
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
+      "Priority email support"
+    ],
+    whatYouGet: [
+      "Create and manage up to 5 resumes",
+      "100 AI-powered edits per month",
+      "Access to all premium templates",
+      "Export as PDF and editable DOCX",
+      "ATS optimization scanner",
       "Priority email support"
     ],
     cta: "Upgrade to Plus",
@@ -54,6 +69,15 @@ const plans = [
       "Cover letter generator",
       "Priority support"
     ],
+    whatYouGet: [
+      "Unlimited resume creation and storage",
+      "Unlimited AI-powered edits and optimizations",
+      "Full access to all premium templates",
+      "Export as PDF and DOCX formats",
+      "Advanced ATS optimization scanner",
+      "AI-powered cover letter generator",
+      "Priority customer support"
+    ],
     cta: "Upgrade to Ultra",
     ctaHref: "/dashboard/account",
     popular: false,
@@ -71,6 +95,15 @@ const plans = [
       "ATS scanner",
       "Cover letter generator",
       "Ultra access for life"
+    ],
+    whatYouGet: [
+      "Everything in Ultra plan",
+      "One-time payment, no recurring fees",
+      "Lifetime access to all future features",
+      "Unlimited everything forever",
+      "Special early adopter badge",
+      "VIP priority support",
+      "All future premium features included"
     ],
     cta: "Get Lifetime Access",
     ctaHref: "/dashboard/account",
