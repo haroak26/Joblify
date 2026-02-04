@@ -253,35 +253,23 @@ export default function MyJobs() {
       <SearchLoadingOverlay isSearching={refreshJobsMutation.isPending} />
       
       <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8 flex-wrap">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-jobs-heading">
-              My Jobs
-              {hasJobs && (
-                <span className="block sm:inline sm:ml-4 text-muted-foreground font-normal text-lg sm:text-xl">
-                  ({jobs.length})
-                </span>
-              )}
-            </h1>
-            <p className="text-base sm:text-lg text-muted-foreground">Find and track opportunities that match your skills.</p>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            {hasSkills && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 justify-end">
+          {hasSkills && (
+            <Button
+              onClick={() => refreshJobsMutation.mutate()}
+              disabled={refreshJobsMutation.isPending}
+              className="gap-2 w-full sm:w-auto"
+              data-testid="button-refresh-jobs"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? 'animate-spin' : ''}`} />
+              {refreshJobsMutation.isPending ? 'Searching...' : 'Search Jobs'}
+            </Button>
+          )}
+          {hasJobs && (
+            <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
               <Button
-                onClick={() => refreshJobsMutation.mutate()}
-                disabled={refreshJobsMutation.isPending}
-                className="gap-2 w-full sm:w-auto"
-                data-testid="button-refresh-jobs"
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshJobsMutation.isPending ? 'animate-spin' : ''}`} />
-                {refreshJobsMutation.isPending ? 'Searching...' : 'Search Jobs'}
-              </Button>
-            )}
-            {hasJobs && (
-              <div className="flex items-center gap-1 border rounded-md p-1 bg-muted/20 w-full sm:w-auto justify-center sm:justify-start">
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="icon"
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="icon"
                 className="h-9 w-9"
                 onClick={() => setViewMode("list")}
                 data-testid="button-view-list"
@@ -300,42 +288,41 @@ export default function MyJobs() {
             </div>
           )}
         </div>
-      </div>
 
-      {jobsQuery.isLoading ? (
-        <JobListSkeleton />
-      ) : !hasSkills && !hasJobs ? (
-        <EmptyState type="no-skills" />
-      ) : !hasJobs ? (
-        <EmptyState type="no-jobs" onAction={() => refreshJobsMutation.mutate()} />
-      ) : (
-        <div className="space-y-10">
-          <div className="border-b pb-8">
-            <JobFilters
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              sourceFilter={sourceFilter}
-              onSourceChange={setSourceFilter}
-              statusFilter={statusFilter}
-              onStatusChange={setStatusFilter}
-              timeFilter={timeFilter}
-              onTimeChange={setTimeFilter}
-              jobCount={filteredJobs.length}
-            />
-          </div>
-
-          {filteredJobs.length === 0 ? (
-            <EmptyState type="no-results" />
-          ) : (
-            <div className="space-y-10" data-testid="job-list">
-              {sectionsToShow.map((section) =>
-                renderJobSection(section, groupedJobs[section])
-              )}
+        {jobsQuery.isLoading ? (
+          <JobListSkeleton />
+        ) : !hasSkills && !hasJobs ? (
+          <EmptyState type="no-skills" />
+        ) : !hasJobs ? (
+          <EmptyState type="no-jobs" onAction={() => refreshJobsMutation.mutate()} />
+        ) : (
+          <div className="space-y-10">
+            <div className="border-b pb-8">
+              <JobFilters
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                sourceFilter={sourceFilter}
+                onSourceChange={setSourceFilter}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                timeFilter={timeFilter}
+                onTimeChange={setTimeFilter}
+                jobCount={filteredJobs.length}
+              />
             </div>
-          )}
-        </div>
-      )}
-    </div>
+
+            {filteredJobs.length === 0 ? (
+              <EmptyState type="no-results" />
+            ) : (
+              <div className="space-y-10" data-testid="job-list" aria-label={`${jobs.length} jobs total, ${filteredJobs.length} jobs shown`}>
+                {sectionsToShow.map((section) =>
+                  renderJobSection(section, groupedJobs[section])
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 }

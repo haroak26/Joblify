@@ -96,13 +96,6 @@ export default function LinkedInImport() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">LinkedIn Job Import</h1>
-        <p className="text-muted-foreground">
-          Import job postings directly from LinkedIn to your job list
-        </p>
-      </div>
-
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
@@ -110,14 +103,14 @@ export default function LinkedInImport() {
         </AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add LinkedIn Job URLs</CardTitle>
-          <CardDescription>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Add LinkedIn Job URLs</h2>
+          <p className="text-sm text-muted-foreground">
             Enter one or more LinkedIn job posting URLs. We'll scrape the job details and add them to your list.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </p>
+        </div>
+        <div className="space-y-4">
           <div className="space-y-3">
             {urls.map((url, index) => (
               <div key={index} className="flex gap-2">
@@ -181,8 +174,8 @@ export default function LinkedInImport() {
             <p>• You can import multiple jobs at once</p>
             <p>• Jobs will be saved to your "My Jobs" list</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {importedJobs.length > 0 && (
         <Card>

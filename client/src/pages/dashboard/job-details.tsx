@@ -36,7 +36,7 @@ export default function JobDetails() {
   });
 
   const jobId = params?.id ?? "";
-  const job = jobsQuery.data?.jobs.find((item) => item.id === jobId);
+  const job = jobsQuery.data?.jobs?.find((item) => item.id === jobId);
   const profile = profileQuery.data ?? { intro: "", skills: [] };
 
   const matchedSkillNames = useMemo(() => {

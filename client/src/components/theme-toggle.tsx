@@ -1,22 +1,32 @@
 import { Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useTheme } from "./theme-provider";
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleTheme();
+    }
+  };
+
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <div 
+      role="button"
+      tabIndex={0}
       onClick={toggleTheme}
-      data-testid="button-theme-toggle"
+      onKeyDown={handleKeyDown}
+      className="flex items-center gap-2 cursor-pointer"
+      data-testid="theme-toggle"
+      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
       {theme === "light" ? (
         <Moon className="h-4 w-4" />
       ) : (
         <Sun className="h-4 w-4" />
       )}
-    </Button>
+      <span className="text-sm">Theme</span>
+    </div>
   );
 }

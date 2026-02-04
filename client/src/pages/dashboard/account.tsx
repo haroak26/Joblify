@@ -274,11 +274,6 @@ export default function Account() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-account-heading">Account Settings</h1>
-        <p className="text-base sm:text-lg text-muted-foreground">Manage your profile, usage, and subscription.</p>
-      </div>
-
       <div className="space-y-12 sm:space-y-16">
         {/* Account Details Section */}
         <section className="space-y-6">

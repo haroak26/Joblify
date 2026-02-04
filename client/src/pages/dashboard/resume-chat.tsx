@@ -75,13 +75,6 @@ export default function ResumeChat() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Build Your Resume with AI</h1>
-        <p className="text-muted-foreground">
-          Chat naturally with our AI to create your resume - no forms required!
-        </p>
-      </div>
-      
       <Card className="flex flex-col h-[600px]">
         <div className="flex-1 p-6 space-y-4 overflow-y-auto">
           {!hasMessages && (

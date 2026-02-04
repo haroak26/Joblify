@@ -18,9 +18,10 @@ export default function TailorPage() {
   const { toast } = useToast();
 
   // Fetch user's jobs
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery<any[]>({
+  const { data: jobsData, isLoading: jobsLoading } = useQuery<{ jobs: any[] }>({
     queryKey: ["/api/jobs"],
   });
+  const jobs = jobsData?.jobs ?? [];
 
   // Fetch user's resumes
   const { data: resumes = [], isLoading: resumesLoading } = useQuery<any[]>({
@@ -157,13 +158,6 @@ export default function TailorPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Tailor to Job</h1>
-        <p className="text-muted-foreground">
-          Optimize your resume and cover letter for a specific job posting
-        </p>
-      </div>
-
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
@@ -173,17 +167,17 @@ export default function TailorPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Job Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
               <Briefcase className="w-5 h-5" />
               Select Job
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm text-muted-foreground">
               Choose the job you want to tailor your application for
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="job-select">Job Posting</Label>
               <Select value={selectedJobId} onValueChange={setSelectedJobId}>
@@ -226,21 +220,21 @@ export default function TailorPage() {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Resume Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
               <FileText className="w-5 h-5" />
               Select Resume
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm text-muted-foreground">
               Choose the resume you want to tailor
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="resume-select">Base Resume</Label>
               <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
@@ -283,8 +277,8 @@ export default function TailorPage() {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Results */}
