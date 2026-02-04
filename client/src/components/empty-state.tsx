@@ -15,7 +15,7 @@ export function EmptyState({ type, onAction }: EmptyStateProps) {
         </div>
         <h3 className="font-bold text-xl mb-2">Complete Your Profile</h3>
         <p className="text-muted-foreground max-w-md mx-auto mb-6 leading-relaxed">
-          Add your introduction and skills so we can find freelance opportunities that match your expertise.
+          Add your introduction and skills so we can find job opportunities that match your expertise.
         </p>
         <Button className="gap-2" data-testid="button-go-to-profile">
           <Sparkles className="w-4 h-4" />

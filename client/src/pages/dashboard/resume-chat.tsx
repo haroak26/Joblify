@@ -74,13 +74,10 @@ export default function ResumeChat() {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Sparkles className="w-8 h-8 text-primary" />
-          Build Your Resume with AI
-        </h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Build Your Resume with AI</h1>
+        <p className="text-muted-foreground">
           Chat naturally with our AI to create your resume - no forms required!
         </p>
       </div>

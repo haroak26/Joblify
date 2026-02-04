@@ -1,11 +1,30 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, FileText, Download, Trash2, Copy } from "lucide-react";
-import { Link } from "wouter";
+import { Plus, FileText, Upload } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ResumeDashboard() {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [title, setTitle] = useState("");
+
   const { data: resumes = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
   });
@@ -17,21 +36,110 @@ export default function ResumeDashboard() {
   const canCreateMore = !subscription?.limits?.maxResumes || 
     resumes.length < subscription.limits.maxResumes;
 
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      if (!file) throw new Error("No file selected");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("title", title || file.name.replace(/\.(pdf|docx)$/i, ""));
+      
+      const res = await fetch("/api/resumes/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to upload");
+      }
+      
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+      toast({
+        title: "Resume Imported!",
+        description: "Your resume has been successfully imported.",
+      });
+      setUploadDialogOpen(false);
+      setFile(null);
+      setTitle("");
+      navigate(`/dashboard/resumes/${data.resume.id}/edit`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">My Resumes</h1>
+          <h1 className="text-3xl font-bold mb-2">My Resumes</h1>
           <p className="text-muted-foreground">
             {resumes.length} / {subscription?.limits?.maxResumes === -1 ? '∞' : subscription?.limits?.maxResumes} resumes
           </p>
         </div>
-        <Link href="/dashboard/resumes/new">
-          <Button disabled={!canCreateMore}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Resume
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={!canCreateMore}>
+                <Upload className="w-4 h-4 mr-2" />
+                Import Resume
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Import Resume</DialogTitle>
+                <DialogDescription>
+                  Upload your existing resume (PDF or DOCX) to import it into Joblify
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resume-title">Resume Title</Label>
+                  <Input
+                    id="resume-title"
+                    placeholder="e.g., Software Engineer Resume"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="resume-file">Resume File</Label>
+                  <Input
+                    id="resume-file"
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  />
+                  {file && (
+                    <p className="text-sm text-muted-foreground">
+                      Selected: {file.name}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  onClick={() => uploadMutation.mutate()}
+                  disabled={!file || uploadMutation.isPending}
+                  className="w-full"
+                >
+                  {uploadMutation.isPending ? "Importing..." : "Import Resume"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Link href="/dashboard/resumes/new">
+            <Button disabled={!canCreateMore}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Resume
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (

@@ -61,10 +61,10 @@ export default function CoverLetterGenerator() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Cover Letter Generator</h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="container mx-auto p-6 max-w-4xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Cover Letter Generator</h1>
+        <p className="text-muted-foreground">
           Create a personalized cover letter using AI based on your resume and the job description
         </p>
       </div>
