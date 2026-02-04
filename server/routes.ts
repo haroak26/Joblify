@@ -2,10 +2,16 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { skillSchema, PLAN_LIMITS, normalizePlan } from "@shared/schema";
+import { skillSchema, PLAN_LIMITS, normalizePlan, resumeDataSchema } from "@shared/schema";
+import type { ResumeData } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
+import multer from 'multer';
+import PDFDocument from 'pdfkit';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import pdf from 'pdf-parse';
+import mammoth from 'mammoth';
 
 let poeClient: OpenAI | null = null;
 
@@ -27,6 +33,111 @@ function getPoeClient(): OpenAI {
   });
 
   return poeClient;
+}
+
+/**
+ * Merges extracted resume data from AI into existing resume data
+ * Appends arrays and replaces other values
+ */
+function mergeResumeData(
+  currentData: ResumeData,
+  extractedData: Record<string, unknown>
+): ResumeData {
+  const merged = { ...currentData };
+  
+  for (const [key, value] of Object.entries(extractedData)) {
+    if (!value) continue;
+    
+    const typedKey = key as keyof ResumeData;
+    const currentValue = currentData[typedKey];
+    
+    // For array fields, append new items
+    if (Array.isArray(value) && Array.isArray(currentValue)) {
+      (merged[typedKey] as unknown[]) = [...currentValue, ...value];
+    }
+    // For other fields, replace with new value
+    else if (typedKey in merged) {
+      (merged[typedKey] as unknown) = value;
+    }
+  }
+  
+  return merged;
+}
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || 
+        file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and DOCX files are allowed'));
+    }
+  }
+});
+
+// Convert resume data to text for ATS analysis
+function resumeDataToText(resumeData: ResumeData): string {
+  const parts: string[] = [];
+  
+  // Personal Info
+  const { personalInfo } = resumeData;
+  if (personalInfo.name) parts.push(personalInfo.name);
+  if (personalInfo.email) parts.push(personalInfo.email);
+  if (personalInfo.phone) parts.push(personalInfo.phone);
+  if (personalInfo.location) parts.push(personalInfo.location);
+  
+  // Summary
+  if (resumeData.summary) {
+    parts.push('\nSUMMARY\n' + resumeData.summary);
+  }
+  
+  // Experience
+  if (resumeData.experience?.length > 0) {
+    parts.push('\nEXPERIENCE');
+    resumeData.experience.forEach(exp => {
+      parts.push(`\n${exp.title} at ${exp.company}`);
+      parts.push(`${exp.location} | ${exp.startDate} - ${exp.endDate || 'Present'}`);
+      exp.description.forEach(desc => parts.push(`• ${desc}`));
+    });
+  }
+  
+  // Education
+  if (resumeData.education?.length > 0) {
+    parts.push('\nEDUCATION');
+    resumeData.education.forEach(edu => {
+      parts.push(`\n${edu.degree} in ${edu.field}`);
+      parts.push(`${edu.school} | ${edu.graduationDate}`);
+      if (edu.gpa) parts.push(`GPA: ${edu.gpa}`);
+    });
+  }
+  
+  // Skills
+  if (resumeData.skills?.length > 0) {
+    parts.push('\nSKILLS\n' + resumeData.skills.join(', '));
+  }
+  
+  // Certifications
+  if (resumeData.certifications?.length > 0) {
+    parts.push('\nCERTIFICATIONS');
+    resumeData.certifications.forEach(cert => {
+      parts.push(`\n${cert.name} - ${cert.issuer} (${cert.date})`);
+    });
+  }
+  
+  // Projects
+  if (resumeData.projects?.length > 0) {
+    parts.push('\nPROJECTS');
+    resumeData.projects.forEach(proj => {
+      parts.push(`\n${proj.name}`);
+      parts.push(proj.description);
+      parts.push(`Technologies: ${proj.technologies.join(', ')}`);
+    });
+  }
+  
+  return parts.join('\n');
 }
 
 export async function registerRoutes(
@@ -217,7 +328,7 @@ export async function registerRoutes(
       console.log('[API] Intro validated - length:', intro.length);
       
       const response = await getPoeClient().chat.completions.create({
-        model: "gpt-5-nano",
+        model: "claude-3.5-haiku",
         messages: [
           {
             role: "system",
@@ -277,6 +388,719 @@ export async function registerRoutes(
       }
     }
   });
+
+  // ============================================
+  // Resume Management Endpoints
+  // ============================================
+  
+  app.get("/api/resumes", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Fetching resumes for user:', userId);
+      const resumes = await storage.getResumes(userId);
+      res.json({ resumes });
+    } catch (error) {
+      console.error('[API] Error fetching resumes for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch resumes",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUMES_FETCH_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/resumes", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Creating resume for user:', userId);
+      const schema = z.object({
+        title: z.string().min(1, "Title is required"),
+        template: z.enum(['modern', 'classic', 'creative']).optional().default('modern'),
+      });
+      
+      const data = schema.parse(req.body);
+      
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      const resumeCount = await storage.countUserResumes(userId);
+      
+      if (limits.maxResumes !== Infinity && resumeCount >= limits.maxResumes) {
+        console.log('[API] Resume limit reached for user:', userId, '- limit:', limits.maxResumes);
+        return res.status(403).json({
+          error: 'Resume limit reached',
+          code: 'RESUME_LIMIT',
+          limit: limits.maxResumes,
+          current: resumeCount,
+          message: `Your ${plan} plan allows up to ${limits.maxResumes} resume(s). Upgrade to create more.`
+        });
+      }
+      
+      // Create empty resume data structure
+      const emptyResumeData = {
+        personalInfo: {
+          name: "",
+          email: "",
+          phone: "",
+          location: "",
+          linkedin: "",
+          website: "",
+        },
+        summary: "",
+        experience: [],
+        education: [],
+        skills: [],
+        certifications: [],
+        projects: [],
+      };
+      
+      const resume = await storage.createResume(userId, {
+        userId,
+        title: data.title,
+        template: data.template,
+        resumeData: emptyResumeData,
+      });
+      
+      console.log('[API] Resume created:', resume.id, 'user:', userId);
+      res.json({ resume });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Resume validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid resume data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error creating resume for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to create resume",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "RESUME_CREATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.get("/api/resumes/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Fetching resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      res.json({ resume });
+    } catch (error) {
+      console.error('[API] Error fetching resume:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUME_FETCH_ERROR"
+      });
+    }
+  });
+
+  app.put("/api/resumes/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Updating resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      const schema = z.object({
+        title: z.string().min(1).optional(),
+        template: z.enum(['modern', 'classic', 'creative']).optional(),
+        resumeData: resumeDataSchema.optional(),
+      });
+      
+      const updates = schema.parse(req.body);
+      const updated = await storage.updateResume(id, updates);
+      
+      console.log('[API] Resume updated:', id, 'user:', userId);
+      res.json({ resume: updated });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Resume validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid resume data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error updating resume:', id, 'user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to update resume",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "RESUME_UPDATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.delete("/api/resumes/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Deleting resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      await storage.deleteResume(id);
+      console.log('[API] Resume deleted:', id, 'user:', userId);
+      res.json({ message: "Resume deleted successfully" });
+    } catch (error) {
+      console.error('[API] Error deleting resume:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to delete resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUME_DELETE_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/resumes/:id/duplicate", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Duplicating resume:', id, 'user:', userId);
+      const resume = await storage.getResume(id);
+      
+      if (!resume) {
+        console.log('[API] Resume not found:', id);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', id, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      const resumeCount = await storage.countUserResumes(userId);
+      
+      if (limits.maxResumes !== Infinity && resumeCount >= limits.maxResumes) {
+        console.log('[API] Resume limit reached for user:', userId, '- limit:', limits.maxResumes);
+        return res.status(403).json({
+          error: 'Resume limit reached',
+          code: 'RESUME_LIMIT',
+          limit: limits.maxResumes,
+          current: resumeCount,
+          message: `Your ${plan} plan allows up to ${limits.maxResumes} resume(s). Upgrade to create more.`
+        });
+      }
+      
+      const newResume = await storage.createResume(userId, {
+        userId,
+        title: `${resume.title} (Copy)`,
+        template: resume.template,
+        resumeData: resume.resumeData,
+      });
+      
+      console.log('[API] Resume duplicated:', id, '-> new id:', newResume.id, 'user:', userId);
+      res.json({ resume: newResume });
+    } catch (error) {
+      console.error('[API] Error duplicating resume:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to duplicate resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUME_DUPLICATE_ERROR"
+      });
+    }
+  });
+
+  // ============================================
+  // AI Chat Endpoints
+  // ============================================
+  
+  const RESUME_CHAT_SYSTEM_PROMPT = `You are a professional resume builder assistant. Help users create great resumes through natural conversation.
+
+Your goals:
+1. Ask about their experience, education, and skills one section at a time
+2. Extract structured information from their responses
+3. Provide helpful suggestions to improve their resume content
+4. Be encouraging and professional
+
+When the user provides information, respond in this format:
+{
+  "message": "Your conversational response to the user",
+  "extracted_data": {
+    // Include any resume fields you can extract from their response
+    // e.g., "experience": [{"company": "Google", "title": "Engineer", ...}]
+  }
+}
+
+Start by asking about their current or target job title.`;
+
+  app.post("/api/chat/resume/:id/message", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const resumeId = req.params.id as string;
+    try {
+      console.log('[API] Chat message for resume:', resumeId, 'user:', userId);
+      const schema = z.object({
+        message: z.string().min(1, "Message is required"),
+      });
+      
+      const { message } = schema.parse(req.body);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        console.log('[API] Resume not found:', resumeId);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', resumeId, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      // Get or create chat conversation
+      let conversation = await storage.getChatConversation(resumeId);
+      if (!conversation) {
+        conversation = await storage.createChatConversation(userId, resumeId);
+        console.log('[API] Created new chat conversation for resume:', resumeId);
+      }
+      
+      // Build messages array
+      const messages = conversation.messages as Array<{ role: string; content: string }>;
+      const chatMessages = [
+        { role: "system" as const, content: RESUME_CHAT_SYSTEM_PROMPT },
+        ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+        { role: "user" as const, content: message },
+      ];
+      
+      // Send to AI
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: chatMessages,
+        max_tokens: 1000,
+      });
+      
+      const aiResponse = response.choices[0]?.message?.content || "I'm sorry, I couldn't process that.";
+      console.log('[API] AI response received for resume:', resumeId);
+      
+      // Save messages to conversation
+      const updatedMessages = [
+        ...messages,
+        { role: "user", content: message, timestamp: new Date().toISOString() },
+        { role: "assistant", content: aiResponse, timestamp: new Date().toISOString() },
+      ];
+      
+      await storage.updateChatConversation(conversation.id, updatedMessages);
+      
+      // Try to parse AI response for extracted data
+      let extractedData = null;
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleanContent);
+        if (parsed.extracted_data) {
+          extractedData = parsed.extracted_data;
+          
+          // Merge extracted data into existing resume data
+          const mergedData = mergeResumeData(resume.resumeData, extractedData);
+          
+          // Validate the merged data
+          const validatedData = resumeDataSchema.parse(mergedData);
+          await storage.updateResume(resumeId, { resumeData: validatedData });
+          console.log('[API] Resume updated with extracted data:', resumeId);
+        }
+      } catch (parseError) {
+        // If parsing fails, just send the response as-is
+        console.log('[API] Could not parse AI response for data extraction:', parseError);
+      }
+      
+      res.json({ 
+        response: aiResponse,
+        extractedData,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Chat validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid message data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error in chat for resume:', resumeId, 'user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to process chat message",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "CHAT_ERROR"
+        });
+      }
+    }
+  });
+
+  app.get("/api/chat/resume/:id/history", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const resumeId = req.params.id as string;
+    try {
+      console.log('[API] Fetching chat history for resume:', resumeId, 'user:', userId);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        console.log('[API] Resume not found:', resumeId);
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        console.log('[API] Unauthorized resume access:', resumeId, 'user:', userId);
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      const conversation = await storage.getChatConversation(resumeId);
+      const messages = conversation?.messages || [];
+      
+      res.json({ messages });
+    } catch (error) {
+      console.error('[API] Error fetching chat history for resume:', resumeId, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch chat history",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "CHAT_HISTORY_ERROR"
+      });
+    }
+  });
+
+  // ============================================
+  // AI Enhancement Endpoints
+  // ============================================
+  
+  app.post("/api/ai/improve-content", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI improve content for user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+        section: z.string().min(1, "Section is required"),
+      });
+      
+      const { content, section } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional resume editor. Improve the following ${section} section to be more professional, impactful, and ATS-friendly. Keep the same information but make it more compelling. Return only the improved content without any explanations.`
+          },
+          {
+            role: "user",
+            content,
+          }
+        ],
+        max_tokens: 500,
+      });
+      
+      const improved = response.choices[0]?.message?.content || content;
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI content improved for user:', userId);
+      
+      res.json({ improved });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI improve validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error improving content for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to improve content",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  app.post("/api/ai/suggest-keywords", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI suggest keywords for user:', userId);
+      const schema = z.object({
+        jobTitle: z.string().min(1, "Job title is required"),
+        industry: z.string().optional(),
+      });
+      
+      const { jobTitle, industry } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const industryContext = industry ? ` in the ${industry} industry` : '';
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a resume keyword expert. Suggest 10-15 relevant keywords and skills for a ${jobTitle}${industryContext} that would help a resume pass ATS systems. Return only a JSON array of keywords, nothing else. Example: ["Python", "Machine Learning", "Data Analysis"]`
+          },
+          {
+            role: "user",
+            content: `Job title: ${jobTitle}${industryContext}`
+          }
+        ],
+        max_tokens: 300,
+      });
+      
+      const content = response.choices[0]?.message?.content || '[]';
+      let keywords: string[] = [];
+      
+      try {
+        const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleanContent);
+        keywords = Array.isArray(parsed) ? parsed : [];
+      } catch (parseError) {
+        console.error('[API] Failed to parse AI keywords response:', parseError);
+      }
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI keywords suggested for user:', userId);
+      
+      res.json({ keywords });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI keywords validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error suggesting keywords for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to suggest keywords",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  app.post("/api/ai/check-grammar", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI check grammar for user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+      });
+      
+      const { content } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a grammar and spelling checker. Check the following text for grammar and spelling errors. Return a JSON object with: { "corrected": "the corrected text", "changes": ["list of changes made"] }. If no changes are needed, return the original text with an empty changes array.`
+          },
+          {
+            role: "user",
+            content,
+          }
+        ],
+        max_tokens: 500,
+      });
+      
+      const aiResponse = response.choices[0]?.message?.content || '{}';
+      let result = { corrected: content, changes: [] as string[] };
+      
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        const parsed = JSON.parse(cleanContent);
+        result = {
+          corrected: parsed.corrected || content,
+          changes: parsed.changes || [],
+        };
+      } catch (parseError) {
+        console.error('[API] Failed to parse AI grammar response:', parseError);
+      }
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI grammar check completed for user:', userId);
+      
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI grammar validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error checking grammar for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to check grammar",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  app.post("/api/ai/adjust-tone", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] AI adjust tone for user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+        tone: z.enum(['professional', 'creative', 'technical']),
+      });
+      
+      const { content, tone } = schema.parse(req.body);
+      
+      // Check AI usage limits
+      const canUse = await storage.canUseAiEdit(userId);
+      if (!canUse) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        console.log('[API] AI edit limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'AI edit limit reached',
+          code: 'AI_EDIT_LIMIT',
+          limit: limits.maxAiEditsPerMonth,
+          message: `Your ${plan} plan allows ${limits.maxAiEditsPerMonth} AI edits per month. Upgrade for more.`
+        });
+      }
+      
+      const toneDescriptions = {
+        professional: "formal, corporate, and business-appropriate",
+        creative: "engaging, unique, and personality-driven",
+        technical: "precise, detailed, and industry-specific"
+      };
+      
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: `You are a professional writer. Rewrite the following text in a ${toneDescriptions[tone]} tone. Keep the same information but adjust the language and style. Return only the rewritten text without any explanations.`
+          },
+          {
+            role: "user",
+            content,
+          }
+        ],
+        max_tokens: 500,
+      });
+      
+      const rewritten = response.choices[0]?.message?.content || content;
+      
+      // Increment usage
+      await storage.incrementAiEdits(userId);
+      console.log('[API] AI tone adjusted for user:', userId, 'tone:', tone);
+      
+      res.json({ rewritten });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI tone validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error adjusting tone for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to adjust tone",
+          message: error instanceof Error ? error.message : "AI service unavailable",
+          code: "AI_ERROR"
+        });
+      }
+    }
+  });
+
+  // ============================================
+  // Job Management Endpoints (Legacy - will be removed)
+  // ============================================
 
   app.get("/api/jobs", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;
@@ -445,7 +1269,7 @@ Write a ${tone} outreach message for this job opportunity.`;
 
       const poeClient = getPoeClient();
       const response = await poeClient.chat.completions.create({
-        model: "gpt-5-nano",
+        model: "claude-3.5-haiku",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -703,6 +1527,831 @@ Write a ${tone} outreach message for this job opportunity.`;
     } catch (error) {
       console.error("Schedule run error:", error);
       res.status(500).json({ error: "Failed to run schedule" });
+    }
+  });
+
+  // ============================================
+  // ATS Scanner Endpoints
+  // ============================================
+
+  const ATS_ANALYSIS_PROMPT = `You are an ATS (Applicant Tracking System) analyzer. Analyze this resume and provide:
+
+1. ATS Compatibility Score (0-100)
+2. Important keywords found
+3. Missing keywords that should be included
+4. Specific suggestions to improve ATS compatibility
+
+Consider:
+- Use of standard section headers (Experience, Education, Skills)
+- Keyword density
+- Formatting clarity
+- Industry-standard terms
+- Lack of tables/images/complex formatting
+
+Return JSON format:
+{
+  "score": 85,
+  "keywords": ["javascript", "react", "python"],
+  "missingKeywords": ["agile", "scrum"],
+  "suggestions": ["Add more action verbs", "Include certifications section"]
+}`;
+
+  app.post("/api/ats/scan", requireAuth, requireVerifiedEmail, upload.single('file'), async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] ATS scan file upload for user:', userId);
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded", code: "NO_FILE" });
+      }
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!limits.hasAtsScanner) {
+        console.log('[API] ATS scanner not available for plan:', plan);
+        return res.status(403).json({
+          error: 'ATS scanner not available',
+          code: 'ATS_NOT_AVAILABLE',
+          message: `Upgrade to ${plan === 'free' ? 'Plus' : 'a higher'} plan to access ATS scanner.`
+        });
+      }
+
+      let parsedText = '';
+      
+      // Parse file based on type
+      if (req.file.mimetype === 'application/pdf') {
+        const pdfData = await pdf(req.file.buffer);
+        parsedText = pdfData.text;
+      } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+        parsedText = result.value;
+      } else {
+        return res.status(400).json({ error: "Invalid file type", code: "INVALID_FILE_TYPE" });
+      }
+
+      if (!parsedText.trim()) {
+        return res.status(400).json({ error: "Could not extract text from file", code: "PARSE_ERROR" });
+      }
+
+      // Send to AI for analysis
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: ATS_ANALYSIS_PROMPT
+          },
+          {
+            role: "user",
+            content: `Analyze this resume:\n\n${parsedText}`
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const aiResponse = response.choices[0]?.message?.content || '{}';
+      let analysis = { score: 0, keywords: [], missingKeywords: [], suggestions: [] };
+
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        analysis = JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error('[API] Failed to parse ATS analysis:', parseError);
+      }
+
+      console.log('[API] ATS scan completed for user:', userId, 'score:', analysis.score);
+      res.json({ 
+        score: analysis.score || 0,
+        keywords: analysis.keywords || [],
+        missingKeywords: analysis.missingKeywords || [],
+        suggestions: analysis.suggestions || [],
+        parsedText 
+      });
+    } catch (error) {
+      console.error('[API] Error in ATS scan for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to scan resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "ATS_SCAN_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/ats/analyze", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] ATS analyze for user:', userId);
+      const schema = z.object({
+        resumeId: z.string(),
+      });
+      
+      const { resumeId } = schema.parse(req.body);
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!limits.hasAtsScanner) {
+        console.log('[API] ATS scanner not available for plan:', plan);
+        return res.status(403).json({
+          error: 'ATS scanner not available',
+          code: 'ATS_NOT_AVAILABLE',
+          message: `Upgrade to ${plan === 'free' ? 'Plus' : 'a higher'} plan to access ATS scanner.`
+        });
+      }
+
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Convert resume data to text
+      const resumeText = resumeDataToText(resume.resumeData);
+
+      // Send to AI for analysis
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: ATS_ANALYSIS_PROMPT
+          },
+          {
+            role: "user",
+            content: `Analyze this resume:\n\n${resumeText}`
+          }
+        ],
+        max_tokens: 1000,
+      });
+
+      const aiResponse = response.choices[0]?.message?.content || '{}';
+      let analysis = { score: 0, keywords: [], missingKeywords: [], suggestions: [] };
+
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        analysis = JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error('[API] Failed to parse ATS analysis:', parseError);
+      }
+
+      console.log('[API] ATS analysis completed for user:', userId, 'resume:', resumeId, 'score:', analysis.score);
+      res.json({ 
+        score: analysis.score || 0,
+        keywords: analysis.keywords || [],
+        missingKeywords: analysis.missingKeywords || [],
+        suggestions: analysis.suggestions || []
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] ATS analyze validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error in ATS analyze for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to analyze resume",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "ATS_ANALYZE_ERROR"
+        });
+      }
+    }
+  });
+
+  // ============================================
+  // Cover Letter Endpoints
+  // ============================================
+
+  const COVER_LETTER_PROMPT = `You are a professional cover letter writer. Generate a compelling cover letter based on:
+
+Resume: {resumeData}
+Job Description: {jobDescription}
+Tone: {tone}
+
+Requirements:
+- Personalized to the job description
+- Highlights relevant experience from resume
+- {tone} tone throughout
+- Professional format with proper greeting and closing
+- 250-400 words
+- Include specific examples from their experience
+
+Return ONLY the cover letter text, no JSON.`;
+
+  app.post("/api/cover-letter/generate", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Generating cover letter for user:', userId);
+      const schema = z.object({
+        resumeId: z.string(),
+        jobDescription: z.string().min(10, "Job description is required"),
+        tone: z.enum(['professional', 'enthusiastic', 'creative']).default('professional'),
+      });
+      
+      const { resumeId, jobDescription, tone } = schema.parse(req.body);
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!limits.hasCoverLetterGenerator) {
+        console.log('[API] Cover letter generator not available for plan:', plan);
+        return res.status(403).json({
+          error: 'Cover letter generator not available',
+          code: 'COVER_LETTER_NOT_AVAILABLE',
+          message: `Upgrade to ${plan === 'free' ? 'Plus' : 'a higher'} plan to access cover letter generator.`
+        });
+      }
+
+      // Validate user owns the resume
+      const resume = await storage.getResume(resumeId);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Convert resume to text
+      const resumeText = resumeDataToText(resume.resumeData);
+
+      // Generate cover letter using AI
+      const prompt = COVER_LETTER_PROMPT
+        .replace('{resumeData}', resumeText)
+        .replace('{jobDescription}', jobDescription)
+        .replace(/{tone}/g, tone);
+
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: prompt
+          },
+          {
+            role: "user",
+            content: "Generate the cover letter now."
+          }
+        ],
+        max_tokens: 800,
+      });
+
+      const content = response.choices[0]?.message?.content || '';
+      
+      // Save to database
+      const coverLetter = await storage.createCoverLetter({
+        userId,
+        resumeId,
+        content,
+        jobDescription,
+      });
+
+      console.log('[API] Cover letter generated:', coverLetter.id, 'user:', userId);
+      res.json({ id: coverLetter.id, content: coverLetter.content });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Cover letter validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error generating cover letter for user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to generate cover letter",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "COVER_LETTER_GENERATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.get("/api/cover-letter/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Fetching cover letter:', id, 'user:', userId);
+      const coverLetter = await storage.getCoverLetter(id);
+      
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+      
+      res.json({ coverLetter });
+    } catch (error) {
+      console.error('[API] Error fetching cover letter:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch cover letter",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTER_FETCH_ERROR"
+      });
+    }
+  });
+
+  app.put("/api/cover-letter/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Updating cover letter:', id, 'user:', userId);
+      const schema = z.object({
+        content: z.string().min(1, "Content is required"),
+      });
+      
+      const { content } = schema.parse(req.body);
+
+      const coverLetter = await storage.getCoverLetter(id);
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      const updated = await storage.updateCoverLetter(id, content);
+      console.log('[API] Cover letter updated:', id, 'user:', userId);
+      res.json({ coverLetter: updated });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Cover letter validation error for user:', userId, error.errors);
+        res.status(400).json({ 
+          error: "Invalid request data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error updating cover letter:', id, 'user:', userId, error);
+        res.status(500).json({ 
+          error: "Failed to update cover letter",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "COVER_LETTER_UPDATE_ERROR"
+        });
+      }
+    }
+  });
+
+  app.delete("/api/cover-letter/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Deleting cover letter:', id, 'user:', userId);
+      const coverLetter = await storage.getCoverLetter(id);
+      
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      await storage.deleteCoverLetter(id);
+      console.log('[API] Cover letter deleted:', id, 'user:', userId);
+      res.json({ message: "Cover letter deleted successfully" });
+    } catch (error) {
+      console.error('[API] Error deleting cover letter:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to delete cover letter",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTER_DELETE_ERROR"
+      });
+    }
+  });
+
+  app.get("/api/cover-letters", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Fetching cover letters for user:', userId);
+      const coverLetters = await storage.getCoverLetters(userId);
+      res.json({ coverLetters });
+    } catch (error) {
+      console.error('[API] Error fetching cover letters for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to fetch cover letters",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTERS_FETCH_ERROR"
+      });
+    }
+  });
+
+  // ============================================
+  // Export Endpoints
+  // ============================================
+
+  app.post("/api/export/pdf/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Exporting resume as PDF:', id, 'user:', userId);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(id);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!(limits.allowedFormats as readonly string[]).includes('pdf')) {
+        console.log('[API] PDF export not available for plan:', plan);
+        return res.status(403).json({
+          error: 'PDF export not available',
+          code: 'PDF_NOT_AVAILABLE',
+          message: `Upgrade to access PDF export.`
+        });
+      }
+
+      // Generate PDF
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${resume.title.replace(/[^a-z0-9]/gi, '_')}.pdf"`);
+        res.send(pdfBuffer);
+        console.log('[API] PDF exported successfully:', id, 'user:', userId);
+      });
+
+      const { resumeData } = resume;
+
+      // Title
+      doc.fontSize(24).text(resumeData.personalInfo.name || 'Resume', { align: 'center' });
+      doc.moveDown(0.5);
+
+      // Contact Info
+      doc.fontSize(10);
+      const contact = [];
+      if (resumeData.personalInfo.email) contact.push(resumeData.personalInfo.email);
+      if (resumeData.personalInfo.phone) contact.push(resumeData.personalInfo.phone);
+      if (resumeData.personalInfo.location) contact.push(resumeData.personalInfo.location);
+      if (contact.length > 0) {
+        doc.text(contact.join(' | '), { align: 'center' });
+      }
+      if (resumeData.personalInfo.linkedin || resumeData.personalInfo.website) {
+        const links = [];
+        if (resumeData.personalInfo.linkedin) links.push(resumeData.personalInfo.linkedin);
+        if (resumeData.personalInfo.website) links.push(resumeData.personalInfo.website);
+        doc.text(links.join(' | '), { align: 'center' });
+      }
+      doc.moveDown();
+
+      // Summary
+      if (resumeData.summary) {
+        doc.fontSize(14).text('SUMMARY', { underline: true });
+        doc.fontSize(10).moveDown(0.3);
+        doc.text(resumeData.summary);
+        doc.moveDown();
+      }
+
+      // Experience
+      if (resumeData.experience?.length > 0) {
+        doc.fontSize(14).text('EXPERIENCE', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.experience.forEach((exp) => {
+          doc.fontSize(12).text(`${exp.title} at ${exp.company}`);
+          doc.fontSize(10).text(`${exp.location} | ${exp.startDate} - ${exp.endDate || 'Present'}`);
+          doc.moveDown(0.2);
+          exp.description.forEach((desc) => {
+            doc.text(`• ${desc}`, { indent: 20 });
+          });
+          doc.moveDown();
+        });
+      }
+
+      // Education
+      if (resumeData.education?.length > 0) {
+        doc.fontSize(14).text('EDUCATION', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.education.forEach((edu) => {
+          doc.fontSize(12).text(`${edu.degree} in ${edu.field}`);
+          doc.fontSize(10).text(`${edu.school} | ${edu.graduationDate}`);
+          if (edu.gpa) doc.text(`GPA: ${edu.gpa}`);
+          doc.moveDown();
+        });
+      }
+
+      // Skills
+      if (resumeData.skills?.length > 0) {
+        doc.fontSize(14).text('SKILLS', { underline: true });
+        doc.fontSize(10).moveDown(0.3);
+        doc.text(resumeData.skills.join(', '));
+        doc.moveDown();
+      }
+
+      // Certifications
+      if (resumeData.certifications?.length > 0) {
+        doc.fontSize(14).text('CERTIFICATIONS', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.certifications.forEach((cert) => {
+          doc.fontSize(10).text(`${cert.name} - ${cert.issuer} (${cert.date})`);
+        });
+        doc.moveDown();
+      }
+
+      // Projects
+      if (resumeData.projects?.length > 0) {
+        doc.fontSize(14).text('PROJECTS', { underline: true });
+        doc.moveDown(0.3);
+        resumeData.projects.forEach((proj) => {
+          doc.fontSize(12).text(proj.name);
+          doc.fontSize(10).text(proj.description);
+          doc.text(`Technologies: ${proj.technologies.join(', ')}`);
+          if (proj.url) doc.text(`URL: ${proj.url}`);
+          doc.moveDown();
+        });
+      }
+
+      doc.end();
+    } catch (error) {
+      console.error('[API] Error exporting PDF:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to export PDF",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "PDF_EXPORT_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/export/docx/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Exporting resume as DOCX:', id, 'user:', userId);
+      
+      // Validate user owns the resume
+      const resume = await storage.getResume(id);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
+      }
+      
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      if (!(limits.allowedFormats as readonly string[]).includes('docx')) {
+        console.log('[API] DOCX export not available for plan:', plan);
+        return res.status(403).json({
+          error: 'DOCX export not available',
+          code: 'DOCX_NOT_AVAILABLE',
+          message: `Upgrade to access DOCX export.`
+        });
+      }
+
+      const { resumeData } = resume;
+      const sections: Paragraph[] = [];
+
+      // Title
+      sections.push(
+        new Paragraph({
+          text: resumeData.personalInfo.name || 'Resume',
+          heading: HeadingLevel.HEADING_1,
+          alignment: 'center',
+        })
+      );
+
+      // Contact Info
+      const contact = [];
+      if (resumeData.personalInfo.email) contact.push(resumeData.personalInfo.email);
+      if (resumeData.personalInfo.phone) contact.push(resumeData.personalInfo.phone);
+      if (resumeData.personalInfo.location) contact.push(resumeData.personalInfo.location);
+      if (contact.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: contact.join(' | '),
+            alignment: 'center',
+          })
+        );
+      }
+
+      if (resumeData.personalInfo.linkedin || resumeData.personalInfo.website) {
+        const links = [];
+        if (resumeData.personalInfo.linkedin) links.push(resumeData.personalInfo.linkedin);
+        if (resumeData.personalInfo.website) links.push(resumeData.personalInfo.website);
+        sections.push(
+          new Paragraph({
+            text: links.join(' | '),
+            alignment: 'center',
+          })
+        );
+      }
+
+      sections.push(new Paragraph({ text: '' })); // Empty line
+
+      // Summary
+      if (resumeData.summary) {
+        sections.push(
+          new Paragraph({
+            text: 'SUMMARY',
+            heading: HeadingLevel.HEADING_2,
+          }),
+          new Paragraph({ text: resumeData.summary }),
+          new Paragraph({ text: '' })
+        );
+      }
+
+      // Experience
+      if (resumeData.experience?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'EXPERIENCE',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.experience.forEach((exp) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${exp.title} at ${exp.company}`, bold: true }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${exp.location} | ${exp.startDate} - ${exp.endDate || 'Present'}`, italics: true }),
+              ],
+            })
+          );
+          exp.description.forEach((desc) => {
+            sections.push(new Paragraph({ text: `• ${desc}` }));
+          });
+          sections.push(new Paragraph({ text: '' }));
+        });
+      }
+
+      // Education
+      if (resumeData.education?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'EDUCATION',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.education.forEach((edu) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${edu.degree} in ${edu.field}`, bold: true }),
+              ],
+            }),
+            new Paragraph({ text: `${edu.school} | ${edu.graduationDate}` })
+          );
+          if (edu.gpa) {
+            sections.push(new Paragraph({ text: `GPA: ${edu.gpa}` }));
+          }
+          sections.push(new Paragraph({ text: '' }));
+        });
+      }
+
+      // Skills
+      if (resumeData.skills?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'SKILLS',
+            heading: HeadingLevel.HEADING_2,
+          }),
+          new Paragraph({ text: resumeData.skills.join(', ') }),
+          new Paragraph({ text: '' })
+        );
+      }
+
+      // Certifications
+      if (resumeData.certifications?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'CERTIFICATIONS',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.certifications.forEach((cert) => {
+          sections.push(new Paragraph({ text: `${cert.name} - ${cert.issuer} (${cert.date})` }));
+        });
+        sections.push(new Paragraph({ text: '' }));
+      }
+
+      // Projects
+      if (resumeData.projects?.length > 0) {
+        sections.push(
+          new Paragraph({
+            text: 'PROJECTS',
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        resumeData.projects.forEach((proj) => {
+          sections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: proj.name, bold: true }),
+              ],
+            }),
+            new Paragraph({ text: proj.description }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `Technologies: ${proj.technologies.join(', ')}`, italics: true }),
+              ],
+            })
+          );
+          if (proj.url) {
+            sections.push(new Paragraph({ text: `URL: ${proj.url}` }));
+          }
+          sections.push(new Paragraph({ text: '' }));
+        });
+      }
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: sections,
+        }],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="${resume.title.replace(/[^a-z0-9]/gi, '_')}.docx"`);
+      res.send(buffer);
+      console.log('[API] DOCX exported successfully:', id, 'user:', userId);
+    } catch (error) {
+      console.error('[API] Error exporting DOCX:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to export DOCX",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "DOCX_EXPORT_ERROR"
+      });
+    }
+  });
+
+  app.post("/api/export/cover-letter/pdf/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    const id = req.params.id as string;
+    try {
+      console.log('[API] Exporting cover letter as PDF:', id, 'user:', userId);
+      
+      // Validate user owns the cover letter
+      const coverLetter = await storage.getCoverLetter(id);
+      if (!coverLetter) {
+        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
+      }
+      
+      if (coverLetter.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+      }
+
+      // Generate PDF
+      const doc = new PDFDocument({ margin: 50 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="cover_letter.pdf"`);
+        res.send(pdfBuffer);
+        console.log('[API] Cover letter PDF exported successfully:', id, 'user:', userId);
+      });
+
+      doc.fontSize(12).text(coverLetter.content, {
+        align: 'left',
+        lineGap: 5,
+      });
+
+      doc.end();
+    } catch (error) {
+      console.error('[API] Error exporting cover letter PDF:', id, 'user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to export cover letter PDF",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "COVER_LETTER_PDF_EXPORT_ERROR"
+      });
     }
   });
 

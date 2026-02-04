@@ -175,7 +175,7 @@ Keep it absolutely minimal - single words work best.`;
   try {
     console.log('[Scraper] Generating search parameters with AI');
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-nano',
+      model: 'claude-3.5-haiku',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3, // Lower temperature for more consistent, simpler outputs
       response_format: { type: "json_object" }
@@ -486,7 +486,7 @@ Return format: {"relevant_indices": [0, 2, 5]} (indices of relevant posts)
 Only include posts that are clearly hiring. If unsure, exclude.`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-nano',
+      model: 'claude-3.5-haiku',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
       response_format: { type: "json_object" }

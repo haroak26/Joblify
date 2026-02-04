@@ -16,32 +16,33 @@ import { useAuth } from "@/hooks/use-auth";
 
 const features = [
   {
+    icon: MessageSquare,
+    title: "AI Chat Builder",
+    description: "Tell your story naturally, and our AI crafts your professional resume as you chat."
+  },
+  {
     icon: Search,
-    title: "Smart Scanning",
-    description: "Our engine monitors Reddit and X around the clock to catch new hiring posts."
+    title: "ATS Scanner",
+    description: "Optimize your resume for applicant tracking systems with AI-powered analysis."
   },
   {
     icon: Zap,
-    title: "AI Matchmaking",
-    description: "Our AI understands your expertise and matches you with the most relevant opportunities."
-  },
-  {
-    icon: MessageSquare,
-    title: "Instant Pitching",
-    description: "Generate personalized pitches that stand out with a single click."
+    title: "Instant Export",
+    description: "Download your resume as PDF or DOCX in seconds, ready to send to employers."
   }
 ];
 
 const platforms = [
-  { name: "Reddit", icon: SiReddit, color: "text-orange-500" },
-  { name: "X", icon: () => <span className="font-bold">𝕏</span>, color: "text-foreground" },
+  { name: "Multiple Templates", icon: () => <span className="font-bold">📄</span>, color: "text-foreground" },
+  { name: "AI Enhancement", icon: () => <span className="font-bold">✨</span>, color: "text-foreground" },
+  { name: "Cover Letters", icon: () => <span className="font-bold">📝</span>, color: "text-foreground" },
 ];
 
 const benefits = [
-  "Find opportunities before competitors",
-  "AI suggests skills from your background",
-  "Generate personalized pitches instantly",
-  "Track applications and saved jobs",
+  "Build resumes through natural conversation",
+  "AI suggests improvements and keywords",
+  "Export as PDF or DOCX instantly",
+  "ATS optimization for better job matches",
 ];
 
 export default function Landing() {
@@ -79,14 +80,14 @@ export default function Landing() {
             <div className="max-w-2xl">
               <Badge variant="secondary" className="mb-5 text-xs font-medium bg-primary/10 text-primary border-none">
                 <Star className="w-3 h-3 mr-1.5" />
-                AI-Powered Job Discovery
+                AI-Powered Resume Builder
               </Badge>
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
-                Find freelance gigs
-                <span className="text-primary block mt-1">before anyone else</span>
+                Build your perfect resume
+                <span className="text-primary block mt-1">with AI</span>
               </h1>
               <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed">
-                Joblify scans social media around the clock to surface hiring opportunities that match your skills. Stop scrolling, start earning.
+                Joblify uses AI to craft professional resumes through natural conversation. No complicated forms. Just chat naturally and watch your resume come to life.
               </p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">
                 <Link href="/dashboard">
@@ -106,14 +107,14 @@ export default function Landing() {
               <div className="space-y-4">
                 <div className="bg-background border rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold">SaaS Landing Page</p>
-                    <span className="text-xs text-muted-foreground">Reddit · 2m ago</span>
+                    <p className="font-semibold">Your Resume Preview</p>
+                    <span className="text-xs text-muted-foreground">Live · Building</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Looking for a designer/dev to polish a SaaS hero + pricing section. Budget $1.5k.
+                    Senior Frontend Developer with 5+ years building scalable web applications using React, TypeScript, and modern frameworks.
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {["UI Design", "React", "Figma"].map((skill) => (
+                    {["React", "TypeScript", "UI/UX"].map((skill) => (
                       <Badge key={skill} variant="secondary" className="text-[11px] border-none bg-muted">
                         {skill}
                       </Badge>
@@ -121,18 +122,17 @@ export default function Landing() {
                   </div>
                 </div>
                 <div className="bg-background border rounded-xl p-4">
-                  <p className="text-xs uppercase text-muted-foreground mb-2">AI Pitch Draft</p>
+                  <p className="text-xs uppercase text-muted-foreground mb-2">AI Suggestion</p>
                   <p className="text-sm">
-                    I can deliver a high-converting hero and pricing flow within a week. Recent work includes
-                    SaaS launches that improved trials by 28%. Happy to share a quick mockup.
+                    Great start! I'd recommend highlighting your leadership experience and quantifying achievements. Would you like me to add metrics to your project descriptions?
                   </p>
                 </div>
                 <div className="bg-background border rounded-xl p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold">Match Score</p>
-                    <p className="text-xs text-muted-foreground">Based on your skills + intro</p>
+                    <p className="text-sm font-semibold">ATS Score</p>
+                    <p className="text-xs text-muted-foreground">Optimized for job boards</p>
                   </div>
-                  <p className="text-2xl font-bold text-primary">92%</p>
+                  <p className="text-2xl font-bold text-primary">94%</p>
                 </div>
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function Landing() {
           <div className="text-center mb-14">
             <h2 className="text-2xl sm:text-4xl font-bold mb-4">How it works</h2>
             <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
-              Three simple steps to land your next project
+              Three simple steps to create your professional resume
             </p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8 lg:gap-12">
@@ -183,29 +183,29 @@ export default function Landing() {
           <div className="text-center mb-14">
             <h2 className="text-2xl sm:text-4xl font-bold mb-4">Example workflow</h2>
             <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
-              See how a typical Joblify session turns a social post into a qualified lead.
+              See how a typical Joblify session creates a professional resume in minutes.
             </p>
           </div>
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="border rounded-2xl p-6 bg-background">
               <p className="text-xs uppercase text-muted-foreground mb-3">Step 1</p>
-              <h3 className="text-xl font-semibold mb-3">Import your experience</h3>
+              <h3 className="text-xl font-semibold mb-3">Chat with AI</h3>
               <p className="text-muted-foreground">
-                Add a short intro and a few skills. Joblify builds a matching profile instantly.
+                Tell your story naturally. Share your experience, skills, and achievements in conversation.
               </p>
             </div>
             <div className="border rounded-2xl p-6 bg-background">
               <p className="text-xs uppercase text-muted-foreground mb-3">Step 2</p>
-              <h3 className="text-xl font-semibold mb-3">Get matched posts</h3>
+              <h3 className="text-xl font-semibold mb-3">AI builds your resume</h3>
               <p className="text-muted-foreground">
-                Fresh feeds from Reddit and X surface the newest hiring posts for you.
+                Watch as AI crafts professional sections, suggests improvements, and optimizes for ATS.
               </p>
             </div>
             <div className="border rounded-2xl p-6 bg-background">
               <p className="text-xs uppercase text-muted-foreground mb-3">Step 3</p>
-              <h3 className="text-xl font-semibold mb-3">Send a tailored pitch</h3>
+              <h3 className="text-xl font-semibold mb-3">Export and apply</h3>
               <p className="text-muted-foreground">
-                Use AI to craft a crisp response, then track the lead inside your dashboard.
+                Download as PDF or DOCX, choose from templates, and start applying to jobs.
               </p>
             </div>
           </div>
@@ -218,10 +218,10 @@ export default function Landing() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-2xl sm:text-4xl font-bold mb-6">
-                Everything you need to land more clients
+                Everything you need to land your dream job
               </h2>
               <p className="text-muted-foreground text-base sm:text-lg mb-8 leading-relaxed">
-                Joblify combines smart discovery with AI-powered tools to help you find and win more freelance work.
+                Joblify combines AI conversation with professional formatting to help you create resumes that stand out.
               </p>
               <div className="space-y-4">
                 {benefits.map((b) => (
@@ -234,16 +234,16 @@ export default function Landing() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-background border rounded-lg p-6">
-                <p className="text-4xl font-bold text-primary mb-1">85%</p>
-                <p className="text-sm text-muted-foreground">Faster discovery</p>
+                <p className="text-4xl font-bold text-primary mb-1">5min</p>
+                <p className="text-sm text-muted-foreground">Average build time</p>
               </div>
               <div className="bg-background border rounded-lg p-6">
                 <p className="text-4xl font-bold text-primary mb-1">12k+</p>
-                <p className="text-sm text-muted-foreground">Active users</p>
+                <p className="text-sm text-muted-foreground">Resumes created</p>
               </div>
               <div className="bg-background border rounded-lg p-6">
-                <p className="text-4xl font-bold text-primary mb-1">50k+</p>
-                <p className="text-sm text-muted-foreground">Jobs matched</p>
+                <p className="text-4xl font-bold text-primary mb-1">95%</p>
+                <p className="text-sm text-muted-foreground">ATS pass rate</p>
               </div>
               <div className="bg-background border rounded-lg p-6">
                 <p className="text-4xl font-bold text-primary mb-1">4.9</p>
@@ -258,10 +258,10 @@ export default function Landing() {
       <section className="py-16 sm:py-20 lg:py-28 px-4 sm:px-6 text-center">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl sm:text-4xl font-bold mb-4">
-            Ready to find your next gig?
+            Ready to build your resume?
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg mb-8">
-            Join thousands of freelancers using AI to discover opportunities faster.
+            Join thousands of job seekers using AI to create professional resumes in minutes.
           </p>
           <Link href="/dashboard">
             <Button size="lg" className="w-full sm:w-auto">

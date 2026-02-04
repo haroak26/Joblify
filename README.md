@@ -1,176 +1,256 @@
-# Joblify - Freelance Job Discovery Platform
+# Joblify Resume Builder
 
-Joblify is an intelligent job discovery platform designed to help freelancers manage and track job opportunities based on their skills and experience.
+**Build your perfect resume with AI** - Joblify is an AI-powered resume builder that helps you create professional resumes through natural conversation. No complicated forms, just chat naturally and watch your resume come to life.
 
-## Features
+## ✨ Features
 
-- 🎯 **Job Management**: Save jobs, track applications, and manage your pipeline
-- 🤖 **AI-Powered Matching**: View jobs matched to your skills and experience
-- 📧 **Email Notifications**: Get notified when new jobs are added
-- ⏰ **Scheduled Searches**: Set up automated job searches on your schedule
-- 🚀 **AI Message Generation**: Generate personalized application messages with AI
-- 💼 **Subscription Plans**: Multiple tiers with different features and limits
+### 🤖 AI Chat Builder
+- Create resumes through natural conversation with Claude 3.5 Haiku
+- AI extracts structured information from your responses
+- Get professional suggestions and improvements in real-time
+- Build your resume section by section with guided prompts
 
-## Tech Stack
+### 📄 Professional Resume Editor
+- Visual editor with live preview
+- Multiple professional templates (Modern, Classic, Creative)
+- Drag-and-drop section reordering
+- Real-time updates as you type
+- Support for multiple resumes per account
 
-- **Backend**: Node.js + Express + TypeScript
-- **Frontend**: React + Vite + TypeScript + TailwindCSS
-- **Database**: PostgreSQL with Drizzle ORM
-- **AI**: OpenAI GPT (or Poe API)
-- **Email**: Brevo (SendinBlue)
-- **Payments**: Stripe
+### 🔍 ATS Scanner
+- Upload and analyze existing resumes (PDF/DOCX)
+- Get ATS compatibility score (0-100)
+- Identify missing keywords and optimization opportunities
+- AI-powered suggestions to improve ATS compatibility
 
-## Setup Instructions
+### ✍️ AI-Powered Enhancements
+- **Content Improvement**: Rewrite bullet points professionally
+- **Keyword Optimization**: Get industry-specific keyword suggestions
+- **Grammar Check**: Fix errors and improve clarity
+- **Tone Adjustment**: Switch between professional, creative, or technical tones
+
+### 📧 Cover Letter Generator
+- Generate personalized cover letters from resume data
+- Customize tone (professional, enthusiastic, creative)
+- Edit and refine AI-generated content
+- Save and manage multiple cover letters
+
+### 📥 Easy Export
+- Download resumes as PDF (all plans)
+- Export as DOCX (Plus and above)
+- Print-friendly formatting
+- Custom filename support
+
+## 💎 Pricing Plans
+
+| Feature | Free | Plus ($15/mo) | Ultra ($30/mo) | Lifetime ($100) |
+|---------|------|--------------|----------------|-----------------|
+| **Resumes** | 1 | 5 | Unlimited | Unlimited |
+| **AI Edits/Month** | 5 | 100 | Unlimited | Unlimited |
+| **Templates** | Basic | All | All | All |
+| **PDF Export** | ✅ | ✅ | ✅ | ✅ |
+| **DOCX Export** | ❌ | ✅ | ✅ | ✅ |
+| **ATS Scanner** | ❌ | ✅ | ✅ | ✅ |
+| **Cover Letters** | ❌ | ❌ | ✅ | ✅ |
+| **Priority Support** | ❌ | ✅ | ✅ | ✅ |
+
+## 🚀 Quick Start
 
 ### Prerequisites
-
-- Node.js 20+ and npm
+- Node.js 18+ and npm
 - PostgreSQL database
-- OpenAI API key (for AI features)
-- Brevo account (for email notifications)
-- Stripe account (for payments, optional for development)
+- Poe API key (for AI features)
+- Stripe account (for payments, optional)
+- Brevo account (for email notifications, optional)
 
 ### Installation
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/haroak26/Joblify-Freelance.git
-   cd Joblify-Freelance
-   ```
+```bash
+git clone https://github.com/haroak26/Joblify-Freelance.git
+cd Joblify-Freelance
+```
 
 2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
 3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and fill in your configuration:
-   
-   **Required variables:**
-   - `DATABASE_URL`: PostgreSQL connection string
-   - `SESSION_SECRET`: Random string for session encryption
-   - `OPENAI_API_KEY`: Your OpenAI API key
-   - `BREVO_API_KEY`: Your Brevo API key
-   - `BREVO_SENDER_EMAIL`: Email address for notifications
-   
-   **Optional variables:**
-   - `STRIPE_SECRET_KEY`: For payment processing
-   - See `.env.example` for all options
+```bash
+cp .env.example .env
+```
 
-4. **Set up the database**
-   ```bash
-   npm run db:push
-   ```
+Edit `.env` and configure:
+```env
+# Database (REQUIRED)
+DATABASE_URL=postgresql://user:password@localhost:5432/joblify
 
-5. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-   
-   The app will be available at `http://localhost:5000`
+# Session secret (REQUIRED)
+SESSION_SECRET=your-random-secret-here
 
-6. **Build for production**
-   ```bash
-   npm run build
-   npm start
-   ```
+# Poe API for AI features (REQUIRED)
+POE_API_KEY=your-poe-api-key
+POE_API_BASE_URL=https://api.poe.com/v1
 
-## Environment Variables
+# Stripe (optional - for payments)
+STRIPE_SECRET_KEY=your-stripe-key
+STRIPE_PRICE_ID_PLUS=price_xxx
+STRIPE_PRICE_ID_ULTRA=price_xxx
+STRIPE_PRICE_ID_LIFETIME=price_xxx
 
-See `.env.example` for a complete list of environment variables and their descriptions.
+# Brevo (optional - for emails)
+BREVO_API_KEY=your-brevo-key
+BREVO_SENDER_EMAIL=noreply@yourdomain.com
+```
 
-## How It Works
+4. **Run database migrations**
+```bash
+npm run db:push
+```
 
-## Usage
+5. **Start development server**
+```bash
+npm run dev
+```
 
-1. **Create an account** and verify your email
-2. **Set up your profile**:
-   - Add your skills (React, Python, Design, etc.)
-   - Write a short intro about your experience
-3. **Manage opportunities**:
-   - View and save interesting jobs
-   - Mark jobs as applied
-   - Generate AI-powered application messages
-4. **Set up schedules** (requires Plus/Ultra/Lifetime plan):
-   - Automate periodic updates
+The app will be available at `http://localhost:5000`
 
-## Subscription Plans
+### Production Build
+```bash
+npm run build
+npm start
+```
 
-- **Free**: Limited features
-- **Plus**: More features, automated schedules
-- **Ultra**: Higher limits, priority support
-- **Lifetime**: Unlimited access forever
+## 🏗️ Tech Stack
 
-See the app's pricing page for current limits and pricing.
+### Frontend
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Wouter** - Routing
+- **TanStack Query** - Data fetching
+- **Radix UI** - Accessible components
 
-## Development
+### Backend
+- **Express** - Web server
+- **PostgreSQL** - Database
+- **Drizzle ORM** - Type-safe database queries
+- **Passport** - Authentication
+- **Stripe** - Payments
+- **Poe API (Claude 3.5 Haiku)** - AI features
 
-### Project Structure
+### Document Processing
+- **PDFKit** - PDF generation
+- **docx** - DOCX generation
+- **pdf-parse** - PDF parsing
+- **mammoth** - DOCX parsing
+
+## 📁 Project Structure
 
 ```
-.
-├── client/                 # React frontend
+├── client/                 # Frontend React app
 │   └── src/
-│       ├── components/     # Reusable UI components
-│       ├── pages/          # Page components
-│       └── lib/            # Utilities
-├── server/                 # Express backend
-│   ├── storage.ts         # Database operations
-│   ├── routes.ts          # API routes
-│   ├── scheduler.ts       # Automated schedules
-│   └── brevo.ts           # Email service
-├── shared/                 # Shared types and schemas
-│   └── schema.ts          # Drizzle schema
-└── migrations/            # Database migrations
+│       ├── components/    # Reusable UI components
+│       ├── pages/         # Page components
+│       │   └── dashboard/ # Dashboard pages
+│       └── hooks/         # Custom React hooks
+├── server/                # Backend Express server
+│   ├── routes.ts         # API routes
+│   ├── storage.ts        # Database operations
+│   ├── stripe.ts         # Payment processing
+│   └── auth.ts           # Authentication
+├── shared/               # Shared code between client/server
+│   └── schema.ts         # Database schema & types
+└── migrations/           # Database migrations
 ```
 
-### Key Files
+## 🔑 Key API Endpoints
 
-- **`server/storage.ts`**: All database operations
-- **`server/routes.ts`**: API endpoints
-- **`shared/schema.ts`**: Database schema and TypeScript types
+### Resume Management
+- `GET /api/resumes` - List all resumes
+- `POST /api/resumes` - Create new resume
+- `GET /api/resumes/:id` - Get resume details
+- `PUT /api/resumes/:id` - Update resume
+- `DELETE /api/resumes/:id` - Delete resume
 
-### Scripts
+### AI Chat
+- `POST /api/chat/resume/:id/message` - Send chat message
+- `GET /api/chat/resume/:id/history` - Get conversation history
 
-- `npm run dev`: Start development server
-- `npm run build`: Build for production
-- `npm start`: Run production server
-- `npm run check`: TypeScript type checking
-- `npm run db:push`: Push database schema changes
+### AI Enhancements
+- `POST /api/ai/improve-content` - Improve content
+- `POST /api/ai/suggest-keywords` - Get keywords
+- `POST /api/ai/check-grammar` - Grammar check
+- `POST /api/ai/adjust-tone` - Adjust tone
 
-## Troubleshooting
+### ATS & Export
+- `POST /api/ats/scan` - Scan uploaded resume
+- `POST /api/ats/analyze` - Analyze resume
+- `POST /api/export/pdf/:id` - Export as PDF
+- `POST /api/export/docx/:id` - Export as DOCX
 
-### Jobs not appearing
+### Cover Letters
+- `POST /api/cover-letter/generate` - Generate cover letter
+- `GET /api/cover-letters` - List cover letters
+- `GET /api/cover-letter/:id` - Get cover letter
+- `PUT /api/cover-letter/:id` - Update cover letter
 
-1. Ensure your profile has skills and intro text
-2. Check console logs for any errors
-3. Verify database connection
+## 🎨 Design System
 
-### Email notifications not working
+- **Primary Color**: Green (#1B9C5D)
+- **Font**: Inter
+- **Border Radius**: 0.75rem (12px)
+- **Design Philosophy**: Clean, professional, no gradients or shadows
+- **Dark Mode**: Full support
 
-1. Verify `BREVO_API_KEY` is set
-2. Check `BREVO_SENDER_EMAIL` is verified in Brevo
-3. Check spam folder
-4. Review Brevo dashboard for delivery status
+## 🔒 Security
 
-## Contributing
+- Session-based authentication with secure cookies
+- Password hashing with bcrypt
+- SQL injection prevention via Drizzle ORM
+- XSS prevention with React
+- File upload validation (size & type)
+- Rate limiting on AI endpoints
+- Plan limit enforcement
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## 📝 Environment Variables
 
-## License
+See `.env.example` for all available configuration options.
 
-MIT License - see LICENSE file for details
+**Required:**
+- `DATABASE_URL` - PostgreSQL connection string
+- `SESSION_SECRET` - Session encryption key
+- `POE_API_KEY` - Poe API key for AI features
 
-## Support
+**Optional:**
+- `STRIPE_*` - Stripe configuration for payments
+- `BREVO_*` - Brevo configuration for emails
+- `PORT` - Server port (default: 5000)
 
-For issues and questions:
-- Open a GitHub issue
-- Contact: harryoak35@gmail.com
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support, email support@joblify.com or open an issue on GitHub.
+
+## 🙏 Acknowledgments
+
+- Claude 3.5 Haiku by Anthropic via Poe API
+- Radix UI for accessible components
+- Tailwind CSS for styling system
+- All open-source contributors
 
 ---
 
-Built with ❤️ for freelancers finding their next opportunity
+Built with ❤️ using AI-powered resume building technology
