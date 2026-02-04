@@ -11,7 +11,6 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { SiReddit } from "react-icons/si";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 
 const features = [
@@ -59,7 +58,6 @@ export default function Landing() {
             <Link href="/pricing">
               <Button variant="ghost" size="sm">Pricing</Button>
             </Link>
-            <ThemeToggle />
             <Link href="/dashboard">
               <Button size="sm">{primaryCtaLabel}</Button>
             </Link>
