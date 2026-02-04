@@ -461,7 +461,7 @@ export async function registerRoutes(
         userId,
         title: data.title,
         template: data.template,
-        resumeData: resumeData,
+        resumeData,
       });
       
       console.log('[API] Resume created:', resume.id, 'user:', userId);

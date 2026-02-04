@@ -141,10 +141,9 @@ To test these changes:
 ## What's Left to Implement
 
 Based on the problem statement, remaining items:
-- [ ] Ensure resume templates are beautifully designed (backend/template work)
-- [ ] Backend integration for the wizard form data structure
-- [ ] End-to-end testing of all features
-- [ ] Verify AI integrations work with new wizard data
+- [ ] Ensure resume templates are beautifully designed (needs template rendering review)
+- [ ] End-to-end testing of all features with database
+- [ ] Verify AI integrations work with new wizard data structure
 
 ## Notes
 

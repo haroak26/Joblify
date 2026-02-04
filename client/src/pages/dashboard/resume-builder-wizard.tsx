@@ -58,6 +58,11 @@ export default function ResumeBuilderWizard() {
   const [skills, setSkills] = useState<string>("");
   const [resumeTitle, setResumeTitle] = useState<string>("My Resume");
 
+  // Helper function to split description into bullet points
+  const parseDescription = (description: string): string[] => {
+    return description ? description.split('\n').filter(Boolean) : [];
+  };
+
   const createResumeMutation = useMutation({
     mutationFn: async () => {
       // Transform wizard data to match backend schema
@@ -79,7 +84,7 @@ export default function ResumeBuilderWizard() {
             location: "",
             startDate: exp.startDate,
             endDate: exp.endDate || null,
-            description: exp.description ? exp.description.split('\n').filter(Boolean) : [],
+            description: parseDescription(exp.description),
           })),
         education: education
           .filter(edu => edu.school || edu.degree)
