@@ -314,7 +314,7 @@ export default function MyJobs() {
             {filteredJobs.length === 0 ? (
               <EmptyState type="no-results" />
             ) : (
-              <div className="space-y-10" data-testid="job-list">
+              <div className="space-y-10" data-testid="job-list" aria-label={`${jobs.length} jobs total, ${filteredJobs.length} jobs shown`}>
                 {sectionsToShow.map((section) =>
                   renderJobSection(section, groupedJobs[section])
                 )}
