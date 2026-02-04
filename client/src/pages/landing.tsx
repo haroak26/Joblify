@@ -146,7 +146,7 @@ export default function Landing() {
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
             {platforms.map((p) => (
               <div key={p.name} className="flex items-center gap-2">
-                <p.icon className={`w-5 h-5 ${p.color}`} />
+                {p.icon()}
                 <span className="font-medium">{p.name}</span>
               </div>
             ))}

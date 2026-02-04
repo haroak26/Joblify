@@ -6,16 +6,16 @@ import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 
 export default function ResumeDashboard() {
-  const { data: resumes, isLoading } = useQuery({
+  const { data: resumes = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
   });
 
-  const { data: subscription } = useQuery({
+  const { data: subscription } = useQuery<any>({
     queryKey: ["/api/subscription"],
   });
 
   const canCreateMore = !subscription?.limits?.maxResumes || 
-    (resumes?.length || 0) < subscription.limits.maxResumes;
+    resumes.length < subscription.limits.maxResumes;
 
   return (
     <div className="space-y-6">
@@ -23,7 +23,7 @@ export default function ResumeDashboard() {
         <div>
           <h1 className="text-3xl font-bold">My Resumes</h1>
           <p className="text-muted-foreground">
-            {resumes?.length || 0} / {subscription?.limits?.maxResumes === -1 ? '∞' : subscription?.limits?.maxResumes} resumes
+            {resumes.length} / {subscription?.limits?.maxResumes === -1 ? '∞' : subscription?.limits?.maxResumes} resumes
           </p>
         </div>
         <Link href="/dashboard/resumes/new">
@@ -36,7 +36,7 @@ export default function ResumeDashboard() {
 
       {isLoading ? (
         <div>Loading...</div>
-      ) : resumes?.length === 0 ? (
+      ) : resumes.length === 0 ? (
         <Card className="p-12 text-center">
           <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-xl font-semibold mb-2">No resumes yet</h3>
@@ -52,7 +52,7 @@ export default function ResumeDashboard() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resumes?.map((resume: any) => (
+          {resumes.map((resume: any) => (
             <Card key={resume.id} className="p-6">
               <h3 className="font-semibold text-lg mb-2">{resume.title}</h3>
               <p className="text-sm text-muted-foreground mb-4">
