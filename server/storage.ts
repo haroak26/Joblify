@@ -29,6 +29,8 @@ export interface IStorage {
   
   // Job methods
   getJobs(userId: string): Promise<JobPost[]>;
+  getJob(jobId: string): Promise<any | undefined>;
+  createJob(data: any): Promise<any>;
   setJobs(userId: string, jobs: JobPost[]): Promise<void>;
   addJobs(userId: string, jobs: JobPost[]): Promise<JobPost[]>;
   saveJobs(userId: string, jobs: JobPost[]): Promise<void>;
@@ -464,6 +466,87 @@ export class DatabaseStorage implements IStorage {
       };
     }
     return undefined;
+  }
+
+  async getJob(jobId: string): Promise<any | undefined> {
+    const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
+    if (!job) return undefined;
+    
+    return {
+      id: job.id,
+      userId: job.userId,
+      title: job.title,
+      description: job.description,
+      source: job.source,
+      sourceUrl: job.sourceUrl,
+      author: job.author,
+      authorHandle: job.authorHandle || undefined,
+      postedAt: job.postedAt,
+      matchedSkills: (job.matchedSkills as string[]) || [],
+      budget: job.budget || undefined,
+      isRemote: job.isRemote,
+      saved: job.saved,
+      applied: job.applied,
+      relevanceScore: job.relevanceScore,
+      rawData: job.rawData,
+      scrapedAt: job.scrapedAt || undefined,
+      linkedinUrl: job.linkedinUrl || undefined,
+      importedFrom: job.importedFrom || undefined,
+      company: job.company || undefined,
+      location: job.location || undefined,
+    };
+  }
+
+  async createJob(data: any): Promise<any> {
+    const [newJob] = await db
+      .insert(jobs)
+      .values({
+        id: randomUUID(),
+        userId: data.userId,
+        title: data.title,
+        description: data.description,
+        source: data.source,
+        sourceUrl: data.sourceUrl,
+        author: data.author,
+        authorHandle: data.authorHandle || null,
+        postedAt: data.postedAt,
+        matchedSkills: data.matchedSkills || [],
+        budget: data.budget || null,
+        isRemote: data.isRemote ?? true,
+        saved: data.saved ?? false,
+        applied: data.applied ?? false,
+        relevanceScore: data.relevanceScore || 0,
+        rawData: data.rawData || null,
+        linkedinUrl: data.linkedinUrl || null,
+        importedFrom: data.importedFrom || null,
+        company: data.company || null,
+        location: data.location || null,
+      })
+      .returning();
+    
+    return {
+      id: newJob.id,
+      userId: newJob.userId,
+      title: newJob.title,
+      description: newJob.description,
+      source: newJob.source,
+      sourceUrl: newJob.sourceUrl,
+      author: newJob.author,
+      authorHandle: newJob.authorHandle || undefined,
+      postedAt: newJob.postedAt,
+      matchedSkills: (newJob.matchedSkills as string[]) || [],
+      budget: newJob.budget || undefined,
+      isRemote: newJob.isRemote,
+      saved: newJob.saved,
+      applied: newJob.applied,
+      relevanceScore: newJob.relevanceScore,
+      rawData: newJob.rawData,
+      scrapedAt: newJob.scrapedAt || undefined,
+      linkedinUrl: newJob.linkedinUrl || undefined,
+      importedFrom: newJob.importedFrom || undefined,
+      company: newJob.company || undefined,
+      location: newJob.location || undefined,
+    };
   }
 
   generateJobsForSkills(skills: Skill[]): JobPost[] {
@@ -915,6 +998,8 @@ export class DatabaseStorage implements IStorage {
         title: data.title,
         template: data.template || 'modern',
         resumeData: data.resumeData,
+        targetJobId: data.targetJobId || null,
+        isTailored: data.isTailored || false,
       })
       .returning();
     return resume;

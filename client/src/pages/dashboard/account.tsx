@@ -69,8 +69,8 @@ const plans = [
     price: "$0",
     period: "forever",
     billingSuffix: "",
-    features: ["10 skills maximum", "10 jobs scraped", "5 AI messages"],
-    limits: { skills: 10, jobs: 10 },
+    features: ["1 resume", "3 AI edits/mo", "5 job imports/mo", "PDF export"],
+    limits: { skills: 10, jobs: 5 },
   },
   {
     id: "plus",
@@ -78,8 +78,8 @@ const plans = [
     price: "$15",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["Unlimited skills", "300 jobs scraped", "500 AI messages", "2 schedules", "Priority support"],
-    limits: { skills: -1, jobs: 300 },
+    features: ["5 resumes", "50 AI edits/mo", "100 job imports/mo", "PDF & DOCX", "ATS scanner", "LinkedIn import", "Cover letters"],
+    limits: { skills: -1, jobs: 100 },
     popular: true,
   },
   {
@@ -88,7 +88,7 @@ const plans = [
     price: "$30",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["Unlimited skills", "Unlimited jobs scraped", "Unlimited messages", "Unlimited schedules", "Priority support"],
+    features: ["Unlimited resumes", "Unlimited AI edits", "Unlimited imports", "All formats", "ATS scanner", "LinkedIn import", "Cover letters", "Resume tailoring"],
     limits: { skills: -1, jobs: -1 },
   },
   {
@@ -97,7 +97,7 @@ const plans = [
     price: "$100",
     period: "one-time",
     billingSuffix: "",
-    features: ["Unlimited skills", "Unlimited jobs scraped", "Unlimited messages", "Unlimited schedules", "Ultra access for life"],
+    features: ["Everything in Ultra", "Lifetime access", "All future features", "VIP support"],
     limits: { skills: -1, jobs: -1 },
   },
 ];
@@ -333,9 +333,9 @@ export default function Account() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative overflow-hidden rounded-2xl border p-6 sm:p-7 transition-all shadow-sm ${
+                  className={`relative overflow-hidden rounded-lg border p-6 sm:p-7 transition-all ${
                     isCurrent
-                      ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20'
+                      ? 'border-primary bg-primary/5'
                       : 'border-border bg-background'
                   }`}
                   data-testid={`card-plan-${plan.id}`}
@@ -437,15 +437,14 @@ export default function Account() {
           
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Job Scrapes Card */}
-            <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-full -mr-16 -mt-16" />
+            <Card className="relative overflow-hidden border">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-primary/10 rounded-lg">
+                    <div className="p-2 bg-muted rounded-lg">
                       <Zap className="w-5 h-5 text-primary" />
                     </div>
-                    <CardTitle className="text-base font-medium">Job Scrapes</CardTitle>
+                    <CardTitle className="text-base font-medium">Job Imports</CardTitle>
                   </div>
                   <Badge 
                     variant={jobsUsedPercent >= 90 ? "destructive" : jobsUsedPercent >= 70 ? "default" : "secondary"}
@@ -458,12 +457,12 @@ export default function Account() {
               <CardContent className="space-y-2">
                 <Progress 
                   value={jobsUsedPercent} 
-                  className="h-3 bg-muted shadow-inner"
+                  className="h-3 bg-muted"
                 />
                 <p className="text-xs text-muted-foreground">
                   {maxJobs === -1 
-                    ? "Unlimited job searches available"
-                    : `${usageData?.remaining.jobsThisMonth || 0} searches remaining this month`
+                    ? "Unlimited job imports available"
+                    : `${usageData?.remaining.jobsThisMonth || 0} imports remaining this month`
                   }
                 </p>
               </CardContent>
@@ -471,15 +470,14 @@ export default function Account() {
             
             {/* Skills Card - Only show for free tier */}
             {!isPlus && !isUltra && !isLifetime && (
-              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full -mr-16 -mt-16" />
+              <Card className="relative overflow-hidden border">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <div className="p-2 bg-muted rounded-lg">
+                        <Award className="w-5 h-5 text-foreground" />
                       </div>
-                      <CardTitle className="text-base font-medium">Skills Limit</CardTitle>
+                      <CardTitle className="text-base font-medium">AI Edits</CardTitle>
                     </div>
                     <Badge 
                       variant={skillsUsedPercent >= 90 ? "destructive" : skillsUsedPercent >= 70 ? "default" : "secondary"}
@@ -492,10 +490,10 @@ export default function Account() {
                 <CardContent className="space-y-2">
                   <Progress 
                     value={skillsUsedPercent} 
-                    className="h-3 bg-muted shadow-inner"
+                    className="h-3 bg-muted"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {usageData?.remaining.skills || 0} skill slots available
+                    {usageData?.remaining.skills || 0} AI edits remaining
                   </p>
                 </CardContent>
               </Card>
@@ -503,10 +501,10 @@ export default function Account() {
             
             {/* Placeholder card for paid tiers to maintain grid */}
             {(isPlus || isUltra || isLifetime) && (
-              <Card className="relative overflow-hidden border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-transparent hover:shadow-lg transition-shadow">
+              <Card className="relative overflow-hidden border border-dashed border-primary/30 bg-primary/5">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-primary/10 rounded-lg">
+                    <div className="p-2 bg-muted rounded-lg">
                       <TrendingUp className="w-5 h-5 text-primary" />
                     </div>
                     <CardTitle className="text-base font-medium">Premium Benefits</CardTitle>
@@ -515,11 +513,11 @@ export default function Account() {
                 <CardContent className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="w-4 h-4 text-green-500" />
-                    <span>Unlimited skills</span>
+                    <span>Unlimited AI edits</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="w-4 h-4 text-green-500" />
-                    <span>{maxJobs === -1 ? "Unlimited" : "Extended"} job searches</span>
+                    <span>{maxJobs === -1 ? "Unlimited" : "Extended"} job imports</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="w-4 h-4 text-green-500" />
@@ -551,7 +549,7 @@ export default function Account() {
 
         {/* Danger Zone Section */}
         <section className="pt-12 border-t">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 sm:p-8 rounded-xl border border-destructive/20 bg-destructive/5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 sm:p-8 rounded-lg border border-destructive/20 bg-destructive/5">
             <div className="space-y-2">
               <p className="text-lg font-bold text-destructive">Danger Zone</p>
               <p className="text-base text-muted-foreground">Permanently remove your account and all associated data.</p>

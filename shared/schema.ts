@@ -96,6 +96,10 @@ export const jobs = pgTable("jobs", {
   relevanceScore: integer("relevance_score").notNull().default(0),
   rawData: jsonb("raw_data"),
   scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
+  linkedinUrl: text("linkedin_url"), // LinkedIn job URL if imported from LinkedIn
+  importedFrom: text("imported_from"), // 'linkedin', 'reddit', 'x', etc.
+  company: text("company"), // Company name from LinkedIn
+  location: text("location"), // Job location
 });
 
 export const jobsRelations = relations(jobs, ({ one }) => ({
@@ -242,31 +246,32 @@ export type Usage = typeof usage.$inferSelect;
 // Plan limits
 export const PLAN_LIMITS = {
   free: {
-    maxSkills: 10,
-    maxJobsPerMonth: 10,
+    maxJobsPerMonth: 5, // Reduced to encourage upgrades
     maxSchedules: 0,
     hasScheduleAccess: false,
     // Resume builder limits
     maxResumes: 1,
-    maxAiEditsPerMonth: 5,
+    maxAiEditsPerMonth: 3, // Reduced to encourage upgrades
     hasAtsScanner: false,
     hasCoverLetterGenerator: false,
+    hasLinkedInImport: false,
+    hasTailoringFeature: false,
     allowedFormats: ['pdf'] as const,
   },
   plus: {
-    maxSkills: Infinity,
-    maxJobsPerMonth: 300,
+    maxJobsPerMonth: 100, // Reduced from 300 to encourage ultra
     maxSchedules: 2,
     hasScheduleAccess: true,
     // Resume builder limits
     maxResumes: 5,
-    maxAiEditsPerMonth: 100,
+    maxAiEditsPerMonth: 50, // Reduced from 100 to encourage ultra
     hasAtsScanner: true,
-    hasCoverLetterGenerator: false,
+    hasCoverLetterGenerator: true,
+    hasLinkedInImport: true,
+    hasTailoringFeature: false, // Only ultra gets tailoring
     allowedFormats: ['pdf', 'docx'] as const,
   },
   ultra: {
-    maxSkills: Infinity,
     maxJobsPerMonth: Infinity,
     maxSchedules: Infinity,
     hasScheduleAccess: true,
@@ -275,10 +280,11 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: Infinity,
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
+    hasLinkedInImport: true,
+    hasTailoringFeature: true,
     allowedFormats: ['pdf', 'docx'] as const,
   },
   lifetime: {
-    maxSkills: Infinity,
     maxJobsPerMonth: Infinity,
     maxSchedules: Infinity,
     hasScheduleAccess: true,
@@ -287,6 +293,8 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: Infinity,
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
+    hasLinkedInImport: true,
+    hasTailoringFeature: true,
     allowedFormats: ['pdf', 'docx'] as const,
   },
 } as const;
@@ -409,6 +417,8 @@ export const resumes = pgTable("resumes", {
   resumeData: jsonb("resume_data").notNull().$type<ResumeData>(),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+  targetJobId: varchar("target_job_id").references(() => jobs.id, { onDelete: "set null" }), // Job this resume is tailored for
+  isTailored: boolean("is_tailored").notNull().default(false),
 });
 
 export const resumesRelations = relations(resumes, ({ one, many }) => ({
@@ -448,6 +458,8 @@ export const coverLetters = pgTable("cover_letters", {
   jobDescription: text("job_description"),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+  targetJobId: varchar("target_job_id").references(() => jobs.id, { onDelete: "set null" }), // Job this cover letter is tailored for
+  isTailored: boolean("is_tailored").notNull().default(false),
 });
 
 export const coverLettersRelations = relations(coverLetters, ({ one }) => ({
