@@ -449,13 +449,6 @@ export default function ResumeBuilderWizard() {
 
   return (
     <div className="container mx-auto p-6 max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Create Your Resume</h1>
-        <p className="text-muted-foreground">
-          Answer a few questions to build your professional resume
-        </p>
-      </div>
-
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted-foreground">
           <span>Step {step} of {totalSteps}</span>

@@ -59,14 +59,14 @@ export default function AtsScanner() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Scan Your Resume</CardTitle>
-          <CardDescription>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Scan Your Resume</h2>
+          <p className="text-sm text-muted-foreground">
             Choose a resume from Joblify or upload an external resume for analysis
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </p>
+        </div>
+        <div className="space-y-4">
           <Tabs value={scanMode} onValueChange={(value) => setScanMode(value as "joblify" | "upload")}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="joblify">
@@ -170,8 +170,8 @@ export default function AtsScanner() {
               </Button>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {result && (
         <>

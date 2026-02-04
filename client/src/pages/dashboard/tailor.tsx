@@ -167,17 +167,17 @@ export default function TailorPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Job Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
               <Briefcase className="w-5 h-5" />
               Select Job
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm text-muted-foreground">
               Choose the job you want to tailor your application for
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="job-select">Job Posting</Label>
               <Select value={selectedJobId} onValueChange={setSelectedJobId}>
@@ -220,21 +220,21 @@ export default function TailorPage() {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Resume Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
               <FileText className="w-5 h-5" />
               Select Resume
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm text-muted-foreground">
               Choose the resume you want to tailor
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="resume-select">Base Resume</Label>
               <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
@@ -277,8 +277,8 @@ export default function TailorPage() {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Results */}

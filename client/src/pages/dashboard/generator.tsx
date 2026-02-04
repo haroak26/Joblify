@@ -76,11 +76,6 @@ export default function Generator() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-generator-heading">Message Generator</h1>
-        <p className="text-base sm:text-lg text-muted-foreground">Personalized outreach and social media engagement.</p>
-      </div>
-
       <div className="space-y-8 sm:space-y-10">
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="space-y-3">

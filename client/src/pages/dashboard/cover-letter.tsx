@@ -62,14 +62,14 @@ export default function CoverLetterGenerator() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Generate Your Cover Letter</CardTitle>
-          <CardDescription>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Generate Your Cover Letter</h2>
+          <p className="text-sm text-muted-foreground">
             Fill in the details below to create a tailored cover letter
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </p>
+        </div>
+        <div className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="resume-select">Select Resume *</Label>
             <Select value={resumeId} onValueChange={setResumeId}>
@@ -157,8 +157,8 @@ export default function CoverLetterGenerator() {
               </>
             )}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {result && (
         <Card>

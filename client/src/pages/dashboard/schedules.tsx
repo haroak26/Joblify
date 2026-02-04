@@ -203,16 +203,11 @@ export default function Schedules() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-10 max-w-5xl mx-auto space-y-8 sm:space-y-12">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-schedules-title">Schedules</h1>
-          <p className="text-muted-foreground">Automate your job discovery with recurring scans</p>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-muted-foreground">
-          <span>Schedules: {schedules.length}/{scheduleLimitLabel}</span>
-          <Button 
-            onClick={() => setShowAddForm(!showAddForm)} 
-            className="gap-2 w-full sm:w-auto"
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+        <span className="text-sm text-muted-foreground">Schedules: {schedules.length}/{scheduleLimitLabel}</span>
+        <Button 
+          onClick={() => setShowAddForm(!showAddForm)} 
+          className="gap-2 w-full sm:w-auto"
             data-testid="button-add-schedule"
             disabled={maxSchedules !== -1 && schedules.length >= maxSchedules}
           >
