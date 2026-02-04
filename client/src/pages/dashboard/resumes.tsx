@@ -41,6 +41,32 @@ export default function ResumeDashboard() {
   const canCreateMore = !subscription?.limits?.maxResumes || 
     resumes.length < subscription.limits.maxResumes;
 
+  const downloadPdf = async (resumeId: string, resumeTitle: string) => {
+    try {
+      const res = await fetch(`/api/export/pdf/${resumeId}`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${resumeTitle.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "PDF Downloaded",
+        description: "Your resume has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Unable to download PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("No file selected");
@@ -172,7 +198,7 @@ export default function ResumeDashboard() {
                 <Link href={`/dashboard/resumes/${resume.id}/chat`}>
                   <Button size="sm" variant="outline">Chat</Button>
                 </Link>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={() => downloadPdf(resume.id, resume.title)}>
                   <Download className="w-4 h-4" />
                 </Button>
               </div>
