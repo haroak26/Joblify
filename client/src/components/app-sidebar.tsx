@@ -148,7 +148,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   onClick={toggleTheme}
-                  className={`h-9 px-3 rounded-md transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground`}
+                  className="h-9 px-3 rounded-md transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 >
                   {theme === "light" ? (
                     <Moon className="w-4 h-4" />
