@@ -1661,6 +1661,151 @@ Return JSON format:
     }
   });
 
+  // Upload and import external resume
+  app.post("/api/resumes/upload", requireAuth, requireVerifiedEmail, upload.single('file'), async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Resume upload for user:', userId);
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded", code: "NO_FILE" });
+      }
+
+      const title = req.body.title || 'Imported Resume';
+
+      // Check plan limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
+      const resumeCount = await storage.countUserResumes(userId);
+      
+      if (limits.maxResumes !== Infinity && resumeCount >= limits.maxResumes) {
+        console.log('[API] Resume limit reached for user:', userId);
+        return res.status(403).json({
+          error: 'Resume limit reached',
+          code: 'RESUME_LIMIT',
+          limit: limits.maxResumes,
+          current: resumeCount,
+        });
+      }
+
+      let parsedText = '';
+      
+      // Parse file based on type
+      if (req.file.mimetype === 'application/pdf') {
+        const pdfData = await pdf(req.file.buffer);
+        parsedText = pdfData.text;
+      } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+        parsedText = result.value;
+      } else {
+        return res.status(400).json({ error: "Invalid file type", code: "INVALID_FILE_TYPE" });
+      }
+
+      if (!parsedText.trim()) {
+        return res.status(400).json({ error: "Could not extract text from file", code: "PARSE_ERROR" });
+      }
+
+      // Use AI to parse the resume into structured data
+      const parsePrompt = `You are a resume parser. Extract structured data from this resume text and return it as JSON.
+
+Return JSON with this exact structure:
+{
+  "personalInfo": {
+    "name": "string",
+    "email": "string",
+    "phone": "string",
+    "location": "string",
+    "linkedin": "string",
+    "website": "string"
+  },
+  "summary": "string",
+  "experience": [
+    {
+      "company": "string",
+      "position": "string",
+      "startDate": "YYYY-MM",
+      "endDate": "YYYY-MM or Present",
+      "description": ["bullet point 1", "bullet point 2"]
+    }
+  ],
+  "education": [
+    {
+      "school": "string",
+      "degree": "string",
+      "field": "string",
+      "graduationDate": "YYYY-MM"
+    }
+  ],
+  "skills": ["skill1", "skill2"],
+  "certifications": [
+    {
+      "name": "string",
+      "issuer": "string",
+      "date": "YYYY-MM"
+    }
+  ],
+  "projects": []
+}
+
+Extract all information accurately. If a field is not found, use empty string or empty array.`;
+
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-4.5-haiku",
+        messages: [
+          {
+            role: "system",
+            content: parsePrompt
+          },
+          {
+            role: "user",
+            content: `Parse this resume:\n\n${parsedText}`
+          }
+        ],
+        max_tokens: 2000,
+      });
+
+      const aiResponse = response.choices[0]?.message?.content || '{}';
+      let resumeData;
+
+      try {
+        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
+        resumeData = JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error('[API] Failed to parse resume data:', parseError);
+        // Fallback to basic structure with parsed text as summary
+        resumeData = {
+          personalInfo: { name: "", email: "", phone: "", location: "", linkedin: "", website: "" },
+          summary: parsedText.substring(0, 500),
+          experience: [],
+          education: [],
+          skills: [],
+          certifications: [],
+          projects: [],
+        };
+      }
+
+      // Create the resume in Joblify
+      const resume = await storage.createResume(userId, {
+        userId,
+        title,
+        template: 'modern',
+        resumeData,
+      });
+
+      console.log('[API] Resume uploaded and imported:', resume.id, 'user:', userId);
+      res.json({ resume, parsedText });
+    } catch (error) {
+      console.error('[API] Error uploading resume for user:', userId, error);
+      res.status(500).json({ 
+        error: "Failed to upload resume",
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "RESUME_UPLOAD_ERROR"
+      });
+    }
+  });
+
   app.post("/api/ats/analyze", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
