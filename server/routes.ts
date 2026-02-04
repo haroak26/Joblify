@@ -328,7 +328,7 @@ export async function registerRoutes(
       console.log('[API] Intro validated - length:', intro.length);
       
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -706,7 +706,7 @@ Start by asking about their current or target job title.`;
       
       // Send to AI
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: chatMessages,
         max_tokens: 1000,
       });
@@ -830,7 +830,7 @@ Start by asking about their current or target job title.`;
       }
       
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -898,7 +898,7 @@ Start by asking about their current or target job title.`;
       
       const industryContext = industry ? ` in the ${industry} industry` : '';
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -973,7 +973,7 @@ Start by asking about their current or target job title.`;
       }
       
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -1058,7 +1058,7 @@ Start by asking about their current or target job title.`;
       };
       
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -1269,7 +1269,7 @@ Write a ${tone} outreach message for this job opportunity.`;
 
       const poeClient = getPoeClient();
       const response = await poeClient.chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -1598,7 +1598,7 @@ Return JSON format:
 
       // Send to AI for analysis
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -1679,7 +1679,7 @@ Return JSON format:
 
       // Send to AI for analysis
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -1795,7 +1795,7 @@ Return ONLY the cover letter text, no JSON.`;
         .replace(/{tone}/g, tone);
 
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3.5-haiku",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",

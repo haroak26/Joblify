@@ -8,15 +8,15 @@ import { useAuth } from "@/hooks/use-auth";
 export default function DashboardHome() {
   const { user } = useAuth();
   
-  const { data: resumes, isLoading: resumesLoading } = useQuery({
+  const { data: resumes = [], isLoading: resumesLoading } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
   });
 
-  const { data: subscription } = useQuery({
+  const { data: subscription } = useQuery<any>({
     queryKey: ["/api/subscription"],
   });
 
-  const resumeCount = resumes?.length || 0;
+  const resumeCount = resumes.length;
   const maxResumes = subscription?.limits?.maxResumes === -1 ? '∞' : subscription?.limits?.maxResumes;
 
   return (
@@ -139,7 +139,7 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {resumes?.slice(0, 5).map((resume: any) => (
+              {resumes.slice(0, 5).map((resume: any) => (
                 <Link key={resume.id} href={`/dashboard/resumes/${resume.id}/edit`}>
                   <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
                     <div className="flex items-center gap-3">

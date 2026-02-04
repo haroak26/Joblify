@@ -27,7 +27,7 @@ export default function ResumeChat() {
     },
   });
 
-  const { data: chatHistory } = useQuery({
+  const { data: chatHistory } = useQuery<any>({
     queryKey: [`/api/chat/resume/${id}/history`],
     enabled: !!id,
   });

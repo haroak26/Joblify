@@ -11,7 +11,7 @@ export default function CoverLetterGenerator() {
   const [tone, setTone] = useState<"professional" | "enthusiastic" | "creative">("professional");
   const [result, setResult] = useState<any>(null);
 
-  const { data: resumes } = useQuery({
+  const { data: resumes = [] } = useQuery<any[]>({
     queryKey: ["/api/resumes"],
   });
 
@@ -40,7 +40,7 @@ export default function CoverLetterGenerator() {
               <SelectValue placeholder="Choose a resume" />
             </SelectTrigger>
             <SelectContent>
-              {resumes?.map((r: any) => (
+              {resumes.map((r: any) => (
                 <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>
               ))}
             </SelectContent>

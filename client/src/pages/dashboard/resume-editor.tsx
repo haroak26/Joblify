@@ -10,7 +10,7 @@ export default function ResumeEditor() {
   const { id } = useParams();
   const queryClient = useQueryClient();
 
-  const { data: resume } = useQuery({
+  const { data: resume } = useQuery<any>({
     queryKey: [`/api/resumes/${id}`],
   });
 
