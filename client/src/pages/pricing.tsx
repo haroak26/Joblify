@@ -150,7 +150,7 @@ export default function Pricing() {
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-0 right-0 flex justify-center">
-                    <Badge className="bg-primary text-primary-foreground">
+                    <Badge className="bg-primary text-primary-foreground px-3 py-1">
                       Most Popular
                     </Badge>
                   </div>
@@ -215,15 +215,15 @@ export default function Pricing() {
             <div>
               <h3 className="font-semibold text-lg mb-2">What file formats can I export?</h3>
               <p className="text-muted-foreground">
-                Free users can export as PDF. Plus, Ultra, and Lifetime users can export as both PDF and DOCX 
+                Free users can export as PDF. Plus and Ultra users can export as both PDF and DOCX 
                 formats for maximum compatibility.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold text-lg mb-2">Is the Lifetime plan really lifetime?</h3>
+              <h3 className="font-semibold text-lg mb-2">Do you offer refunds?</h3>
               <p className="text-muted-foreground">
-                Yes! Pay once and get Ultra-level access for life. This is a special offer 
-                for early adopters and beta testers.
+                Yes! We offer a 7-day money-back guarantee on all paid plans. If you're not satisfied, 
+                contact support for a full refund.
               </p>
             </div>
           </div>
