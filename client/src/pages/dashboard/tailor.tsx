@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, FileText, Briefcase, Loader2, Download, Copy, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { Resume } from "@shared/schema";
 
 export default function TailorPage() {
   const [selectedJobId, setSelectedJobId] = useState("");
@@ -24,9 +25,12 @@ export default function TailorPage() {
   const jobs = jobsData?.jobs ?? [];
 
   // Fetch user's resumes
-  const { data: resumes = [], isLoading: resumesLoading } = useQuery<any[]>({
+  const { data: resumesData, isLoading: resumesLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
+  
+  // Ensure resumes is always an array
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   // Get selected job details
   const selectedJob = jobs.find((j: any) => j.id === selectedJobId);

@@ -4,13 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { FileText, Plus, Scan, Mail, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import type { Resume } from "@shared/schema";
 
 export default function DashboardHome() {
   const { user } = useAuth();
   
-  const { data: resumes = [], isLoading: resumesLoading } = useQuery<any[]>({
+  const { data: resumesData, isLoading: resumesLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
+  
+  // Ensure resumes is always an array
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   const { data: subscription } = useQuery<any>({
     queryKey: ["/api/subscription"],

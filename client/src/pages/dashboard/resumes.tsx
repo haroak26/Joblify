@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import type { Resume } from "@shared/schema";
 
 export default function ResumeDashboard() {
   const [, navigate] = useLocation();
@@ -25,9 +26,12 @@ export default function ResumeDashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
 
-  const { data: resumes = [], isLoading } = useQuery<any[]>({
+  const { data: resumesData, isLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
+  
+  // Ensure resumes is always an array
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   const { data: subscription } = useQuery<any>({
     queryKey: ["/api/subscription"],

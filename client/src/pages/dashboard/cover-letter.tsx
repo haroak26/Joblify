@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Copy, Download, Loader2, Sparkles, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { Resume } from "@shared/schema";
 
 export default function CoverLetterGenerator() {
   const [resumeId, setResumeId] = useState("");
@@ -15,9 +16,12 @@ export default function CoverLetterGenerator() {
   const [result, setResult] = useState<any>(null);
   const { toast } = useToast();
 
-  const { data: resumes = [] } = useQuery<any[]>({
+  const { data: resumesData } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
+  
+  // Ensure resumes is always an array
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   const generateMutation = useMutation({
     mutationFn: async () => {
