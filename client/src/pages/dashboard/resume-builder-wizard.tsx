@@ -60,28 +60,56 @@ export default function ResumeBuilderWizard() {
 
   const createResumeMutation = useMutation({
     mutationFn: async () => {
+      // Transform wizard data to match backend schema
       const resumeData = {
-        title: resumeTitle || "My Resume",
-        template: "modern",
-        data: {
-          personalInfo,
-          workExperiences: workExperiences.filter(exp => exp.company || exp.position),
-          education: education.filter(edu => edu.school || edu.degree),
-          skills: skills.split(',').map(s => s.trim()).filter(Boolean),
+        personalInfo: {
+          name: personalInfo.fullName,
+          email: personalInfo.email,
+          phone: personalInfo.phone,
+          location: personalInfo.location,
+          linkedin: "",
+          website: "",
         },
+        summary: personalInfo.summary,
+        experience: workExperiences
+          .filter(exp => exp.company || exp.position)
+          .map(exp => ({
+            company: exp.company,
+            title: exp.position,
+            location: "",
+            startDate: exp.startDate,
+            endDate: exp.endDate || null,
+            description: exp.description ? exp.description.split('\n').filter(Boolean) : [],
+          })),
+        education: education
+          .filter(edu => edu.school || edu.degree)
+          .map(edu => ({
+            school: edu.school,
+            degree: edu.degree,
+            field: edu.field,
+            graduationDate: edu.graduationDate,
+            gpa: "",
+          })),
+        skills: skills.split(',').map(s => s.trim()).filter(Boolean),
+        certifications: [],
+        projects: [],
       };
 
       const res = await fetch("/api/resumes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resumeData),
+        body: JSON.stringify({ 
+          title: resumeTitle || "My Resume", 
+          template: "modern",
+          resumeData: resumeData,
+        }),
       });
       if (!res.ok) throw new Error("Failed to create resume");
       return res.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
-      setLocation(`/dashboard/resumes/${data.id}/edit`);
+      setLocation(`/dashboard/resumes/${data.resume.id}/edit`);
     },
   });
 

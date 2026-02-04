@@ -416,6 +416,7 @@ export async function registerRoutes(
       const schema = z.object({
         title: z.string().min(1, "Title is required"),
         template: z.enum(['modern', 'classic', 'creative']).optional().default('modern'),
+        resumeData: resumeDataSchema.optional(),
       });
       
       const data = schema.parse(req.body);
@@ -438,8 +439,8 @@ export async function registerRoutes(
         });
       }
       
-      // Create empty resume data structure
-      const emptyResumeData = {
+      // Use provided resumeData or create empty structure
+      const resumeData = data.resumeData || {
         personalInfo: {
           name: "",
           email: "",
@@ -460,7 +461,7 @@ export async function registerRoutes(
         userId,
         title: data.title,
         template: data.template,
-        resumeData: emptyResumeData,
+        resumeData: resumeData,
       });
       
       console.log('[API] Resume created:', resume.id, 'user:', userId);
