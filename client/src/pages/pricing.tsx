@@ -14,17 +14,17 @@ const plans = [
     period: "forever",
     features: [
       "1 resume",
-      "5 AI edits per month",
+      "3 AI edits per month",
+      "5 job imports per month",
       "Basic templates",
-      "PDF download",
-      "Email support"
+      "PDF download"
     ],
     whatYouGet: [
       "Create and store 1 professional resume",
-      "Get 5 AI-powered edits monthly to enhance your content",
+      "Get 3 AI-powered edits monthly to enhance your content",
+      "Import up to 5 jobs per month",
       "Access to basic resume templates",
-      "Export your resume as PDF",
-      "Email support for any questions"
+      "Export your resume as PDF"
     ],
     cta: "Get Started Free",
     ctaHref: "/register",
@@ -37,19 +37,23 @@ const plans = [
     period: "per month",
     features: [
       "5 resumes",
-      "100 AI edits per month",
+      "50 AI edits per month",
+      "100 job imports per month",
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
-      "Priority email support"
+      "LinkedIn import",
+      "Cover letter generator"
     ],
     whatYouGet: [
       "Create and manage up to 5 resumes",
-      "100 AI-powered edits per month",
+      "50 AI-powered edits per month",
+      "Import up to 100 jobs per month",
       "Access to all premium templates",
       "Export as PDF and editable DOCX",
       "ATS optimization scanner",
-      "Priority email support"
+      "Import jobs directly from LinkedIn",
+      "AI-powered cover letter generator"
     ],
     cta: "Upgrade to Plus",
     ctaHref: "/dashboard/account",
@@ -63,19 +67,25 @@ const plans = [
     features: [
       "Unlimited resumes",
       "Unlimited AI edits",
+      "Unlimited job imports",
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
+      "LinkedIn import",
       "Cover letter generator",
+      "Resume & cover letter tailoring",
       "Priority support"
     ],
     whatYouGet: [
       "Unlimited resume creation and storage",
       "Unlimited AI-powered edits and optimizations",
+      "Unlimited job imports from any source",
       "Full access to all premium templates",
       "Export as PDF and DOCX formats",
       "Advanced ATS optimization scanner",
+      "Import jobs directly from LinkedIn",
       "AI-powered cover letter generator",
+      "Tailor resumes and cover letters to specific jobs",
       "Priority customer support"
     ],
     cta: "Upgrade to Ultra",
@@ -90,10 +100,13 @@ const plans = [
     features: [
       "Unlimited resumes",
       "Unlimited AI edits",
+      "Unlimited job imports",
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
+      "LinkedIn import",
       "Cover letter generator",
+      "Resume & cover letter tailoring",
       "Ultra access for life"
     ],
     whatYouGet: [
