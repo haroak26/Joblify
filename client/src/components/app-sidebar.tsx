@@ -149,10 +149,7 @@ export function AppSidebar() {
                   asChild
                   className="h-9 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
                 >
-                  <div className="flex items-center gap-2 cursor-pointer w-full">
-                    <ThemeToggle />
-                    <span className="text-sm">Theme</span>
-                  </div>
+                  <ThemeToggle />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

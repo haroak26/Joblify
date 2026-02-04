@@ -96,13 +96,6 @@ export default function LinkedInImport() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">LinkedIn Job Import</h1>
-        <p className="text-muted-foreground">
-          Import job postings directly from LinkedIn to your job list
-        </p>
-      </div>
-
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>

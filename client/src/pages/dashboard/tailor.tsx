@@ -158,13 +158,6 @@ export default function TailorPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Tailor to Job</h1>
-        <p className="text-muted-foreground">
-          Optimize your resume and cover letter for a specific job posting
-        </p>
-      </div>
-
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>

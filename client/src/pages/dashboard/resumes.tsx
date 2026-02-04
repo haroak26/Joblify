@@ -77,13 +77,7 @@ export default function ResumeDashboard() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">My Resumes</h1>
-          <p className="text-muted-foreground">
-            {resumes.length} / {subscription?.limits?.maxResumes === -1 ? '∞' : subscription?.limits?.maxResumes} resumes
-          </p>
-        </div>
+      <div className="flex items-center justify-end mb-6">
         <div className="flex gap-2">
           <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
             <DialogTrigger asChild>
