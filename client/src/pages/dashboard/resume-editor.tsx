@@ -42,9 +42,12 @@ export default function ResumeEditor() {
   if (!resume) return <div>Loading...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Edit Resume</h1>
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Edit Resume</h1>
+          <p className="text-muted-foreground">Customize your resume content</p>
+        </div>
         <Button onClick={downloadPdf}>
           <Download className="w-4 h-4 mr-2" />
           Download PDF

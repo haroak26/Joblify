@@ -18,10 +18,10 @@ export default function ResumeDashboard() {
     resumes.length < subscription.limits.maxResumes;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">My Resumes</h1>
+          <h1 className="text-3xl font-bold mb-2">My Resumes</h1>
           <p className="text-muted-foreground">
             {resumes.length} / {subscription?.limits?.maxResumes === -1 ? '∞' : subscription?.limits?.maxResumes} resumes
           </p>

@@ -156,21 +156,18 @@ export default function TailorPage() {
   const isLoading = tailorResumeMutation.isPending || tailorCoverLetterMutation.isPending;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Sparkles className="w-8 h-8 text-primary" />
-          Tailor to Job
-        </h1>
-        <p className="text-muted-foreground mt-2">
+    <div className="container mx-auto p-6 max-w-6xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Tailor to Job</h1>
+        <p className="text-muted-foreground">
           Optimize your resume and cover letter for a specific job posting
         </p>
       </div>
 
-      <Alert>
+      <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          This feature is available for Ultra and Lifetime subscribers. It uses AI to tailor your resume and cover letter to match specific job requirements.
+          This feature is available for Ultra subscribers. It uses AI to tailor your resume and cover letter to match specific job requirements.
         </AlertDescription>
       </Alert>
 

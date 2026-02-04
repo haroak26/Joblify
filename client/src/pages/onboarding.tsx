@@ -110,7 +110,7 @@ export default function Onboarding() {
           <div className="space-y-2">
             <CardTitle className="text-2xl">Welcome to Joblify! 👋</CardTitle>
             <CardDescription>
-              Let's set up your profile to find the perfect freelance opportunities
+              Let's set up your profile to find the perfect job opportunities
             </CardDescription>
             <Progress value={progress} className="mt-4" />
             <p className="text-sm text-muted-foreground">Step {step} of 3</p>
