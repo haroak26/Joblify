@@ -208,13 +208,12 @@ export default function Schedules() {
         <Button 
           onClick={() => setShowAddForm(!showAddForm)} 
           className="gap-2 w-full sm:w-auto"
-            data-testid="button-add-schedule"
-            disabled={maxSchedules !== -1 && schedules.length >= maxSchedules}
-          >
-            <Plus className="w-4 h-4" />
-            Add Schedule
-          </Button>
-        </div>
+          data-testid="button-add-schedule"
+          disabled={maxSchedules !== -1 && schedules.length >= maxSchedules}
+        >
+          <Plus className="w-4 h-4" />
+          Add Schedule
+        </Button>
       </div>
 
       {showAddForm && (

@@ -25,7 +25,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <EmailVerificationBanner email={user.email} />
             </div>
           )}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto pt-6">
             {children}
           </main>
         </div>
