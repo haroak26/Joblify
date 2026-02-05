@@ -242,7 +242,7 @@ export default function AIResumeBuilder() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Build Your Resume?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands of professionals who've created their perfect resume through conversation
+            Create your perfect resume through simple conversation
           </p>
           <Link href={user ? "/dashboard/resume-chat" : "/register"}>
             <Button size="lg">

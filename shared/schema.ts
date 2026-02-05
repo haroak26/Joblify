@@ -16,6 +16,10 @@ export const users = pgTable("users", {
   verificationToken: text("verification_token"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpiresAt: timestamp("password_reset_expires_at"),
+  // Two-Factor Authentication
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
+  twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret
+  backupCodes: jsonb("backup_codes").default([]), // Array of encrypted backup codes
 });
 
 export const subscriptions = pgTable("subscriptions", {
@@ -492,3 +496,102 @@ export const chatMessageSchema = z.object({
 });
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+// ============================================
+// Security & Audit Tables
+// ============================================
+
+export const securityEvents = pgTable("security_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(), // 'login_attempt', 'login_success', 'login_failure', '2fa_enabled', '2fa_disabled', 'password_change', etc.
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("security_events_user_id_idx").on(table.userId),
+  createdAtIdx: index("security_events_created_at_idx").on(table.createdAt),
+}));
+
+export const securityEventsRelations = relations(securityEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [securityEvents.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertSecurityEventSchema = createInsertSchema(securityEvents).omit({ id: true, createdAt: true });
+export type InsertSecurityEvent = z.infer<typeof insertSecurityEventSchema>;
+export type SecurityEvent = typeof securityEvents.$inferSelect;
+
+// ============================================
+// Support & Customer Service Tables
+// ============================================
+
+export const supportInteractions = pgTable("support_interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  question: text("question").notNull(),
+  aiResponse: text("ai_response"),
+  userAcceptedAi: boolean("user_accepted_ai").notNull().default(false),
+  zendeskTicketId: text("zendesk_ticket_id"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("support_interactions_user_id_idx").on(table.userId),
+}));
+
+export const supportInteractionsRelations = relations(supportInteractions, ({ one }) => ({
+  user: one(users, {
+    fields: [supportInteractions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertSupportInteractionSchema = createInsertSchema(supportInteractions).omit({ id: true, createdAt: true });
+export type InsertSupportInteraction = z.infer<typeof insertSupportInteractionSchema>;
+export type SupportInteraction = typeof supportInteractions.$inferSelect;
+
+// ============================================
+// Enhanced Job Application Tracking
+// ============================================
+
+export const jobApplications = pgTable("job_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("saved"), // 'saved', 'applied', 'interview_scheduled', 'offer_received', 'rejected', 'withdrawn'
+  notes: text("notes"),
+  followUpDate: timestamp("follow_up_date"),
+  appliedAt: timestamp("applied_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("job_applications_user_id_idx").on(table.userId),
+  jobIdIdx: index("job_applications_job_id_idx").on(table.jobId),
+}));
+
+export const jobApplicationsRelations = relations(jobApplications, ({ one }) => ({
+  user: one(users, {
+    fields: [jobApplications.userId],
+    references: [users.id],
+  }),
+  job: one(jobs, {
+    fields: [jobApplications.jobId],
+    references: [jobs.id],
+  }),
+}));
+
+export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
+export type JobApplication = typeof jobApplications.$inferSelect;
+
+export const jobApplicationStatusSchema = z.enum([
+  "saved",
+  "applied",
+  "interview_scheduled",
+  "offer_received",
+  "rejected",
+  "withdrawn"
+]);
+export type JobApplicationStatus = z.infer<typeof jobApplicationStatusSchema>;

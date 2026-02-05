@@ -134,10 +134,10 @@ export default function Landing() {
                 </div>
                 <div className="bg-background border rounded-xl p-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold">ATS Score</p>
-                    <p className="text-xs text-muted-foreground">Optimized for job boards</p>
+                    <p className="text-sm font-semibold">ATS Optimized</p>
+                    <p className="text-xs text-muted-foreground">Formatted for applicant tracking systems</p>
                   </div>
-                  <p className="text-2xl font-bold text-primary">94%</p>
+                  <CheckCircle2 className="w-8 h-8 text-primary" />
                 </div>
               </div>
             </div>
@@ -225,20 +225,20 @@ export default function Landing() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-background border rounded-lg p-6">
-                <p className="text-4xl font-bold text-primary mb-1">5min</p>
-                <p className="text-sm text-muted-foreground">Average build time</p>
+                <p className="text-4xl font-bold text-primary mb-1">Fast</p>
+                <p className="text-sm text-muted-foreground">Quick resume creation</p>
               </div>
               <div className="bg-background border rounded-lg p-6">
-                <p className="text-4xl font-bold text-primary mb-1">12k+</p>
-                <p className="text-sm text-muted-foreground">Resumes created</p>
+                <p className="text-4xl font-bold text-primary mb-1">Smart</p>
+                <p className="text-sm text-muted-foreground">AI-powered optimization</p>
               </div>
               <div className="bg-background border rounded-lg p-6">
-                <p className="text-4xl font-bold text-primary mb-1">95%</p>
-                <p className="text-sm text-muted-foreground">ATS pass rate</p>
+                <p className="text-4xl font-bold text-primary mb-1">ATS</p>
+                <p className="text-sm text-muted-foreground">Optimized for applicant tracking systems</p>
               </div>
               <div className="bg-background border rounded-lg p-6">
-                <p className="text-4xl font-bold text-primary mb-1">4.9</p>
-                <p className="text-sm text-muted-foreground">User rating</p>
+                <p className="text-4xl font-bold text-primary mb-1">Free</p>
+                <p className="text-sm text-muted-foreground">Get started at no cost</p>
               </div>
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function Landing() {
             Ready to build your resume?
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg mb-8">
-            Join thousands of job seekers using AI to create professional resumes in minutes.
+            Start building your professional resume with AI today.
           </p>
           <Link href="/dashboard">
             <Button size="lg" className="w-full sm:w-auto">
