@@ -22,7 +22,7 @@ const features = [
   {
     icon: MessageSquare,
     title: "AI Chat Resume Builder",
-    description: "Our standout feature - build your resume through natural conversation. No more struggling with blank forms or template fields. Just chat with our AI assistant and watch your professional resume take shape.",
+    description: "Our unique feature - build your resume through natural conversation. No more struggling with blank forms or template fields. Just chat with our AI assistant and watch your professional resume take shape.",
     highlight: true
   },
   {

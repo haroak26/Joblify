@@ -58,7 +58,7 @@ export default function PrivacyPolicy() {
 
               <h3 className="text-xl font-semibold mb-3 mt-6">2.2 AI Chat Interaction Data</h3>
               <p className="text-muted-foreground leading-relaxed mb-3">
-                Our standout AI Chat Resume Builder collects and processes:
+                Our unique AI Chat Resume Builder collects and processes:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                 <li>Chat conversations between you and our AI assistant</li>
@@ -315,8 +315,7 @@ export default function PrivacyPolicy() {
                 If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:
               </p>
               <div className="bg-muted/50 p-6 rounded-lg">
-                <p className="text-muted-foreground mb-2"><strong>Email:</strong> privacy@joblify.com</p>
-                <p className="text-muted-foreground mb-2"><strong>Address:</strong> Joblify Inc., 123 Tech Street, San Francisco, CA 94105, USA</p>
+                <p className="text-muted-foreground mb-2"><strong>Email:</strong> privacy@joblifyai.com</p>
                 <p className="text-muted-foreground"><strong>Response Time:</strong> We aim to respond to all inquiries within 30 days</p>
               </div>
             </section>
