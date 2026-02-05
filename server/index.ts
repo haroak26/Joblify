@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
 import { startScheduleRunner } from "./scheduler";
+import { securityHeaders, sanitizeInput, generalApiRateLimit } from "./middleware/security";
 
 // Validate critical environment variables
 function validateEnvVars() {
@@ -67,6 +68,9 @@ validateEnvVars();
 const app = express();
 const httpServer = createServer(app);
 
+// Apply security headers (helmet)
+app.use(securityHeaders());
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: Buffer;
@@ -97,6 +101,10 @@ app.use((req, res, next) => {
 });
 
 app.use(express.urlencoded({ extended: false }));
+
+// Apply input sanitization and rate limiting
+app.use(sanitizeInput);
+app.use('/api', generalApiRateLimit);
 
 setupAuth(app);
 

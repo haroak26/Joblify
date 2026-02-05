@@ -248,7 +248,8 @@ export function isAccountLocked(identifier: string): boolean {
 // Clean up expired locks every hour
 setInterval(() => {
   const now = Date.now();
-  for (const [key, value] of loginAttempts.entries()) {
+  const entries = Array.from(loginAttempts.entries());
+  for (const [key, value] of entries) {
     if (value.lockUntil && value.lockUntil <= now) {
       loginAttempts.delete(key);
     }

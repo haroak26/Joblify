@@ -210,7 +210,7 @@ export default function LinkedInImport() {
                     </p>
                   )}
                   <Button
-                    variant="link"
+                    variant="ghost"
                     size="sm"
                     className="p-0 h-auto"
                     asChild

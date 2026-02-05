@@ -13,7 +13,8 @@ import {
   Shield,
   TrendingUp,
   Briefcase,
-  ArrowRight
+  ArrowRight,
+  Star
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
