@@ -142,16 +142,24 @@ export const registrationRateLimit = rateLimit({
 
 /**
  * Input sanitization middleware
+ * 
+ * Note: This provides basic XSS protection. For production use,
+ * consider using a library like DOMPurify or validator.js for more
+ * comprehensive sanitization, especially for user-generated content
+ * that will be rendered as HTML.
  */
 export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
-  // Basic XSS prevention - strip HTML tags from string inputs
+  // Basic XSS prevention - escape HTML special characters
   const sanitize = (obj: any): any => {
     if (typeof obj === "string") {
-      // Remove script tags and on* event handlers
+      // HTML escape special characters
       return obj
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "")
-        .replace(/on\w+\s*=\s*[^\s>]*/gi, "");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;")
+        .replace(/\//g, "&#x2F;");
     }
     if (Array.isArray(obj)) {
       return obj.map(sanitize);
