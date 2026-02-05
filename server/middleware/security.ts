@@ -149,42 +149,65 @@ export const registrationRateLimit = rateLimit({
  * that will be rendered as HTML.
  */
 export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
-  // Basic XSS prevention - escape HTML special characters
-  const sanitize = (obj: any): any => {
-    if (typeof obj === "string") {
-      // HTML escape special characters
-      return obj
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#x27;")
-        .replace(/\//g, "&#x2F;");
-    }
-    if (Array.isArray(obj)) {
-      return obj.map(sanitize);
-    }
-    if (obj && typeof obj === "object") {
-      const sanitized: any = {};
-      for (const key in obj) {
-        sanitized[key] = sanitize(obj[key]);
+  try {
+    // Basic XSS prevention - escape HTML special characters
+    const sanitize = (obj: any): any => {
+      if (typeof obj === "string") {
+        // HTML escape special characters
+        return obj
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#x27;")
+          .replace(/\//g, "&#x2F;");
       }
-      return sanitized;
+      if (Array.isArray(obj)) {
+        return obj.map(sanitize);
+      }
+      if (obj && typeof obj === "object") {
+        const sanitized: any = {};
+        for (const key in obj) {
+          sanitized[key] = sanitize(obj[key]);
+        }
+        return sanitized;
+      }
+      return obj;
+    };
+
+    // Sanitize body (writable property - direct assignment works)
+    if (req.body) {
+      req.body = sanitize(req.body);
     }
-    return obj;
-  };
+    
+    // Sanitize query (may be read-only - mutate in place)
+    if (req.query && typeof req.query === 'object') {
+      const sanitized = sanitize(req.query);
+      // Clear existing properties
+      for (const key in req.query) {
+        delete (req.query as any)[key];
+      }
+      // Assign sanitized values
+      Object.assign(req.query, sanitized);
+    }
+    
+    // Sanitize params (may be read-only - mutate in place)
+    if (req.params && typeof req.params === 'object') {
+      const sanitized = sanitize(req.params);
+      // Clear existing properties
+      for (const key in req.params) {
+        delete (req.params as any)[key];
+      }
+      // Assign sanitized values
+      Object.assign(req.params, sanitized);
+    }
 
-  if (req.body) {
-    req.body = sanitize(req.body);
+    next();
+  } catch (error) {
+    console.error('Error in sanitizeInput middleware:', error);
+    // Continue processing even if sanitization fails to avoid breaking the request
+    next();
   }
-  if (req.query) {
-    req.query = sanitize(req.query);
-  }
-  if (req.params) {
-    req.params = sanitize(req.params);
-  }
-
-  next();
 }
 
 /**
