@@ -5,16 +5,19 @@ import {
   type JobCache, type InsertJobCache,
   type Resume, type InsertResume, type ChatConversation, type InsertChatConversation,
   type CoverLetter, type InsertCoverLetter,
+  type SecurityEvent, type InsertSecurityEvent,
+  type SupportInteraction, type InsertSupportInteraction,
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache,
-  resumes, chatConversations, coverLetters, resumeDataSchema
+  resumes, chatConversations, coverLetters, securityEvents, supportInteractions, resumeDataSchema
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray, lte, isNotNull, gte, or, sql, count } from "drizzle-orm";
+import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
@@ -93,9 +96,23 @@ export interface IStorage {
   // Cover letter methods
   getCoverLetter(id: string): Promise<CoverLetter | undefined>;
   getCoverLetters(userId: string): Promise<CoverLetter[]>;
+  getCoverLetterCount(userId: string): Promise<number>;
   createCoverLetter(data: InsertCoverLetter): Promise<CoverLetter>;
   updateCoverLetter(id: string, content: string): Promise<CoverLetter>;
   deleteCoverLetter(id: string): Promise<void>;
+  
+  // Count methods for GDPR
+  getResumeCount(userId: string): Promise<number>;
+  getJobCount(userId: string): Promise<number>;
+  getScheduleCount(userId: string): Promise<number>;
+  
+  // Security events methods
+  getSecurityEvents(userId: string, limit?: number): Promise<SecurityEvent[]>;
+  createSecurityEvent(data: InsertSecurityEvent): Promise<SecurityEvent>;
+  
+  // Support interactions methods
+  getSupportInteractions(userId: string, limit?: number): Promise<SupportInteraction[]>;
+  createSupportInteraction(data: InsertSupportInteraction): Promise<SupportInteraction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1120,6 +1137,79 @@ export class DatabaseStorage implements IStorage {
   
   async deleteCoverLetter(id: string): Promise<void> {
     await db.delete(coverLetters).where(eq(coverLetters.id, id));
+  }
+  
+  // GDPR/CCPA Support Methods
+  
+  async getUserById(id: string): Promise<User | undefined> {
+    // Alias for getUser - for GDPR compliance clarity
+    return this.getUser(id);
+  }
+  
+  async getResumeCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(resumes)
+      .where(eq(resumes.userId, userId));
+    return result[0]?.count || 0;
+  }
+  
+  async getCoverLetterCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(coverLetters)
+      .where(eq(coverLetters.userId, userId));
+    return result[0]?.count || 0;
+  }
+  
+  async getJobCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(jobs)
+      .where(eq(jobs.userId, userId));
+    return result[0]?.count || 0;
+  }
+  
+  async getScheduleCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(schedules)
+      .where(eq(schedules.userId, userId));
+    return result[0]?.count || 0;
+  }
+  
+  async getSecurityEvents(userId: string, limit: number = 100): Promise<SecurityEvent[]> {
+    return db
+      .select()
+      .from(securityEvents)
+      .where(eq(securityEvents.userId, userId))
+      .orderBy(desc(securityEvents.createdAt))
+      .limit(limit);
+  }
+  
+  async createSecurityEvent(data: InsertSecurityEvent): Promise<SecurityEvent> {
+    const [event] = await db
+      .insert(securityEvents)
+      .values(data)
+      .returning();
+    return event;
+  }
+  
+  async getSupportInteractions(userId: string, limit: number = 100): Promise<SupportInteraction[]> {
+    return db
+      .select()
+      .from(supportInteractions)
+      .where(eq(supportInteractions.userId, userId))
+      .orderBy(desc(supportInteractions.createdAt))
+      .limit(limit);
+  }
+  
+  async createSupportInteraction(data: InsertSupportInteraction): Promise<SupportInteraction> {
+    const [interaction] = await db
+      .insert(supportInteractions)
+      .values(data)
+      .returning();
+    return interaction;
   }
 }
 

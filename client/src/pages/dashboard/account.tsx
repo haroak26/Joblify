@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText } from "lucide-react";
 import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -94,6 +94,7 @@ const plans = [
 export default function Account() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [showDataSummary, setShowDataSummary] = useState(false);
 
   const userQuery = useQuery<UserResponse>({
     queryKey: ["/api/auth/me"],
@@ -169,6 +170,41 @@ export default function Account() {
       });
     },
   });
+
+  // GDPR/CCPA Data Rights Queries
+  const dataSummaryQuery = useQuery({
+    queryKey: ["/api/user/data-summary"],
+    enabled: showDataSummary,
+  });
+
+  const downloadDataExport = async () => {
+    try {
+      const response = await apiRequest("GET", "/api/user/data-export");
+      const data = await response.json();
+      
+      // Create a blob and download it
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `joblify-data-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Data Export Complete",
+        description: "Your data has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Unable to export your data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const subscription = subscriptionQuery.data?.subscription;
   const normalizedPlan = normalizePlan(subscription?.plan);
@@ -484,6 +520,128 @@ export default function Account() {
                 </CardContent>
               </Card>
             )}
+          </div>
+        </section>
+
+        {/* Privacy Rights Section - GDPR/CCPA Compliance */}
+        <section className="pt-12 border-t">
+          <h2 className="text-2xl font-bold mb-6">Privacy Rights</h2>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Your Data Rights
+                </CardTitle>
+                <CardDescription>
+                  In accordance with GDPR and CCPA, you have the following rights regarding your personal data.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Data Export */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Download className="w-4 h-4 text-muted-foreground" />
+                      <p className="font-semibold">Download Your Data</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Export all your personal data in a portable JSON format (Right to Data Portability).
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={downloadDataExport}
+                    className="w-full sm:w-auto"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Data
+                  </Button>
+                </div>
+
+                {/* Data Summary */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <p className="font-semibold">View What Data We Collect</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      See a detailed summary of what personal data we store about you (Right to Access).
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowDataSummary(!showDataSummary)}
+                    className="w-full sm:w-auto"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    {showDataSummary ? "Hide" : "View"} Summary
+                  </Button>
+                </div>
+
+                {/* Data Summary Details */}
+                {showDataSummary && dataSummaryQuery.data && (
+                  <div className="mt-4 p-4 rounded-lg border bg-muted/50 space-y-4">
+                    <h3 className="font-semibold text-lg">Data Categories We Collect</h3>
+                    <div className="space-y-3">
+                      {Object.entries(dataSummaryQuery.data.dataCategories).map(([key, category]: [string, any]) => (
+                        category.dataPresent && (
+                          <div key={key} className="p-3 rounded-md bg-background border">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <p className="font-medium">{category.description}</p>
+                                {category.count !== undefined && (
+                                  <Badge variant="secondary" className="mt-1">
+                                    {category.count} items
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-1">
+                              <strong>Purpose:</strong> {category.purpose}
+                            </p>
+                            <p className="text-sm text-muted-foreground mb-1">
+                              <strong>Source:</strong> {category.source}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              <strong>Retention:</strong> {category.retention}
+                            </p>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="font-semibold mb-2">Third-Party Data Sharing</h4>
+                      <div className="space-y-2">
+                        {Object.entries(dataSummaryQuery.data.thirdPartySharing).map(([key, service]: [string, any]) => (
+                          <div key={key} className="p-2 rounded-md bg-background border text-sm">
+                            <p className="font-medium">{service.name}</p>
+                            <p className="text-muted-foreground">Purpose: {service.purpose}</p>
+                            <p className="text-muted-foreground">
+                              Data shared: {service.dataShared.join(', ')}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="font-semibold mb-2">Contact for Privacy Requests</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Email: <a href="mailto:privacy@joblifyai.com" className="text-primary hover:underline">
+                          privacy@joblifyai.com
+                        </a>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Response time: {dataSummaryQuery.data.contactInformation.responseTime}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </section>
 
