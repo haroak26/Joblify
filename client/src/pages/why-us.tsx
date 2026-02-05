@@ -143,7 +143,7 @@ export default function WhyUs() {
             <div>
               <Badge className="mb-4 bg-primary text-primary-foreground">
                 <Sparkles className="w-3 h-3 mr-1.5" />
-                Our Standout Feature
+                Our Unique Feature
               </Badge>
               <h2 className="text-3xl sm:text-4xl font-bold mb-6">
                 AI Chat Resume Builder
@@ -261,7 +261,7 @@ export default function WhyUs() {
                   </div>
                   <CardTitle>{feature.title}</CardTitle>
                   {feature.highlight && (
-                    <Badge className="w-fit bg-primary text-primary-foreground">Standout Feature</Badge>
+                    <Badge className="w-fit bg-primary text-primary-foreground">Unique Feature</Badge>
                   )}
                 </CardHeader>
                 <CardContent>
