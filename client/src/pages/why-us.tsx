@@ -91,9 +91,6 @@ export default function WhyUs() {
             </div>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/why-us">
-              <Button variant="ghost" size="sm">Why Us</Button>
-            </Link>
             <Link href="/pricing">
               <Button variant="ghost" size="sm">Pricing</Button>
             </Link>

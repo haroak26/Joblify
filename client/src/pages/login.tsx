@@ -67,10 +67,10 @@ export default function Login() {
               <Briefcase className="w-6 h-6 text-primary-foreground" />
             </div>
           </Link>
+          <Link href="/">
+            <div className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">Joblify</div>
+          </Link>
           <div>
-            <Link href="/">
-              <h1 className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">Joblify</h1>
-            </Link>
             <CardTitle className="text-2xl mt-2" data-testid="text-login-title">Welcome back</CardTitle>
             <CardDescription className="mt-1">Sign in to your Joblify account</CardDescription>
           </div>

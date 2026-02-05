@@ -141,7 +141,10 @@ export default function Contact() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground text-center">
-                      For more detailed assistance, email us at <a href="mailto:privacy@joblifyai.com" className="text-primary hover:underline">privacy@joblifyai.com</a>
+                      For more detailed assistance, email us at{" "}
+                      <Button variant="link" className="h-auto p-0 text-xs text-primary" asChild>
+                        <a href="mailto:privacy@joblifyai.com">privacy@joblifyai.com</a>
+                      </Button>
                     </p>
                   </div>
                 ) : (

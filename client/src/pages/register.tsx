@@ -180,10 +180,10 @@ export default function Register() {
               <Briefcase className="w-6 h-6 text-primary-foreground" />
             </div>
           </Link>
+          <Link href="/">
+            <div className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">Joblify</div>
+          </Link>
           <div>
-            <Link href="/">
-              <h1 className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">Joblify</h1>
-            </Link>
             <CardTitle className="text-2xl mt-2">
               {step === 1 && "Create your account"}
               {step === 2 && "Choose a password"}
