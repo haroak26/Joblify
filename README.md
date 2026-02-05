@@ -89,12 +89,17 @@ DATABASE_URL=postgresql://user:password@localhost:5432/joblify
 # Session secret (REQUIRED)
 SESSION_SECRET=your-random-secret-here
 
+# Two-factor authentication encryption key (REQUIRED)
+# Generate with: openssl rand -hex 32
+TWO_FACTOR_ENCRYPTION_KEY=your-random-2fa-encryption-key-here
+
 # Poe API for AI features (REQUIRED)
 POE_API_KEY=your-poe-api-key
 POE_API_BASE_URL=https://api.poe.com/v1
 
 # Stripe (optional - for payments)
 STRIPE_SECRET_KEY=your-stripe-key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 STRIPE_PRICE_ID_PLUS=price_xxx
 STRIPE_PRICE_ID_ULTRA=price_xxx
 STRIPE_PRICE_ID_LIFETIME=price_xxx
@@ -102,7 +107,37 @@ STRIPE_PRICE_ID_LIFETIME=price_xxx
 # Brevo (optional - for emails)
 BREVO_API_KEY=your-brevo-key
 BREVO_SENDER_EMAIL=noreply@yourdomain.com
+BREVO_SENDER_NAME=Joblify
+
+# Analytics (optional - for product analytics)
+VITE_POSTHOG_API_KEY=your-posthog-api-key
+VITE_POSTHOG_HOST=https://app.posthog.com
+
+# Customer Support (optional - for customer support widget)
+VITE_ZENDESK_KEY=your-zendesk-key
+VITE_ZENDESK_SUBDOMAIN=your-subdomain
+
+# Application Configuration
+BASE_URL=http://localhost:5000
+PORT=5000
+NODE_ENV=development
 ```
+
+### Environment Variable Documentation
+
+#### Required Variables
+- `DATABASE_URL`: PostgreSQL connection string
+- `SESSION_SECRET`: Random string for session encryption (generate with `openssl rand -base64 32`)
+- `TWO_FACTOR_ENCRYPTION_KEY`: Encryption key for 2FA secrets (generate with `openssl rand -hex 32`)
+- `POE_API_KEY`: API key for AI features (get from https://poe.com/)
+
+#### Optional Variables
+- **Stripe** (for payments): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, price IDs
+- **Brevo** (for email notifications): `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`
+- **PostHog** (for analytics): `VITE_POSTHOG_API_KEY`, `VITE_POSTHOG_HOST`
+- **Zendesk** (for customer support): `VITE_ZENDESK_KEY`, `VITE_ZENDESK_SUBDOMAIN`
+
+**Note:** Variables prefixed with `VITE_` are exposed to the client-side application.
 
 4. **Run database migrations**
 ```bash
@@ -195,6 +230,16 @@ npm start
 - `GET /api/cover-letters` - List cover letters
 - `GET /api/cover-letter/:id` - Get cover letter
 - `PUT /api/cover-letter/:id` - Update cover letter
+
+### GDPR/CCPA Privacy Rights
+- `GET /api/user/data-export` - Export all user data (JSON)
+- `GET /api/user/data-summary` - View data collection summary
+- `POST /api/user/consent-withdraw` - Withdraw consent for data processing
+
+### Account Management
+- `DELETE /api/account` - Delete account and all data
+- `GET /api/subscription` - Get subscription details
+- `GET /api/usage` - Get usage statistics
 
 ## 🎨 Design System
 
