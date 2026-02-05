@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { ReadingProgress } from "@/components/reading-progress";
 import { BackToTop } from "@/components/back-to-top";
+import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
 import { Briefcase, ArrowLeft, Calendar, Clock, Share2, Twitter, Linkedin, Facebook } from "lucide-react";
 import { getBlogPost, getAllBlogPosts } from "@/lib/blog-data";
 import ReactMarkdown from 'react-markdown';
@@ -201,6 +202,9 @@ export default function BlogPost() {
           <div className="prose prose-slate dark:prose-invert max-w-none">
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
+          
+          {/* Newsletter Subscribe */}
+          <NewsletterSubscribe />
         </div>
       </article>
 
