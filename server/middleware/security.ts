@@ -183,30 +183,29 @@ export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
     // Sanitize query (may be read-only - mutate in place)
     if (req.query && typeof req.query === 'object') {
       const sanitized = sanitize(req.query);
-      // Clear existing properties
-      for (const key in req.query) {
-        delete (req.query as any)[key];
-      }
+      // Delete existing properties first to remove any unsanitized data
+      Object.keys(req.query).forEach(key => delete (req.query as any)[key]);
       // Assign sanitized values
-      Object.assign(req.query, sanitized);
+      Object.keys(sanitized).forEach(key => (req.query as any)[key] = sanitized[key]);
     }
     
     // Sanitize params (may be read-only - mutate in place)
     if (req.params && typeof req.params === 'object') {
       const sanitized = sanitize(req.params);
-      // Clear existing properties
-      for (const key in req.params) {
-        delete (req.params as any)[key];
-      }
+      // Delete existing properties first to remove any unsanitized data
+      Object.keys(req.params).forEach(key => delete (req.params as any)[key]);
       // Assign sanitized values
-      Object.assign(req.params, sanitized);
+      Object.keys(sanitized).forEach(key => (req.params as any)[key] = sanitized[key]);
     }
 
     next();
   } catch (error) {
     console.error('Error in sanitizeInput middleware:', error);
-    // Continue processing even if sanitization fails to avoid breaking the request
-    next();
+    // Return error response instead of continuing with potentially unsanitized data
+    res.status(500).json({ 
+      error: 'Request sanitization failed',
+      message: 'Unable to process request safely'
+    });
   }
 }
 
