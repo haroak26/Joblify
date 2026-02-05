@@ -439,12 +439,15 @@ export async function registerRoutes(
         });
       }
       
-      // Use provided resumeData or create empty structure
+      // Get user data to auto-populate resume
+      const user = await storage.getUser(userId);
+      
+      // Use provided resumeData or create structure with user data
       const resumeData = data.resumeData || {
         personalInfo: {
-          name: "",
-          email: "",
-          phone: "",
+          name: user?.name || "",
+          email: user?.email || "",
+          phone: user?.phone || "",
           location: "",
           linkedin: "",
           website: "",
@@ -710,6 +713,9 @@ If the user hasn't provided structured data yet, just respond conversationally w
         return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
       }
       
+      // Get user data for context
+      const user = await storage.getUser(userId);
+      
       // Get or create chat conversation
       let conversation = await storage.getChatConversation(resumeId);
       if (!conversation) {
@@ -717,10 +723,19 @@ If the user hasn't provided structured data yet, just respond conversationally w
         console.log('[API] Created new chat conversation for resume:', resumeId);
       }
       
-      // Build messages array
+      // Build messages array with user context in system prompt
       const messages = conversation.messages as Array<{ role: string; content: string }>;
+      const systemPromptWithContext = `${RESUME_CHAT_SYSTEM_PROMPT}
+
+User information available:
+- Name: ${resume.resumeData.personalInfo?.name || user?.name || "Not provided"}
+- Email: ${resume.resumeData.personalInfo?.email || user?.email || "Not provided"}
+- Phone: ${resume.resumeData.personalInfo?.phone || user?.phone || "Not provided"}
+
+Use this information to personalize your responses and avoid asking for data already known.`;
+      
       const chatMessages = [
-        { role: "system" as const, content: RESUME_CHAT_SYSTEM_PROMPT },
+        { role: "system" as const, content: systemPromptWithContext },
         ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
         { role: "user" as const, content: message },
       ];
@@ -807,11 +822,30 @@ If the user hasn't provided structured data yet, just respond conversationally w
       }
       
       const conversation = await storage.getChatConversation(resumeId);
-      const messages = conversation?.messages || [];
+      let messages = conversation?.messages || [];
+      
+      // If no messages, add personalized welcome message
+      if (messages.length === 0) {
+        const user = await storage.getUser(userId);
+        const userName = resume.resumeData.personalInfo?.name || user?.name || "there";
+        const welcomeMessages = [
+          {
+            role: "assistant",
+            content: `Hi, ${userName}!`,
+            timestamp: new Date().toISOString()
+          },
+          {
+            role: "assistant",
+            content: "I'm your AI resume assistant. Let's build your resume together! Tell me about your most recent work experience - what do you do or what was your last job?",
+            timestamp: new Date().toISOString()
+          }
+        ];
+        messages = welcomeMessages;
+      }
       
       res.json({ messages });
     } catch (error) {
-      console.error('[API] Error fetching chat history for resume:', resumeId, 'user:', userId, error);
+      console.error('[API] Fetching chat history for resume:', resumeId, 'user:', userId, error);
       res.status(500).json({ 
         error: "Failed to fetch chat history",
         message: error instanceof Error ? error.message : "Unknown error occurred",
