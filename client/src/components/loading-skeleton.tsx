@@ -88,3 +88,53 @@ export function SkillsSkeleton() {
     </div>
   );
 }
+
+export function ResumeCardSkeleton() {
+  return (
+    <Card className="p-6" data-testid="resume-card-skeleton">
+      <Skeleton className="w-48 h-6 rounded mb-2" />
+      <Skeleton className="w-32 h-4 rounded mb-4" />
+      <div className="flex gap-2">
+        <Skeleton className="w-16 h-9 rounded" />
+        <Skeleton className="w-16 h-9 rounded" />
+        <Skeleton className="w-10 h-9 rounded" />
+      </div>
+    </Card>
+  );
+}
+
+export function ResumeListSkeleton() {
+  return (
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="resume-list-skeleton">
+      <ResumeCardSkeleton />
+      <ResumeCardSkeleton />
+      <ResumeCardSkeleton />
+    </div>
+  );
+}
+
+export function ResumeEditorSkeleton() {
+  return (
+    <div className="container mx-auto p-6 max-w-7xl space-y-6">
+      <div className="flex justify-end">
+        <Skeleton className="w-40 h-10 rounded" />
+      </div>
+      <Card className="p-6">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="w-32 h-5 rounded" />
+            <Skeleton className="w-full h-10 rounded" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="w-40 h-5 rounded" />
+            <Skeleton className="w-full h-32 rounded" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="w-48 h-5 rounded" />
+            <Skeleton className="w-full h-10 rounded" />
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}

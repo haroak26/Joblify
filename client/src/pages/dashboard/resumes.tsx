@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import type { Resume } from "@shared/schema";
+import { ResumeListSkeleton } from "@/components/loading-skeleton";
 
 export default function ResumeDashboard() {
   const [, navigate] = useLocation();
@@ -25,9 +27,12 @@ export default function ResumeDashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
 
-  const { data: resumes = [], isLoading } = useQuery<any[]>({
+  const { data: resumesData, isLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
+  
+  // Ensure resumes is always an array
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   const { data: subscription } = useQuery<any>({
     queryKey: ["/api/subscription"],
@@ -35,6 +40,32 @@ export default function ResumeDashboard() {
 
   const canCreateMore = !subscription?.limits?.maxResumes || 
     resumes.length < subscription.limits.maxResumes;
+
+  const downloadPdf = async (resumeId: string, resumeTitle: string) => {
+    try {
+      const res = await fetch(`/api/export/pdf/${resumeId}`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${resumeTitle.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "PDF Downloaded",
+        description: "Your resume has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: "Unable to download PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -137,7 +168,7 @@ export default function ResumeDashboard() {
       </div>
 
       {isLoading ? (
-        <div>Loading...</div>
+        <ResumeListSkeleton />
       ) : resumes.length === 0 ? (
         <Card className="p-12 text-center">
           <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -167,7 +198,7 @@ export default function ResumeDashboard() {
                 <Link href={`/dashboard/resumes/${resume.id}/chat`}>
                   <Button size="sm" variant="outline">Chat</Button>
                 </Link>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={() => downloadPdf(resume.id, resume.title)}>
                   <Download className="w-4 h-4" />
                 </Button>
               </div>

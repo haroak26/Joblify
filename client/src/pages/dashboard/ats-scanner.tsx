@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import type { Resume } from "@shared/schema";
 
 export default function AtsScanner() {
   const [file, setFile] = useState<File | null>(null);
@@ -14,9 +15,12 @@ export default function AtsScanner() {
   const [result, setResult] = useState<any>(null);
   const [scanMode, setScanMode] = useState<"joblify" | "upload">("joblify");
 
-  const { data: resumes = [] } = useQuery<any[]>({
+  const { data: resumesData } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
+  
+  // Ensure resumes is always an array
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   const scanJoblifyResumeMutation = useMutation({
     mutationFn: async (resumeId: string) => {

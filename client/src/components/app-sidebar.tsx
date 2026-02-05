@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, FileText, Scan, Mail, User, Sparkles, ExternalLink, Briefcase } from "lucide-react";
+import { Home, FileText, Scan, Mail, User, Sparkles, ExternalLink, Briefcase, Moon, Sun } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { normalizePlan } from "@shared/schema";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/components/theme-provider";
 
 interface SubscriptionResponse {
   subscription: { plan: string };
@@ -59,6 +59,7 @@ const mainMenuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout, isLoading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   
   const subscriptionQuery = useQuery<SubscriptionResponse>({
     queryKey: ["/api/subscription"],
@@ -146,10 +147,15 @@ export function AppSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton 
-                  asChild
-                  className="h-9 px-3 rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+                  onClick={toggleTheme}
+                  className="h-9 px-3 rounded-md transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                 >
-                  <ThemeToggle />
+                  {theme === "light" ? (
+                    <Moon className="w-4 h-4" />
+                  ) : (
+                    <Sun className="w-4 h-4" />
+                  )}
+                  <span className="text-sm">Theme</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
