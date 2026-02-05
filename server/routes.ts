@@ -809,6 +809,9 @@ Use this information to personalize your responses and avoid asking for data alr
     try {
       console.log('[API] Fetching chat history for resume:', resumeId, 'user:', userId);
       
+      // Get user data early for potential use
+      const user = await storage.getUser(userId);
+      
       // Validate user owns the resume
       const resume = await storage.getResume(resumeId);
       if (!resume) {
@@ -826,7 +829,6 @@ Use this information to personalize your responses and avoid asking for data alr
       
       // If no messages, add personalized welcome message
       if (messages.length === 0) {
-        const user = await storage.getUser(userId);
         const userName = resume.resumeData.personalInfo?.name || user?.name || "there";
         const welcomeMessages = [
           {
@@ -845,7 +847,7 @@ Use this information to personalize your responses and avoid asking for data alr
       
       res.json({ messages });
     } catch (error) {
-      console.error('[API] Fetching chat history for resume:', resumeId, 'user:', userId, error);
+      console.error('[API] Error fetching chat history for resume:', resumeId, 'user:', userId, error);
       res.status(500).json({ 
         error: "Failed to fetch chat history",
         message: error instanceof Error ? error.message : "Unknown error occurred",
