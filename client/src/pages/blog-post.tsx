@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { ReadingProgress } from "@/components/reading-progress";
+import { BackToTop } from "@/components/back-to-top";
 import { Briefcase, ArrowLeft, Calendar, Clock, Share2, Twitter, Linkedin, Facebook } from "lucide-react";
 import { getBlogPost, getAllBlogPosts } from "@/lib/blog-data";
 import ReactMarkdown from 'react-markdown';
@@ -107,6 +108,9 @@ export default function BlogPost() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Reading Progress Bar */}
       <ReadingProgress />
+      
+      {/* Back to Top Button */}
+      <BackToTop />
       
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
