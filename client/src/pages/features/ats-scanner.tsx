@@ -284,8 +284,8 @@ export default function ATSScanner() {
               <div className="text-sm text-muted-foreground">of resumes are rejected by ATS before human review</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-primary mb-2">3x</div>
-              <div className="text-sm text-muted-foreground">higher interview rate with ATS-optimized resumes</div>
+              <div className="text-4xl font-bold text-primary mb-2">Better</div>
+              <div className="text-sm text-muted-foreground">chances with ATS-optimized resumes</div>
             </div>
           </div>
         </div>
@@ -296,7 +296,7 @@ export default function ATSScanner() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Optimize Your Resume?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands who've improved their ATS scores and increased their interview rates
+            Improve your ATS scores and increase your interview rates
           </p>
           <Link href={user ? "/dashboard/ats-scanner" : "/register"}>
             <Button size="lg">

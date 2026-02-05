@@ -29,10 +29,10 @@ const values = [
 ];
 
 const stats = [
-  { number: "50K+", label: "Resumes Created" },
-  { number: "98%", label: "ATS Pass Rate" },
-  { number: "4.8/5", label: "User Rating" },
-  { number: "30min", label: "Avg. Build Time" }
+  { number: "AI", label: "Powered Technology" },
+  { number: "ATS", label: "Optimized Output" },
+  { number: "Free", label: "To Get Started" },
+  { number: "Simple", label: "Conversation Based" }
 ];
 
 export default function About() {
@@ -113,9 +113,9 @@ export default function About() {
       <section className="py-16 px-4 sm:px-6 bg-muted/30 border-y">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Joblify by the Numbers</h2>
+            <h2 className="text-3xl font-bold mb-4">What Makes Joblify Different</h2>
             <p className="text-muted-foreground">
-              See the impact we're making in the job search community
+              Our core features and approach
             </p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -168,7 +168,7 @@ export default function About() {
               We realized that while AI technology had advanced tremendously, most resume builders still operated like digital versions of paper forms. There had to be a better way—one that leveraged conversational AI to make the process feel natural and actually helpful.
             </p>
             <p>
-              After months of development and feedback from hundreds of beta users, we launched Joblify in late 2025. The response was overwhelming. People loved being able to "talk" through their experience rather than fill out endless forms. They appreciated getting ATS-optimized results without having to understand technical jargon.
+              After months of development and testing, we launched Joblify in late 2025. Our users appreciate being able to "talk" through their experience rather than fill out endless forms, and getting ATS-optimized results without having to understand technical jargon.
             </p>
             <p>
               Today, we're constantly evolving based on user feedback, adding new features, and refining our AI to serve you better. But our core mission remains the same: make professional resume building accessible, efficient, and dare we say it—enjoyable.
@@ -209,7 +209,7 @@ export default function About() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center">
-                  Professional resume writers and career coaches with decades of combined experience helping thousands of people land their dream jobs.
+                  Professional resume writers and career coaches with expertise in helping people land their dream jobs.
                 </p>
               </CardContent>
             </Card>
@@ -235,7 +235,7 @@ export default function About() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Build Your Best Resume?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands of professionals who've already created their perfect resume with Joblify
+            Start building your professional resume today with Joblify
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/register">

@@ -13,8 +13,7 @@ import {
   Shield,
   TrendingUp,
   Briefcase,
-  ArrowRight,
-  Star
+  ArrowRight
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -70,26 +69,7 @@ const benefits = [
   }
 ];
 
-const testimonials = [
-  {
-    name: "Sarah Chen",
-    role: "Software Engineer",
-    content: "I dreaded updating my resume, but Joblify made it actually enjoyable. The AI asked questions I hadn't even thought about, and helped me showcase achievements I'd forgotten.",
-    rating: 5
-  },
-  {
-    name: "Marcus Rodriguez",
-    role: "Freelance Designer",
-    content: "As a freelancer with dozens of projects, organizing my experience was overwhelming. Joblify's chat interface made it so easy - I just talked about my work naturally.",
-    rating: 5
-  },
-  {
-    name: "Emily Watson",
-    role: "Marketing Manager",
-    content: "The traditional resume builders felt like filling out tax forms. Joblify felt like talking to a career coach who actually cared about my story.",
-    rating: 5
-  }
-];
+
 
 export default function WhyUs() {
   const { user } = useAuth();
@@ -302,37 +282,7 @@ export default function WhyUs() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-16 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              What Our Users Say
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Real feedback from real professionals
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index}>
-                <CardHeader>
-                  <div className="flex gap-1 mb-2">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                    ))}
-                  </div>
-                  <CardTitle className="text-lg">{testimonial.name}</CardTitle>
-                  <CardDescription>{testimonial.role}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground italic">"{testimonial.content}"</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* Comparison */}
       <section className="py-16 px-4 sm:px-6 bg-primary/5">
@@ -414,7 +364,7 @@ export default function WhyUs() {
             Ready to Build Your Resume the Smart Way?
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join thousands of professionals who've discovered a better way to create resumes
+            Start building your resume the smart way today
           </p>
           <Link href={ctaLink}>
             <Button size="lg" className="text-lg px-8">
