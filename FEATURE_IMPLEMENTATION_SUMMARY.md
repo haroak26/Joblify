@@ -278,10 +278,10 @@ These features require additional UI development and API integration:
 
 ```json
 {
-  "posthog-js": "^1.96.1",
+  "posthog-js": "^1.341.0",
   "speakeasy": "^2.0.0",
-  "qrcode": "^1.5.3",
-  "helmet": "^7.1.0"
+  "qrcode": "^1.5.4",
+  "helmet": "^8.1.0"
 }
 ```
 
@@ -405,11 +405,19 @@ Before deploying to production:
    - Not related to new features
    - Should be addressed separately
 
-2. **Database:**
+2. **Login Attempt Tracking:**
+   - Currently uses in-memory Map (single server only)
+   - Data lost on server restart
+   - For production multi-server deployments:
+     - Consider Redis for distributed state
+     - Or use security_events table
+     - Or implement a distributed cache
+
+3. **Database:**
    - Migrations need to be run in production
    - Schema changes require database access
 
-3. **External Dependencies:**
+4. **External Dependencies:**
    - PostHog requires API key
    - Zendesk requires configuration
    - POE API must be available

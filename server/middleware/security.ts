@@ -7,14 +7,15 @@ import { normalizePlan } from "@shared/schema";
  * Security headers middleware using helmet
  */
 export function securityHeaders() {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   return helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: [
           "'self'",
-          "'unsafe-inline'", // Required for Vite in development
-          "'unsafe-eval'", // Required for Vite in development
+          ...(isDevelopment ? ["'unsafe-inline'", "'unsafe-eval'"] : []), // Only in dev for Vite HMR
           "https://cdn.posthog.com",
           "https://static.zdassets.com",
           "https://ekr.zdassets.com",
@@ -81,8 +82,8 @@ export function createTieredRateLimit(options: {
     message,
     standardHeaders: true,
     legacyHeaders: false,
-    // Skip rate limiting for successful requests in development
-    skip: (req) => process.env.NODE_ENV === "development",
+    // Use higher limits in development but don't skip entirely
+    skip: (req) => false,
   });
 }
 
@@ -195,6 +196,15 @@ export const sessionConfig = {
 
 /**
  * Account lockout tracking
+ * 
+ * NOTE: This uses an in-memory Map which means:
+ * 1. Data is lost on server restart
+ * 2. Won't work correctly in multi-server deployments
+ * 
+ * For production multi-server deployments, consider:
+ * - Using Redis for distributed state
+ * - Using the security_events table
+ * - Implementing a distributed cache
  */
 const loginAttempts = new Map<string, { count: number; lockUntil?: number }>();
 
