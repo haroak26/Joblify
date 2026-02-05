@@ -112,10 +112,11 @@ export default function Blog() {
                 <Link key={post.slug} href={`/blog/${post.slug}`}>
                   <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
                     <div className="aspect-video bg-muted rounded-t-lg overflow-hidden">
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                        {/* Placeholder for blog image */}
-                        <Briefcase className="w-12 h-12" />
-                      </div>
+                      <img 
+                        src={post.image} 
+                        alt={post.title}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <CardHeader>
                       <div className="flex items-center gap-2 mb-2">

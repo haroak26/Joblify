@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, FileText, Upload } from "lucide-react";
+import { Plus, FileText, Upload, MessageSquare, ListChecks, Download } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -24,6 +24,7 @@ export default function ResumeDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [createModeDialogOpen, setCreateModeDialogOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
 
@@ -158,12 +159,64 @@ export default function ResumeDashboard() {
               </div>
             </DialogContent>
           </Dialog>
-          <Link href="/dashboard/resumes/new">
-            <Button disabled={!canCreateMore}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Resume
-            </Button>
-          </Link>
+          <Dialog open={createModeDialogOpen} onOpenChange={setCreateModeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button disabled={!canCreateMore}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Resume
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Choose Resume Builder Mode</DialogTitle>
+                <DialogDescription>
+                  Select how you'd like to create your resume
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <Card
+                  className="p-6 cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => {
+                    setCreateModeDialogOpen(false);
+                    navigate("/dashboard/resume-chat");
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <MessageSquare className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">AI Chat Mode</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Our unique conversational AI guides you through building your resume by asking intelligent questions.
+                      </p>
+                      <p className="text-xs text-primary font-medium">Recommended for most users</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card
+                  className="p-6 cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => {
+                    setCreateModeDialogOpen(false);
+                    navigate("/dashboard/resumes/new");
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                      <ListChecks className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">Traditional Mode</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Manually fill out a step-by-step form with traditional input fields and sections.
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">For those who prefer structured forms</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -174,14 +227,66 @@ export default function ResumeDashboard() {
           <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-xl font-semibold mb-2">No resumes yet</h3>
           <p className="text-muted-foreground mb-4">
-            Create your first resume with our AI chat builder
+            Create your first resume with AI assistance
           </p>
-          <Link href="/dashboard/resumes/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Resume
-            </Button>
-          </Link>
+          <Dialog open={createModeDialogOpen} onOpenChange={setCreateModeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Resume
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Choose Resume Builder Mode</DialogTitle>
+                <DialogDescription>
+                  Select how you'd like to create your resume
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <Card
+                  className="p-6 cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => {
+                    setCreateModeDialogOpen(false);
+                    navigate("/dashboard/resume-chat");
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <MessageSquare className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">AI Chat Mode</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Our unique conversational AI guides you through building your resume by asking intelligent questions.
+                      </p>
+                      <p className="text-xs text-primary font-medium">Recommended for most users</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card
+                  className="p-6 cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => {
+                    setCreateModeDialogOpen(false);
+                    navigate("/dashboard/resumes/new");
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+                      <ListChecks className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">Traditional Mode</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Manually fill out a step-by-step form with traditional input fields and sections.
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">For those who prefer structured forms</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </DialogContent>
+          </Dialog>
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

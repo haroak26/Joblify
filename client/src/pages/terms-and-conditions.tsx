@@ -109,7 +109,7 @@ export default function TermsAndConditions() {
                 <li>Interfere with or disrupt the Service or servers/networks connected to the Service</li>
                 <li>Use automated systems (bots, scrapers) to access or extract data from the Service without permission</li>
                 <li>Reverse engineer, decompile, or disassemble any part of the Service</li>
-                <li>Remove, obscure, or alter any copyright, trademark, or proprietary notices</li>
+                <li>Remove, obscure, or alter any copyright or proprietary notices</li>
                 <li>Transmit viruses, malware, or other harmful code</li>
                 <li>Harass, abuse, threaten, or harm others</li>
                 <li>Resell, sublicense, or redistribute the Service without our written consent</li>
@@ -134,10 +134,9 @@ export default function TermsAndConditions() {
                 <li>Website design, graphics, logos, and branding</li>
                 <li>Resume templates and formatting tools</li>
                 <li>Text, content, and documentation</li>
-                <li>Trademarks, service marks, and trade names</li>
               </ul>
               <p className="text-muted-foreground leading-relaxed mt-3">
-                ...are owned by Joblify or our licensors and are protected by copyright, trademark, patent, and other intellectual property laws. You are granted a limited, non-exclusive, non-transferable, revocable license to use the Service solely for your personal, non-commercial purposes, subject to these Terms.
+                ...are owned by Joblify or our licensors and are protected by copyright and other intellectual property laws. You are granted a limited, non-exclusive, non-transferable, revocable license to use the Service solely for your personal, non-commercial purposes, subject to these Terms.
               </p>
 
               <h3 className="text-xl font-semibold mb-3 mt-6">5.2 User-Generated Content</h3>
@@ -247,10 +246,9 @@ export default function TermsAndConditions() {
                 Our refund policy is as follows:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
-                <li><strong>7-Day Money-Back Guarantee:</strong> If you are not satisfied with a paid subscription, you may request a full refund within 7 days of your initial purchase</li>
                 <li><strong>Renewal Charges:</strong> Renewal charges are generally non-refundable, but we may offer refunds on a case-by-case basis for accidental renewals reported within 7 days</li>
                 <li><strong>Partial Refunds:</strong> We do not offer pro-rated refunds for partial billing periods</li>
-                <li><strong>Refund Process:</strong> To request a refund, contact our support team at support@joblify.com with your account details and reason for the request</li>
+                <li><strong>Refund Process:</strong> To request a refund, contact our support team at privacy@joblifyai.com with your account details and reason for the request</li>
               </ul>
             </section>
 
@@ -367,7 +365,7 @@ export default function TermsAndConditions() {
 
               <h3 className="text-xl font-semibold mb-3 mt-6">14.2 Informal Resolution</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Before filing a claim, you agree to contact us at legal@joblify.com to attempt to resolve the dispute informally. We will work in good faith to resolve the matter within 60 days.
+                Before filing a claim, you agree to contact us at privacy@joblifyai.com to attempt to resolve the dispute informally. We will work in good faith to resolve the matter within 60 days.
               </p>
 
               <h3 className="text-xl font-semibold mb-3 mt-6">14.3 Arbitration Agreement</h3>
@@ -431,9 +429,7 @@ export default function TermsAndConditions() {
                 If you have questions, concerns, or feedback regarding these Terms or our Service, please contact us:
               </p>
               <div className="bg-muted/50 p-6 rounded-lg">
-                <p className="text-muted-foreground mb-2"><strong>Email:</strong> legal@joblify.com</p>
-                <p className="text-muted-foreground mb-2"><strong>Support:</strong> support@joblify.com</p>
-                <p className="text-muted-foreground mb-2"><strong>Address:</strong> Joblify Inc., 123 Tech Street, San Francisco, CA 94105, USA</p>
+                <p className="text-muted-foreground mb-2"><strong>Email:</strong> privacy@joblifyai.com</p>
                 <p className="text-muted-foreground"><strong>Response Time:</strong> We aim to respond to all inquiries within 2-3 business days</p>
               </div>
             </section>

@@ -62,17 +62,17 @@ export function Footer() {
             <h3 className="font-semibold mb-4">Product</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/features/ai-resume-builder" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   AI Resume Builder
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/ats-scanner" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/features/ats-scanner" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   ATS Scanner
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/cover-letter" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/features/cover-letter" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Cover Letter Generator
                 </Link>
               </li>
@@ -94,19 +94,19 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Contact
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#careers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Careers
-                </a>
+                <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  Blog
+                </Link>
               </li>
             </ul>
           </div>
@@ -121,9 +121,9 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="#help" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Help Center
-                </a>
+                </Link>
               </li>
               <li>
                 <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

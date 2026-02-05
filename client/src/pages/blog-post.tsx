@@ -81,7 +81,6 @@ export default function BlogPost() {
               {post.description}
             </p>
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
-              <span>By {post.author}</span>
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
                 {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
@@ -132,23 +131,6 @@ export default function BlogPost() {
           {/* Article Content */}
           <div className="prose prose-slate dark:prose-invert max-w-none">
             <ReactMarkdown>{post.content}</ReactMarkdown>
-          </div>
-
-          {/* Author Bio */}
-          <div className="mt-12 p-6 bg-muted/50 rounded-lg">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-xl font-bold text-primary">
-                  {post.author.split(' ').map(n => n[0]).join('')}
-                </span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-1">{post.author}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Career development expert and resume strategist at Joblify. Passionate about helping professionals achieve their career goals through effective resume writing and job search strategies.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </article>
