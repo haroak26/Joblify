@@ -3,6 +3,9 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
+import { ReadingProgress } from "@/components/reading-progress";
+import { BackToTop } from "@/components/back-to-top";
+import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
 import { Briefcase, ArrowLeft, Calendar, Clock, Share2, Twitter, Linkedin, Facebook } from "lucide-react";
 import { getBlogPost, getAllBlogPosts } from "@/lib/blog-data";
 import ReactMarkdown from 'react-markdown';
@@ -19,7 +22,68 @@ export default function BlogPost() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [slug]);
+    
+    // Update page title and meta tags for SEO
+    if (post) {
+      document.title = `${post.title} | Joblify Blog`;
+      
+      // Update or create meta description
+      let metaDescription = document.querySelector('meta[name="description"]');
+      if (!metaDescription) {
+        metaDescription = document.createElement('meta');
+        metaDescription.setAttribute('name', 'description');
+        document.head.appendChild(metaDescription);
+      }
+      metaDescription.setAttribute('content', post.description);
+      
+      // Update or create meta keywords
+      let metaKeywords = document.querySelector('meta[name="keywords"]');
+      if (!metaKeywords) {
+        metaKeywords = document.createElement('meta');
+        metaKeywords.setAttribute('name', 'keywords');
+        document.head.appendChild(metaKeywords);
+      }
+      metaKeywords.setAttribute('content', post.tags.join(', '));
+      
+      // Open Graph tags for social sharing
+      const ogTags = [
+        { property: 'og:title', content: post.title },
+        { property: 'og:description', content: post.description },
+        { property: 'og:type', content: 'article' },
+        { property: 'og:image', content: post.image },
+        { property: 'article:published_time', content: post.date },
+        { property: 'article:tag', content: post.tags.join(', ') }
+      ];
+      
+      ogTags.forEach(({ property, content }) => {
+        let meta = document.querySelector(`meta[property="${property}"]`);
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('property', property);
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      });
+      
+      // Twitter Card tags
+      const twitterTags = [
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: post.title },
+        { name: 'twitter:description', content: post.description },
+        { name: 'twitter:image', content: post.image }
+      ];
+      
+      twitterTags.forEach(({ name, content }) => {
+        let meta = document.querySelector(`meta[name="${name}"]`);
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('name', name);
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', content);
+      });
+    }
+  }, [slug, post]);
 
   if (!post) {
     return (
@@ -43,6 +107,12 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Reading Progress Bar */}
+      <ReadingProgress />
+      
+      {/* Back to Top Button */}
+      <BackToTop />
+      
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -132,6 +202,9 @@ export default function BlogPost() {
           <div className="prose prose-slate dark:prose-invert max-w-none">
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
+          
+          {/* Newsletter Subscribe */}
+          <NewsletterSubscribe />
         </div>
       </article>
 

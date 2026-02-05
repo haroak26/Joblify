@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
+import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
 import { Briefcase, Search, Calendar, Clock, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getAllBlogPosts } from "@/lib/blog-data";
@@ -102,6 +103,11 @@ export default function Blog() {
       {/* Blog Posts Grid */}
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
+          {/* Newsletter Section */}
+          <div className="mb-12">
+            <NewsletterSubscribe />
+          </div>
+          
           {filteredPosts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No articles found matching your search.</p>
