@@ -62,11 +62,16 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-            <Briefcase className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <Link href="/">
+            <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+              <Briefcase className="w-6 h-6 text-primary-foreground" />
+            </div>
+          </Link>
+          <Link href="/">
+            <div className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">Joblify</div>
+          </Link>
           <div>
-            <CardTitle className="text-2xl" data-testid="text-login-title">Welcome back</CardTitle>
+            <CardTitle className="text-2xl mt-2" data-testid="text-login-title">Welcome back</CardTitle>
             <CardDescription className="mt-1">Sign in to your Joblify account</CardDescription>
           </div>
         </CardHeader>

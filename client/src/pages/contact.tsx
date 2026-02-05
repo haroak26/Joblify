@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Footer } from "@/components/footer";
-import { Briefcase, Mail, MessageSquare, Send, CheckCircle2 } from "lucide-react";
+import { Briefcase, Mail, MessageSquare, Send, CheckCircle2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Contact() {
@@ -18,22 +18,39 @@ export default function Contact() {
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setAiResponse(null);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsSubmitted(true);
-      toast({
-        title: "Message sent!",
-        description: "We'll get back to you within 2-3 business days.",
+    try {
+      const res = await fetch("/api/contact/ai-response", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    }, 1000);
+
+      if (!res.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const data = await res.json();
+      setAiResponse(data.response);
+      toast({
+        title: "Response received!",
+        description: "Our AI assistant has provided a response below.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again or email us directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -96,20 +113,39 @@ export default function Contact() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {isSubmitted ? (
-                  <div className="text-center py-8">
-                    <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Thank you!</h3>
-                    <p className="text-muted-foreground">
-                      Your message has been sent. We'll respond within 2-3 business days.
+                {aiResponse ? (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <div className="flex items-start gap-2 mb-2">
+                        <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                        <h3 className="font-semibold text-primary">AI Response</h3>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{aiResponse}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setAiResponse(null);
+                          setFormData({ name: "", email: "", subject: "", message: "" });
+                        }}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Ask Another Question
+                      </Button>
+                      <Button
+                        onClick={() => setAiResponse(null)}
+                        className="flex-1"
+                      >
+                        Follow Up
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      For more detailed assistance, email us at{" "}
+                      <Button variant="link" className="h-auto p-0 text-xs text-primary" asChild>
+                        <a href="mailto:privacy@joblifyai.com">privacy@joblifyai.com</a>
+                      </Button>
                     </p>
-                    <Button
-                      className="mt-4"
-                      onClick={() => setIsSubmitted(false)}
-                      variant="outline"
-                    >
-                      Send Another Message
-                    </Button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">

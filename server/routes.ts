@@ -1120,6 +1120,82 @@ If the user hasn't provided structured data yet, just respond conversationally w
   });
 
   // ============================================
+  // Contact/Support Endpoint
+  // ============================================
+  
+  app.post("/api/contact/ai-response", async (req: Request, res) => {
+    try {
+      console.log('[API] Contact AI response request');
+      const schema = z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Valid email is required"),
+        subject: z.string().min(1, "Subject is required"),
+        message: z.string().min(1, "Message is required"),
+      });
+      
+      const { name, email, subject, message } = schema.parse(req.body);
+      
+      // Create AI prompt for contact response
+      const systemPrompt = `You are Joblify's AI customer support assistant. Your role is to provide helpful, accurate, and friendly responses to customer inquiries about Joblify, an AI-powered resume building platform.
+
+Key information about Joblify:
+- Joblify uses conversational AI to help users build professional, ATS-optimized resumes
+- We offer multiple plans: Free, Plus, and Ultra/Lifetime
+- Main features: AI Chat Resume Builder, ATS Scanner, Cover Letter Generator, Resume Tailoring
+- We prioritize user privacy and data security
+- Resumes can be exported in PDF and DOCX formats
+
+When responding:
+1. Be warm, professional, and helpful
+2. Provide specific answers based on the user's question
+3. If you don't know something specific about pricing or features, suggest they check the pricing page or email privacy@joblifyai.com
+4. Keep responses concise but informative (2-4 paragraphs max)
+5. Always end with an offer to help further if needed
+
+The user's question is about: ${subject}`;
+
+      const userPrompt = `Name: ${name}
+Email: ${email}
+Subject: ${subject}
+
+Question: ${message}`;
+
+      const response = await getPoeClient().chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: 500,
+      });
+      
+      const aiResponse = response.choices[0]?.message?.content || "Thank you for contacting Joblify! We've received your message and will get back to you within 2-3 business days at the email you provided.";
+      console.log('[API] Contact AI response generated');
+      
+      res.json({ 
+        response: aiResponse,
+        success: true,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Contact validation error:', error.errors);
+        res.status(400).json({ 
+          error: "Invalid contact data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      } else {
+        console.error('[API] Error generating contact response:', error);
+        res.status(500).json({ 
+          error: "Failed to process contact request",
+          message: error instanceof Error ? error.message : "Unknown error occurred",
+          code: "CONTACT_ERROR"
+        });
+      }
+    }
+  });
+
+  // ============================================
   // Job Management Endpoints (Legacy - will be removed)
   // ============================================
 

@@ -123,6 +123,13 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/dashboard/resume-chat">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeChat />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
       <Route path="/dashboard/resumes/:id/chat">
         <ProtectedRoute>
           <DashboardLayout>

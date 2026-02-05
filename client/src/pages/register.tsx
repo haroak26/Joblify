@@ -175,11 +175,16 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-            <Briefcase className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <Link href="/">
+            <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">
+              <Briefcase className="w-6 h-6 text-primary-foreground" />
+            </div>
+          </Link>
+          <Link href="/">
+            <div className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">Joblify</div>
+          </Link>
           <div>
-            <CardTitle className="text-2xl">
+            <CardTitle className="text-2xl mt-2">
               {step === 1 && "Create your account"}
               {step === 2 && "Choose a password"}
               {step === 3 && "Tell us about yourself"}
