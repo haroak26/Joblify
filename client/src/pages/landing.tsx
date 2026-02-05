@@ -1,6 +1,9 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CookieConsent } from "@/components/cookie-consent";
+import { Footer } from "@/components/footer";
+import { SEO } from "@/components/seo";
 import { 
   Search, 
   Zap, 
@@ -45,6 +48,13 @@ export default function Landing() {
   const secondaryCtaLabel = user ? "My Account" : "Get Started Free";
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="AI-Powered Resume Builder"
+        description="Build your perfect resume with AI through natural conversation. Joblify's AI Chat Resume Builder makes creating professional, ATS-optimized resumes fast and easy."
+        keywords="AI resume builder, resume maker, ATS resume, professional resume, resume templates, job application, career tools"
+        canonicalUrl="https://joblify.com"
+      />
+      
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -55,6 +65,9 @@ export default function Landing() {
             <span className="font-bold text-lg">Joblify</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/why-us">
+              <Button variant="ghost" size="sm">Why Us</Button>
+            </Link>
             <Link href="/pricing">
               <Button variant="ghost" size="sm">Pricing</Button>
             </Link>
@@ -251,19 +264,10 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-              <Briefcase className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold">Joblify</span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            © 2026 Joblify. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
+
+      {/* Cookie Consent Banner */}
+      <CookieConsent />
     </div>
   );
 }
