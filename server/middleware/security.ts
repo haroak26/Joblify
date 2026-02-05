@@ -200,7 +200,7 @@ export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
 
     next();
   } catch (error) {
-    console.error('Error in sanitizeInput middleware:', error);
+    console.error('Error in sanitizeInput middleware - sanitization failed');
     // Return error response instead of continuing with potentially unsanitized data
     res.status(500).json({ 
       error: 'Request sanitization failed',
