@@ -1,6 +1,8 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CookieConsent } from "@/components/cookie-consent";
+import { Footer } from "@/components/footer";
 import { 
   Search, 
   Zap, 
@@ -254,19 +256,10 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-              <Briefcase className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold">Joblify</span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            © 2026 Joblify. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
+
+      {/* Cookie Consent Banner */}
+      <CookieConsent />
     </div>
   );
 }
