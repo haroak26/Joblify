@@ -30,7 +30,7 @@ export default function DashboardHome() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.username}!</h1>
+        <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name || user?.username}!</h1>
         <p className="text-muted-foreground">Build your perfect resume with AI assistance</p>
       </div>
 
@@ -104,63 +104,6 @@ export default function DashboardHome() {
               </>
             )}
           </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
-        <Card className="hover:border-primary transition-colors cursor-pointer">
-          <Link href="/dashboard/resumes">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">My Resumes</CardTitle>
-              </div>
-              <CardDescription>View and manage all your resumes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="ghost" className="w-full justify-between">
-                View all
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Link>
-        </Card>
-
-        <Card className="hover:border-primary transition-colors cursor-pointer">
-          <Link href="/dashboard/ats-scanner">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Scan className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">ATS Scanner</CardTitle>
-              </div>
-              <CardDescription>Optimize your resume for applicant tracking systems</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="ghost" className="w-full justify-between">
-                Scan resume
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Link>
-        </Card>
-
-        <Card className="hover:border-primary transition-colors cursor-pointer">
-          <Link href="/dashboard/cover-letter">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Cover Letters</CardTitle>
-              </div>
-              <CardDescription>Generate AI-powered cover letters</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="ghost" className="w-full justify-between">
-                Create letter
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Link>
         </Card>
       </div>
 

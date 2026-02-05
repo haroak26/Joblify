@@ -8,7 +8,7 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   
   const style = {
     "--sidebar-width": "14rem",
@@ -20,7 +20,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1">
-          {user && !user.emailVerified && (
+          {!isLoading && user && !user.emailVerified && (
             <div className="px-4 pt-4">
               <EmailVerificationBanner email={user.email} />
             </div>
