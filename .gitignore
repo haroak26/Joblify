@@ -12,3 +12,4 @@ cookies2.txt
 *.cookie
 test-*.ts
 test-*.js
+.env
