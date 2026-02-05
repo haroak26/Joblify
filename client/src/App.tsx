@@ -14,6 +14,8 @@ import Pricing from "@/pages/pricing";
 import WhyUs from "@/pages/why-us";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsAndConditions from "@/pages/terms-and-conditions";
+import Blog from "@/pages/blog";
+import BlogPost from "@/pages/blog-post";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
@@ -43,6 +45,8 @@ function Router() {
       <Route path="/why-us" component={WhyUs} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-and-conditions" component={TermsAndConditions} />
+      <Route path="/blog" component={Blog} />
+      <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />

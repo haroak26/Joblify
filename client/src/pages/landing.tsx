@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CookieConsent } from "@/components/cookie-consent";
 import { Footer } from "@/components/footer";
+import { SEO } from "@/components/seo";
 import { 
   Search, 
   Zap, 
@@ -47,6 +48,13 @@ export default function Landing() {
   const secondaryCtaLabel = user ? "My Account" : "Get Started Free";
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="AI-Powered Resume Builder"
+        description="Build your perfect resume with AI through natural conversation. Joblify's AI Chat Resume Builder makes creating professional, ATS-optimized resumes fast and easy."
+        keywords="AI resume builder, resume maker, ATS resume, professional resume, resume templates, job application, career tools"
+        canonicalUrl="https://joblify.com"
+      />
+      
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
