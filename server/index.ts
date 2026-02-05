@@ -68,6 +68,9 @@ validateEnvVars();
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy - required for rate limiting with X-Forwarded-For header
+app.set('trust proxy', true);
+
 // Apply security headers (helmet)
 app.use(securityHeaders());
 
