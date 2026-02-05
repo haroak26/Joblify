@@ -12,10 +12,15 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
 import WhyUs from "@/pages/why-us";
+import About from "@/pages/about";
+import Contact from "@/pages/contact";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsAndConditions from "@/pages/terms-and-conditions";
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
+import AIResumeBuilderFeature from "@/pages/features/ai-resume-builder";
+import ATSScannerFeature from "@/pages/features/ats-scanner";
+import CoverLetterFeature from "@/pages/features/cover-letter";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
@@ -43,6 +48,11 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/why-us" component={WhyUs} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/features/ai-resume-builder" component={AIResumeBuilderFeature} />
+      <Route path="/features/ats-scanner" component={ATSScannerFeature} />
+      <Route path="/features/cover-letter" component={CoverLetterFeature} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-and-conditions" component={TermsAndConditions} />
       <Route path="/blog" component={Blog} />
