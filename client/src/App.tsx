@@ -11,6 +11,9 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
+import WhyUs from "@/pages/why-us";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import TermsAndConditions from "@/pages/terms-and-conditions";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
@@ -37,6 +40,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/why-us" component={WhyUs} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/terms-and-conditions" component={TermsAndConditions} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
