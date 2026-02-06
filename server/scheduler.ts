@@ -28,8 +28,15 @@ export function startScheduleRunner(intervalMs = 60_000) {
       // Run daily cleanup of expired cached jobs
       const now = Date.now();
       if (now - lastCleanupTime >= CLEANUP_INTERVAL_MS) {
-        console.log('[Scheduler] Running daily job cache cleanup');
+        console.log('[Scheduler] Running daily cleanup tasks');
         await cleanupExpiredJobs();
+        
+        // Cleanup expired deleted accounts (72 hours after deletion)
+        const deletedCount = await storage.cleanupExpiredDeletedAccounts();
+        if (deletedCount > 0) {
+          console.log(`[Scheduler] Cleaned up ${deletedCount} expired deleted account records`);
+        }
+        
         lastCleanupTime = now;
       }
     } catch (error) {

@@ -8,7 +8,8 @@ import {
   type SecurityEvent, type InsertSecurityEvent,
   type SupportInteraction, type InsertSupportInteraction,
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache,
-  resumes, chatConversations, coverLetters, securityEvents, supportInteractions, resumeDataSchema
+  resumes, chatConversations, coverLetters, securityEvents, supportInteractions, resumeDataSchema,
+  deletedAccountsTracker
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc } from "drizzle-orm";
@@ -113,6 +114,11 @@ export interface IStorage {
   // Support interactions methods
   getSupportInteractions(userId: string, limit?: number): Promise<SupportInteraction[]>;
   createSupportInteraction(data: InsertSupportInteraction): Promise<SupportInteraction>;
+  
+  // Deleted accounts tracker methods (abuse prevention)
+  checkDeletedAccount(email: string): Promise<{ isBlocked: boolean; expiresAt?: Date }>;
+  addDeletedAccount(email: string, reason?: string): Promise<void>;
+  cleanupExpiredDeletedAccounts(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1210,6 +1216,43 @@ export class DatabaseStorage implements IStorage {
       .values(data)
       .returning();
     return interaction;
+  }
+  
+  // Deleted accounts tracker methods (abuse prevention)
+  async checkDeletedAccount(email: string): Promise<{ isBlocked: boolean; expiresAt?: Date }> {
+    const [record] = await db
+      .select()
+      .from(deletedAccountsTracker)
+      .where(
+        and(
+          eq(deletedAccountsTracker.email, email),
+          gte(deletedAccountsTracker.expiresAt, new Date())
+        )
+      );
+    
+    if (record) {
+      return { isBlocked: true, expiresAt: record.expiresAt };
+    }
+    return { isBlocked: false };
+  }
+  
+  async addDeletedAccount(email: string, reason?: string): Promise<void> {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 72); // 72 hours from now
+    
+    await db.insert(deletedAccountsTracker).values({
+      email,
+      expiresAt,
+      reason: reason || null,
+    });
+  }
+  
+  async cleanupExpiredDeletedAccounts(): Promise<number> {
+    const result = await db
+      .delete(deletedAccountsTracker)
+      .where(lte(deletedAccountsTracker.expiresAt, new Date()));
+    
+    return result.rowCount || 0;
   }
 }
 

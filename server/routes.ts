@@ -1517,6 +1517,9 @@ Write a ${tone} outreach message for this job opportunity.`;
       // Delete user (cascade will handle related records)
       await storage.deleteUser(userId);
       
+      // Add email to deleted accounts tracker (abuse prevention - 72 hour block)
+      await storage.addDeletedAccount(user.email, 'User-initiated account deletion');
+      
       // Destroy session
       req.session.destroy((err) => {
         if (err) {

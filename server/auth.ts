@@ -129,6 +129,18 @@ export function setupAuth(app: Express) {
       if (existingEmail) {
         return res.status(400).json({ error: "Email already registered" });
       }
+      
+      // Check if email is in deleted accounts tracker (abuse prevention)
+      const deletedCheck = await storage.checkDeletedAccount(email);
+      if (deletedCheck.isBlocked) {
+        const hoursRemaining = Math.ceil(
+          (deletedCheck.expiresAt!.getTime() - Date.now()) / (1000 * 60 * 60)
+        );
+        return res.status(403).json({
+          error: "Fraud Detection System",
+          message: `This email was recently used for an account that was deleted. For security reasons, you cannot create a new account with this email for 72 hours. Time remaining: ${hoursRemaining} hours. If you believe this is an error, please contact appeals@joblifyai.com`,
+        });
+      }
 
       const hashedPassword = await hashPassword(password);
       const verificationToken = generateVerificationToken();
