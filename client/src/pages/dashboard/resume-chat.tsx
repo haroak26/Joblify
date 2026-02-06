@@ -100,7 +100,8 @@ export default function ResumeChat() {
   });
 
   useEffect(() => {
-    if (!id && !hasCreatedRef.current && !createMutation.isPending && !createMutation.isSuccess) {
+    const shouldCreateResume = !id && !hasCreatedRef.current && !createMutation.isPending && !createMutation.isSuccess;
+    if (shouldCreateResume) {
       hasCreatedRef.current = true;
       createMutation.mutate();
     }

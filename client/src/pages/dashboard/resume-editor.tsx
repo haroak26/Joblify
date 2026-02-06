@@ -143,32 +143,41 @@ export default function ResumeEditor() {
     };
   }, [resume]);
 
+  // Known safe field paths for resume data updates
+  const SAFE_PATHS = new Set([
+    "personalInfo.name", "personalInfo.email", "personalInfo.phone",
+    "personalInfo.location", "personalInfo.linkedin", "personalInfo.website",
+    "summary",
+  ]);
+
   const saveField = useCallback((path: string, value: any) => {
     const data = getResumeData();
-    const keys = path.split(".");
-    let obj: any = { ...data };
-    const root = obj;
+    const root = JSON.parse(JSON.stringify(data));
 
-    // Deep clone arrays for immutability
-    for (let i = 0; i < keys.length - 1; i++) {
-      const key = keys[i];
-      const idx = parseInt(keys[i + 1]);
-      if (Array.isArray(obj[key])) {
-        obj[key] = [...obj[key]];
-        if (!isNaN(idx)) {
-          obj[key][idx] = { ...obj[key][idx] };
-          obj = obj[key][idx];
-          i++;
-          continue;
-        }
-      } else if (typeof obj[key] === "object" && obj[key] !== null) {
-        obj[key] = { ...obj[key] };
+    // Handle known safe top-level and nested paths
+    if (SAFE_PATHS.has(path)) {
+      const keys = path.split(".");
+      if (keys.length === 1) {
+        root[keys[0] as keyof ResumeData] = value;
+      } else if (keys.length === 2) {
+        (root as any)[keys[0]][keys[1]] = value;
       }
-      obj = obj[key];
+      updateMutation.mutate({ resumeData: root });
+      return;
     }
-    obj[keys[keys.length - 1]] = value;
 
-    updateMutation.mutate({ resumeData: root });
+    // Handle array item paths like "experience.0.title" or "education.1.school"
+    const match = path.match(/^(experience|education|certifications|projects)\.(\d+)\.(\w+)$/);
+    if (match) {
+      const [, section, indexStr, field] = match;
+      const index = parseInt(indexStr, 10);
+      const arr = (root as any)[section];
+      if (Array.isArray(arr) && index >= 0 && index < arr.length && typeof arr[index] === "object") {
+        arr[index][field] = value;
+        updateMutation.mutate({ resumeData: root });
+      }
+      return;
+    }
   }, [getResumeData, updateMutation]);
 
   const addExperience = () => {
