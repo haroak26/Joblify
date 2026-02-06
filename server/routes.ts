@@ -1746,26 +1746,44 @@ Write a ${tone} outreach message for this job opportunity.`;
   // ATS Scanner Endpoints
   // ============================================
 
-  const ATS_ANALYSIS_PROMPT = `You are an ATS (Applicant Tracking System) analyzer. Analyze this resume and provide:
+  const ATS_ANALYSIS_PROMPT = `You are an expert ATS (Applicant Tracking System) analyzer performing a deep, professional-grade analysis. Analyze the resume thoroughly across multiple dimensions.
 
-1. ATS Compatibility Score (0-100)
-2. Important keywords found
-3. Missing keywords that should be included
-4. Specific suggestions to improve ATS compatibility
+Evaluate these categories (score each 0-100):
 
-Consider:
-- Use of standard section headers (Experience, Education, Skills)
-- Keyword density
-- Formatting clarity
-- Industry-standard terms
-- Lack of tables/images/complex formatting
+1. **Content Quality**: Are there strong action verbs, quantified achievements, and relevant industry terminology? Are bullet points impactful and results-oriented?
 
-Return JSON format:
+2. **Keyword Optimization**: Does the resume contain critical industry keywords, job-specific terms, and relevant technical skills? How is the keyword density and natural integration?
+
+3. **Formatting & Structure**: Does it use standard section headers (Experience, Education, Skills, Summary)? Is formatting clean and parseable by ATS software? Are there any tables, images, columns, or graphics that would break ATS parsing?
+
+4. **Section Completeness**: Are all essential sections present? Is contact information complete? Is there a professional summary? Are dates and locations included for experience/education?
+
+5. **ATS Compatibility**: Is the file format ATS-friendly? Are there special characters, headers/footers, or non-standard elements that ATS might skip? Is the content in a machine-readable format?
+
+6. **Impact & Relevance**: Are experiences described with measurable outcomes (numbers, percentages, revenue)? Do achievements demonstrate value? Is content tailored to the target role?
+
+IMPORTANT: If a job description is provided after "TARGET JOB DESCRIPTION:", analyze keyword alignment between the resume and job description, identify exact missing keywords from the job posting, and provide targeted suggestions.
+
+Return ONLY valid JSON in this exact format:
 {
-  "score": 85,
-  "keywords": ["javascript", "react", "python"],
-  "missingKeywords": ["agile", "scrum"],
-  "suggestions": ["Add more action verbs", "Include certifications section"]
+  "score": 75,
+  "categories": [
+    {"name": "Content Quality", "score": 80, "feedback": "Strong action verbs used, but missing quantified results in 3 bullet points."},
+    {"name": "Keyword Optimization", "score": 70, "feedback": "Good keyword density for the field, but missing key terms like..."},
+    {"name": "Formatting & Structure", "score": 85, "feedback": "Clean formatting with standard headers. Well organized."},
+    {"name": "Section Completeness", "score": 75, "feedback": "Missing certifications section and LinkedIn URL."},
+    {"name": "ATS Compatibility", "score": 90, "feedback": "Fully parseable format with no problematic elements."},
+    {"name": "Impact & Relevance", "score": 65, "feedback": "Only 2 of 8 bullet points include measurable outcomes."}
+  ],
+  "keywords": ["javascript", "react", "python", "project management"],
+  "missingKeywords": ["agile", "scrum", "CI/CD", "cloud computing"],
+  "suggestions": [
+    "Add quantified achievements (e.g., 'Increased sales by 30%' instead of 'Increased sales')",
+    "Include a professional summary section at the top highlighting 3-5 key qualifications",
+    "Add missing technical skills: Docker, Kubernetes, AWS based on industry standards",
+    "Replace passive language ('responsible for') with action verbs ('led', 'developed', 'optimized')",
+    "Include specific metrics and numbers in your experience descriptions"
+  ]
 }`;
 
   app.post("/api/ats/scan", requireAuth, requireVerifiedEmail, upload.single('file'), async (req: Request, res) => {
@@ -1808,6 +1826,15 @@ Return JSON format:
         return res.status(400).json({ error: "Could not extract text from file", code: "PARSE_ERROR" });
       }
 
+      // Get optional job description from form data
+      const jobDescription = req.body?.jobDescription;
+
+      // Build analysis prompt with optional job description
+      let userContent = `Analyze this resume:\n\n${parsedText}`;
+      if (jobDescription) {
+        userContent += `\n\nTARGET JOB DESCRIPTION:\n${jobDescription}`;
+      }
+
       // Send to AI for analysis
       const response = await getPoeClient().chat.completions.create({
         model: "claude-4.5-haiku",
@@ -1818,14 +1845,14 @@ Return JSON format:
           },
           {
             role: "user",
-            content: `Analyze this resume:\n\n${parsedText}`
+            content: userContent
           }
         ],
-        max_tokens: 1000,
+        max_tokens: 2000,
       });
 
       const aiResponse = response.choices[0]?.message?.content || '{}';
-      let analysis = { score: 0, keywords: [], missingKeywords: [], suggestions: [] };
+      let analysis: any = { score: 0, categories: [], keywords: [], missingKeywords: [], suggestions: [] };
 
       try {
         const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
@@ -1837,6 +1864,7 @@ Return JSON format:
       console.log('[API] ATS scan completed for user:', userId, 'score:', analysis.score);
       res.json({ 
         score: analysis.score || 0,
+        categories: analysis.categories || [],
         keywords: analysis.keywords || [],
         missingKeywords: analysis.missingKeywords || [],
         suggestions: analysis.suggestions || [],
@@ -2003,9 +2031,10 @@ Extract all information accurately. If a field is not found, use empty string or
       console.log('[API] ATS analyze for user:', userId);
       const schema = z.object({
         resumeId: z.string(),
+        jobDescription: z.string().optional(),
       });
       
-      const { resumeId } = schema.parse(req.body);
+      const { resumeId, jobDescription } = schema.parse(req.body);
 
       // Check plan limits
       const subscription = await storage.getSubscription(userId);
@@ -2034,9 +2063,15 @@ Extract all information accurately. If a field is not found, use empty string or
       // Convert resume data to text
       const resumeText = resumeDataToText(resume.resumeData);
 
+      // Build analysis prompt with optional job description
+      let userContent = `Analyze this resume:\n\n${resumeText}`;
+      if (jobDescription) {
+        userContent += `\n\nTARGET JOB DESCRIPTION:\n${jobDescription}`;
+      }
+
       // Send to AI for analysis
       const response = await getPoeClient().chat.completions.create({
-        model: "gpt-5-nano",
+        model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
@@ -2044,14 +2079,14 @@ Extract all information accurately. If a field is not found, use empty string or
           },
           {
             role: "user",
-            content: `Analyze this resume:\n\n${resumeText}`
+            content: userContent
           }
         ],
-        max_tokens: 1000,
+        max_tokens: 2000,
       });
 
       const aiResponse = response.choices[0]?.message?.content || '{}';
-      let analysis = { score: 0, keywords: [], missingKeywords: [], suggestions: [] };
+      let analysis: any = { score: 0, categories: [], keywords: [], missingKeywords: [], suggestions: [] };
 
       try {
         const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
@@ -2063,6 +2098,7 @@ Extract all information accurately. If a field is not found, use empty string or
       console.log('[API] ATS analysis completed for user:', userId, 'resume:', resumeId, 'score:', analysis.score);
       res.json({ 
         score: analysis.score || 0,
+        categories: analysis.categories || [],
         keywords: analysis.keywords || [],
         missingKeywords: analysis.missingKeywords || [],
         suggestions: analysis.suggestions || []
