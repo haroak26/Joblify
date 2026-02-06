@@ -2126,21 +2126,33 @@ Extract all information accurately. If a field is not found, use empty string or
   // Cover Letter Endpoints
   // ============================================
 
-  const COVER_LETTER_PROMPT = `You are a professional cover letter writer. Generate a compelling cover letter based on:
+  const COVER_LETTER_PROMPT = `You are a professional cover letter writer. Generate a compelling cover letter that sounds authentically human-written, not AI-generated.
 
 Resume: {resumeData}
 Job Description: {jobDescription}
 Tone: {tone}
 
-Requirements:
-- Personalized to the job description
-- Highlights relevant experience from resume
-- {tone} tone throughout
-- Professional format with proper greeting and closing
-- 250-400 words
-- Include specific examples from their experience
+CRITICAL REQUIREMENTS:
+1. DO NOT use em dashes (—) anywhere - use periods, commas, or semicolons instead
+2. AVOID AI jargon phrases like:
+   - "I am excited to leverage"
+   - "I am writing to express my interest"
+   - "utilize", "leverage", "facilitate", "optimize"
+   - "I would welcome the opportunity"
+   - "I am confident that my skills"
+3. Write in a natural, conversational {tone} tone
+4. Use varied sentence structure and length (mix short and longer sentences)
+5. Use active voice, not passive
+6. Include specific details from the resume
+7. Show genuine, specific interest in the company/role (not generic enthusiasm)
+8. Keep paragraphs 3-4 sentences maximum
+9. Total length: 250-350 words
+10. Include proper greeting and professional closing
 
-Return ONLY the cover letter text, no JSON.`;
+Write as if the candidate themselves wrote this letter. Make it feel personal and authentic.
+
+Return ONLY the cover letter text, no JSON or markdown formatting.`;
+
 
   app.post("/api/cover-letter/generate", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;
@@ -2204,11 +2216,25 @@ Return ONLY the cover letter text, no JSON.`;
 
       const content = response.choices[0]?.message?.content || '';
       
+      // Post-processing: Remove AI patterns and em dashes
+      let processedContent = content;
+      
+      // Replace em dashes with commas or periods
+      processedContent = processedContent.replace(/—/g, ', ');
+      
+      // Remove common AI patterns (optional, for additional safety)
+      // This is conservative - only catches very obvious patterns
+      processedContent = processedContent
+        .replace(/I am excited to leverage/gi, 'I look forward to applying')
+        .replace(/I am writing to express my interest/gi, 'I am interested')
+        .replace(/I would welcome the opportunity/gi, 'I would appreciate the chance')
+        .replace(/I am confident that my skills/gi, 'My skills');
+      
       // Save to database
       const coverLetter = await storage.createCoverLetter({
         userId,
         resumeId,
-        content,
+        content: processedContent,
         jobDescription,
       });
 
