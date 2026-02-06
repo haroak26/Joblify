@@ -1531,6 +1531,85 @@ Write a ${tone} outreach message for this job opportunity.`;
     }
   });
 
+  // GDPR/CCPA Compliance Endpoints
+  
+  // Data Export - Right to Data Portability (GDPR Article 20)
+  app.get("/api/user/data-export", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Log the data access request for audit trail
+      await storage.createSecurityEvent({
+        userId,
+        eventType: "data_export_requested",
+        ipAddress: req.ip || null,
+        userAgent: req.get('user-agent') || null,
+        metadata: { timestamp: new Date().toISOString() },
+      });
+      
+      const { exportUserData } = await import("./lib/gdpr-compliance");
+      const data = await exportUserData(userId);
+      
+      // Set headers for file download
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="joblify-data-export-${new Date().toISOString().split('T')[0]}.json"`);
+      
+      res.json(data);
+    } catch (error) {
+      console.error("[GDPR] Data export error:", error);
+      res.status(500).json({ 
+        error: "Failed to export data",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Data Summary - Right to Access (GDPR Article 15)
+  app.get("/api/user/data-summary", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Log the data access request for audit trail
+      await storage.createSecurityEvent({
+        userId,
+        eventType: "data_summary_requested",
+        ipAddress: req.ip || null,
+        userAgent: req.get('user-agent') || null,
+        metadata: { timestamp: new Date().toISOString() },
+      });
+      
+      const { getUserDataSummary } = await import("./lib/gdpr-compliance");
+      const summary = await getUserDataSummary(userId);
+      
+      res.json(summary);
+    } catch (error) {
+      console.error("[GDPR] Data summary error:", error);
+      res.status(500).json({ 
+        error: "Failed to get data summary",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Consent Withdrawal - Right to Withdraw Consent (GDPR Article 7)
+  app.post("/api/user/consent-withdraw", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { reason } = req.body;
+      
+      const { logConsentWithdrawal } = await import("./lib/gdpr-compliance");
+      const result = await logConsentWithdrawal(userId, reason);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("[GDPR] Consent withdrawal error:", error);
+      res.status(500).json({ 
+        error: "Failed to process consent withdrawal",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Schedule endpoints
   app.get("/api/schedules", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     try {
