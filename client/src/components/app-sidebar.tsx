@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, FileText, Scan, Mail, User, Sparkles, ExternalLink, Briefcase, Moon, Sun } from "lucide-react";
+import { Home, FileText, Scan, Mail, User, Briefcase, Moon, Sun } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -43,16 +43,6 @@ const mainMenuItems = [
     title: "Cover Letters",
     url: "/dashboard/cover-letter",
     icon: Mail,
-  },
-  {
-    title: "Tailor to Job",
-    url: "/dashboard/tailor",
-    icon: Sparkles,
-  },
-  {
-    title: "LinkedIn Import",
-    url: "/dashboard/linkedin-import",
-    icon: ExternalLink,
   },
 ];
 

@@ -39,8 +39,7 @@ import ResumeChat from "@/pages/dashboard/resume-chat";
 import ResumeBuilderWizard from "@/pages/dashboard/resume-builder-wizard";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetterGenerator from "@/pages/dashboard/cover-letter";
-import TailorPage from "@/pages/dashboard/tailor";
-import LinkedInImport from "@/pages/dashboard/linkedin-import";
+
 
 function Router() {
   return (
@@ -158,20 +157,7 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      <Route path="/dashboard/tailor">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <TailorPage />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/linkedin-import">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <LinkedInImport />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
+
       <Route component={NotFound} />
     </Switch>
   );

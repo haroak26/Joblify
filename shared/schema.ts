@@ -258,8 +258,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: 3, // Reduced to encourage upgrades
     hasAtsScanner: false,
     hasCoverLetterGenerator: false,
-    hasLinkedInImport: false,
-    hasTailoringFeature: false,
     allowedFormats: ['pdf'] as const,
   },
   plus: {
@@ -271,8 +269,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: 50, // Reduced from 100 to encourage ultra
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
-    hasLinkedInImport: true,
-    hasTailoringFeature: false, // Only ultra gets tailoring
     allowedFormats: ['pdf', 'docx'] as const,
   },
   ultra: {
@@ -284,8 +280,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: Infinity,
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
-    hasLinkedInImport: true,
-    hasTailoringFeature: true,
     allowedFormats: ['pdf', 'docx'] as const,
   },
   lifetime: {
@@ -297,8 +291,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: Infinity,
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
-    hasLinkedInImport: true,
-    hasTailoringFeature: true,
     allowedFormats: ['pdf', 'docx'] as const,
   },
 } as const;
