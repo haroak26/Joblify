@@ -20,7 +20,7 @@ export default function SummarySection({ data, onUpdate }: SummarySectionProps) 
         className="resize-none"
       />
       <p className="text-sm text-muted-foreground">
-        {data.summary.length} characters
+        {(data.summary || "").length} characters
       </p>
     </div>
   );

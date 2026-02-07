@@ -16,7 +16,7 @@ export default function SkillsSection({ data, onUpdate }: SkillsSectionProps) {
 
   const handleAddSkill = () => {
     const trimmedValue = inputValue.trim();
-    if (!trimmedValue || data.skills.includes(trimmedValue)) return;
+    if (!trimmedValue || data.skills.some(skill => skill.toLowerCase() === trimmedValue.toLowerCase())) return;
 
     onUpdate({
       skills: [...data.skills, trimmedValue],

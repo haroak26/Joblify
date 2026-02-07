@@ -24,7 +24,7 @@ export default function PersonalInfoSection({ data, onUpdate }: PersonalInfoSect
           <Label htmlFor="name">Full Name</Label>
           <Input
             id="name"
-            value={data.personalInfo.name}
+            value={data.personalInfo.name || ""}
             onChange={(e) => handleChange("name", e.target.value)}
             placeholder="John Doe"
           />
@@ -47,7 +47,7 @@ export default function PersonalInfoSection({ data, onUpdate }: PersonalInfoSect
           <Input
             id="phone"
             type="tel"
-            value={data.personalInfo.phone}
+            value={data.personalInfo.phone || ""}
             onChange={(e) => handleChange("phone", e.target.value)}
             placeholder="+1 (555) 123-4567"
           />
@@ -56,7 +56,7 @@ export default function PersonalInfoSection({ data, onUpdate }: PersonalInfoSect
           <Label htmlFor="location">Location</Label>
           <Input
             id="location"
-            value={data.personalInfo.location}
+            value={data.personalInfo.location || ""}
             onChange={(e) => handleChange("location", e.target.value)}
             placeholder="New York, NY"
           />

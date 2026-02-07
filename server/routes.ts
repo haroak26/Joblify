@@ -518,7 +518,7 @@ export async function registerRoutes(
       // Validate request body
       const createSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional', 'creative', 'executive', 'technical']).optional(),
+        template: z.enum(['modern', 'professional']).optional(),
       });
 
       const data = createSchema.parse(req.body);
@@ -615,7 +615,7 @@ export async function registerRoutes(
       // Validate and update resume
       const updateSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional', 'creative', 'executive', 'technical']).optional(),
+        template: z.enum(['modern', 'professional']).optional(),
         resumeData: resumeDataSchema.optional(),
       });
 
@@ -675,7 +675,7 @@ export async function registerRoutes(
 
       // Create PDF document
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
-      const resumeData = resume.resumeData as ResumeData;
+      const resumeData = resumeDataSchema.parse(resume.resumeData);
 
       // Set response headers for PDF download
       res.setHeader('Content-Type', 'application/pdf');
