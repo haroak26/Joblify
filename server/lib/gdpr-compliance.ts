@@ -145,7 +145,7 @@ export async function getUserDataSummary(userId: string) {
           fields: ["cover letter text", "job information", "customization"],
           dataPresent: coverLetterCount > 0,
           count: coverLetterCount,
-          source: "Generated using AI",
+          source: "Generated using AI based on job description and user input",
           purpose: "Cover letter creation and storage",
           retention: "As long as your account exists",
         },
