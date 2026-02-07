@@ -77,7 +77,7 @@ export default function AtsScanner() {
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
           <Search className="w-6 h-6 text-primary" />
           ATS Resume Scanner
         </h2>
@@ -91,7 +91,7 @@ export default function AtsScanner() {
         {/* Left: Resume selection */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Select Resume</CardTitle>
+            <CardTitle className="text-body">Select Resume</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <CleanTabs value={scanMode} onValueChange={(value) => setScanMode(value as "joblify" | "upload")}>
@@ -132,14 +132,14 @@ export default function AtsScanner() {
                   />
                   <label htmlFor="resume-file-upload" className="cursor-pointer">
                     <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="font-medium text-sm">Click to upload</p>
-                    <p className="text-xs text-muted-foreground">PDF or DOCX (max 10MB)</p>
+                    <p className="font-medium text-small">Click to upload</p>
+                    <p className="text-small text-muted-foreground">PDF or DOCX (max 10MB)</p>
                   </label>
                 </div>
                 {file && (
                   <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
                     <FileText className="w-4 h-4" />
-                    <span className="flex-1 text-sm truncate">{file.name}</span>
+                    <span className="flex-1 text-small truncate">{file.name}</span>
                     <Button variant="ghost" size="sm" onClick={() => setFile(null)}>Remove</Button>
                   </div>
                 )}
@@ -151,10 +151,10 @@ export default function AtsScanner() {
         {/* Right: Job description */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-body flex items-center gap-2">
               <Target className="w-4 h-4" />
               Job Description
-              <Badge variant="secondary" className="text-xs">Recommended</Badge>
+              <Badge variant="secondary" className="text-small">Recommended</Badge>
             </CardTitle>
             <CardDescription>
               Paste a job description for targeted keyword matching and gap analysis
@@ -169,7 +169,7 @@ export default function AtsScanner() {
               className="resize-none"
             />
             {jobDescription && (
-              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+              <p className="text-small text-green-600 mt-2 flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />
                 Job description provided – analysis will include targeted keyword matching
               </p>
@@ -215,12 +215,12 @@ export default function AtsScanner() {
                   <div className={`text-7xl font-bold ${getScoreColor(result.score)}`}>
                     {result.score}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1">out of 100</p>
+                  <p className="text-small text-muted-foreground mt-1">out of 100</p>
                 </div>
                 <div className="flex-1 space-y-3">
-                  <h3 className="text-xl font-semibold">{getScoreLabel(result.score)}</h3>
+                  <h3 className="text-large font-semibold">{getScoreLabel(result.score)}</h3>
                   <Progress value={result.score} className="h-3" />
-                  <div className="grid grid-cols-3 gap-4 text-center text-xs">
+                  <div className="grid grid-cols-3 gap-4 text-center text-small">
                     <div>
                       <div className="font-semibold text-green-600">{result.keywords?.length || 0}</div>
                       <div className="text-muted-foreground">Keywords Found</div>
@@ -260,13 +260,13 @@ export default function AtsScanner() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Icon className={`w-4 h-4 ${style.color}`} />
-                          <span className="font-medium text-sm">{cat.name}</span>
+                          <span className="font-medium text-small">{cat.name}</span>
                         </div>
-                        <span className={`font-semibold text-sm ${style.color}`}>{cat.score}/100</span>
+                        <span className={`font-semibold text-small ${style.color}`}>{cat.score}/100</span>
                       </div>
                       <Progress value={cat.score} className="h-2" />
                       {cat.feedback && (
-                        <p className="text-xs text-muted-foreground pl-6">{cat.feedback}</p>
+                        <p className="text-small text-muted-foreground pl-6">{cat.feedback}</p>
                       )}
                       {i < result.categories.length - 1 && <Separator />}
                     </div>
@@ -281,7 +281,7 @@ export default function AtsScanner() {
             {result.keywords && result.keywords.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="text-body flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-green-600" />
                     Keywords Found ({result.keywords.length})
                   </CardTitle>
@@ -304,7 +304,7 @@ export default function AtsScanner() {
             {result.missingKeywords && result.missingKeywords.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="text-body flex items-center gap-2">
                     <XCircle className="w-5 h-5 text-red-600" />
                     Missing Keywords ({result.missingKeywords.length})
                   </CardTitle>
@@ -341,10 +341,10 @@ export default function AtsScanner() {
                 <div className="space-y-3">
                   {result.suggestions.map((suggestion: string, i: number) => (
                     <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-semibold">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mt-0.5 text-small font-semibold">
                         {i + 1}
                       </div>
-                      <p className="flex-1 text-sm">{suggestion}</p>
+                      <p className="flex-1 text-small">{suggestion}</p>
                     </div>
                   ))}
                 </div>
@@ -355,13 +355,13 @@ export default function AtsScanner() {
           {/* Quick Tips */}
           <Card className="bg-primary/5 border-primary/20">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
+              <CardTitle className="text-body flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
                 ATS Pro Tips
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-3 text-sm">
+              <div className="grid md:grid-cols-2 gap-3 text-small">
                 <div className="flex items-start gap-2">
                   <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                   <span>Use standard section headers: Experience, Education, Skills</span>

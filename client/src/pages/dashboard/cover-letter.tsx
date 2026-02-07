@@ -68,8 +68,8 @@ export default function CoverLetterGenerator() {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-semibold mb-2">Generate Your Cover Letter</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-large font-semibold mb-2">Generate Your Cover Letter</h2>
+          <p className="text-small text-muted-foreground">
             Fill in the details below to create a tailored cover letter
           </p>
         </div>
@@ -82,7 +82,7 @@ export default function CoverLetterGenerator() {
               </SelectTrigger>
               <SelectContent>
                 {resumes.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
+                  <div className="p-2 text-small text-muted-foreground">
                     No resumes found. Create one first.
                   </div>
                 ) : (
@@ -107,9 +107,9 @@ export default function CoverLetterGenerator() {
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste the complete job description here, including requirements, responsibilities, and company information..."
               rows={8}
-              className="font-mono text-sm"
+              className="font-mono text-small"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               Include as much detail as possible for a more tailored cover letter
             </p>
           </div>
@@ -124,19 +124,19 @@ export default function CoverLetterGenerator() {
                 <SelectItem value="professional">
                   <div>
                     <div className="font-medium">Professional</div>
-                    <div className="text-xs text-muted-foreground">Formal and business-oriented</div>
+                    <div className="text-small text-muted-foreground">Formal and business-oriented</div>
                   </div>
                 </SelectItem>
                 <SelectItem value="enthusiastic">
                   <div>
                     <div className="font-medium">Enthusiastic</div>
-                    <div className="text-xs text-muted-foreground">Energetic and passionate</div>
+                    <div className="text-small text-muted-foreground">Energetic and passionate</div>
                   </div>
                 </SelectItem>
                 <SelectItem value="creative">
                   <div>
                     <div className="font-medium">Creative</div>
-                    <div className="text-xs text-muted-foreground">Unique and expressive</div>
+                    <div className="text-small text-muted-foreground">Unique and expressive</div>
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -199,7 +199,7 @@ export default function CoverLetterGenerator() {
               value={result.content} 
               rows={24}
               readOnly
-              className="font-serif text-sm leading-relaxed"
+              className="font-serif text-small leading-relaxed"
             />
           </CardContent>
         </Card>

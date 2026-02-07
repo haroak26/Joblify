@@ -351,7 +351,7 @@ export default function Account() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-24 h-24 rounded-lg bg-primary flex items-center justify-center text-white text-3xl font-bold border border-primary">
+              <div className="w-24 h-24 rounded-lg bg-primary flex items-center justify-center text-white text-header font-bold border border-primary">
                 {getUserInitials()}
               </div>
               {user?.emailVerified && (
@@ -368,7 +368,7 @@ export default function Account() {
                   <div className="h-8 w-48 bg-muted animate-pulse rounded" />
                 ) : (
                   <>
-                    <h1 className="text-3xl font-bold" data-testid="text-username">
+                    <h1 className="text-header font-bold" data-testid="text-username">
                       {user?.name || user?.username}
                     </h1>
                     <Badge variant={user?.emailVerified ? "secondary" : "destructive"} className="h-6 rounded-md">
@@ -386,7 +386,7 @@ export default function Account() {
                 </p>
               )}
               
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-small text-muted-foreground">
                 <Clock className="w-4 h-4" />
                 <span>Member since {new Date().getFullYear()}</span>
               </div>
@@ -395,8 +395,8 @@ export default function Account() {
             {/* Current Plan Badge */}
             <div className="sm:ml-auto">
               <div className="text-right space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Current Plan</p>
-                <Badge variant="outline" className="text-lg px-4 py-2 font-bold rounded-md">
+                <p className="text-small text-muted-foreground uppercase tracking-wider">Current Plan</p>
+                <Badge variant="outline" className="text-large px-4 py-2 font-bold rounded-md">
                   {currentPlanLabel}
                 </Badge>
               </div>
@@ -428,7 +428,7 @@ export default function Account() {
           {/* Settings Tab */}
           <CleanTabsContent value="settings" className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold">Account Settings</h2>
+              <h2 className="text-subheader font-bold">Account Settings</h2>
               <p className="text-muted-foreground">Manage your account preferences and security</p>
             </div>
 
@@ -449,7 +449,7 @@ export default function Account() {
           <CleanTabsContent value="usage" className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold">Usage Overview</h2>
+                <h2 className="text-subheader font-bold">Usage Overview</h2>
                 <p className="text-muted-foreground">Monitor your monthly resource consumption</p>
               </div>
               {usageData && (
@@ -474,7 +474,7 @@ export default function Account() {
                       <div className="p-2.5 bg-blue-500/10 rounded-lg">
                         <Briefcase className="w-5 h-5 text-blue-500" />
                       </div>
-                      <h3 className="text-base font-semibold">Job Imports</h3>
+                      <h3 className="text-body font-semibold">Job Imports</h3>
                     </div>
                     <Badge variant={getUsageColor(jobsUsedPercent)} className="font-semibold rounded-md">
                       {usageData?.usage.jobsScrapedThisMonth || 0}/{maxJobs === -1 ? "∞" : maxJobs || 0}
@@ -501,13 +501,13 @@ export default function Account() {
                       <div className="p-2.5 bg-purple-500/10 rounded-lg">
                         <Sparkles className="w-5 h-5 text-purple-500" />
                       </div>
-                      <h3 className="text-base font-semibold">AI Edits</h3>
+                      <h3 className="text-body font-semibold">AI Edits</h3>
                     </div>
                     <Badge variant="secondary" className="font-semibold rounded-md">
                       {usageData?.usage.aiEditsThisMonth || 0}
                     </Badge>
                   </div>
-                  <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="text-small text-muted-foreground space-y-1">
                     <p>• Resume improvements</p>
                     <p>• Cover letter generation</p>
                     <p>• ATS optimization</p>
@@ -523,7 +523,7 @@ export default function Account() {
                       <div className="p-2.5 bg-green-500/10 rounded-lg">
                         <FileText className="w-5 h-5 text-green-500" />
                       </div>
-                      <h3 className="text-base font-semibold">Cover Letters</h3>
+                      <h3 className="text-body font-semibold">Cover Letters</h3>
                     </div>
                     <Badge variant="secondary" className="font-semibold rounded-md">
                       {usageData?.usage.coverLettersThisMonth || 0}
@@ -543,7 +543,7 @@ export default function Account() {
                       <div className="p-2.5 bg-amber-500/10 rounded-lg">
                         <Award className="w-5 h-5 text-amber-500" />
                       </div>
-                      <h3 className="text-base font-semibold">Skills</h3>
+                      <h3 className="text-body font-semibold">Skills</h3>
                     </div>
                     <Badge variant={getUsageColor(skillsUsedPercent)} className="font-semibold rounded-md">
                       {usageData?.usage.skillsCount || 0}/{maxSkills === -1 ? "∞" : maxSkills || 0}
@@ -570,7 +570,7 @@ export default function Account() {
                       <div className="p-2.5 bg-indigo-500/10 rounded-lg">
                         <Calendar className="w-5 h-5 text-indigo-500" />
                       </div>
-                      <h3 className="text-base font-semibold">Schedules</h3>
+                      <h3 className="text-body font-semibold">Schedules</h3>
                     </div>
                     <Badge variant={getUsageColor(schedulesUsedPercent)} className="font-semibold rounded-md">
                       {usageData?.usage.schedulesCount || 0}/{maxSchedules === -1 ? "∞" : maxSchedules || 0}
@@ -597,7 +597,7 @@ export default function Account() {
                       <div className="p-2.5 bg-rose-500/10 rounded-lg">
                         <FileSpreadsheet className="w-5 h-5 text-rose-500" />
                       </div>
-                      <h3 className="text-base font-semibold">ATS Scans</h3>
+                      <h3 className="text-body font-semibold">ATS Scans</h3>
                     </div>
                     <Badge variant="secondary" className="font-semibold rounded-md">
                       {usageData?.usage.atsScansThisMonth || 0}
@@ -616,22 +616,22 @@ export default function Account() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Premium Benefits Active</h3>
+                    <h3 className="text-large font-semibold">Premium Benefits Active</h3>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-small">
                       <Check className="w-4 h-4 text-green-500" />
                       <span>Extended usage limits</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-small">
                       <Check className="w-4 h-4 text-green-500" />
                       <span>Priority support</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-small">
                       <Check className="w-4 h-4 text-green-500" />
                       <span>Advanced AI features</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-small">
                       <Check className="w-4 h-4 text-green-500" />
                       <span>All export formats</span>
                     </div>
@@ -645,12 +645,12 @@ export default function Account() {
           <CleanTabsContent value="subscription" className="space-y-6">{/* Subscription Section */}
         <section className="space-y-8">
           <div>
-            <h2 className="text-2xl font-bold">Subscription & Billing</h2>
+            <h2 className="text-subheader font-bold">Subscription & Billing</h2>
             <p className="text-muted-foreground">Manage your plan and billing information</p>
           </div>
           
           {subscription?.status === "cancelled" && cancellationDate && (
-            <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-small text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
               Your subscription will cancel on <span className="font-semibold">{cancellationDate}</span>.
             </div>
           )}
@@ -673,7 +673,7 @@ export default function Account() {
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-xl font-bold">{plan.name}</h3>
+                          <h3 className="text-large font-bold">{plan.name}</h3>
                           {plan.popular && !isCurrent && (
                             <Badge className="bg-primary rounded-md">Popular</Badge>
                           )}
@@ -689,15 +689,15 @@ export default function Account() {
                         <p className="text-xs uppercase tracking-widest text-muted-foreground">{plan.period}</p>
                       </div>
                       <div className="text-right">
-                        <span className="text-3xl font-bold">{plan.price}</span>
+                        <span className="text-header font-bold">{plan.price}</span>
                         {plan.billingSuffix && (
-                          <span className="text-muted-foreground text-sm font-medium">{plan.billingSuffix}</span>
+                          <span className="text-muted-foreground text-small font-medium">{plan.billingSuffix}</span>
                         )}
                       </div>
                     </div>
                     <ul className="space-y-3">
                       {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-3 text-sm">
+                        <li key={i} className="flex items-center gap-3 text-small">
                           <Check className="w-4 h-4 text-primary flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
@@ -725,8 +725,8 @@ export default function Account() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle className="text-xl font-bold">Cancel Subscription?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-base">
+                            <AlertDialogTitle className="text-large font-bold">Cancel Subscription?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-body">
                               You'll retain {currentPlanLabel} benefits until the end of your current billing cycle.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
@@ -750,18 +750,18 @@ export default function Account() {
           {/* Data & Privacy Tab */}
           <CleanTabsContent value="data" className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold">Data & Privacy</h2>
+              <h2 className="text-subheader font-bold">Data & Privacy</h2>
               <p className="text-muted-foreground">Manage your personal data and privacy settings</p>
             </div>
 
             <div className="border rounded-lg p-6">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <h3 className="text-large font-semibold flex items-center gap-2">
                     <Shield className="w-5 h-5" />
                     Your Data Rights
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-small text-muted-foreground">
                     In accordance with GDPR and CCPA, you have the following rights regarding your personal data.
                   </p>
                 </div>
@@ -773,7 +773,7 @@ export default function Account() {
                       <Download className="w-4 h-4 text-primary" />
                       <p className="font-semibold">Download Your Data (PDF)</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-small text-muted-foreground">
                       Export your personal data in a readable PDF format (Right to Data Portability).
                     </p>
                   </div>
@@ -793,7 +793,7 @@ export default function Account() {
                       <Download className="w-4 h-4 text-muted-foreground" />
                       <p className="font-semibold">Download Your Data (JSON)</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-small text-muted-foreground">
                       Export all your data in machine-readable JSON format.
                     </p>
                   </div>
@@ -814,7 +814,7 @@ export default function Account() {
                       <FileText className="w-4 h-4 text-muted-foreground" />
                       <p className="font-semibold">View What Data We Collect</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-small text-muted-foreground">
                       See a detailed summary of what personal data we store about you (Right to Access).
                     </p>
                   </div>
@@ -831,7 +831,7 @@ export default function Account() {
                   {/* Data Summary Details */}
                   {showDataSummary && dataSummaryQuery.data && (
                     <div className="mt-4 p-4 rounded-lg border bg-muted/50 space-y-4">
-                      <h3 className="font-semibold text-lg">Data Categories We Collect</h3>
+                      <h3 className="font-semibold text-large">Data Categories We Collect</h3>
                       <div className="space-y-3">
                         {Object.entries(dataSummaryQuery.data.dataCategories).map(([key, category]: [string, any]) => (
                           category.dataPresent && (
@@ -846,13 +846,13 @@ export default function Account() {
                                   )}
                                 </div>
                               </div>
-                              <p className="text-sm text-muted-foreground mb-1">
+                              <p className="text-small text-muted-foreground mb-1">
                                 <strong>Purpose:</strong> {category.purpose}
                               </p>
-                              <p className="text-sm text-muted-foreground mb-1">
+                              <p className="text-small text-muted-foreground mb-1">
                                 <strong>Source:</strong> {category.source}
                               </p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-small text-muted-foreground">
                                 <strong>Retention:</strong> {category.retention}
                               </p>
                             </div>
@@ -864,7 +864,7 @@ export default function Account() {
                         <h4 className="font-semibold mb-2">Third-Party Data Sharing</h4>
                         <div className="space-y-2">
                           {Object.entries(dataSummaryQuery.data.thirdPartySharing).map(([key, service]: [string, any]) => (
-                            <div key={key} className="p-2 rounded-md bg-background border text-sm">
+                            <div key={key} className="p-2 rounded-md bg-background border text-small">
                               <p className="font-medium">{service.name}</p>
                               <p className="text-muted-foreground">Purpose: {service.purpose}</p>
                               <p className="text-muted-foreground">
@@ -877,12 +877,12 @@ export default function Account() {
 
                       <div className="mt-4 pt-4 border-t">
                         <h4 className="font-semibold mb-2">Contact for Privacy Requests</h4>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-small text-muted-foreground">
                           Email: <a href="mailto:privacy@joblifyai.com" className="text-primary hover:underline">
                             privacy@joblifyai.com
                           </a>
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-small text-muted-foreground">
                           Response time: {dataSummaryQuery.data.contactInformation.responseTime}
                         </p>
                       </div>
@@ -909,8 +909,8 @@ export default function Account() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription className="text-base">
+                    <AlertDialogTitle className="text-large font-bold">Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-body">
                       This action is irreversible. All data will be lost forever.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -1004,7 +1004,7 @@ function PasswordChangeSection() {
     <div className="border rounded-lg p-6">
       <div className="flex items-center gap-2 mb-4">
         <Lock className="w-5 h-5" />
-        <h3 className="text-lg font-semibold">Change Password</h3>
+        <h3 className="text-large font-semibold">Change Password</h3>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -1048,7 +1048,7 @@ function PasswordChangeSection() {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Progress value={strength} className="h-2 flex-1" />
-                <span className="text-xs text-muted-foreground w-16">
+                <span className="text-small text-muted-foreground w-16">
                   {strength < 40 ? "Weak" : strength < 70 ? "Medium" : "Strong"}
                 </span>
               </div>
@@ -1172,7 +1172,7 @@ function TwoFactorAuthSection() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5" />
-          <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
+          <h3 className="text-large font-semibold">Two-Factor Authentication</h3>
         </div>
         {twoFAStatus?.enabled && (
           <Badge variant="outline" className="bg-green-600/10 text-green-800 dark:text-green-400 border-green-600/20">
@@ -1181,7 +1181,7 @@ function TwoFactorAuthSection() {
           </Badge>
         )}
       </div>
-      <p className="text-sm text-muted-foreground mb-4">
+      <p className="text-small text-muted-foreground mb-4">
         Add an extra layer of security to your account
       </p>
 
@@ -1194,7 +1194,7 @@ function TwoFactorAuthSection() {
       {showSetup && qrCode && !backupCodes.length && (
         <div className="space-y-4">
           <div className="border rounded-lg p-4 bg-muted/50">
-            <p className="text-sm font-medium mb-2">1. Scan this QR code with your authenticator app:</p>
+            <p className="text-small font-medium mb-2">1. Scan this QR code with your authenticator app:</p>
             <img src={qrCode} alt="2FA QR Code" className="mx-auto w-48 h-48" />
           </div>
           <div className="space-y-2">
@@ -1220,10 +1220,10 @@ function TwoFactorAuthSection() {
             <Shield className="w-5 h-5 text-yellow-700 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold text-yellow-700">Save Your Backup Codes</p>
-              <p className="text-sm text-yellow-700/80">Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.</p>
+              <p className="text-small text-yellow-700/80">Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+          <div className="grid grid-cols-2 gap-2 font-mono text-small">
             {backupCodes.map((code, i) => (
               <div key={i} className="bg-background border rounded px-2 py-1 text-center">
                 {code}
@@ -1251,7 +1251,7 @@ function TwoFactorAuthSection() {
 
       {showDisable && (
         <div className="space-y-4 mt-4 border rounded-lg p-4 bg-muted/50">
-          <p className="text-sm font-medium">Enter your password to disable 2FA:</p>
+          <p className="text-small font-medium">Enter your password to disable 2FA:</p>
           <Input
             type="password"
             value={disablePassword}
@@ -1313,13 +1313,13 @@ function EmailPreferencesSection() {
     <div className="border rounded-lg p-6">
       <div className="flex items-center gap-2 mb-4">
         <Mail className="w-5 h-5" />
-        <h3 className="text-lg font-semibold">Email Preferences</h3>
+        <h3 className="text-large font-semibold">Email Preferences</h3>
       </div>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="font-medium">Notification Emails</p>
-            <p className="text-sm text-muted-foreground">Receive emails about important account activities</p>
+            <p className="text-small text-muted-foreground">Receive emails about important account activities</p>
           </div>
           <Switch
             checked={preferences?.emailNotifications ?? true}
@@ -1330,7 +1330,7 @@ function EmailPreferencesSection() {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="font-medium">Marketing Emails</p>
-            <p className="text-sm text-muted-foreground">Receive updates about new features and promotions</p>
+            <p className="text-small text-muted-foreground">Receive updates about new features and promotions</p>
           </div>
           <Switch
             checked={preferences?.marketingEmails ?? true}
@@ -1341,7 +1341,7 @@ function EmailPreferencesSection() {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="font-medium">Weekly Summary Emails</p>
-            <p className="text-sm text-muted-foreground">Get a weekly digest of your activity and opportunities</p>
+            <p className="text-small text-muted-foreground">Get a weekly digest of your activity and opportunities</p>
           </div>
           <Switch
             checked={preferences?.weeklySummaryEmails ?? true}
@@ -1390,13 +1390,13 @@ function NotificationSettingsSection() {
     <div className="border rounded-lg p-6">
       <div className="flex items-center gap-2 mb-4">
         <Bell className="w-5 h-5" />
-        <h3 className="text-lg font-semibold">Notification Settings</h3>
+        <h3 className="text-large font-semibold">Notification Settings</h3>
       </div>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="font-medium">In-App Notifications</p>
-            <p className="text-sm text-muted-foreground">Show notifications within the application</p>
+            <p className="text-small text-muted-foreground">Show notifications within the application</p>
           </div>
           <Switch
             checked={preferences?.inAppNotifications ?? true}
@@ -1407,7 +1407,7 @@ function NotificationSettingsSection() {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="font-medium">Push Notifications</p>
-            <p className="text-sm text-muted-foreground">Browser push notifications (not yet supported)</p>
+            <p className="text-small text-muted-foreground">Browser push notifications (not yet supported)</p>
           </div>
           <Switch disabled checked={false} />
         </div>
