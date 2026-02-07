@@ -510,10 +510,7 @@ export async function registerRoutes(
   // Create a new resume
   app.post("/api/resumes", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       // Validate request body
       const createSchema = z.object({
@@ -552,10 +549,7 @@ export async function registerRoutes(
   // Get a single resume by ID
   app.get("/api/resumes/:id", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const { id } = req.params;
       if (!id) {
@@ -587,10 +581,7 @@ export async function registerRoutes(
   // Update a resume
   app.patch("/api/resumes/:id", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const { id } = req.params;
       if (!id) {
@@ -648,10 +639,7 @@ export async function registerRoutes(
   // Generate and return PDF for a resume
   app.post("/api/resumes/:id/pdf", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const { id } = req.params;
       if (!id) {
