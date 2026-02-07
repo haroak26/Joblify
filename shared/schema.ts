@@ -22,6 +22,18 @@ export const users = pgTable("users", {
   backupCodes: jsonb("backup_codes").default([]), // Array of encrypted backup codes
 });
 
+// Deleted accounts tracker for abuse prevention
+export const deletedAccountsTracker = pgTable("deleted_accounts_tracker", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  deletedAt: timestamp("deleted_at").notNull().default(sql`NOW()`),
+  expiresAt: timestamp("expires_at").notNull(), // deletedAt + 72 hours
+  reason: text("reason"), // Optional: why user deleted account
+}, (table) => ({
+  emailIdx: index("deleted_accounts_email_idx").on(table.email),
+  expiresAtIdx: index("deleted_accounts_expires_at_idx").on(table.expiresAt),
+}));
+
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
@@ -37,6 +49,10 @@ export const usage = pgTable("usage", {
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
   jobsScrapedThisMonth: integer("jobs_scraped_this_month").notNull().default(0),
   aiEditsThisMonth: integer("ai_edits_this_month").notNull().default(0),
+  importedResumesThisMonth: integer("imported_resumes_this_month").notNull().default(0),
+  jobAnalysesThisMonth: integer("job_analyses_this_month").notNull().default(0),
+  coverLettersThisMonth: integer("cover_letters_this_month").notNull().default(0),
+  atsScansThisMonth: integer("ats_scans_this_month").notNull().default(0),
   monthResetDate: timestamp("month_reset_date").notNull().default(sql`NOW()`),
 });
 
@@ -258,8 +274,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: 3, // Reduced to encourage upgrades
     hasAtsScanner: false,
     hasCoverLetterGenerator: false,
-    hasLinkedInImport: false,
-    hasTailoringFeature: false,
     allowedFormats: ['pdf'] as const,
   },
   plus: {
@@ -271,8 +285,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: 50, // Reduced from 100 to encourage ultra
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
-    hasLinkedInImport: true,
-    hasTailoringFeature: false, // Only ultra gets tailoring
     allowedFormats: ['pdf', 'docx'] as const,
   },
   ultra: {
@@ -284,8 +296,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: Infinity,
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
-    hasLinkedInImport: true,
-    hasTailoringFeature: true,
     allowedFormats: ['pdf', 'docx'] as const,
   },
   lifetime: {
@@ -297,8 +307,6 @@ export const PLAN_LIMITS = {
     maxAiEditsPerMonth: Infinity,
     hasAtsScanner: true,
     hasCoverLetterGenerator: true,
-    hasLinkedInImport: true,
-    hasTailoringFeature: true,
     allowedFormats: ['pdf', 'docx'] as const,
   },
 } as const;
@@ -421,8 +429,6 @@ export const resumes = pgTable("resumes", {
   resumeData: jsonb("resume_data").notNull().$type<ResumeData>(),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
-  targetJobId: varchar("target_job_id").references(() => jobs.id, { onDelete: "set null" }), // Job this resume is tailored for
-  isTailored: boolean("is_tailored").notNull().default(false),
 });
 
 export const resumesRelations = relations(resumes, ({ one, many }) => ({
@@ -462,8 +468,6 @@ export const coverLetters = pgTable("cover_letters", {
   jobDescription: text("job_description"),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
-  targetJobId: varchar("target_job_id").references(() => jobs.id, { onDelete: "set null" }), // Job this cover letter is tailored for
-  isTailored: boolean("is_tailored").notNull().default(false),
 });
 
 export const coverLettersRelations = relations(coverLetters, ({ one }) => ({

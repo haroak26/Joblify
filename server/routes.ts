@@ -1517,6 +1517,9 @@ Write a ${tone} outreach message for this job opportunity.`;
       // Delete user (cascade will handle related records)
       await storage.deleteUser(userId);
       
+      // Add email to deleted accounts tracker (abuse prevention - 72 hour block)
+      await storage.addDeletedAccount(user.email, 'User-initiated account deletion');
+      
       // Destroy session
       req.session.destroy((err) => {
         if (err) {
@@ -2126,21 +2129,33 @@ Extract all information accurately. If a field is not found, use empty string or
   // Cover Letter Endpoints
   // ============================================
 
-  const COVER_LETTER_PROMPT = `You are a professional cover letter writer. Generate a compelling cover letter based on:
+  const COVER_LETTER_PROMPT = `You are a professional cover letter writer. Generate a compelling cover letter that sounds authentically human-written, not AI-generated.
 
 Resume: {resumeData}
 Job Description: {jobDescription}
 Tone: {tone}
 
-Requirements:
-- Personalized to the job description
-- Highlights relevant experience from resume
-- {tone} tone throughout
-- Professional format with proper greeting and closing
-- 250-400 words
-- Include specific examples from their experience
+CRITICAL REQUIREMENTS:
+1. DO NOT use em dashes (—) anywhere - use periods, commas, or semicolons instead
+2. AVOID AI jargon phrases like:
+   - "I am excited to leverage"
+   - "I am writing to express my interest"
+   - "utilize", "leverage", "facilitate", "optimize"
+   - "I would welcome the opportunity"
+   - "I am confident that my skills"
+3. Write in a natural, conversational {tone} tone
+4. Use varied sentence structure and length (mix short and longer sentences)
+5. Use active voice, not passive
+6. Include specific details from the resume
+7. Show genuine, specific interest in the company/role (not generic enthusiasm)
+8. Keep paragraphs 3-4 sentences maximum
+9. Total length: 250-350 words
+10. Include proper greeting and professional closing
 
-Return ONLY the cover letter text, no JSON.`;
+Write as if the candidate themselves wrote this letter. Make it feel personal and authentic.
+
+Return ONLY the cover letter text, no JSON or markdown formatting.`;
+
 
   app.post("/api/cover-letter/generate", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;
@@ -2204,11 +2219,25 @@ Return ONLY the cover letter text, no JSON.`;
 
       const content = response.choices[0]?.message?.content || '';
       
+      // Post-processing: Remove AI patterns and em dashes
+      let processedContent = content;
+      
+      // Replace em dashes with commas or periods
+      processedContent = processedContent.replace(/—/g, ', ');
+      
+      // Remove common AI patterns (optional, for additional safety)
+      // This is conservative - only catches very obvious patterns
+      processedContent = processedContent
+        .replace(/I am excited to leverage/gi, 'I look forward to applying')
+        .replace(/I am writing to express my interest/gi, 'I am interested')
+        .replace(/I would welcome the opportunity/gi, 'I would appreciate the chance')
+        .replace(/I am confident that my skills/gi, 'My skills');
+      
       // Save to database
       const coverLetter = await storage.createCoverLetter({
         userId,
         resumeId,
-        content,
+        content: processedContent,
         jobDescription,
       });
 
@@ -2824,210 +2853,6 @@ Return ONLY the cover letter text, no JSON.`;
           error: "Failed to import LinkedIn jobs",
           message: error instanceof Error ? error.message : "Unknown error occurred",
           code: "LINKEDIN_IMPORT_ERROR"
-        });
-      }
-    }
-  });
-
-  // Tailor Resume to Job
-  app.post("/api/resumes/:id/tailor", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
-    const userId = req.session.userId!;
-    const resumeId = req.params.id as string;
-    try {
-      const schema = z.object({
-        jobId: z.string(),
-      });
-      
-      const { jobId } = schema.parse(req.body);
-
-      // Check plan limits
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const limits = PLAN_LIMITS[plan];
-      
-      if (!limits.hasTailoringFeature) {
-        return res.status(403).json({
-          error: 'Resume tailoring not available',
-          code: 'TAILORING_NOT_AVAILABLE',
-          message: `Upgrade to Ultra plan to access resume tailoring.`
-        });
-      }
-
-      // Validate user owns the resume and job
-      const resume = await storage.getResume(resumeId);
-      if (!resume || resume.userId !== userId) {
-        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
-      }
-
-      const job = await storage.getJob(jobId);
-      if (!job || job.userId !== userId) {
-        return res.status(404).json({ error: "Job not found", code: "JOB_NOT_FOUND" });
-      }
-
-      // Use AI to tailor the resume
-      const resumeText = resumeDataToText(resume.resumeData);
-      const prompt = `You are an expert resume writer. Tailor this resume to match the job description.
-      
-Resume:
-${resumeText}
-
-Job Title: ${job.title}
-Job Description: ${job.description}
-
-Optimize the resume by:
-1. Highlighting relevant skills and experience
-2. Using keywords from the job description
-3. Emphasizing achievements that match the job requirements
-4. Keeping it concise and ATS-friendly
-
-Return the tailored resume data as JSON in the same format as the input resume data.`;
-
-      const response = await getPoeClient().chat.completions.create({
-        model: "gpt-5-nano",
-        messages: [
-          { role: "system", content: "You are an expert resume writer and ATS optimization specialist." },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 2000,
-      });
-
-      const aiResponse = response.choices[0]?.message?.content || '{}';
-      let tailoredData = resume.resumeData;
-
-      try {
-        const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
-        tailoredData = JSON.parse(cleanContent);
-      } catch (parseError) {
-        console.error('[API] Failed to parse tailored resume:', parseError);
-      }
-
-      // Create a new tailored resume
-      const tailoredResume = await storage.createResume({
-        userId,
-        title: `${resume.title} (Tailored for ${job.title})`,
-        template: resume.template,
-        resumeData: tailoredData,
-        targetJobId: jobId,
-        isTailored: true,
-      });
-
-      res.json({ 
-        success: true,
-        resume: tailoredResume
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ 
-          error: "Invalid request data", 
-          details: error.errors,
-          code: "VALIDATION_ERROR"
-        });
-      } else {
-        console.error('[API] Error tailoring resume:', error);
-        res.status(500).json({ 
-          error: "Failed to tailor resume",
-          message: error instanceof Error ? error.message : "Unknown error occurred",
-          code: "RESUME_TAILOR_ERROR"
-        });
-      }
-    }
-  });
-
-  // Tailor Cover Letter to Job
-  app.post("/api/cover-letter/tailor", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
-    const userId = req.session.userId!;
-    try {
-      const schema = z.object({
-        resumeId: z.string(),
-        jobId: z.string(),
-        tone: z.enum(['professional', 'enthusiastic', 'creative']).default('professional'),
-      });
-      
-      const { resumeId, jobId, tone } = schema.parse(req.body);
-
-      // Check plan limits
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const limits = PLAN_LIMITS[plan];
-      
-      if (!limits.hasTailoringFeature) {
-        return res.status(403).json({
-          error: 'Cover letter tailoring not available',
-          code: 'TAILORING_NOT_AVAILABLE',
-          message: `Upgrade to Ultra plan to access cover letter tailoring.`
-        });
-      }
-
-      // Validate user owns the resume and job
-      const resume = await storage.getResume(resumeId);
-      if (!resume || resume.userId !== userId) {
-        return res.status(404).json({ error: "Resume not found", code: "RESUME_NOT_FOUND" });
-      }
-
-      const job = await storage.getJob(jobId);
-      if (!job || job.userId !== userId) {
-        return res.status(404).json({ error: "Job not found", code: "JOB_NOT_FOUND" });
-      }
-
-      // Use AI to generate tailored cover letter
-      const resumeText = resumeDataToText(resume.resumeData);
-      const prompt = `Generate a ${tone} cover letter tailored to this specific job.
-
-Resume Summary:
-${resumeText}
-
-Job Title: ${job.title}
-Company: ${job.company || job.author}
-Job Description: ${job.description}
-
-The cover letter should:
-- Be 250-400 words
-- Address the specific requirements in the job description
-- Highlight relevant experience from the resume
-- Show enthusiasm for the role and company
-- Be ${tone} in tone
-
-Return ONLY the cover letter text, no JSON.`;
-
-      const response = await getPoeClient().chat.completions.create({
-        model: "claude-4.5-haiku",
-        messages: [
-          { role: "system", content: "You are an expert cover letter writer." },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 800,
-      });
-
-      const content = response.choices[0]?.message?.content || '';
-
-      // Save tailored cover letter
-      const coverLetter = await storage.createCoverLetter({
-        userId,
-        resumeId,
-        content,
-        jobDescription: job.description,
-        targetJobId: jobId,
-        isTailored: true,
-      });
-
-      res.json({ 
-        success: true,
-        id: coverLetter.id, 
-        content: coverLetter.content 
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ 
-          error: "Invalid request data", 
-          details: error.errors,
-          code: "VALIDATION_ERROR"
-        });
-      } else {
-        console.error('[API] Error tailoring cover letter:', error);
-        res.status(500).json({ 
-          error: "Failed to tailor cover letter",
-          message: error instanceof Error ? error.message : "Unknown error occurred",
-          code: "COVER_LETTER_TAILOR_ERROR"
         });
       }
     }

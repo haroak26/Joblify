@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, FileText, Scan, Mail, User, Sparkles, ExternalLink, Briefcase, Moon, Sun } from "lucide-react";
+import { Home, FileText, Scan, Mail, User, Briefcase, Moon, Sun } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -44,16 +44,6 @@ const mainMenuItems = [
     url: "/dashboard/cover-letter",
     icon: Mail,
   },
-  {
-    title: "Tailor to Job",
-    url: "/dashboard/tailor",
-    icon: Sparkles,
-  },
-  {
-    title: "LinkedIn Import",
-    url: "/dashboard/linkedin-import",
-    icon: ExternalLink,
-  },
 ];
 
 export function AppSidebar() {
@@ -79,8 +69,23 @@ export function AppSidebar() {
     return location === url || location.startsWith(url + "/");
   };
 
-  const getInitials = (username: string) => {
-    return username.slice(0, 2).toUpperCase();
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const getDisplayName = (name: string) => {
+    if (!name) return "User";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0]; // Just first name if single name
+    }
+    // Return "FirstName LastInitial."
+    return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
   };
 
   const logoHref = user ? "/dashboard" : "/";
@@ -162,14 +167,14 @@ export function AppSidebar() {
 
             <div className="flex items-center gap-3 px-3 py-2 mt-2 border-t border-sidebar-border">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={`https://avatar.vercel.sh/${user.username}`} />
+                <AvatarImage src={`https://avatar.vercel.sh/${user.email}`} />
                 <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
-                  {getInitials(user.username)}
+                  {getInitials(user.name || user.username)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate text-sidebar-foreground" data-testid="text-username">{user.username}</span>
-                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{planLabel}</span>
+                <span className="text-sm font-medium truncate text-sidebar-foreground" data-testid="text-username">{getDisplayName(user.name || user.username)}</span>
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{planLabel} Plan</span>
               </div>
             </div>
           </div>
