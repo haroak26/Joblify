@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { skillSchema, PLAN_LIMITS, normalizePlan } from "@shared/schema";
+import { skillSchema, normalizePlan } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
@@ -89,28 +89,6 @@ export async function registerRoutes(
       const profile = await storage.setProfile(userId, data);
       console.log('[API] Profile saved successfully for user:', userId);
       
-      if (data.skills.length === 0) {
-        // Only clear unsaved jobs when skills are empty, preserve saved/applied
-        await storage.clearUnsavedJobs(userId);
-        console.log('[API] Cleared unsaved jobs for user:', userId);
-      }
-      
-      // Trigger scraping asynchronously if profile is complete and has skills
-      if (data.isComplete && data.skills.length > 0) {
-        console.log('[API] Triggering background scraping for user:', userId);
-        const { scrapeJobs } = await import('./scrapers/index');
-        scrapeJobs(data.intro, data.skills)
-          .then(async (jobs) => {
-            console.log('[API] Background scraping completed for user:', userId, '- jobs found:', jobs.length);
-            await storage.saveJobs(userId, jobs);
-            await storage.setProfile(userId, { lastScrapedAt: new Date() });
-          })
-          .catch(err => {
-            console.error('[API] Background scraping error for user:', userId, err);
-            // Could add error tracking service here (e.g., Sentry)
-          });
-      }
-      
       res.json(profile);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -181,12 +159,6 @@ export async function registerRoutes(
       const updated = await storage.setProfile(userId, { ...profile, skills });
       console.log('[API] Skills saved successfully for user:', userId);
       
-      if (skills.length === 0) {
-        // Only clear unsaved jobs when skills are empty, preserve saved/applied
-        await storage.clearUnsavedJobs(userId);
-        console.log('[API] Cleared unsaved jobs for user:', userId);
-      }
-      
       res.json({ skills: updated.skills });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -223,7 +195,7 @@ export async function registerRoutes(
         messages: [
           {
             role: "system",
-            content: `You are a career advisor that suggests relevant professional skills based on someone's background and experience. Analyze the user's introduction and suggest 5-8 specific, marketable skills that would be relevant for freelance work. Focus on skills that are commonly sought by clients on freelance platforms like Upwork and Fiverr. Return only a JSON array of skill names, nothing else. Example: ["React", "UI/UX Design", "Node.js", "TypeScript"]`
+            content: `You are a career advisor that suggests relevant professional skills based on someone's background and experience. Analyze the user's introduction and suggest 5-8 specific, marketable skills that would be valuable in their career. Focus on skills that are in-demand in the job market and would strengthen their resume. Return only a JSON array of skill names, nothing else. Example: ["React", "UI/UX Design", "Node.js", "TypeScript"]`
           },
           {
             role: "user",
@@ -281,86 +253,6 @@ export async function registerRoutes(
   });
 
   // LinkedIn Import Endpoint
-  app.post("/api/jobs/import-linkedin", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
-    const userId = req.session.userId!;
-    try {
-      const schema = z.object({
-        urls: z.array(z.string().url()).min(1, "At least one URL required"),
-      });
-      
-      const { urls } = schema.parse(req.body);
-
-      // Check plan limits
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const limits = PLAN_LIMITS[plan];
-      
-      if (!limits.hasLinkedInImport) {
-        return res.status(403).json({
-          error: 'LinkedIn import not available',
-          code: 'LINKEDIN_IMPORT_NOT_AVAILABLE',
-          message: `Upgrade to Plus or higher to access LinkedIn import.`
-        });
-      }
-
-      // Import jobs from LinkedIn using Apify (mock implementation for now)
-      const importedJobs = [];
-      
-      for (const url of urls) {
-        try {
-          // TODO: Implement actual Apify scraping
-          // For now, create a placeholder job
-          const job = await storage.createJob({
-            userId,
-            title: "Imported LinkedIn Job",
-            description: "Job imported from LinkedIn",
-            source: "linkedin",
-            sourceUrl: url,
-            author: "LinkedIn Company",
-            authorHandle: "",
-            postedAt: new Date().toISOString(),
-            matchedSkills: [],
-            budget: null,
-            isRemote: true,
-            saved: true,
-            applied: false,
-            relevanceScore: 0,
-            rawData: null,
-            linkedinUrl: url,
-            importedFrom: "linkedin",
-            company: "Company Name",
-            location: "Location",
-          });
-          
-          importedJobs.push(job);
-        } catch (error) {
-          console.error('[API] Error importing LinkedIn job:', url, error);
-        }
-      }
-
-      res.json({ 
-        success: true, 
-        count: importedJobs.length,
-        jobs: importedJobs
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ 
-          error: "Invalid request data", 
-          details: error.errors,
-          code: "VALIDATION_ERROR"
-        });
-      } else {
-        console.error('[API] Error importing LinkedIn jobs:', error);
-        res.status(500).json({ 
-          error: "Failed to import LinkedIn jobs",
-          message: error instanceof Error ? error.message : "Unknown error occurred",
-          code: "LINKEDIN_IMPORT_ERROR"
-        });
-      }
-    }
-  });
-
   // ============================================
   // Password Change Endpoint
   // ============================================
@@ -609,46 +501,4 @@ export async function registerRoutes(
   });
 
   return httpServer;
-}
-
-function generateFallbackMessage(jobTitle: string, skills: string[], tone: string, intro: string, isComment: boolean = false): string {
-  const skillsList = skills.length > 0 ? skills.join(", ") : "relevant expertise";
-
-  if (isComment) {
-    const comments = [
-      `Hi! I’ve been working with ${skillsList} recently and this feels right up my alley. Happy to share a couple examples if that helps.`,
-      `Hey there — I work a lot with ${skillsList} and can jump in quickly. Want me to send a quick overview of similar work?`,
-      `I’ve got experience with ${skillsList} and can help keep this moving. If you’re open, I can DM a few relevant samples.`,
-    ];
-    return comments[Math.floor(Math.random() * comments.length)];
-  }
-
-  const toneIntros: Record<string, string> = {
-    professional: "I hope this message finds you well.",
-    friendly: "Hey there! I came across your post and got really excited.",
-    enthusiastic: "Wow, this opportunity sounds amazing!",
-  };
-
-  const toneClosings: Record<string, string> = {
-    professional: "I look forward to discussing how I can contribute to your project.",
-    friendly: "Would love to chat more about this! Let me know if you'd like to hop on a quick call.",
-    enthusiastic: "I can't wait to hear back from you!",
-  };
-
-  return `Hi,
-
-${toneIntros[tone] || toneIntros.professional}
-
-I'm reaching out about "${jobTitle}" and believe I'd be a great fit for this project.
-
-${intro ? `${intro}\n\n` : ""}With my experience in ${skillsList}, I've worked on similar projects and understand the importance of delivering high-quality work that meets your specific needs.
-
-I can help you with:
-- Understanding your vision and translating it into actionable deliverables
-- Providing regular updates and maintaining clear communication
-- Ensuring the final result exceeds your expectations
-
-${toneClosings[tone] || toneClosings.professional}
-
-Best regards`;
 }

@@ -54,8 +54,8 @@ const features = [
 
 const benefits = [
   {
-    title: "For Freelancers",
-    description: "Showcase diverse project experience naturally through conversation. Our AI helps you present your varied skills in a cohesive, professional way.",
+    title: "For Professionals",
+    description: "Showcase your experience and skills effectively through conversation. Our AI helps you present your achievements in a cohesive, professional way.",
     icon: Briefcase
   },
   {
@@ -262,7 +262,7 @@ export default function WhyUs() {
               Built for Everyone
             </h2>
             <p className="text-lg text-muted-foreground">
-              Whether you're a freelancer, job seeker, or career changer
+              Whether you're a professional, job seeker, or career changer
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
