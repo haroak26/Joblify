@@ -386,6 +386,32 @@ export type SupportInteraction = typeof supportInteractions.$inferSelect;
 // Enhanced Job Application Tracking
 // ============================================
 
+export const jobs = pgTable("jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  source: text("source").notNull(), // 'reddit', 'x'
+  sourceUrl: text("source_url").notNull(),
+  author: text("author"),
+  authorHandle: text("author_handle"),
+  postedAt: timestamp("posted_at").notNull(),
+  matchedSkills: jsonb("matched_skills").notNull().default([]),
+  budget: text("budget"),
+  isRemote: boolean("is_remote").notNull().default(true),
+  relevanceScore: integer("relevance_score").notNull().default(0),
+  rawData: jsonb("raw_data"),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
+});
+
+export const jobsRelations = relations(jobs, ({ one, many }) => ({
+  user: one(users, {
+    fields: [jobs.userId],
+    references: [users.id],
+  }),
+  applications: many(jobApplications),
+}));
+
 export const jobApplications = pgTable("job_applications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
