@@ -679,8 +679,8 @@ export async function registerRoutes(
         resumeData.experience.forEach((exp, index) => {
           doc.fontSize(12).font('Helvetica-Bold').text(exp.title);
           doc.fontSize(10).font('Helvetica-Oblique').text(`${exp.company} | ${exp.location}`);
-          const endDate = exp.endDate || 'Present';
-          doc.text(`${exp.startDate} - ${endDate}`);
+          const endDateDisplay = exp.endDate || 'Present';
+          doc.text(`${exp.startDate} - ${endDateDisplay}`);
           doc.moveDown(0.3);
           
           if (exp.description && exp.description.length > 0) {
