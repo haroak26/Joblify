@@ -154,15 +154,15 @@ const normalizeImportedResumeData = (rawData: any, parsedText: string): ResumeDa
     if (typeof value !== "string") return "";
     const trimmed = value.trim();
     if (!trimmed) return "";
-    if (/^https?:\\/\\//i.test(trimmed)) return trimmed;
-    if (/^[\\w.-]+\\.[a-z]{2,}/i.test(trimmed)) return `https://${trimmed}`;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^[\w.-]+\.[a-z]{2,}/i.test(trimmed)) return `https://${trimmed}`;
     return "";
   };
 
   const normalizeEmail = (value: unknown) => {
     if (typeof value !== "string") return "";
     const trimmed = value.trim();
-    return /.+@.+\\..+/.test(trimmed) ? trimmed : "";
+    return /.+@.+\..+/.test(trimmed) ? trimmed : "";
   };
 
   const base: ResumeData = {
