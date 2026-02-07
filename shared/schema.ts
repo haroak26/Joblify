@@ -425,7 +425,7 @@ export const resumes = pgTable("resumes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
-  template: varchar("template").notNull().default("modern"), // 'modern', 'classic', 'creative'
+  template: varchar("template").notNull().default("modern"), // 'modern', 'professional', 'creative', 'executive', 'technical'
   resumeData: jsonb("resume_data").notNull().$type<ResumeData>(),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
@@ -500,6 +500,42 @@ export const chatMessageSchema = z.object({
 });
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+// Resume Template Types
+export const RESUME_TEMPLATES = {
+  modern: {
+    id: 'modern',
+    name: 'Modern',
+    description: 'Clean, minimalist design with a two-column layout. Perfect for tech and creative professionals.',
+    features: ['Two-column layout', 'Accent colors', 'Modern typography', 'ATS-friendly']
+  },
+  professional: {
+    id: 'professional',
+    name: 'Professional',
+    description: 'Classic single-column format with a corporate feel. Ideal for traditional industries.',
+    features: ['Single-column', 'Traditional format', 'Conservative design', 'ATS-optimized']
+  },
+  creative: {
+    id: 'creative',
+    name: 'Creative',
+    description: 'Bold design with color accents and modern typography. Stand out in creative fields.',
+    features: ['Color accents', 'Modern fonts', 'Visual hierarchy', 'Creative layout']
+  },
+  executive: {
+    id: 'executive',
+    name: 'Executive',
+    description: 'Premium design with bold headers and elegant spacing. Perfect for senior positions.',
+    features: ['Bold headers', 'Premium feel', 'Elegant spacing', 'Leadership focused']
+  },
+  technical: {
+    id: 'technical',
+    name: 'Technical',
+    description: 'Skills-focused compact layout optimized for technical roles and engineering positions.',
+    features: ['Skills-first layout', 'Compact design', 'Technical focus', 'Project showcase']
+  }
+} as const;
+
+export type ResumeTemplateId = keyof typeof RESUME_TEMPLATES;
 
 // ============================================
 // Security & Audit Tables

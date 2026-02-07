@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Eye } from "lucide-react";
+import { TEMPLATE_COMPONENTS } from "@/components/resume-templates";
+import type { ResumeData, ResumeTemplateId } from "@shared/schema";
 
 interface PersonalInfo {
   fullName: string;
@@ -34,9 +36,14 @@ interface Education {
 
 export default function ResumeBuilderWizard() {
   const [, setLocation] = useLocation();
+  const searchParams = useSearch();
   const queryClient = useQueryClient();
   const [step, setStep] = useState(1);
   const totalSteps = 5;
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Get template from URL or default to modern
+  const selectedTemplate = (new URLSearchParams(searchParams).get('template') as ResumeTemplateId) || 'modern';
 
   // Form state
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
@@ -105,7 +112,7 @@ export default function ResumeBuilderWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           title: resumeTitle || "My Resume", 
-          template: "modern",
+          template: selectedTemplate,
           resumeData: resumeData,
         }),
       });
@@ -151,6 +158,38 @@ export default function ResumeBuilderWizard() {
   const removeEducation = (index: number) => {
     setEducation(education.filter((_, i) => i !== index));
   };
+
+  // Generate preview resume data
+  const previewResumeData: ResumeData = useMemo(() => ({
+    personalInfo: {
+      name: personalInfo.fullName || "Your Name",
+      email: personalInfo.email || "your.email@example.com",
+      phone: personalInfo.phone || "+1 (555) 123-4567",
+      location: personalInfo.location || "City, State",
+      linkedin: "",
+      website: "",
+    },
+    summary: personalInfo.summary || "Professional summary will appear here...",
+    experience: workExperiences.filter(exp => exp.company || exp.position).map(exp => ({
+      company: exp.company || "Company Name",
+      title: exp.position || "Job Title",
+      location: "Location",
+      startDate: exp.startDate || "MM/YYYY",
+      endDate: exp.endDate || null,
+      description: parseDescription(exp.description),
+    })),
+    education: education.filter(edu => edu.school || edu.degree).map(edu => ({
+      school: edu.school || "School Name",
+      degree: edu.degree || "Degree",
+      field: edu.field || "Field of Study",
+      graduationDate: edu.graduationDate || "MM/YYYY",
+      gpa: "",
+    })),
+    skills: skills.split(',').map(s => s.trim()).filter(Boolean),
+    certifications: [],
+    projects: [],
+  }), [personalInfo, workExperiences, education, skills]);
+
 
   const progress = (step / totalSteps) * 100;
 
@@ -448,41 +487,81 @@ export default function ResumeBuilderWizard() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-3xl">
-      {renderStep()}
-
-      <div className="flex justify-between pt-4">
+    <div className="container mx-auto p-6 max-w-7xl">
+      {/* Preview Toggle Button */}
+      <div className="mb-4 flex justify-end">
         <Button
           variant="outline"
-          onClick={() => setStep(Math.max(1, step - 1))}
-          disabled={step === 1}
+          size="sm"
+          onClick={() => setShowPreview(!showPreview)}
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Previous
+          <Eye className="w-4 h-4 mr-2" />
+          {showPreview ? 'Hide Preview' : 'Show Preview'}
         </Button>
+      </div>
 
-        {step < totalSteps ? (
-          <Button
-            onClick={() => setStep(Math.min(totalSteps, step + 1))}
-            disabled={!canProceed()}
-          >
-            Next
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <Button
-            onClick={() => createResumeMutation.mutate()}
-            disabled={!canProceed() || createResumeMutation.isPending}
-          >
-            {createResumeMutation.isPending ? (
-              <>Creating Resume...</>
+      {/* Main Layout */}
+      <div className={`grid gap-6 ${showPreview ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+        {/* Form Panel */}
+        <div>
+          {renderStep()}
+
+          <div className="flex justify-between pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setStep(Math.max(1, step - 1))}
+              disabled={step === 1}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+
+            {step < totalSteps ? (
+              <Button
+                onClick={() => setStep(Math.min(totalSteps, step + 1))}
+                disabled={!canProceed()}
+              >
+                Next
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Create Resume
-              </>
+              <Button
+                onClick={() => createResumeMutation.mutate()}
+                disabled={!canProceed() || createResumeMutation.isPending}
+              >
+                {createResumeMutation.isPending ? (
+                  <>Creating Resume...</>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Create Resume
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
+          </div>
+        </div>
+
+        {/* Live Preview Panel */}
+        {showPreview && (
+          <div className="lg:sticky lg:top-6 lg:self-start">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Live Preview</CardTitle>
+                <CardDescription>
+                  See how your resume looks as you build it
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg overflow-auto max-h-[800px] bg-white">
+                  {(() => {
+                    const TemplateComponent = TEMPLATE_COMPONENTS[selectedTemplate];
+                    return <TemplateComponent resumeData={previewResumeData} />;
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </div>
