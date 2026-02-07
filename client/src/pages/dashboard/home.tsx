@@ -7,12 +7,26 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+interface Resume {
+  id: string;
+  userId: string;
+  title: string;
+  template: string;
+  resumeData: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ResumesResponse {
+  resumes: Resume[];
+}
+
 export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: resumesData, isLoading: resumesLoading } = useQuery<{ resumes: any[] }>({
+  const { data: resumesData, isLoading: resumesLoading } = useQuery<ResumesResponse>({
     queryKey: ["/api/resumes"],
   });
 

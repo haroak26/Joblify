@@ -12,6 +12,12 @@ import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
+/**
+ * Represents a user's profile information
+ * @property intro - Personal introduction or bio text
+ * @property skills - Array of user's professional skills
+ * @property isComplete - Whether the profile setup is complete
+ */
 export interface Profile {
   intro: string;
   skills: Skill[];
