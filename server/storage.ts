@@ -12,6 +12,18 @@ import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
+/**
+ * Represents a user's profile information
+ * @property intro - Personal introduction or bio text
+ * @property skills - Array of user's professional skills
+ * @property isComplete - Whether the profile setup is complete
+ */
+export interface Profile {
+  intro: string;
+  skills: Skill[];
+  isComplete: boolean;
+}
+
 export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
@@ -117,7 +129,6 @@ export class DatabaseStorage implements IStorage {
     // Create usage tracking
     await db.insert(usage).values({
       userId: user.id,
-      jobsScrapedThisMonth: 0,
       monthResetDate: new Date(),
     });
 
@@ -133,18 +144,17 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getProfile(userId: string): Promise<FreelancerProfile & { lastScrapedAt?: Date | null }> {
+  async getProfile(userId: string): Promise<Profile> {
     try {
       const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
       if (!profile) {
-        return { intro: "", skills: [], isComplete: false, lastScrapedAt: null };
+        return { intro: "", skills: [], isComplete: false };
       }
       const skills = (profile.skills as Skill[]) || [];
       return {
         intro: profile.intro || "",
         skills,
         isComplete: profile.isComplete || false,
-        lastScrapedAt: profile.lastScrapedAt,
       };
     } catch (error) {
       console.error('[Storage] Error fetching profile for user', userId, error);
@@ -152,14 +162,13 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async setProfile(userId: string, data: Partial<FreelancerProfile & { lastScrapedAt?: Date | null }>): Promise<FreelancerProfile & { lastScrapedAt?: Date | null }> {
+  async setProfile(userId: string, data: Partial<Profile>): Promise<Profile> {
     try {
       const [existing] = await db.select().from(profiles).where(eq(profiles.userId, userId));
       
       const updatedIntro = data.intro !== undefined ? data.intro : (existing?.intro || "");
       const updatedSkills = data.skills !== undefined ? data.skills : (existing?.skills as Skill[] || []);
       const updatedIsComplete = data.isComplete !== undefined ? data.isComplete : (existing?.isComplete || false);
-      const updatedLastScrapedAt = data.lastScrapedAt !== undefined ? data.lastScrapedAt : (existing?.lastScrapedAt || null);
       
       if (existing) {
         await db
@@ -168,7 +177,6 @@ export class DatabaseStorage implements IStorage {
             intro: updatedIntro,
             skills: updatedSkills,
             isComplete: updatedIsComplete,
-            lastScrapedAt: updatedLastScrapedAt,
           })
           .where(eq(profiles.userId, userId));
       } else {
@@ -177,7 +185,6 @@ export class DatabaseStorage implements IStorage {
           intro: updatedIntro,
           skills: updatedSkills,
           isComplete: updatedIsComplete,
-          lastScrapedAt: updatedLastScrapedAt,
         });
       }
       
@@ -185,7 +192,6 @@ export class DatabaseStorage implements IStorage {
         intro: updatedIntro,
         skills: updatedSkills,
         isComplete: updatedIsComplete,
-        lastScrapedAt: updatedLastScrapedAt,
       };
     } catch (error) {
       console.error('[Storage] Error setting profile for user', userId, error);
@@ -240,7 +246,6 @@ export class DatabaseStorage implements IStorage {
         .insert(usage)
         .values({
           userId,
-          jobsScrapedThisMonth: 0,
           monthResetDate: new Date(),
         })
         .returning();
@@ -252,7 +257,6 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(usage)
       .set({ 
-        jobsScrapedThisMonth: 0, 
         monthResetDate: new Date() 
       })
       .where(eq(usage.userId, userId))

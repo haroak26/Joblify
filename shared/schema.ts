@@ -52,7 +52,6 @@ export const subscriptions = pgTable("subscriptions", {
 export const usage = pgTable("usage", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  jobsScrapedThisMonth: integer("jobs_scraped_this_month").notNull().default(0),
   aiEditsThisMonth: integer("ai_edits_this_month").notNull().default(0),
   importedResumesThisMonth: integer("imported_resumes_this_month").notNull().default(0),
   jobAnalysesThisMonth: integer("job_analyses_this_month").notNull().default(0),
@@ -381,73 +380,3 @@ export const supportInteractionsRelations = relations(supportInteractions, ({ on
 export const insertSupportInteractionSchema = createInsertSchema(supportInteractions).omit({ id: true, createdAt: true });
 export type InsertSupportInteraction = z.infer<typeof insertSupportInteractionSchema>;
 export type SupportInteraction = typeof supportInteractions.$inferSelect;
-
-// ============================================
-// Enhanced Job Application Tracking
-// ============================================
-
-export const jobs = pgTable("jobs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  source: text("source").notNull(), // 'reddit', 'x'
-  sourceUrl: text("source_url").notNull(),
-  author: text("author"),
-  authorHandle: text("author_handle"),
-  postedAt: timestamp("posted_at").notNull(),
-  matchedSkills: jsonb("matched_skills").notNull().default([]),
-  budget: text("budget"),
-  isRemote: boolean("is_remote").notNull().default(true),
-  relevanceScore: integer("relevance_score").notNull().default(0),
-  rawData: jsonb("raw_data"),
-  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
-});
-
-export const jobsRelations = relations(jobs, ({ one, many }) => ({
-  user: one(users, {
-    fields: [jobs.userId],
-    references: [users.id],
-  }),
-  applications: many(jobApplications),
-}));
-
-export const jobApplications = pgTable("job_applications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  jobId: varchar("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
-  status: text("status").notNull().default("saved"), // 'saved', 'applied', 'interview_scheduled', 'offer_received', 'rejected', 'withdrawn'
-  notes: text("notes"),
-  followUpDate: timestamp("follow_up_date"),
-  appliedAt: timestamp("applied_at"),
-  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
-  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
-}, (table) => ({
-  userIdIdx: index("job_applications_user_id_idx").on(table.userId),
-  jobIdIdx: index("job_applications_job_id_idx").on(table.jobId),
-}));
-
-export const jobApplicationsRelations = relations(jobApplications, ({ one }) => ({
-  user: one(users, {
-    fields: [jobApplications.userId],
-    references: [users.id],
-  }),
-  job: one(jobs, {
-    fields: [jobApplications.jobId],
-    references: [jobs.id],
-  }),
-}));
-
-export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({ id: true, createdAt: true, updatedAt: true });
-export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
-export type JobApplication = typeof jobApplications.$inferSelect;
-
-export const jobApplicationStatusSchema = z.enum([
-  "saved",
-  "applied",
-  "interview_scheduled",
-  "offer_received",
-  "rejected",
-  "withdrawn"
-]);
-export type JobApplicationStatus = z.infer<typeof jobApplicationStatusSchema>;

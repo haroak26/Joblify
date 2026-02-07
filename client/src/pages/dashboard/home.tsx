@@ -7,13 +7,27 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+interface Resume {
+  id: string;
+  userId: string;
+  title: string;
+  template: string;
+  resumeData: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ResumesResponse {
+  resumes: Resume[];
+}
+
 export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: jobsData, isLoading: jobsLoading } = useQuery<{ jobs: any[] }>({
-    queryKey: ["/api/jobs"],
+  const { data: resumesData, isLoading: resumesLoading } = useQuery<ResumesResponse>({
+    queryKey: ["/api/resumes"],
   });
 
   const createResumeMutation = useMutation({
@@ -36,21 +50,37 @@ export default function DashboardHome() {
     },
   });
   
-  // Ensure jobs is always an array
-  const jobs = Array.isArray(jobsData?.jobs) ? jobsData.jobs : [];
-
-  const totalJobs = jobs.length;
-  const jobsApplied = jobs.filter((job: any) => job.applied).length;
+  // Ensure resumes is always an array
+  const resumes = Array.isArray(resumesData?.resumes) ? resumesData.resumes : [];
+  const totalResumes = resumes.length;
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-header font-bold mb-2">Welcome back, {user?.name || user?.username}!</h1>
-        <p className="text-body text-muted-foreground">Track your job applications and search for opportunities</p>
+        <p className="text-body text-muted-foreground">Create professional resumes with AI-powered tools</p>
       </div>
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-small font-medium">My Resumes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {resumesLoading ? (
+              <div className="h-8 bg-muted animate-pulse rounded" />
+            ) : (
+              <>
+                <div className="text-large font-bold">{totalResumes}</div>
+                <p className="text-small text-muted-foreground mt-1">
+                  {totalResumes === 0 ? 'Create your first resume' : `${totalResumes} resume${totalResumes === 1 ? '' : 's'} created`}
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-small font-medium">ATS Scanner</CardTitle>
@@ -65,43 +95,37 @@ export default function DashboardHome() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-small font-medium">Number of Jobs</CardTitle>
+            <CardTitle className="text-small font-medium">Cover Letters</CardTitle>
           </CardHeader>
           <CardContent>
-            {jobsLoading ? (
-              <div className="h-8 bg-muted animate-pulse rounded" />
-            ) : (
-              <>
-                <div className="text-large font-bold">{totalJobs}</div>
-                <p className="text-small text-muted-foreground mt-1">
-                  {totalJobs === 0 ? 'No jobs tracked' : `${totalJobs} job${totalJobs === 1 ? '' : 's'} tracked`}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-small font-medium">Jobs Applied For</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {jobsLoading ? (
-              <div className="h-8 bg-muted animate-pulse rounded" />
-            ) : (
-              <>
-                <div className="text-large font-bold">{jobsApplied}</div>
-                <p className="text-small text-muted-foreground mt-1">
-                  {jobsApplied === 0 ? 'No applications yet' : `${jobsApplied} application${jobsApplied === 1 ? '' : 's'}`}
-                </p>
-              </>
-            )}
+            <div className="text-large font-bold text-muted-foreground">Ready</div>
+            <p className="text-small text-muted-foreground mt-1">
+              Generate professional cover letters
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-large font-semibold">Resume Builder</CardTitle>
+            <CardDescription className="text-small">
+              Create ATS-optimized resumes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full"
+              onClick={() => createResumeMutation.mutate()}
+              disabled={createResumeMutation.isPending}
+            >
+              {createResumeMutation.isPending ? "Creating..." : "Build Resume"} <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-large font-semibold">ATS Scanner</CardTitle>
@@ -129,40 +153,6 @@ export default function DashboardHome() {
             <Link href="/dashboard/cover-letter">
               <Button className="w-full">
                 Create Letter <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-large font-semibold">Resume Builder</CardTitle>
-            <CardDescription className="text-small">
-              Create ATS-optimized resumes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              className="w-full"
-              onClick={() => createResumeMutation.mutate()}
-              disabled={createResumeMutation.isPending}
-            >
-              {createResumeMutation.isPending ? "Creating..." : "Build Resume"} <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-large font-semibold">Jobs</CardTitle>
-            <CardDescription className="text-small">
-              Track and manage job applications
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/dashboard/jobs">
-              <Button className="w-full">
-                View Jobs <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </CardContent>
