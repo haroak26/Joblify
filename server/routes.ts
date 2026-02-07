@@ -3067,7 +3067,6 @@ Return ONLY the cover letter text, no JSON or markdown formatting.`;
 
       res.json({
         qrCode,
-        secret: encryptedSecret,
       });
     } catch (error) {
       console.error('[API] Error setting up 2FA:', error);

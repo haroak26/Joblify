@@ -1175,7 +1175,7 @@ function TwoFactorAuthSection() {
           <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
         </div>
         {twoFAStatus?.enabled && (
-          <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
+          <Badge variant="outline" className="bg-green-600/10 text-green-800 dark:text-green-400 border-green-600/20">
             <Check className="w-3 h-3 mr-1" />
             Enabled
           </Badge>
