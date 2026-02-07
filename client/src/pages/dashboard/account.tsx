@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles } from "lucide-react";
 import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -37,6 +38,12 @@ interface UsageResponse {
   usage: {
     skillsCount: number;
     jobsScrapedThisMonth: number;
+    aiEditsThisMonth: number;
+    importedResumesThisMonth: number;
+    jobAnalysesThisMonth: number;
+    coverLettersThisMonth: number;
+    atsScansThisMonth: number;
+    schedulesCount: number;
     monthResetDate: string;
   };
   limits: {
@@ -48,6 +55,8 @@ interface UsageResponse {
   remaining: {
     skills: number;
     jobsThisMonth: number;
+    aiEdits: number;
+    schedules: number;
   };
 }
 
@@ -206,6 +215,34 @@ export default function Account() {
     }
   };
 
+  const downloadDataExportPDF = async () => {
+    try {
+      const response = await apiRequest("POST", "/api/user/data-export-pdf");
+      const blob = await response.blob();
+      
+      // Create a blob and download it
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `joblify-data-export-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "PDF Export Complete",
+        description: "Your data has been downloaded as a PDF.",
+      });
+    } catch (error) {
+      toast({
+        title: "PDF Export Failed",
+        description: "Unable to export your data as PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const subscription = subscriptionQuery.data?.subscription;
   const normalizedPlan = normalizePlan(subscription?.plan);
   const usageData = usageQuery.data;
@@ -263,6 +300,7 @@ export default function Account() {
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
+  const maxSchedules = usageData?.limits.maxSchedules ?? 0;
 
   const jobsUsedPercent = usageData && maxJobs > 0
     ? (usageData.usage.jobsScrapedThisMonth / maxJobs) * 100
@@ -272,48 +310,329 @@ export default function Account() {
     ? (usageData.usage.skillsCount / maxSkills) * 100
     : 0;
 
+  const schedulesUsedPercent = usageData && maxSchedules > 0
+    ? (usageData.usage.schedulesCount / maxSchedules) * 100
+    : 0;
+
+  // Helper to get color based on usage percentage
+  const getUsageColor = (percent: number) => {
+    if (percent >= 90) return "destructive";
+    if (percent >= 70) return "default";
+    return "secondary";
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.name) {
+      return user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    return user?.username?.slice(0, 2).toUpperCase() || 'U';
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-10 space-y-8 sm:space-y-10 lg:space-y-12 max-w-5xl mx-auto">
-      <div className="space-y-12 sm:space-y-16">
-        {/* Account Details Section */}
-        <section className="space-y-6">
-          <h2 className="text-xl font-semibold flex items-center gap-3 border-b pb-4">
-            <User className="w-6 h-6 text-primary" />
-            Profile Information
-          </h2>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Username</p>
-              {userQuery.isLoading ? (
-                <div className="h-6 w-32 bg-muted animate-pulse rounded" />
-              ) : (
-                <p className="text-lg font-semibold" data-testid="text-username">{user?.username}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Email Address</p>
-              <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="p-4 sm:p-6 lg:p-10 space-y-8 max-w-6xl mx-auto">
+        {/* Profile Header - Always Visible */}
+        <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-background shadow-lg">
+          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:20px_20px]" />
+          <div className="relative p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              {/* Avatar */}
+              <div className="relative">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white text-3xl font-bold shadow-xl ring-4 ring-background">
+                  {getUserInitials()}
+                </div>
+                {user?.emailVerified && (
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-green-500 border-4 border-background flex items-center justify-center">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </div>
+
+              {/* User Info */}
+              <div className="flex-1 space-y-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  {userQuery.isLoading ? (
+                    <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+                  ) : (
+                    <>
+                      <h1 className="text-3xl font-bold" data-testid="text-username">
+                        {user?.name || user?.username}
+                      </h1>
+                      <Badge variant={user?.emailVerified ? "secondary" : "destructive"} className="h-6">
+                        {user?.emailVerified ? "Verified" : "Unverified"}
+                      </Badge>
+                    </>
+                  )}
+                </div>
+                
                 {userQuery.isLoading ? (
-                  <div className="h-6 w-48 bg-muted animate-pulse rounded" />
+                  <div className="h-5 w-64 bg-muted animate-pulse rounded" />
                 ) : (
-                  <p className="text-lg font-semibold truncate" data-testid="text-email">{user?.email}</p>
+                  <p className="text-muted-foreground flex items-center gap-2" data-testid="text-email">
+                    <span>{user?.email}</span>
+                  </p>
                 )}
-                {user?.emailVerified ? (
-                  <Badge variant="secondary" className="text-xs uppercase h-6 px-3">Verified</Badge>
-                ) : (
-                  <Badge variant="destructive" className="text-xs uppercase h-6 px-3">Unverified</Badge>
-                )}
+                
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  {/* TODO: Display actual account creation date when available in user object */}
+                  <span>Member since {new Date().getFullYear()}</span>
+                </div>
+              </div>
+
+              {/* Current Plan Badge */}
+              <div className="sm:ml-auto">
+                <div className="text-right space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Current Plan</p>
+                  <Badge variant="outline" className="text-lg px-4 py-2 font-bold">
+                    {currentPlanLabel}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Subscription Section */}
+        {/* Tabs Section */}
+        <Tabs defaultValue="usage" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-muted/50">
+            <TabsTrigger value="usage" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Usage</span>
+            </TabsTrigger>
+            <TabsTrigger value="subscription" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <CreditCard className="w-4 h-4" />
+              <span className="hidden sm:inline">Subscription</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </TabsTrigger>
+            <TabsTrigger value="data" className="flex items-center gap-2 data-[state=active]:bg-background">
+              <Database className="w-4 h-4" />
+              <span className="hidden sm:inline">Data & Privacy</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Usage Tab */}
+          <TabsContent value="usage" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Usage Overview</h2>
+                <p className="text-muted-foreground">Monitor your monthly resource consumption</p>
+              </div>
+              {usageData && (
+                <Badge variant="outline" className="gap-1.5 px-3 py-1.5">
+                  <Clock className="w-4 h-4" />
+                  Resets {(() => {
+                    const resetDate = new Date(usageData.usage.monthResetDate);
+                    const nextMonth = new Date(resetDate);
+                    nextMonth.setMonth(nextMonth.getMonth() + 1);
+                    return nextMonth.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  })()}
+                </Badge>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Job Imports */}
+              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2.5 bg-blue-500/10 rounded-lg">
+                        <Briefcase className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <CardTitle className="text-base font-semibold">Job Imports</CardTitle>
+                    </div>
+                    <Badge variant={getUsageColor(jobsUsedPercent)} className="font-semibold">
+                      {usageData?.usage.jobsScrapedThisMonth || 0}/{maxJobs === -1 ? "∞" : maxJobs || 0}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Progress 
+                    value={maxJobs === -1 ? 0 : jobsUsedPercent} 
+                    className="h-2.5"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {maxJobs === -1 
+                      ? "Unlimited job imports available"
+                      : `${usageData?.remaining.jobsThisMonth || 0} imports remaining`
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* AI Edits - No limit tracking as limits vary by plan and are not enforced here */}
+              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2.5 bg-purple-500/10 rounded-lg">
+                        <Sparkles className="w-5 h-5 text-purple-500" />
+                      </div>
+                      <CardTitle className="text-base font-semibold">AI Edits</CardTitle>
+                    </div>
+                    <Badge variant="secondary" className="font-semibold">
+                      {usageData?.usage.aiEditsThisMonth || 0}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>• Resume improvements</p>
+                    <p>• Cover letter generation</p>
+                    <p>• ATS optimization</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Cover Letters */}
+              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2.5 bg-green-500/10 rounded-lg">
+                        <FileText className="w-5 h-5 text-green-500" />
+                      </div>
+                      <CardTitle className="text-base font-semibold">Cover Letters</CardTitle>
+                    </div>
+                    <Badge variant="secondary" className="font-semibold">
+                      {usageData?.usage.coverLettersThisMonth || 0}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Cover letters generated this month
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Skills */}
+              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2.5 bg-amber-500/10 rounded-lg">
+                        <Award className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <CardTitle className="text-base font-semibold">Skills</CardTitle>
+                    </div>
+                    <Badge variant={getUsageColor(skillsUsedPercent)} className="font-semibold">
+                      {usageData?.usage.skillsCount || 0}/{maxSkills === -1 ? "∞" : maxSkills || 0}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Progress 
+                    value={maxSkills === -1 ? 0 : skillsUsedPercent} 
+                    className="h-2.5"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {maxSkills === -1 
+                      ? "Unlimited skills allowed"
+                      : `${usageData?.remaining.skills || 0} skills remaining`
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Schedules */}
+              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2.5 bg-indigo-500/10 rounded-lg">
+                        <Calendar className="w-5 h-5 text-indigo-500" />
+                      </div>
+                      <CardTitle className="text-base font-semibold">Schedules</CardTitle>
+                    </div>
+                    <Badge variant={getUsageColor(schedulesUsedPercent)} className="font-semibold">
+                      {usageData?.usage.schedulesCount || 0}/{maxSchedules === -1 ? "∞" : maxSchedules || 0}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Progress 
+                    value={maxSchedules === -1 ? 0 : schedulesUsedPercent} 
+                    className="h-2.5"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {usageData?.limits.hasScheduleAccess
+                      ? maxSchedules === -1 ? "Unlimited schedules" : `${usageData?.remaining.schedules || 0} remaining`
+                      : "Upgrade to access schedules"
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* ATS Scans */}
+              <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2.5 bg-rose-500/10 rounded-lg">
+                        <FileSpreadsheet className="w-5 h-5 text-rose-500" />
+                      </div>
+                      <CardTitle className="text-base font-semibold">ATS Scans</CardTitle>
+                    </div>
+                    <Badge variant="secondary" className="font-semibold">
+                      {usageData?.usage.atsScansThisMonth || 0}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Resume scans completed this month
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Premium Benefits Callout */}
+            {(isPlus || isUltra || isLifetime) && (
+              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-background">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    <CardTitle>Premium Benefits Active</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="w-4 h-4 text-green-500" />
+                      <span>Extended usage limits</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="w-4 h-4 text-green-500" />
+                      <span>Priority support</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="w-4 h-4 text-green-500" />
+                      <span>Advanced AI features</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="w-4 h-4 text-green-500" />
+                      <span>All export formats</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Subscription Tab */}
+          <TabsContent value="subscription" className="space-y-6">{/* Subscription Section */}
         <section className="space-y-8">
-          <h2 className="text-xl font-semibold flex items-center gap-3 border-b pb-4">
-            <CreditCard className="w-6 h-6 text-primary" />
-            Subscription & Billing
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold">Subscription & Billing</h2>
+            <p className="text-muted-foreground">Manage your plan and billing information</p>
+          </div>
+          
           {subscription?.status === "cancelled" && cancellationDate && (
             <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
               Your subscription will cancel on <span className="font-semibold">{cancellationDate}</span>.
@@ -327,24 +646,27 @@ export default function Account() {
               return (
                 <div
                   key={plan.id}
-                  className={`relative overflow-hidden rounded-lg border p-6 sm:p-7 transition-all ${
+                  className={`relative overflow-hidden rounded-xl border-2 p-6 transition-all hover:shadow-xl ${
                     isCurrent
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border bg-background'
+                      ? 'border-primary bg-gradient-to-br from-primary/10 via-primary/5 to-background shadow-lg'
+                      : 'border-border bg-background hover:border-primary/50'
                   }`}
                   data-testid={`card-plan-${plan.id}`}
                 >
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-bold">{plan.name}</h3>
+                          <h3 className="text-xl font-bold">{plan.name}</h3>
+                          {plan.popular && !isCurrent && (
+                            <Badge className="bg-primary">Popular</Badge>
+                          )}
                           {isCurrent && (
                             <Badge
                               variant="secondary"
-                              className="h-5 rounded-full border border-primary/30 bg-primary/10 px-2 text-[10px] font-semibold uppercase tracking-widest text-primary"
+                              className="h-6 rounded-full border-2 border-primary/30 bg-primary/20 px-3 text-xs font-bold uppercase tracking-wider text-primary"
                             >
-                              {isCancelled ? "Cancelling" : "Active Plan"}
+                              {isCancelled ? "Cancelling" : "Current"}
                             </Badge>
                           )}
                         </div>
@@ -359,7 +681,7 @@ export default function Account() {
                     </div>
                     <ul className="space-y-3">
                       {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <li key={i} className="flex items-center gap-3 text-sm">
                           <Check className="w-4 h-4 text-primary flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
@@ -407,126 +729,50 @@ export default function Account() {
             })}
           </div>
         </section>
+          </TabsContent>
 
-        {/* Usage Tracker Section - Redesigned */}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between border-b pb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-3">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              Usage Overview
-            </h2>
-            {usageData && (
-              <Badge variant="outline" className="gap-1.5 px-3 py-1">
-                <Clock className="w-3.5 h-3.5" />
-                Resets {(() => {
-                  const resetDate = new Date(usageData.usage.monthResetDate);
-                  // Add one month properly
-                  const nextMonth = new Date(resetDate);
-                  nextMonth.setMonth(nextMonth.getMonth() + 1);
-                  return nextMonth.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                })()}
-              </Badge>
-            )}
-          </div>
-          
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Job Scrapes Card */}
-            <Card className="relative overflow-hidden border">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <Zap className="w-5 h-5 text-primary" />
-                    </div>
-                    <CardTitle className="text-base font-medium">Job Imports</CardTitle>
-                  </div>
-                  <Badge 
-                    variant={jobsUsedPercent >= 90 ? "destructive" : jobsUsedPercent >= 70 ? "default" : "secondary"}
-                    className="font-semibold"
-                  >
-                    {usageData?.usage.jobsScrapedThisMonth || 0}/{maxJobs === -1 ? "∞" : maxJobs || 0}
-                  </Badge>
-                </div>
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Account Settings</h2>
+              <p className="text-muted-foreground">Manage your account preferences and security</p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Coming Soon</CardTitle>
+                <CardDescription>
+                  Additional settings will be available here, including:
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Progress 
-                  value={jobsUsedPercent} 
-                  className="h-3 bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {maxJobs === -1 
-                    ? "Unlimited job imports available"
-                    : `${usageData?.remaining.jobsThisMonth || 0} imports remaining this month`
-                  }
-                </p>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="w-4 h-4" />
+                  <span>Password change</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="w-4 h-4" />
+                  <span>Two-factor authentication</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Settings className="w-4 h-4" />
+                  <span>Email preferences</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Settings className="w-4 h-4" />
+                  <span>Notification settings</span>
+                </div>
               </CardContent>
             </Card>
-            
-            {/* Skills Card - Only show for free tier */}
-            {!isPlus && !isUltra && !isLifetime && (
-              <Card className="relative overflow-hidden border">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-muted rounded-lg">
-                        <Award className="w-5 h-5 text-foreground" />
-                      </div>
-                      <CardTitle className="text-base font-medium">AI Edits</CardTitle>
-                    </div>
-                    <Badge 
-                      variant={skillsUsedPercent >= 90 ? "destructive" : skillsUsedPercent >= 70 ? "default" : "secondary"}
-                      className="font-semibold"
-                    >
-                      {usageData?.usage.skillsCount || 0}/{maxSkills === -1 ? "∞" : maxSkills || 0}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Progress 
-                    value={skillsUsedPercent} 
-                    className="h-3 bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {usageData?.remaining.skills || 0} AI edits remaining
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Placeholder card for paid tiers to maintain grid */}
-            {(isPlus || isUltra || isLifetime) && (
-              <Card className="relative overflow-hidden border border-dashed border-primary/30 bg-primary/5">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <TrendingUp className="w-5 h-5 text-primary" />
-                    </div>
-                    <CardTitle className="text-base font-medium">Premium Benefits</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>Unlimited AI edits</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>{maxJobs === -1 ? "Unlimited" : "Extended"} job imports</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-green-500" />
-                    <span>Priority support</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
+          </TabsContent>
 
-        {/* Privacy Rights Section - GDPR/CCPA Compliance */}
-        <section className="pt-12 border-t">
-          <h2 className="text-2xl font-bold mb-6">Privacy Rights</h2>
-          <div className="space-y-6">
+          {/* Data & Privacy Tab */}
+          <TabsContent value="data" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Data & Privacy</h2>
+              <p className="text-muted-foreground">Manage your personal data and privacy settings</p>
+            </div>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -538,15 +784,35 @@ export default function Account() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Data Export */}
+                {/* PDF Data Export */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border-2 bg-muted/50">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Download className="w-4 h-4 text-primary" />
+                      <p className="font-semibold">Download Your Data (PDF)</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Export your personal data in a readable PDF format (Right to Data Portability).
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={downloadDataExportPDF}
+                    className="w-full sm:w-auto"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export PDF
+                  </Button>
+                </div>
+
+                {/* JSON Data Export */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Download className="w-4 h-4 text-muted-foreground" />
-                      <p className="font-semibold">Download Your Data</p>
+                      <p className="font-semibold">Download Your Data (JSON)</p>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Export all your personal data in a portable JSON format (Right to Data Portability).
+                      Export all your data in machine-readable JSON format.
                     </p>
                   </div>
                   <Button 
@@ -555,7 +821,7 @@ export default function Account() {
                     className="w-full sm:w-auto"
                   >
                     <Download className="w-4 h-4 mr-2" />
-                    Export Data
+                    Export JSON
                   </Button>
                 </div>
 
@@ -642,39 +908,40 @@ export default function Account() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </section>
 
-        {/* Danger Zone Section */}
-        <section className="pt-12 border-t">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 sm:p-8 rounded-lg border border-destructive/20 bg-destructive/5">
-            <div className="space-y-2">
-              <p className="text-lg font-bold text-destructive">Danger Zone</p>
-              <p className="text-base text-muted-foreground">Permanently remove your account and all associated data.</p>
+            {/* Danger Zone */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 rounded-xl border-2 border-destructive/20 bg-destructive/5">
+              <div className="space-y-2">
+                <p className="text-lg font-bold text-destructive flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Danger Zone
+                </p>
+                <p className="text-sm text-muted-foreground">Permanently remove your account and all associated data.</p>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="default" className="px-8 font-bold w-full sm:w-auto" data-testid="button-delete-account">
+                    Delete Account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-base">
+                      This action is irreversible. All data will be lost forever.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="gap-3 mt-4">
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteAccountMutation.mutate()} className="bg-destructive text-destructive-foreground font-bold">
+                      Delete Forever
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="default" className="px-8 font-bold w-full sm:w-auto" data-testid="button-delete-account">
-                  Delete Account
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-base">
-                    This action is irreversible. All data will be lost forever.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="gap-3 mt-4">
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => deleteAccountMutation.mutate()} className="bg-destructive text-destructive-foreground font-bold">
-                    Delete Forever
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </section>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

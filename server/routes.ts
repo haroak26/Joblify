@@ -1533,19 +1533,31 @@ Write a ${tone} outreach message for this job opportunity.`;
       const plan = normalizePlan(subscription?.plan);
       const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
       const profile = await storage.getProfile(userId);
+      const schedules = await storage.getSchedules(userId);
       
       res.json({
         usage: {
           skillsCount: profile.skills.length,
+          jobsScrapedThisMonth: userUsage.jobsScrapedThisMonth || 0,
+          aiEditsThisMonth: userUsage.aiEditsThisMonth || 0,
+          importedResumesThisMonth: userUsage.importedResumesThisMonth || 0,
+          jobAnalysesThisMonth: userUsage.jobAnalysesThisMonth || 0,
+          coverLettersThisMonth: userUsage.coverLettersThisMonth || 0,
+          atsScansThisMonth: userUsage.atsScansThisMonth || 0,
+          schedulesCount: schedules.length,
           monthResetDate: userUsage.monthResetDate,
         },
         limits: {
           maxSkills: limits.maxSkills === Infinity ? -1 : limits.maxSkills,
+          maxJobsPerMonth: limits.maxJobsPerMonth === Infinity ? -1 : limits.maxJobsPerMonth,
           maxSchedules: limits.maxSchedules === Infinity ? -1 : limits.maxSchedules,
           hasScheduleAccess: limits.hasScheduleAccess,
         },
         remaining: {
           skills: limits.maxSkills === Infinity ? -1 : Math.max(0, limits.maxSkills - profile.skills.length),
+          jobsThisMonth: limits.maxJobsPerMonth === Infinity ? -1 : Math.max(0, limits.maxJobsPerMonth - (userUsage.jobsScrapedThisMonth || 0)),
+          aiEdits: limits.maxAIEditsPerMonth === Infinity ? -1 : Math.max(0, (limits.maxAIEditsPerMonth || 0) - (userUsage.aiEditsThisMonth || 0)),
+          schedules: limits.maxSchedules === Infinity ? -1 : Math.max(0, limits.maxSchedules - schedules.length),
         }
       });
     } catch (error) {
@@ -1673,6 +1685,38 @@ Write a ${tone} outreach message for this job opportunity.`;
       console.error("[GDPR] Consent withdrawal error:", error);
       res.status(500).json({ 
         error: "Failed to process consent withdrawal",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // PDF Data Export - Right to Data Portability (GDPR Article 20) - PDF Format
+  app.post("/api/user/data-export-pdf", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Log the data access request for audit trail
+      await storage.createSecurityEvent({
+        userId,
+        eventType: "data_export_pdf_requested",
+        ipAddress: req.ip || null,
+        userAgent: req.get('user-agent') || null,
+        metadata: { timestamp: new Date().toISOString() },
+      });
+      
+      const { exportUserDataPDF } = await import("./lib/gdpr-compliance");
+      const pdfBuffer = await exportUserDataPDF(userId);
+      
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="joblify-data-export-${new Date().toISOString().split('T')[0]}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("[GDPR] PDF export error:", error);
+      res.status(500).json({ 
+        error: "Failed to export data as PDF",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
