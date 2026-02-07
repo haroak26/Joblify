@@ -502,5 +502,3 @@ export async function registerRoutes(
 
   return httpServer;
 }
-
-function generateFallbackMessage(jobTitle: string, skills: string[], tone: string, intro: string, isComment: boolean = false): string {
