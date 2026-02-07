@@ -1,32 +1,55 @@
 import { ResumeData } from "@shared/schema";
+import { Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
 
 interface ProfessionalTemplateProps {
   data: ResumeData;
 }
 
+// Professional Template - Centered header design inspired by Sophia Williams
 export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps) {
   const { personalInfo, summary, experience, education, skills, certifications, projects } = data;
 
   return (
-    <div className="p-12 print:p-12 text-black">
-      {/* Header */}
+    <div className="p-8 print:p-8 text-black h-full">
+      {/* Centered Header */}
       <div className="mb-6 text-center border-b-2 border-black pb-4">
-        <h1 className="text-3xl font-serif font-bold mb-2">{personalInfo.name || "Your Name"}</h1>
-        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm font-sans">
-          {personalInfo.email && <span>{personalInfo.email}</span>}
-          {personalInfo.phone && <span>•</span>}
-          {personalInfo.phone && <span>{personalInfo.phone}</span>}
-          {personalInfo.location && <span>•</span>}
-          {personalInfo.location && <span>{personalInfo.location}</span>}
+        <h1 className="text-4xl font-serif font-bold mb-3">{personalInfo.name || "Your Name"}</h1>
+        <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-sm font-sans">
+          {personalInfo.email && (
+            <div className="flex items-center gap-1">
+              <Mail className="w-3.5 h-3.5" />
+              <span>{personalInfo.email}</span>
+            </div>
+          )}
+          {personalInfo.email && personalInfo.phone && <span>•</span>}
+          {personalInfo.phone && (
+            <div className="flex items-center gap-1">
+              <Phone className="w-3.5 h-3.5" />
+              <span>{personalInfo.phone}</span>
+            </div>
+          )}
+          {personalInfo.phone && personalInfo.location && <span>•</span>}
+          {personalInfo.location && (
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5" />
+              <span>{personalInfo.location}</span>
+            </div>
+          )}
         </div>
         {(personalInfo.linkedin || personalInfo.website) && (
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm font-sans mt-1">
+          <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-sm font-sans mt-2">
             {personalInfo.linkedin && (
-              <span className="break-all">{personalInfo.linkedin}</span>
+              <div className="flex items-center gap-1">
+                <Linkedin className="w-3.5 h-3.5" />
+                <span className="break-all">{personalInfo.linkedin}</span>
+              </div>
             )}
             {personalInfo.website && personalInfo.linkedin && <span>•</span>}
             {personalInfo.website && (
-              <span className="break-all">{personalInfo.website}</span>
+              <div className="flex items-center gap-1">
+                <Globe className="w-3.5 h-3.5" />
+                <span className="break-all">{personalInfo.website}</span>
+              </div>
             )}
           </div>
         )}
@@ -35,7 +58,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
       {/* Summary */}
       {summary && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-2 uppercase tracking-wide">
+          <h2 className="text-base font-serif font-bold mb-2 uppercase tracking-wider border-b border-gray-400 pb-1">
             Professional Summary
           </h2>
           <p className="text-sm font-sans leading-relaxed text-gray-800">{summary}</p>
@@ -45,7 +68,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
       {/* Experience */}
       {experience.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wide">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Professional Experience
           </h2>
           <div className="space-y-4">
@@ -54,9 +77,9 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
                 <div className="flex justify-between items-baseline mb-1">
                   <div>
                     <h3 className="font-bold text-base">{exp.title}</h3>
-                    <p className="text-sm italic">{exp.company}, {exp.location}</p>
+                    <p className="text-sm italic text-gray-700">{exp.company}, {exp.location}</p>
                   </div>
-                  <p className="text-sm">
+                  <p className="text-sm font-medium text-gray-700">
                     {exp.startDate} - {exp.endDate || "Present"}
                   </p>
                 </div>
@@ -78,7 +101,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
       {/* Education */}
       {education.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wide">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Education
           </h2>
           <div className="space-y-3 font-sans">
@@ -87,12 +110,12 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
                 <div className="flex justify-between items-baseline">
                   <div>
                     <h3 className="font-bold text-base">{edu.school}</h3>
-                    <p className="text-sm">
+                    <p className="text-sm text-gray-700">
                       {edu.degree} in {edu.field}
                       {edu.gpa && ` • GPA: ${edu.gpa}`}
                     </p>
                   </div>
-                  <p className="text-sm">{edu.graduationDate}</p>
+                  <p className="text-sm font-medium text-gray-700">{edu.graduationDate}</p>
                 </div>
               </div>
             ))}
@@ -103,7 +126,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
       {/* Skills */}
       {skills.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-2 uppercase tracking-wide">
+          <h2 className="text-base font-serif font-bold mb-2 uppercase tracking-wider border-b border-gray-400 pb-1">
             Skills
           </h2>
           <p className="text-sm font-sans text-gray-800 leading-relaxed">
@@ -115,7 +138,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
       {/* Certifications */}
       {certifications && certifications.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wide">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Certifications
           </h2>
           <div className="space-y-2 font-sans">
@@ -123,9 +146,9 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
               <div key={index} className="flex justify-between items-baseline">
                 <div>
                   <h3 className="font-bold text-sm">{cert.name}</h3>
-                  <p className="text-sm">{cert.issuer}</p>
+                  <p className="text-sm text-gray-700">{cert.issuer}</p>
                 </div>
-                <p className="text-sm">{cert.date}</p>
+                <p className="text-sm font-medium text-gray-700">{cert.date}</p>
               </div>
             ))}
           </div>
@@ -135,7 +158,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
       {/* Projects */}
       {projects && projects.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wide">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Projects
           </h2>
           <div className="space-y-3 font-sans">
@@ -144,15 +167,15 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
                 <div className="flex justify-between items-baseline mb-1">
                   <h3 className="font-bold text-base">{project.name}</h3>
                   {project.url && (
-                    <span className="text-sm break-all">{project.url}</span>
+                    <span className="text-sm text-gray-700 break-all">{project.url}</span>
                   )}
                 </div>
                 <p className="text-sm text-gray-800 leading-relaxed mb-1">
                   {project.description}
                 </p>
                 {project.technologies.length > 0 && (
-                  <p className="text-sm">
-                    <span className="font-medium">Technologies:</span> {project.technologies.join(", ")}
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Technologies:</span> {project.technologies.join(", ")}
                   </p>
                 )}
               </div>

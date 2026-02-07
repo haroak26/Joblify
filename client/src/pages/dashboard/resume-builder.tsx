@@ -8,6 +8,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   FileText,
   User,
   Briefcase,
@@ -18,7 +25,8 @@ import {
   ChevronLeft,
   Plus,
   Save,
-  Settings
+  Settings,
+  Palette
 } from "lucide-react";
 import type { Resume, ResumeData } from "@shared/schema";
 
@@ -237,6 +245,20 @@ export default function ResumeBuilder() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Template Selector */}
+            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+              <SelectTrigger className="w-[150px] h-9">
+                <Palette className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Template" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="modern">Modern</SelectItem>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="academic">Academic</SelectItem>
+                <SelectItem value="minimal">Minimal</SelectItem>
+              </SelectContent>
+            </Select>
+            
             {!isAIMode && (
               <Button
                 variant="outline"

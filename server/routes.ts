@@ -534,7 +534,7 @@ export async function registerRoutes(
       // Validate request body
       const createSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional']).optional(),
+        template: z.enum(['modern', 'professional', 'academic', 'minimal']).optional(),
         resumeData: resumeDataSchema.optional(),
       });
 
@@ -626,7 +626,7 @@ export async function registerRoutes(
       // Validate and update resume
       const updateSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional']).optional(),
+        template: z.enum(['modern', 'professional', 'academic', 'minimal']).optional(),
         resumeData: resumeDataSchema.optional(),
       });
 
