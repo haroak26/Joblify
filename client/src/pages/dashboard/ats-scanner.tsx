@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, XCircle, Target, BarChart3, Search, Lightbulb, TrendingUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CleanTabs, CleanTabsContent, CleanTabsList, CleanTabsTrigger } from "@/components/ui/clean-tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -126,19 +126,19 @@ export default function AtsScanner() {
             <CardTitle className="text-base">Select Resume</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Tabs value={scanMode} onValueChange={(value) => setScanMode(value as "joblify" | "upload")}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="joblify">
+            <CleanTabs value={scanMode} onValueChange={(value) => setScanMode(value as "joblify" | "upload")}>
+              <CleanTabsList className="mb-4">
+                <CleanTabsTrigger value="joblify">
                   <FileText className="w-4 h-4 mr-2" />
                   Joblify Resumes
-                </TabsTrigger>
-                <TabsTrigger value="upload">
+                </CleanTabsTrigger>
+                <CleanTabsTrigger value="upload">
                   <Upload className="w-4 h-4 mr-2" />
                   Upload File
-                </TabsTrigger>
-              </TabsList>
+                </CleanTabsTrigger>
+              </CleanTabsList>
               
-              <TabsContent value="joblify" className="space-y-3">
+              <CleanTabsContent value="joblify" className="space-y-3">
                 <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a resume to scan" />
@@ -151,9 +151,9 @@ export default function AtsScanner() {
                     ))}
                   </SelectContent>
                 </Select>
-              </TabsContent>
+              </CleanTabsContent>
               
-              <TabsContent value="upload" className="space-y-3">
+              <CleanTabsContent value="upload" className="space-y-3">
                 <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors">
                   <input
                     id="resume-file-upload"
@@ -175,8 +175,8 @@ export default function AtsScanner() {
                     <Button variant="ghost" size="sm" onClick={() => setFile(null)}>Remove</Button>
                   </div>
                 )}
-              </TabsContent>
-            </Tabs>
+              </CleanTabsContent>
+            </CleanTabs>
           </CardContent>
         </Card>
 
