@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Scan, Mail, ArrowRight, Briefcase, Target, FileText } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -45,20 +45,19 @@ export default function DashboardHome() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name || user?.username}!</h1>
-        <p className="text-muted-foreground">Track your job applications and search for opportunities</p>
+        <h1 className="text-header mb-2">Welcome back, {user?.name || user?.username}!</h1>
+        <p className="text-body text-muted-foreground">Track your job applications and search for opportunities</p>
       </div>
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ATS Scanner</CardTitle>
-            <Scan className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-small font-medium">ATS Scanner</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-muted-foreground">Available</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-large font-bold text-muted-foreground">Available</div>
+            <p className="text-small text-muted-foreground mt-1">
               Scan documents for ATS compatibility
             </p>
           </CardContent>
@@ -66,16 +65,15 @@ export default function DashboardHome() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Number of Jobs</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-small font-medium">Number of Jobs</CardTitle>
           </CardHeader>
           <CardContent>
             {jobsLoading ? (
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{totalJobs}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <div className="text-large font-bold">{totalJobs}</div>
+                <p className="text-small text-muted-foreground mt-1">
                   {totalJobs === 0 ? 'No jobs tracked' : `${totalJobs} job${totalJobs === 1 ? '' : 's'} tracked`}
                 </p>
               </>
@@ -85,16 +83,15 @@ export default function DashboardHome() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Jobs Applied For</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-small font-medium">Jobs Applied For</CardTitle>
           </CardHeader>
           <CardContent>
             {jobsLoading ? (
               <div className="h-8 bg-muted animate-pulse rounded" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{jobsApplied}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <div className="text-large font-bold">{jobsApplied}</div>
+                <p className="text-small text-muted-foreground mt-1">
                   {jobsApplied === 0 ? 'No applications yet' : `${jobsApplied} application${jobsApplied === 1 ? '' : 's'}`}
                 </p>
               </>
@@ -105,13 +102,10 @@ export default function DashboardHome() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Scan className="h-5 w-5" />
-              ATS Scanner
-            </CardTitle>
-            <CardDescription>
+            <CardTitle className="text-body">ATS Scanner</CardTitle>
+            <CardDescription className="text-small">
               Analyze documents for ATS compatibility
             </CardDescription>
           </CardHeader>
@@ -124,13 +118,10 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Cover Letters
-            </CardTitle>
-            <CardDescription>
+            <CardTitle className="text-body">Cover Letters</CardTitle>
+            <CardDescription className="text-small">
               Generate professional cover letters
             </CardDescription>
           </CardHeader>
@@ -143,13 +134,10 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Resume Builder
-            </CardTitle>
-            <CardDescription>
+            <CardTitle className="text-body">Resume Builder</CardTitle>
+            <CardDescription className="text-small">
               Create ATS-optimized resumes
             </CardDescription>
           </CardHeader>
@@ -164,13 +152,10 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5" />
-              Jobs
-            </CardTitle>
-            <CardDescription>
+            <CardTitle className="text-body">Jobs</CardTitle>
+            <CardDescription className="text-small">
               Track and manage job applications
             </CardDescription>
           </CardHeader>

@@ -162,7 +162,7 @@ export default function ResumeBuilder() {
       {/* Secondary Sidebar - Resume Sections */}
       <div className="w-64 border-r border-border bg-card flex flex-col">
         <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-sm text-foreground">Resume Sections</h2>
+          <h2 className="text-small font-semibold text-foreground">Resume Sections</h2>
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-1">
@@ -172,7 +172,7 @@ export default function ResumeBuilder() {
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
                     activeSection === section.id
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -215,7 +215,7 @@ export default function ResumeBuilder() {
             ) : (
               <button
                 onClick={() => setIsEditingTitle(true)}
-                className="text-lg font-semibold hover:text-primary transition-colors"
+                className="text-body font-semibold hover:text-primary transition-colors"
               >
                 {resumeTitle}
               </button>
