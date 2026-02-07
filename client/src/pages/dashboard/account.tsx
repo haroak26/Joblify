@@ -895,7 +895,7 @@ export default function Account() {
             {/* Danger Zone */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 rounded-lg border border-destructive/20 bg-destructive/5">
               <div className="space-y-2">
-                <p className="text-lg font-bold text-destructive flex items-center gap-2">
+                <p className="text-large font-bold text-destructive flex items-center gap-2">
                   <Shield className="w-5 h-5" />
                   Danger Zone
                 </p>
