@@ -18,8 +18,6 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsAndConditions from "@/pages/terms-and-conditions";
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
-import ATSScannerFeature from "@/pages/features/ats-scanner";
-import CoverLetterFeature from "@/pages/features/cover-letter";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
@@ -32,8 +30,6 @@ import JobDetails from "@/pages/dashboard/job-details";
 import Generator from "@/pages/dashboard/generator";
 import Schedules from "@/pages/dashboard/schedules";
 import Account from "@/pages/dashboard/account";
-import AtsScanner from "@/pages/dashboard/ats-scanner";
-import CoverLetterGenerator from "@/pages/dashboard/cover-letter";
 
 
 function Router() {
@@ -44,8 +40,6 @@ function Router() {
       <Route path="/why-us" component={WhyUs} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
-      <Route path="/features/ats-scanner" component={ATSScannerFeature} />
-      <Route path="/features/cover-letter" component={CoverLetterFeature} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-and-conditions" component={TermsAndConditions} />
       <Route path="/blog" component={Blog} />
@@ -99,20 +93,6 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <Account />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/ats-scanner">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <AtsScanner />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/cover-letter">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <CoverLetterGenerator />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

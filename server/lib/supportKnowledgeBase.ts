@@ -17,17 +17,6 @@ export const KNOWLEDGE_BASE = `
 - Plus plan: 50 AI edits per month
 - Ultra/Lifetime plans: Unlimited AI edits
 
-### ATS Scanner
-- Analyzes your resume for Applicant Tracking System compatibility
-- Provides a score and specific improvement suggestions
-- Available on Plus, Ultra, and Lifetime plans only
-- Not available on Free plan
-
-### Cover Letter Generator
-- Generate tailored cover letters for specific jobs
-- Uses your resume data and job description
-- Available on Plus, Ultra, and Lifetime plans only
-
 ### LinkedIn Import
 - Import job postings directly from LinkedIn
 - Automatically extract job details and requirements
@@ -44,7 +33,7 @@ export const KNOWLEDGE_BASE = `
 - Plus/Ultra/Lifetime plans: PDF and DOCX formats
 
 ### Job Scraping
-- Automatically find relevant freelance jobs from Reddit and X (Twitter)
+- Automatically find relevant freelance jobs from X (Twitter)
 - Free plan: 5 jobs per month
 - Plus plan: 100 jobs per month
 - Ultra/Lifetime: Unlimited jobs
@@ -56,8 +45,6 @@ export const KNOWLEDGE_BASE = `
 - 3 AI edits per month
 - PDF export only
 - 5 job scrapes per month
-- No ATS scanner
-- No cover letter generator
 - No LinkedIn import
 - No resume tailoring
 
@@ -66,8 +53,6 @@ export const KNOWLEDGE_BASE = `
 - 50 AI edits per month
 - PDF and DOCX export
 - 100 job scrapes per month
-- ATS scanner included
-- Cover letter generator included
 - LinkedIn import included
 - No resume tailoring
 
@@ -76,8 +61,6 @@ export const KNOWLEDGE_BASE = `
 - Unlimited AI edits
 - PDF and DOCX export
 - Unlimited job scrapes
-- ATS scanner included
-- Cover letter generator included
 - LinkedIn import included
 - Resume tailoring included
 
@@ -139,7 +122,7 @@ Q: How do I track my applications?
 A: After applying, mark the job as "Applied" in your saved jobs. You can update the status to "Interview Scheduled", "Offer Received", etc.
 
 Q: How does job scraping work?
-A: Our system automatically finds relevant freelance jobs based on your profile skills from Reddit and X. Jobs refresh daily.
+A: Our system automatically finds relevant freelance jobs based on your profile skills from X (Twitter). Jobs refresh daily.
 
 ### Technical Issues
 

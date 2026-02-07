@@ -10,8 +10,7 @@ interface SearchLoadingOverlayProps {
 
 const searchSteps = [
   { text: "Preparing search queries...", duration: 2000 },
-  { text: "Searching Reddit for opportunities...", duration: 4000 },
-  { text: "Searching X for opportunities...", duration: 4000 },
+  { text: "Searching X for opportunities...", duration: 6000 },
   { text: "Filtering results with AI...", duration: 3000 },
   { text: "Matching jobs to your skills...", duration: 2000 },
 ];
