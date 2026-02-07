@@ -18,8 +18,11 @@ export default function ResumePreview({ data, template }: ResumePreviewProps) {
           aspectRatio: '8.5 / 11',
         }}
       >
-        {template === 'modern' && <ModernTemplate data={data} />}
-        {template === 'professional' && <ProfessionalTemplate data={data} />}
+        {template === 'professional' ? (
+          <ProfessionalTemplate data={data} />
+        ) : (
+          <ModernTemplate data={data} />
+        )}
       </div>
     </div>
   );
