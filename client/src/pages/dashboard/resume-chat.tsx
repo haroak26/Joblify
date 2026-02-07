@@ -4,7 +4,8 @@ import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Send, Loader2, Sparkles, MessageSquare, Target, Clock, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Send, Loader2, Sparkles, MessageSquare, Target, Clock, AlertCircle, Eye, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PRESENTATION_CARDS = [
@@ -36,6 +37,8 @@ export default function ResumeChat() {
   const [message, setMessage] = useState("");
   const [showPresentation, setShowPresentation] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [currentSection, setCurrentSection] = useState<string | null>(null);
+  const [hasExtractedData, setHasExtractedData] = useState(false);
   const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasCreatedRef = useRef(false);
@@ -86,9 +89,23 @@ export default function ResumeChat() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/chat/resume/${id}/history`] });
       setMessage("");
+      
+      // Update current section if data was extracted
+      if (data.extractedData) {
+        setHasExtractedData(true);
+      }
+      if (data.sectionComplete) {
+        setCurrentSection(data.sectionComplete);
+      }
+      if (data.sectionComplete === 'complete') {
+        toast({
+          title: "Resume Complete! 🎉",
+          description: "Your resume is ready. You can view and edit it now.",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -197,9 +214,46 @@ export default function ResumeChat() {
   }
 
   const messages = chatHistory?.messages || [];
+  
+  // Helper to get section display name
+  const getSectionDisplayName = (section: string | null) => {
+    if (!section) return null;
+    const sectionMap: Record<string, string> = {
+      personal: "Personal Information",
+      experience: "Work Experience",
+      education: "Education",
+      skills: "Skills",
+      complete: "Complete"
+    };
+    return sectionMap[section] || section;
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
+      {/* Progress indicator */}
+      {currentSection && currentSection !== 'complete' && (
+        <div className="mb-4">
+          <Badge variant="secondary" className="flex items-center gap-2 w-fit">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Building: {getSectionDisplayName(currentSection)}
+          </Badge>
+        </div>
+      )}
+      
+      {/* View Resume button */}
+      {hasExtractedData && id && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            variant="outline"
+            onClick={() => setLocation(`/dashboard/resumes/${id}/edit`)}
+            className="gap-2"
+          >
+            <Eye className="w-4 h-4" />
+            View Resume
+          </Button>
+        </div>
+      )}
+      
       <Card className="flex flex-col h-[600px]">
         <div className="flex-1 p-6 space-y-4 overflow-y-auto">
           {chatLoading ? (

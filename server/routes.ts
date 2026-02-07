@@ -37,7 +37,7 @@ function getPoeClient(): OpenAI {
 
 /**
  * Merges extracted resume data from AI into existing resume data
- * Appends arrays and replaces other values
+ * Appends arrays and merges objects intelligently
  */
 function mergeResumeData(
   currentData: ResumeData,
@@ -51,8 +51,15 @@ function mergeResumeData(
     const typedKey = key as keyof ResumeData;
     const currentValue = currentData[typedKey];
     
+    // For personalInfo, merge object properties
+    if (key === 'personalInfo' && typeof value === 'object' && typeof currentValue === 'object') {
+      (merged.personalInfo as any) = {
+        ...currentValue,
+        ...(value as object),
+      };
+    }
     // For array fields, append new items
-    if (Array.isArray(value) && Array.isArray(currentValue)) {
+    else if (Array.isArray(value) && Array.isArray(currentValue)) {
       (merged[typedKey] as unknown[]) = [...currentValue, ...value];
     }
     // For other fields, replace with new value
@@ -651,43 +658,75 @@ export async function registerRoutes(
   // AI Chat Endpoints
   // ============================================
   
-  const RESUME_CHAT_SYSTEM_PROMPT = `You are a friendly, conversational resume builder assistant. Your goal is to help users create great resumes through a natural, human-like conversation - NOT through forms or structured questions.
+  const RESUME_CHAT_SYSTEM_PROMPT = `You are Joblify's AI Resume Builder Assistant. Your job is to help users build a professional, ATS-optimized resume through natural conversation.
 
-Key principles:
-1. Ask questions naturally, as if you're having a casual conversation with a friend
-2. Ask ONE question at a time - never bombard the user with multiple questions
-3. Listen to what they say and adapt your questions based on their responses
-4. Accept answers in natural language - users can say "I work at Google" instead of filling out company/position fields
-5. Be encouraging, warm, and supportive throughout the conversation
-6. Extract information from their casual responses and structure it behind the scenes
+CRITICAL INSTRUCTIONS:
+1. Extract structured resume data from user responses
+2. Automatically optimize all content for ATS (Applicant Tracking Systems)
+3. Use strong action verbs and quantifiable achievements
+4. Ask intelligent follow-up questions to get details
+5. Build the resume section by section
 
-Conversation flow (but adapt based on what they tell you):
-- Start with: "Hi! Let's build your resume together. What's your name?"
-- Then: "Great! Do you have an email or phone number you'd like to include?"
-- Then: "What kind of work do you do?" or "What's your current or most recent job?"
-- Follow up naturally based on their answers
-- If they mention a job, ask about their responsibilities or achievements
-- Ask about education only if relevant
-- Ask about skills in a conversational way: "What are you really good at?"
+CONVERSATION FLOW:
+- Start: Introduce yourself warmly, ask about their target role or current work
+- Personal Info: Get name, email, phone, location (ask naturally, one at a time)
+- Experience: For EACH job, ask: company, title, dates, key achievements (get 3-5 bullet points)
+  - Follow up: "Can you tell me about a specific achievement or project?"
+  - Follow up: "Any metrics or numbers that show your impact?"
+- Education: School, degree, graduation date (field of study if relevant)
+- Skills: Technical and soft skills relevant to their field
+- Optional: Certifications, projects if they mention them
 
-Important:
-- Sound human, not like a bot
-- Use contractions (I'm, you're, let's)
-- Show personality and enthusiasm
-- Acknowledge what they tell you before moving to the next question
-- If they give detailed answers, extract everything you can from one response
+ATS OPTIMIZATION RULES:
+- Use industry-standard keywords from their field
+- Format bullet points with strong action verbs (Led, Developed, Increased, Managed, Created, Implemented, etc.)
+- Include metrics and numbers when possible (e.g., "Increased sales by 25%")
+- Avoid tables, graphics, unusual fonts in content
+- Use standard section headers (EXPERIENCE, EDUCATION, SKILLS)
+- Ensure dates are in MM/YYYY format
+- Use consistent verb tense (past for old roles, present for current)
 
-When you extract information, respond in this format:
+RESPONSE FORMAT:
+Always respond with valid JSON:
 {
-  "message": "Your natural, conversational response",
+  "message": "Your conversational response to the user",
   "extracted_data": {
-    // Include any resume fields you extracted
-    "personalInfo": {"name": "...", "email": "...", "phone": "..."},
-    "experience": [{"company": "...", "title": "...", "description": ["..."]}]
-  }
+    "personalInfo": {"name": "...", "email": "...", "phone": "...", "location": "..."},
+    "summary": "ATS-optimized professional summary (2-3 sentences highlighting key strengths)",
+    "experience": [
+      {
+        "company": "Company Name",
+        "title": "Job Title",
+        "location": "City, State",
+        "startDate": "MM/YYYY",
+        "endDate": "MM/YYYY or null for current",
+        "description": ["Action verb + achievement + metric", "Led team of 5...", "Increased efficiency by 30%..."]
+      }
+    ],
+    "education": [{
+      "school": "University Name",
+      "degree": "Degree Type",
+      "field": "Field of Study",
+      "graduationDate": "MM/YYYY",
+      "gpa": "3.8" (optional, only if 3.5+)
+    }],
+    "skills": ["Skill 1", "Skill 2", "Skill 3"],
+    "certifications": [{"name": "Cert Name", "issuer": "Issuer", "date": "MM/YYYY"}],
+    "projects": [{"name": "Project", "description": "Brief desc", "technologies": ["Tech1"], "url": "https://..."}]
+  },
+  "section_complete": "personal" | "experience" | "education" | "skills" | "complete",
+  "next_section": "What section comes next"
 }
 
-If the user hasn't provided structured data yet, just respond conversationally without extracted_data.`;
+When section_complete is "complete", let the user know their resume is ready and they can view/edit it.
+
+PERSONALITY:
+- Sound human, not like a bot
+- Use contractions (I'm, you're, let's)
+- Show enthusiasm and support
+- Acknowledge their responses before asking next question
+- If they give detailed answers, extract everything you can`;
+
 
 
   app.post("/api/chat/resume/:id/message", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
@@ -761,9 +800,19 @@ Use this information to personalize your responses and avoid asking for data alr
       
       // Try to parse AI response for extracted data
       let extractedData = null;
+      let sectionComplete = null;
+      let nextSection = null;
+      let displayMessage = aiResponse;
+      
       try {
         const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
         const parsed = JSON.parse(cleanContent);
+        
+        // Extract the message for display
+        if (parsed.message) {
+          displayMessage = parsed.message;
+        }
+        
         if (parsed.extracted_data) {
           extractedData = parsed.extracted_data;
           
@@ -775,14 +824,24 @@ Use this information to personalize your responses and avoid asking for data alr
           await storage.updateResume(resumeId, { resumeData: validatedData });
           console.log('[API] Resume updated with extracted data:', resumeId);
         }
+        
+        // Extract section status
+        if (parsed.section_complete) {
+          sectionComplete = parsed.section_complete;
+        }
+        if (parsed.next_section) {
+          nextSection = parsed.next_section;
+        }
       } catch (parseError) {
-        // If parsing fails, just send the response as-is
+        // If parsing fails, use the response as-is
         console.log('[API] Could not parse AI response for data extraction:', parseError);
       }
       
       res.json({ 
-        response: aiResponse,
+        response: displayMessage,
         extractedData,
+        sectionComplete,
+        nextSection,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
