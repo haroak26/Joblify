@@ -2,11 +2,14 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { skillSchema, normalizePlan } from "@shared/schema";
+import { skillSchema, normalizePlan, resumes, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import PDFDocument from "pdfkit";
 
 let poeClient: OpenAI | null = null;
 
@@ -497,6 +500,313 @@ export async function registerRoutes(
     } catch (error) {
       console.error('[API] Error saving preferences:', error);
       res.status(500).json({ error: "Failed to save preferences" });
+    }
+  });
+
+  // ============================================
+  // Resume Endpoints
+  // ============================================
+
+  // Create a new resume
+  app.post("/api/resumes", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Validate request body
+      const createSchema = z.object({
+        title: z.string().min(1).optional(),
+        template: z.enum(['modern', 'professional']).optional(),
+      });
+
+      const data = createSchema.parse(req.body);
+
+      // Create resume with empty data
+      const [newResume] = await db
+        .insert(resumes)
+        .values({
+          userId,
+          title: data.title || "Untitled Resume",
+          template: data.template || "modern",
+          resumeData: createEmptyResumeData(),
+        })
+        .returning();
+
+      res.status(201).json(newResume);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Resume creation validation error:', error.errors);
+        return res.status(400).json({ 
+          error: "Invalid resume data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      }
+      console.error('[API] Error creating resume:', error);
+      res.status(500).json({ error: "Failed to create resume" });
+    }
+  });
+
+  // Get a single resume by ID
+  app.get("/api/resumes/:id", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, id));
+
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Check if user owns this resume
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "You do not have permission to access this resume" });
+      }
+
+      res.json(resume);
+    } catch (error) {
+      console.error('[API] Error fetching resume:', error);
+      res.status(500).json({ error: "Failed to fetch resume" });
+    }
+  });
+
+  // Update a resume
+  app.patch("/api/resumes/:id", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, id));
+
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Check if user owns this resume
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "You do not have permission to update this resume" });
+      }
+
+      // Validate and update resume
+      const updateSchema = z.object({
+        title: z.string().min(1).optional(),
+        template: z.enum(['modern', 'professional']).optional(),
+        resumeData: resumeDataSchema.optional(),
+      });
+
+      const updates = updateSchema.parse(req.body);
+
+      const [updatedResume] = await db
+        .update(resumes)
+        .set({
+          ...updates,
+          updatedAt: new Date(),
+        })
+        .where(eq(resumes.id, id))
+        .returning();
+
+      res.json(updatedResume);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Resume validation error:', error.errors);
+        return res.status(400).json({ 
+          error: "Invalid resume data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      }
+      console.error('[API] Error updating resume:', error);
+      res.status(500).json({ error: "Failed to update resume" });
+    }
+  });
+
+  // Generate and return PDF for a resume
+  app.post("/api/resumes/:id/pdf", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, id));
+
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Check if user owns this resume
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "You do not have permission to access this resume" });
+      }
+
+      // Create PDF document
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const resumeData = resumeDataSchema.parse(resume.resumeData);
+
+      // Set response headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${resume.title}.pdf"`);
+
+      // Pipe the PDF to response
+      doc.pipe(res);
+
+      // Add content to PDF
+      // Header with name and contact info
+      if (resumeData.personalInfo?.name) {
+        doc.fontSize(24).font('Helvetica-Bold').text(resumeData.personalInfo.name, { align: 'center' });
+        doc.moveDown(0.5);
+      }
+
+      // Contact information
+      const contactInfo = resumeData.personalInfo ? [
+        resumeData.personalInfo.email,
+        resumeData.personalInfo.phone,
+        resumeData.personalInfo.location,
+        resumeData.personalInfo.linkedin,
+        resumeData.personalInfo.website,
+      ].filter(Boolean).join(' | ') : '';
+
+      if (contactInfo) {
+        doc.fontSize(10).font('Helvetica').text(contactInfo, { align: 'center' });
+        doc.moveDown(1);
+      }
+
+      // Summary
+      if (resumeData.summary) {
+        doc.fontSize(14).font('Helvetica-Bold').text('Professional Summary');
+        doc.moveDown(0.3);
+        doc.fontSize(10).font('Helvetica').text(resumeData.summary);
+        doc.moveDown(1);
+      }
+
+      // Experience
+      if (resumeData.experience && resumeData.experience.length > 0) {
+        doc.fontSize(14).font('Helvetica-Bold').text('Experience');
+        doc.moveDown(0.5);
+        
+        resumeData.experience.forEach((exp, index) => {
+          doc.fontSize(12).font('Helvetica-Bold').text(exp.title);
+          doc.fontSize(10).font('Helvetica-Oblique').text(`${exp.company} | ${exp.location}`);
+          const endDateDisplay = exp.endDate || 'Present';
+          doc.text(`${exp.startDate} - ${endDateDisplay}`);
+          doc.moveDown(0.3);
+          
+          if (exp.description && exp.description.length > 0) {
+            exp.description.forEach((bullet) => {
+              doc.font('Helvetica').text(`• ${bullet}`, { indent: 20 });
+            });
+          }
+          
+          if (index < resumeData.experience.length - 1) {
+            doc.moveDown(0.7);
+          }
+        });
+        doc.moveDown(1);
+      }
+
+      // Education
+      if (resumeData.education && resumeData.education.length > 0) {
+        doc.fontSize(14).font('Helvetica-Bold').text('Education');
+        doc.moveDown(0.5);
+        
+        resumeData.education.forEach((edu, index) => {
+          doc.fontSize(12).font('Helvetica-Bold').text(edu.degree);
+          doc.fontSize(10).font('Helvetica').text(`${edu.school} | ${edu.field}`);
+          if (edu.graduationDate) {
+            doc.text(edu.graduationDate);
+          }
+          if (edu.gpa) {
+            doc.text(`GPA: ${edu.gpa}`);
+          }
+          
+          if (index < resumeData.education.length - 1) {
+            doc.moveDown(0.7);
+          }
+        });
+        doc.moveDown(1);
+      }
+
+      // Skills
+      if (resumeData.skills && resumeData.skills.length > 0) {
+        doc.fontSize(14).font('Helvetica-Bold').text('Skills');
+        doc.moveDown(0.3);
+        doc.fontSize(10).font('Helvetica').text(resumeData.skills.join(', '));
+        doc.moveDown(1);
+      }
+
+      // Certifications
+      if (resumeData.certifications && resumeData.certifications.length > 0) {
+        doc.fontSize(14).font('Helvetica-Bold').text('Certifications');
+        doc.moveDown(0.5);
+        
+        resumeData.certifications.forEach((cert) => {
+          doc.fontSize(10).font('Helvetica-Bold').text(cert.name);
+          doc.font('Helvetica').text(`${cert.issuer} | ${cert.date}`);
+          doc.moveDown(0.5);
+        });
+        doc.moveDown(0.5);
+      }
+
+      // Projects
+      if (resumeData.projects && resumeData.projects.length > 0) {
+        doc.fontSize(14).font('Helvetica-Bold').text('Projects');
+        doc.moveDown(0.5);
+        
+        resumeData.projects.forEach((project) => {
+          doc.fontSize(11).font('Helvetica-Bold').text(project.name);
+          doc.fontSize(10).font('Helvetica').text(project.description);
+          if (project.technologies && project.technologies.length > 0) {
+            doc.text(`Technologies: ${project.technologies.join(', ')}`);
+          }
+          if (project.url) {
+            doc.text(`URL: ${project.url}`);
+          }
+          doc.moveDown(0.5);
+        });
+      }
+
+      // Finalize PDF
+      doc.end();
+    } catch (error) {
+      console.error('[API] Error generating PDF:', error);
+      // If headers haven't been sent yet, send error response
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to generate PDF" });
+      }
     }
   });
 

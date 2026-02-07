@@ -347,15 +347,15 @@ export default function Account() {
     <div className="min-h-screen bg-background">
       <div className="p-4 sm:p-6 lg:p-10 space-y-8 max-w-6xl mx-auto">
         {/* Profile Header - Always Visible */}
-        <div className="rounded-lg border-2 bg-background p-8">
+        <div className="rounded-lg border bg-background p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {/* Avatar */}
             <div className="relative">
-              <div className="w-24 h-24 rounded-lg bg-primary flex items-center justify-center text-white text-3xl font-bold border-2 border-primary">
+              <div className="w-24 h-24 rounded-lg bg-primary flex items-center justify-center text-white text-3xl font-bold border border-primary">
                 {getUserInitials()}
               </div>
               {user?.emailVerified && (
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-md bg-green-500 border-2 border-background flex items-center justify-center">
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-md bg-green-500 border border-background flex items-center justify-center">
                   <Check className="w-4 h-4 text-white" />
                 </div>
               )}
@@ -467,7 +467,7 @@ export default function Account() {
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {/* Job Imports */}
-              <div className="border-2 rounded-lg p-4">
+              <div className="border rounded-lg p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -494,7 +494,7 @@ export default function Account() {
               </div>
 
               {/* AI Edits - No limit tracking as limits vary by plan and are not enforced here */}
-              <div className="border-2 rounded-lg p-4">
+              <div className="border rounded-lg p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -516,7 +516,7 @@ export default function Account() {
               </div>
 
               {/* Cover Letters */}
-              <div className="border-2 rounded-lg p-4">
+              <div className="border rounded-lg p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -536,7 +536,7 @@ export default function Account() {
               </div>
 
               {/* Skills */}
-              <div className="border-2 rounded-lg p-4">
+              <div className="border rounded-lg p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -563,7 +563,7 @@ export default function Account() {
               </div>
 
               {/* Schedules */}
-              <div className="border-2 rounded-lg p-4">
+              <div className="border rounded-lg p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -590,7 +590,7 @@ export default function Account() {
               </div>
 
               {/* ATS Scans */}
-              <div className="border-2 rounded-lg p-4">
+              <div className="border rounded-lg p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -612,7 +612,7 @@ export default function Account() {
 
             {/* Premium Benefits Callout */}
             {(isPlus || isUltra || isLifetime) && (
-              <div className="border-2 border-primary/20 bg-primary/5 rounded-lg p-6">
+              <div className="border border-primary/20 bg-primary/5 rounded-lg p-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-primary" />
@@ -662,7 +662,7 @@ export default function Account() {
               return (
                 <div
                   key={plan.id}
-                  className={`border-2 rounded-lg p-6 ${
+                  className={`border rounded-lg p-6 ${
                     isCurrent
                       ? 'border-primary bg-primary/10'
                       : 'border-border bg-background'
@@ -680,7 +680,7 @@ export default function Account() {
                           {isCurrent && (
                             <Badge
                               variant="secondary"
-                              className="h-6 rounded-md border-2 border-primary/30 bg-primary/20 px-3 text-xs font-bold uppercase tracking-wider text-primary"
+                              className="h-6 rounded-md border border-primary/30 bg-primary/20 px-3 text-xs font-bold uppercase tracking-wider text-primary"
                             >
                               {isCancelled ? "Cancelling" : "Current"}
                             </Badge>
@@ -754,7 +754,7 @@ export default function Account() {
               <p className="text-muted-foreground">Manage your personal data and privacy settings</p>
             </div>
 
-            <div className="border-2 rounded-lg p-6">
+            <div className="border rounded-lg p-6">
               <div className="space-y-6">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -767,7 +767,7 @@ export default function Account() {
                 </div>
                 <div className="space-y-4">
                   {/* PDF Data Export */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border-2 bg-muted/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border bg-muted/50">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Download className="w-4 h-4 text-primary" />
@@ -893,7 +893,7 @@ export default function Account() {
             </div>
 
             {/* Danger Zone */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 rounded-lg border-2 border-destructive/20 bg-destructive/5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 rounded-lg border border-destructive/20 bg-destructive/5">
               <div className="space-y-2">
                 <p className="text-lg font-bold text-destructive flex items-center gap-2">
                   <Shield className="w-5 h-5" />
@@ -1001,7 +1001,7 @@ function PasswordChangeSection() {
   };
 
   return (
-    <div className="border-2 rounded-lg p-6">
+    <div className="border rounded-lg p-6">
       <div className="flex items-center gap-2 mb-4">
         <Lock className="w-5 h-5" />
         <h3 className="text-lg font-semibold">Change Password</h3>
@@ -1168,7 +1168,7 @@ function TwoFactorAuthSection() {
   });
 
   return (
-    <div className="border-2 rounded-lg p-6">
+    <div className="border rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5" />
@@ -1193,7 +1193,7 @@ function TwoFactorAuthSection() {
 
       {showSetup && qrCode && !backupCodes.length && (
         <div className="space-y-4">
-          <div className="border-2 rounded-lg p-4 bg-muted/50">
+          <div className="border rounded-lg p-4 bg-muted/50">
             <p className="text-sm font-medium mb-2">1. Scan this QR code with your authenticator app:</p>
             <img src={qrCode} alt="2FA QR Code" className="mx-auto w-48 h-48" />
           </div>
@@ -1215,7 +1215,7 @@ function TwoFactorAuthSection() {
       )}
 
       {backupCodes.length > 0 && (
-        <div className="border-2 border-yellow-500/50 rounded-lg p-4 bg-yellow-500/10 space-y-3">
+        <div className="border border-yellow-500/50 rounded-lg p-4 bg-yellow-500/10 space-y-3">
           <div className="flex items-start gap-2">
             <Shield className="w-5 h-5 text-yellow-700 mt-0.5" />
             <div className="flex-1">
@@ -1250,7 +1250,7 @@ function TwoFactorAuthSection() {
       )}
 
       {showDisable && (
-        <div className="space-y-4 mt-4 border-2 rounded-lg p-4 bg-muted/50">
+        <div className="space-y-4 mt-4 border rounded-lg p-4 bg-muted/50">
           <p className="text-sm font-medium">Enter your password to disable 2FA:</p>
           <Input
             type="password"
@@ -1310,7 +1310,7 @@ function EmailPreferencesSection() {
   };
 
   return (
-    <div className="border-2 rounded-lg p-6">
+    <div className="border rounded-lg p-6">
       <div className="flex items-center gap-2 mb-4">
         <Mail className="w-5 h-5" />
         <h3 className="text-lg font-semibold">Email Preferences</h3>
@@ -1387,7 +1387,7 @@ function NotificationSettingsSection() {
   };
 
   return (
-    <div className="border-2 rounded-lg p-6">
+    <div className="border rounded-lg p-6">
       <div className="flex items-center gap-2 mb-4">
         <Bell className="w-5 h-5" />
         <h3 className="text-lg font-semibold">Notification Settings</h3>

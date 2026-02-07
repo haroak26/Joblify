@@ -30,6 +30,7 @@ import JobDetails from "@/pages/dashboard/job-details";
 import Generator from "@/pages/dashboard/generator";
 import Schedules from "@/pages/dashboard/schedules";
 import Account from "@/pages/dashboard/account";
+import ResumeBuilder from "@/pages/dashboard/resume-builder";
 
 
 function Router() {
@@ -94,6 +95,11 @@ function Router() {
           <DashboardLayout>
             <Account />
           </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resume-builder/:id">
+        <ProtectedRoute>
+          <ResumeBuilder />
         </ProtectedRoute>
       </Route>
 

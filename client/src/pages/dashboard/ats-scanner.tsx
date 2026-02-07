@@ -122,7 +122,7 @@ export default function AtsScanner() {
               </CleanTabsContent>
               
               <CleanTabsContent value="upload" className="space-y-3">
-                <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors">
+                <div className="border border-dashed rounded-lg p-6 text-center hover:border-primary transition-colors">
                   <input
                     id="resume-file-upload"
                     type="file"

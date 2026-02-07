@@ -1,15 +1,39 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Scan, Mail, ArrowRight, Briefcase, Target } from "lucide-react";
+import { Scan, Mail, ArrowRight, Briefcase, Target, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardHome() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const { data: jobsData, isLoading: jobsLoading } = useQuery<{ jobs: any[] }>({
     queryKey: ["/api/jobs"],
+  });
+
+  const createResumeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/resumes", {
+        title: "My Resume",
+        template: "modern",
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setLocation(`/dashboard/resume-builder/${data.id}`);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create resume. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
   
   // Ensure jobs is always an array
@@ -116,6 +140,27 @@ export default function DashboardHome() {
                 Create Letter <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Resume Builder
+            </CardTitle>
+            <CardDescription>
+              Create ATS-optimized resumes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              className="w-full"
+              onClick={() => createResumeMutation.mutate()}
+              disabled={createResumeMutation.isPending}
+            >
+              {createResumeMutation.isPending ? "Creating..." : "Build Resume"} <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </CardContent>
         </Card>
 
