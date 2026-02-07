@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { skillSchema, PLAN_LIMITS, normalizePlan, resumeDataSchema } from "@shared/schema";
 import type { ResumeData } from "@shared/schema";
-import { requireAuth, requireVerifiedEmail } from "./auth";
+import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import multer from 'multer';
@@ -12,6 +12,7 @@ import PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
+import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 
 let poeClient: OpenAI | null = null;
 
@@ -2964,6 +2965,254 @@ Return ONLY the cover letter text, no JSON or markdown formatting.`;
           code: "LINKEDIN_IMPORT_ERROR"
         });
       }
+    }
+  });
+
+  // ============================================
+  // Password Change Endpoint
+  // ============================================
+  app.post("/api/user/change-password", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Current password and new password are required" });
+      }
+
+      // Validate new password strength
+      const passwordCheck = isStrongPassword(newPassword);
+      if (!passwordCheck.valid) {
+        return res.status(400).json({ error: passwordCheck.message });
+      }
+
+      // Get user from database
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Verify current password
+      const isValid = await comparePasswords(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(400).json({ error: "Current password is incorrect" });
+      }
+
+      // Hash and update new password
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(userId, { password: hashedPassword });
+
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error) {
+      console.error('[API] Error changing password:', error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
+  // ============================================
+  // 2FA Endpoints
+  // ============================================
+  
+  // Get 2FA status
+  app.get("/api/user/2fa/status", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        enabled: user.twoFactorEnabled,
+        hasBackupCodes: Array.isArray(user.backupCodes) && user.backupCodes.length > 0,
+      });
+    } catch (error) {
+      console.error('[API] Error getting 2FA status:', error);
+      res.status(500).json({ error: "Failed to get 2FA status" });
+    }
+  });
+
+  // Setup 2FA - generate secret and QR code
+  app.post("/api/user/2fa/setup", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Generate new 2FA secret
+      const { encryptedSecret, otpauthUrl } = generate2FASecret(user.email);
+      
+      // Generate QR code
+      const qrCode = await generateQRCode(otpauthUrl);
+
+      // Store encrypted secret temporarily (not enabled yet)
+      await storage.updateUser(userId, {
+        twoFactorSecret: encryptedSecret,
+        twoFactorEnabled: false,
+      });
+
+      res.json({
+        qrCode,
+        secret: encryptedSecret,
+      });
+    } catch (error) {
+      console.error('[API] Error setting up 2FA:', error);
+      res.status(500).json({ error: "Failed to setup 2FA" });
+    }
+  });
+
+  // Verify and enable 2FA
+  app.post("/api/user/2fa/verify", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ error: "Verification token is required" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.twoFactorSecret) {
+        return res.status(400).json({ error: "2FA setup not initiated" });
+      }
+
+      // Verify the token
+      const isValid = verify2FAToken(user.twoFactorSecret, token);
+      if (!isValid) {
+        return res.status(400).json({ error: "Invalid verification code" });
+      }
+
+      // Generate backup codes
+      const { codes, encryptedCodes } = generateBackupCodes(10);
+
+      // Enable 2FA and store backup codes
+      await storage.updateUser(userId, {
+        twoFactorEnabled: true,
+        backupCodes: encryptedCodes,
+      });
+
+      res.json({
+        success: true,
+        backupCodes: codes,
+        message: "2FA enabled successfully",
+      });
+    } catch (error) {
+      console.error('[API] Error verifying 2FA:', error);
+      res.status(500).json({ error: "Failed to verify 2FA" });
+    }
+  });
+
+  // Disable 2FA
+  app.post("/api/user/2fa/disable", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { password } = req.body;
+      if (!password) {
+        return res.status(400).json({ error: "Password is required to disable 2FA" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Verify password
+      const isValid = await comparePasswords(password, user.password);
+      if (!isValid) {
+        return res.status(400).json({ error: "Incorrect password" });
+      }
+
+      // Disable 2FA and clear secret and backup codes
+      await storage.updateUser(userId, {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        backupCodes: [],
+      });
+
+      res.json({ success: true, message: "2FA disabled successfully" });
+    } catch (error) {
+      console.error('[API] Error disabling 2FA:', error);
+      res.status(500).json({ error: "Failed to disable 2FA" });
+    }
+  });
+
+  // ============================================
+  // User Preferences Endpoints
+  // ============================================
+  
+  // Get user preferences
+  app.get("/api/user/preferences", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        emailNotifications: user.emailNotifications ?? true,
+        marketingEmails: user.marketingEmails ?? true,
+        weeklySummaryEmails: user.weeklySummaryEmails ?? true,
+        inAppNotifications: user.inAppNotifications ?? true,
+      });
+    } catch (error) {
+      console.error('[API] Error getting preferences:', error);
+      res.status(500).json({ error: "Failed to get preferences" });
+    }
+  });
+
+  // Save user preferences
+  app.post("/api/user/preferences", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const {
+        emailNotifications,
+        marketingEmails,
+        weeklySummaryEmails,
+        inAppNotifications,
+      } = req.body;
+
+      // Update preferences
+      await storage.updateUser(userId, {
+        emailNotifications: emailNotifications ?? undefined,
+        marketingEmails: marketingEmails ?? undefined,
+        weeklySummaryEmails: weeklySummaryEmails ?? undefined,
+        inAppNotifications: inAppNotifications ?? undefined,
+      });
+
+      res.json({ success: true, message: "Preferences updated successfully" });
+    } catch (error) {
+      console.error('[API] Error saving preferences:', error);
+      res.status(500).json({ error: "Failed to save preferences" });
     }
   });
 

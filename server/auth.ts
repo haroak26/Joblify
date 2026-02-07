@@ -22,20 +22,20 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
+export async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
   const [hashedPassword, salt] = stored.split(".");
   const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
   const suppliedPasswordBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
   return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
 }
 
-function isStrongPassword(password: string): { valid: boolean; message?: string } {
+export function isStrongPassword(password: string): { valid: boolean; message?: string } {
   if (password.length < 8) {
     return { valid: false, message: "Password must be at least 8 characters" };
   }

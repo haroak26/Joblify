@@ -20,6 +20,11 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret
   backupCodes: jsonb("backup_codes").default([]), // Array of encrypted backup codes
+  // User Preferences
+  emailNotifications: boolean("email_notifications").notNull().default(true),
+  marketingEmails: boolean("marketing_emails").notNull().default(true),
+  weeklySummaryEmails: boolean("weekly_summary_emails").notNull().default(true),
+  inAppNotifications: boolean("in_app_notifications").notNull().default(true),
 });
 
 // Deleted accounts tracker for abuse prevention

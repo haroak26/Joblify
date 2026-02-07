@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CleanTabs, CleanTabsContent, CleanTabsList, CleanTabsTrigger } from "@/components/ui/clean-tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell } from "lucide-react";
 import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -66,6 +69,18 @@ interface UserResponse {
     email: string;
     emailVerified: boolean;
   };
+}
+
+interface TwoFAStatus {
+  enabled: boolean;
+  hasBackupCodes: boolean;
+}
+
+interface UserPreferences {
+  emailNotifications: boolean;
+  marketingEmails: boolean;
+  weeklySummaryEmails: boolean;
+  inAppNotifications: boolean;
 }
 
 const plans = [
@@ -417,34 +432,17 @@ export default function Account() {
               <p className="text-muted-foreground">Manage your account preferences and security</p>
             </div>
 
-            <div className="border-2 rounded-lg p-6">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Coming Soon</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Additional settings will be available here, including:
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Shield className="w-4 h-4" />
-                    <span>Password change</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Shield className="w-4 h-4" />
-                    <span>Two-factor authentication</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Settings className="w-4 h-4" />
-                    <span>Email preferences</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Settings className="w-4 h-4" />
-                    <span>Notification settings</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Password Change Section */}
+            <PasswordChangeSection />
+
+            {/* Two-Factor Authentication Section */}
+            <TwoFactorAuthSection />
+
+            {/* Email Preferences Section */}
+            <EmailPreferencesSection />
+
+            {/* Notification Settings Section */}
+            <NotificationSettingsSection />
           </CleanTabsContent>
 
           {/* Usage Tab */}
@@ -927,6 +925,492 @@ export default function Account() {
             </div>
           </CleanTabsContent>
         </CleanTabs>
+      </div>
+    </div>
+  );
+}
+
+// Password Change Section Component
+function PasswordChangeSection() {
+  const { toast } = useToast();
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const passwordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (password.length >= 12) strength += 15;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 20;
+    if (/\d/.test(password)) strength += 20;
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 20;
+    return Math.min(strength, 100);
+  };
+
+  const strength = passwordStrength(newPassword);
+  const strengthColor = strength < 40 ? "bg-red-500" : strength < 70 ? "bg-yellow-500" : "bg-green-500";
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/change-password", {
+        currentPassword,
+        newPassword,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+    changePasswordMutation.mutate();
+  };
+
+  return (
+    <div className="border-2 rounded-lg p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Lock className="w-5 h-5" />
+        <h3 className="text-lg font-semibold">Change Password</h3>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="current-password">Current Password</Label>
+          <div className="relative">
+            <Input
+              id="current-password"
+              type={showCurrentPassword ? "text" : "password"}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-password">New Password</Label>
+          <div className="relative">
+            <Input
+              id="new-password"
+              type={showNewPassword ? "text" : "password"}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword(!showNewPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {newPassword && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Progress value={strength} className="h-2 flex-1" />
+                <span className="text-xs text-muted-foreground w-16">
+                  {strength < 40 ? "Weak" : strength < 70 ? "Medium" : "Strong"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirm-password">Confirm New Password</Label>
+          <div className="relative">
+            <Input
+              id="confirm-password"
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+        <Button type="submit" disabled={changePasswordMutation.isPending}>
+          {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+// Two-Factor Authentication Section Component
+function TwoFactorAuthSection() {
+  const { toast } = useToast();
+  const [qrCode, setQrCode] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [disablePassword, setDisablePassword] = useState("");
+  const [showSetup, setShowSetup] = useState(false);
+  const [showDisable, setShowDisable] = useState(false);
+
+  const { data: twoFAStatus, refetch: refetchStatus } = useQuery<TwoFAStatus>({
+    queryKey: ["/api/user/2fa/status"],
+  });
+
+  const setupMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/2fa/setup");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setQrCode(data.qrCode);
+      setShowSetup(true);
+      toast({
+        title: "Success",
+        description: "Scan the QR code with your authenticator app",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/2fa/verify", { token: verificationCode });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setBackupCodes(data.backupCodes);
+      refetchStatus();
+      toast({
+        title: "Success",
+        description: "2FA enabled successfully. Save your backup codes!",
+      });
+      setVerificationCode("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const disableMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/2fa/disable", { password: disablePassword });
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowDisable(false);
+      setShowSetup(false);
+      setQrCode("");
+      setBackupCodes([]);
+      setDisablePassword("");
+      refetchStatus();
+      toast({
+        title: "Success",
+        description: "2FA disabled successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <div className="border-2 rounded-lg p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5" />
+          <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
+        </div>
+        {twoFAStatus?.enabled && (
+          <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20">
+            <Check className="w-3 h-3 mr-1" />
+            Enabled
+          </Badge>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Add an extra layer of security to your account
+      </p>
+
+      {!twoFAStatus?.enabled && !showSetup && (
+        <Button onClick={() => setupMutation.mutate()} disabled={setupMutation.isPending}>
+          {setupMutation.isPending ? "Setting up..." : "Enable 2FA"}
+        </Button>
+      )}
+
+      {showSetup && qrCode && !backupCodes.length && (
+        <div className="space-y-4">
+          <div className="border-2 rounded-lg p-4 bg-muted/50">
+            <p className="text-sm font-medium mb-2">1. Scan this QR code with your authenticator app:</p>
+            <img src={qrCode} alt="2FA QR Code" className="mx-auto w-48 h-48" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="verification-code">2. Enter the 6-digit code from your app:</Label>
+            <Input
+              id="verification-code"
+              type="text"
+              maxLength={6}
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="000000"
+            />
+          </div>
+          <Button onClick={() => verifyMutation.mutate()} disabled={verifyMutation.isPending || verificationCode.length !== 6}>
+            {verifyMutation.isPending ? "Verifying..." : "Verify and Enable"}
+          </Button>
+        </div>
+      )}
+
+      {backupCodes.length > 0 && (
+        <div className="border-2 border-yellow-500/50 rounded-lg p-4 bg-yellow-500/10 space-y-3">
+          <div className="flex items-start gap-2">
+            <Shield className="w-5 h-5 text-yellow-700 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-yellow-700">Save Your Backup Codes</p>
+              <p className="text-sm text-yellow-700/80">Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+            {backupCodes.map((code, i) => (
+              <div key={i} className="bg-background border rounded px-2 py-1 text-center">
+                {code}
+              </div>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              navigator.clipboard.writeText(backupCodes.join("\n"));
+              toast({ title: "Copied!", description: "Backup codes copied to clipboard" });
+            }}
+          >
+            Copy All Codes
+          </Button>
+        </div>
+      )}
+
+      {twoFAStatus?.enabled && !showDisable && (
+        <Button variant="outline" onClick={() => setShowDisable(true)}>
+          Disable 2FA
+        </Button>
+      )}
+
+      {showDisable && (
+        <div className="space-y-4 mt-4 border-2 rounded-lg p-4 bg-muted/50">
+          <p className="text-sm font-medium">Enter your password to disable 2FA:</p>
+          <Input
+            type="password"
+            value={disablePassword}
+            onChange={(e) => setDisablePassword(e.target.value)}
+            placeholder="Password"
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => disableMutation.mutate()}
+              disabled={disableMutation.isPending || !disablePassword}
+            >
+              {disableMutation.isPending ? "Disabling..." : "Disable 2FA"}
+            </Button>
+            <Button variant="outline" onClick={() => setShowDisable(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Email Preferences Section Component
+function EmailPreferencesSection() {
+  const { toast } = useToast();
+
+  const { data: preferences, refetch } = useQuery<UserPreferences>({
+    queryKey: ["/api/user/preferences"],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (updates: Record<string, boolean>) => {
+      const response = await apiRequest("POST", "/api/user/preferences", updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        title: "Success",
+        description: "Email preferences updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleToggle = (key: string, value: boolean) => {
+    updateMutation.mutate({ [key]: value });
+  };
+
+  return (
+    <div className="border-2 rounded-lg p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Mail className="w-5 h-5" />
+        <h3 className="text-lg font-semibold">Email Preferences</h3>
+      </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="font-medium">Notification Emails</p>
+            <p className="text-sm text-muted-foreground">Receive emails about important account activities</p>
+          </div>
+          <Switch
+            checked={preferences?.emailNotifications ?? true}
+            onCheckedChange={(checked) => handleToggle("emailNotifications", checked)}
+          />
+        </div>
+        <div className="h-px bg-border" />
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="font-medium">Marketing Emails</p>
+            <p className="text-sm text-muted-foreground">Receive updates about new features and promotions</p>
+          </div>
+          <Switch
+            checked={preferences?.marketingEmails ?? true}
+            onCheckedChange={(checked) => handleToggle("marketingEmails", checked)}
+          />
+        </div>
+        <div className="h-px bg-border" />
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="font-medium">Weekly Summary Emails</p>
+            <p className="text-sm text-muted-foreground">Get a weekly digest of your activity and opportunities</p>
+          </div>
+          <Switch
+            checked={preferences?.weeklySummaryEmails ?? true}
+            onCheckedChange={(checked) => handleToggle("weeklySummaryEmails", checked)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Notification Settings Section Component
+function NotificationSettingsSection() {
+  const { toast } = useToast();
+
+  const { data: preferences, refetch } = useQuery<UserPreferences>({
+    queryKey: ["/api/user/preferences"],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (updates: Record<string, boolean>) => {
+      const response = await apiRequest("POST", "/api/user/preferences", updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({
+        title: "Success",
+        description: "Notification settings updated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleToggle = (key: string, value: boolean) => {
+    updateMutation.mutate({ [key]: value });
+  };
+
+  return (
+    <div className="border-2 rounded-lg p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Bell className="w-5 h-5" />
+        <h3 className="text-lg font-semibold">Notification Settings</h3>
+      </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="font-medium">In-App Notifications</p>
+            <p className="text-sm text-muted-foreground">Show notifications within the application</p>
+          </div>
+          <Switch
+            checked={preferences?.inAppNotifications ?? true}
+            onCheckedChange={(checked) => handleToggle("inAppNotifications", checked)}
+          />
+        </div>
+        <div className="h-px bg-border" />
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="font-medium">Push Notifications</p>
+            <p className="text-sm text-muted-foreground">Browser push notifications (not yet supported)</p>
+          </div>
+          <Switch disabled checked={false} />
+        </div>
       </div>
     </div>
   );
