@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Download, Save, Loader2, Plus, Trash2, User, Briefcase,
   GraduationCap, Wrench, Award, FolderOpen, FileText, Mail,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ResumeEditorSkeleton } from "@/components/loading-skeleton";
+import { TEMPLATE_COMPONENTS } from "@/components/resume-templates";
+import { RESUME_TEMPLATES, type ResumeTemplateId } from "@shared/schema";
 
 interface Experience {
   company: string;
@@ -71,6 +74,7 @@ export default function ResumeEditor() {
   const [downloading, setDownloading] = useState(false);
   const [activeSection, setActiveSection] = useState("personal");
   const [newSkill, setNewSkill] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplateId>("modern");
 
   const { data: resume, isLoading } = useQuery<any>({
     queryKey: [`/api/resumes/${id}`],
@@ -250,9 +254,16 @@ export default function ResumeEditor() {
     updateMutation.mutate({ resumeData: { ...data, experience: exp } });
   };
 
+  useEffect(() => {
+    if (resume?.template && resume.template !== selectedTemplate) {
+      setSelectedTemplate(resume.template as ResumeTemplateId);
+    }
+  }, [resume?.template, selectedTemplate]);
+
   if (isLoading || !resume) return <ResumeEditorSkeleton />;
 
   const resumeData = getResumeData();
+  const TemplateComponent = TEMPLATE_COMPONENTS[selectedTemplate] ?? TEMPLATE_COMPONENTS.modern;
   const sections = [
     { id: "personal", label: "Personal Info", icon: User },
     { id: "summary", label: "Summary", icon: FileText },
@@ -266,7 +277,7 @@ export default function ResumeEditor() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
         <div className="flex-1">
           <Input
             defaultValue={resume.title}
@@ -279,7 +290,25 @@ export default function ResumeEditor() {
             }}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Select
+            value={selectedTemplate}
+            onValueChange={(value: ResumeTemplateId) => {
+              setSelectedTemplate(value);
+              updateMutation.mutate({ template: value });
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[220px]">
+              <SelectValue placeholder="Choose template" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(RESUME_TEMPLATES).map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" onClick={downloadPdf} disabled={downloading}>
             {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             {downloading ? "Generating..." : "Download PDF"}
@@ -681,145 +710,8 @@ export default function ResumeEditor() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-white border rounded-lg p-6 text-black text-xs leading-relaxed space-y-3 min-h-[500px] shadow-inner overflow-y-auto max-h-[700px]">
-                  {/* Name */}
-                  <div className="text-center">
-                    <h1 className="text-lg font-bold text-gray-900">
-                      {resumeData.personalInfo.name || "Your Name"}
-                    </h1>
-                    {/* Contact line */}
-                    {(resumeData.personalInfo.email || resumeData.personalInfo.phone || resumeData.personalInfo.location) && (
-                      <p className="text-gray-600 text-[10px] mt-1">
-                        {[resumeData.personalInfo.email, resumeData.personalInfo.phone, resumeData.personalInfo.location]
-                          .filter(Boolean).join(" • ")}
-                      </p>
-                    )}
-                    {(resumeData.personalInfo.linkedin || resumeData.personalInfo.website) && (
-                      <p className="text-gray-500 text-[10px]">
-                        {[resumeData.personalInfo.linkedin, resumeData.personalInfo.website]
-                          .filter(Boolean).join(" • ")}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Summary */}
-                  {resumeData.summary && (
-                    <div>
-                      <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1 mb-1">
-                        Summary
-                      </h2>
-                      <p className="text-gray-700">{resumeData.summary}</p>
-                    </div>
-                  )}
-
-                  {/* Experience */}
-                  {resumeData.experience.length > 0 && (
-                    <div>
-                      <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1 mb-1">
-                        Experience
-                      </h2>
-                      {resumeData.experience.map((exp, i) => (
-                        <div key={i} className="mb-2">
-                          <div className="flex justify-between items-baseline">
-                            <span className="font-semibold text-gray-900">{exp.title || "Job Title"}</span>
-                            <span className="text-gray-500 text-[9px]">
-                              {exp.startDate}{exp.startDate && " – "}{exp.endDate || (exp.startDate ? "Present" : "")}
-                            </span>
-                          </div>
-                          <div className="text-gray-600 text-[10px]">
-                            {exp.company}{exp.company && exp.location && " | "}{exp.location}
-                          </div>
-                          {exp.description.filter(Boolean).length > 0 && (
-                            <ul className="list-disc list-outside ml-3 mt-0.5 space-y-0.5">
-                              {exp.description.filter(Boolean).map((desc, j) => (
-                                <li key={j} className="text-gray-700">{desc}</li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Education */}
-                  {resumeData.education.length > 0 && (
-                    <div>
-                      <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1 mb-1">
-                        Education
-                      </h2>
-                      {resumeData.education.map((edu, i) => (
-                        <div key={i} className="mb-1.5">
-                          <div className="flex justify-between items-baseline">
-                            <span className="font-semibold text-gray-900">
-                              {edu.degree}{edu.degree && edu.field && " in "}{edu.field}
-                            </span>
-                            <span className="text-gray-500 text-[9px]">{edu.graduationDate}</span>
-                          </div>
-                          <div className="text-gray-600 text-[10px]">
-                            {edu.school}
-                            {edu.gpa && ` • GPA: ${edu.gpa}`}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Skills */}
-                  {resumeData.skills.length > 0 && (
-                    <div>
-                      <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1 mb-1">
-                        Skills
-                      </h2>
-                      <p className="text-gray-700">{resumeData.skills.join(", ")}</p>
-                    </div>
-                  )}
-
-                  {/* Certifications */}
-                  {resumeData.certifications && resumeData.certifications.length > 0 && (
-                    <div>
-                      <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1 mb-1">
-                        Certifications
-                      </h2>
-                      {resumeData.certifications.map((cert, i) => (
-                        <div key={i} className="text-gray-700">
-                          <span className="font-medium">{cert.name}</span>
-                          {cert.issuer && ` – ${cert.issuer}`}
-                          {cert.date && ` (${cert.date})`}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Projects */}
-                  {resumeData.projects && resumeData.projects.length > 0 && (
-                    <div>
-                      <h2 className="text-[11px] font-bold uppercase tracking-wider text-gray-800 border-b border-gray-300 pb-1 mb-1">
-                        Projects
-                      </h2>
-                      {resumeData.projects.map((proj, i) => (
-                        <div key={i} className="mb-1.5">
-                          <span className="font-semibold text-gray-900">{proj.name}</span>
-                          {proj.description && <p className="text-gray-700">{proj.description}</p>}
-                          {proj.technologies.length > 0 && (
-                            <p className="text-gray-500 text-[9px]">
-                              Tech: {proj.technologies.join(", ")}
-                            </p>
-                          )}
-                          {proj.url && (
-                            <p className="text-blue-600 text-[9px]">{proj.url}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Empty state */}
-                  {!resumeData.summary && resumeData.experience.length === 0 && resumeData.education.length === 0 && resumeData.skills.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-                      <FileText className="w-10 h-10 mb-2" />
-                      <p className="text-sm">Start filling in your details to see the preview</p>
-                    </div>
-                  )}
+                <div className="bg-white border rounded-lg p-4 text-black shadow-inner overflow-y-auto max-h-[700px] min-h-[500px]">
+                  <TemplateComponent resumeData={resumeData} />
                 </div>
               </CardContent>
             </Card>
