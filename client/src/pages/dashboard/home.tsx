@@ -6,6 +6,8 @@ import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import ResumeCreationModal from "@/components/ResumeCreationModal";
 
 interface Resume {
   id: string;
@@ -25,30 +27,13 @@ export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [showCreationModal, setShowCreationModal] = useState(false);
 
   const { data: resumesData, isLoading: resumesLoading } = useQuery<ResumesResponse>({
     queryKey: ["/api/resumes"],
   });
 
-  const createResumeMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/resumes", {
-        title: "My Resume",
-        template: "modern",
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setLocation(`/dashboard/resume-builder/${data.id}`);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create resume. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  // Remove createResumeMutation as it's now in the modal
   
   // Ensure resumes is always an array
   const resumes = Array.isArray(resumesData?.resumes) ? resumesData.resumes : [];
@@ -118,10 +103,9 @@ export default function DashboardHome() {
           <CardContent>
             <Button
               className="w-full"
-              onClick={() => createResumeMutation.mutate()}
-              disabled={createResumeMutation.isPending}
+              onClick={() => setShowCreationModal(true)}
             >
-              {createResumeMutation.isPending ? "Creating..." : "Build Resume"} <ArrowRight className="ml-2 h-4 w-4" />
+              Build Resume <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>
         </Card>
@@ -158,6 +142,12 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Resume Creation Modal */}
+      <ResumeCreationModal 
+        open={showCreationModal} 
+        onOpenChange={setShowCreationModal}
+      />
     </div>
   );
 }
