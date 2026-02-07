@@ -13,7 +13,6 @@ import {
   Star,
   CheckCircle2
 } from "lucide-react";
-import { SiReddit } from "react-icons/si";
 import { useAuth } from "@/hooks/use-auth";
 
 const features = [
@@ -24,8 +23,8 @@ const features = [
   },
   {
     icon: Search,
-    title: "ATS Scanner",
-    description: "Optimize your resume for applicant tracking systems with AI-powered analysis."
+    title: "Job Search",
+    description: "Find relevant freelance opportunities that match your skills automatically."
   },
   {
     icon: Zap,
@@ -38,7 +37,7 @@ const benefits = [
   "Build resumes through natural conversation",
   "AI suggests improvements and keywords",
   "Export as PDF or DOCX instantly",
-  "ATS optimization for better job matches",
+  "Find freelance jobs that match your skills",
 ];
 
 export default function Landing() {
