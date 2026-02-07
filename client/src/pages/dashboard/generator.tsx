@@ -148,7 +148,7 @@ export default function Generator() {
           onClick={() => generateMutation.mutate()}
           disabled={generateMutation.isPending || !selectedJob || !hasProfile}
           size="lg"
-          className="w-full h-12 text-lg font-semibold shadow-md"
+          className="w-full h-12 text-lg font-semibold"
           data-testid="button-generate"
         >
           {generateMutation.isPending ? (
@@ -181,7 +181,7 @@ export default function Generator() {
               {copied ? "Copied" : "Copy Message"}
             </Button>
           </div>
-          <div className="p-8 bg-muted/30 border rounded-xl whitespace-pre-wrap text-lg leading-relaxed shadow-inner" data-testid="text-generated-message">
+          <div className="p-8 bg-muted/30 border rounded-xl whitespace-pre-wrap text-lg leading-relaxed" data-testid="text-generated-message">
             {generatedMessage}
           </div>
         </div>

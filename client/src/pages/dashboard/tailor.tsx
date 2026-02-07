@@ -173,11 +173,11 @@ export default function TailorPage() {
         {/* Job Selection */}
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
+            <h3 className="text-large font-semibold flex items-center gap-2 mb-1">
               <Briefcase className="w-5 h-5" />
               Select Job
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               Choose the job you want to tailor your application for
             </p>
           </div>
@@ -190,9 +190,9 @@ export default function TailorPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {jobsLoading ? (
-                    <div className="p-2 text-sm text-muted-foreground">Loading jobs...</div>
+                    <div className="p-2 text-small text-muted-foreground">Loading jobs...</div>
                   ) : jobs.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground">
+                    <div className="p-2 text-small text-muted-foreground">
                       No jobs found. Save some jobs first.
                     </div>
                   ) : (
@@ -202,7 +202,7 @@ export default function TailorPage() {
                         <SelectItem key={job.id} value={job.id}>
                           <div className="flex flex-col">
                             <span className="font-medium">{job.title}</span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-small text-muted-foreground">
                               {job.company || job.author}
                             </span>
                           </div>
@@ -216,7 +216,7 @@ export default function TailorPage() {
             {selectedJob && (
               <div className="p-4 border rounded-lg bg-muted/50 space-y-2">
                 <h4 className="font-semibold">{selectedJob.title}</h4>
-                <p className="text-sm text-muted-foreground line-clamp-3">
+                <p className="text-small text-muted-foreground line-clamp-3">
                   {selectedJob.description}
                 </p>
                 {selectedJob.budget && (
@@ -230,11 +230,11 @@ export default function TailorPage() {
         {/* Resume Selection */}
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
+            <h3 className="text-large font-semibold flex items-center gap-2 mb-1">
               <FileText className="w-5 h-5" />
               Select Resume
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-small text-muted-foreground">
               Choose the resume you want to tailor
             </p>
           </div>
@@ -247,9 +247,9 @@ export default function TailorPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {resumesLoading ? (
-                    <div className="p-2 text-sm text-muted-foreground">Loading resumes...</div>
+                    <div className="p-2 text-small text-muted-foreground">Loading resumes...</div>
                   ) : resumes.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground">
+                    <div className="p-2 text-small text-muted-foreground">
                       No resumes found. Create one first.
                     </div>
                   ) : (
@@ -318,7 +318,7 @@ export default function TailorPage() {
                     </div>
                     <div className="p-4 border rounded-lg bg-muted/50">
                       <h3 className="font-semibold mb-2">{tailoredResume.title}</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-small text-muted-foreground">
                         This resume has been optimized with keywords and relevant experience highlighted for the selected job.
                       </p>
                     </div>
