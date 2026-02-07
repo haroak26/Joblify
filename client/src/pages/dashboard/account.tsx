@@ -484,7 +484,7 @@ export default function Account() {
                     value={maxJobs === -1 ? 0 : jobsUsedPercent} 
                     className="h-2.5"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-small text-muted-foreground">
                     {maxJobs === -1 
                       ? "Unlimited job imports available"
                       : `${usageData?.remaining.jobsThisMonth || 0} imports remaining`
@@ -529,7 +529,7 @@ export default function Account() {
                       {usageData?.usage.coverLettersThisMonth || 0}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-small text-muted-foreground">
                     Cover letters generated this month
                   </p>
                 </div>
@@ -553,7 +553,7 @@ export default function Account() {
                     value={maxSkills === -1 ? 0 : skillsUsedPercent} 
                     className="h-2.5"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-small text-muted-foreground">
                     {maxSkills === -1 
                       ? "Unlimited skills allowed"
                       : `${usageData?.remaining.skills || 0} skills remaining`
@@ -580,7 +580,7 @@ export default function Account() {
                     value={maxSchedules === -1 ? 0 : schedulesUsedPercent} 
                     className="h-2.5"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-small text-muted-foreground">
                     {usageData?.limits.hasScheduleAccess
                       ? maxSchedules === -1 ? "Unlimited schedules" : `${usageData?.remaining.schedules || 0} remaining`
                       : "Upgrade to access schedules"
@@ -603,7 +603,7 @@ export default function Account() {
                       {usageData?.usage.atsScansThisMonth || 0}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-small text-muted-foreground">
                     Resume scans completed this month
                   </p>
                 </div>
@@ -680,13 +680,13 @@ export default function Account() {
                           {isCurrent && (
                             <Badge
                               variant="secondary"
-                              className="h-6 rounded-md border border-primary/30 bg-primary/20 px-3 text-xs font-bold uppercase tracking-wider text-primary"
+                              className="h-6 rounded-md border border-primary/30 bg-primary/20 px-3 text-small font-bold uppercase tracking-wider text-primary"
                             >
                               {isCancelled ? "Cancelling" : "Current"}
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs uppercase tracking-widest text-muted-foreground">{plan.period}</p>
+                        <p className="text-small uppercase tracking-widest text-muted-foreground">{plan.period}</p>
                       </div>
                       <div className="text-right">
                         <span className="text-header font-bold">{plan.price}</span>
