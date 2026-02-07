@@ -101,7 +101,7 @@ export default function AIResumeChat({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -192,7 +192,7 @@ export default function AIResumeChat({
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder={isComplete ? "Chat complete! Switch to manual editor to continue." : "Type your message..."}
             disabled={isLoading || isComplete}
             className="flex-1"

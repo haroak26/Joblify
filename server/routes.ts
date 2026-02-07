@@ -731,9 +731,13 @@ export async function registerRoutes(
 
       const { message, currentData, conversationHistory = [] } = chatSchema.parse(req.body);
 
+      // Sanitize inputs by limiting size and truncating if needed
+      const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
+      const sanitizedHistory = conversationHistory.slice(-10); // Keep only last 10 messages
+
       // Build conversation context for AI
-      const conversationContext = conversationHistory.map(msg => 
-        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+      const conversationContext = sanitizedHistory.map(msg => 
+        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.slice(0, 500)}`
       ).join('\n');
 
       // Create AI prompt
@@ -757,7 +761,7 @@ When you have collected enough information across all sections, set isComplete t
 Conversation so far:
 ${conversationContext}
 
-User's message: ${message}
+User's message: ${sanitizedMessage}
 
 Respond with:
 1. A friendly reply with your next question or acknowledgment
@@ -777,7 +781,7 @@ Format your response as JSON with these fields:
           model: "Claude-3.5-Sonnet",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: message }
+            { role: "user", content: sanitizedMessage }
           ],
           max_tokens: 1000,
           temperature: 0.7,

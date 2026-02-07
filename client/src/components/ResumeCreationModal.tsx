@@ -22,7 +22,6 @@ interface ResumeCreationModalProps {
 export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreationModalProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [isCreating, setIsCreating] = useState(false);
 
   const createResumeMutation = useMutation({
     mutationFn: async (mode: "traditional" | "ai") => {
@@ -47,17 +46,14 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
         description: "Failed to create resume. Please try again.",
         variant: "destructive",
       });
-      setIsCreating(false);
     },
   });
 
   const handleTraditionalBuilder = () => {
-    setIsCreating(true);
     createResumeMutation.mutate("traditional");
   };
 
   const handleAIBuilder = () => {
-    setIsCreating(true);
     createResumeMutation.mutate("ai");
   };
 
@@ -86,7 +82,7 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
                   </p>
                   <Button 
                     onClick={handleTraditionalBuilder}
-                    disabled={isCreating}
+                    disabled={createResumeMutation.isPending}
                     className="w-full sm:w-auto"
                   >
                     Get Started
@@ -116,7 +112,7 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
                   </p>
                   <Button 
                     onClick={handleAIBuilder}
-                    disabled={isCreating}
+                    disabled={createResumeMutation.isPending}
                     className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                   >
                     Start Chat
