@@ -68,8 +68,6 @@ export const KNOWLEDGE_BASE = `
 - All Ultra features forever
 - No monthly fees
 - Same as Ultra but pay once
-- No monthly fees
-- Same as Ultra but pay once
 
 ## Common Questions
 

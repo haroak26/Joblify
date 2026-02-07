@@ -127,7 +127,7 @@ User Profile:
 Introduction: ${intro}
 Skills: ${skillNames}
 
-Generate EXTREMELY SIMPLE search queries that find hiring posts on X (Twitter).
+Generate an EXTREMELY SIMPLE search query that finds hiring posts on X (Twitter).
 
 CRITICAL RULES:
 1. Use ONLY 1-2 words max. Examples: "hiring", "freelance", "looking for"

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Scan, Mail, User, Briefcase, Moon, Sun } from "lucide-react";
+import { Home, User, Briefcase, Moon, Sun } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
