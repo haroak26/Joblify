@@ -1,12 +1,10 @@
 import { 
-  type User, type InsertUser, type Skill, type JobPost, type FreelancerProfile, 
-  type Subscription, type Usage, type PlanType, PLAN_LIMITS, normalizePlan,
-  type Schedule, type InsertSchedule, type SeenJob,
-  type JobCache, type InsertJobCache,
+  type User, type InsertUser, type Skill,
+  type Subscription, type Usage, type PlanType, normalizePlan,
   type CoverLetter, type InsertCoverLetter,
   type SecurityEvent, type InsertSecurityEvent,
   type SupportInteraction, type InsertSupportInteraction,
-  users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache,
+  users, profiles, subscriptions, usage,
   coverLetters, securityEvents, supportInteractions,
   deletedAccountsTracker
 } from "@shared/schema";
@@ -27,20 +25,8 @@ export interface IStorage {
   deleteUser(id: string): Promise<boolean>;
   
   // Profile methods
-  getProfile(userId: string): Promise<FreelancerProfile>;
-  setProfile(userId: string, profile: Partial<FreelancerProfile>): Promise<FreelancerProfile>;
-  
-  // Job methods
-  getJobs(userId: string): Promise<JobPost[]>;
-  getJob(jobId: string): Promise<any | undefined>;
-  createJob(data: any): Promise<any>;
-  setJobs(userId: string, jobs: JobPost[]): Promise<void>;
-  addJobs(userId: string, jobs: JobPost[]): Promise<JobPost[]>;
-  saveJobs(userId: string, jobs: JobPost[]): Promise<void>;
-  clearUnsavedJobs(userId: string): Promise<void>;
-  cleanupOldJobs(userId: string): Promise<number>;
-  saveJob(userId: string, jobId: string): Promise<JobPost | undefined>;
-  markJobApplied(userId: string, jobId: string): Promise<JobPost | undefined>;
+  getProfile(userId: string): Promise<{ intro: string; skills: Skill[]; isComplete: boolean }>;
+  setProfile(userId: string, profile: Partial<{ intro: string; skills: Skill[]; isComplete: boolean }>): Promise<{ intro: string; skills: Skill[]; isComplete: boolean }>;
   
   // Subscription methods
   getSubscription(userId: string): Promise<Subscription | undefined>;
@@ -50,31 +36,8 @@ export interface IStorage {
   
   // Usage methods
   getUsage(userId: string): Promise<Usage>;
-  incrementJobsScraped(userId: string, count: number): Promise<Usage>;
   resetMonthlyUsage(userId: string): Promise<Usage>;
   checkAndResetMonthlyUsage(userId: string): Promise<Usage>;
-  
-  // Limit checking
-  canAddSkills(userId: string, newSkillsCount: number): Promise<{ allowed: boolean; limit: number; current: number }>;
-  
-  // Schedule methods
-  getSchedules(userId: string): Promise<Schedule[]>;
-  getDueSchedules(cutoff?: Date): Promise<Schedule[]>;
-  getSchedule(userId: string, scheduleId: string): Promise<Schedule | undefined>;
-  createSchedule(userId: string, schedule: Omit<InsertSchedule, 'userId'>): Promise<Schedule>;
-  updateSchedule(userId: string, scheduleId: string, updates: Partial<Schedule>): Promise<Schedule | undefined>;
-  deleteSchedule(userId: string, scheduleId: string): Promise<boolean>;
-  
-  // Seen jobs methods
-  markJobAsSeen(userId: string, sourceUrl: string): Promise<void>;
-  getSeenJobUrls(userId: string): Promise<string[]>;
-  filterUnseenJobs(userId: string, jobUrls: string[]): Promise<string[]>;
-  
-  // Job cache methods
-  saveToJobCache(jobs: Omit<InsertJobCache, 'expiresAt'>[]): Promise<JobCache[]>;
-  searchJobCache(tags: string[], limit?: number): Promise<JobCache[]>;
-  cleanupExpiredCachedJobs(): Promise<number>;
-  getCachedJobByUrl(sourceUrl: string): Promise<JobCache | undefined>;
   
   // Cover letter methods
   getCoverLetter(id: string): Promise<CoverLetter | undefined>;
@@ -83,10 +46,6 @@ export interface IStorage {
   createCoverLetter(data: InsertCoverLetter): Promise<CoverLetter>;
   updateCoverLetter(id: string, content: string): Promise<CoverLetter>;
   deleteCoverLetter(id: string): Promise<void>;
-  
-  // Count methods for GDPR
-  getJobCount(userId: string): Promise<number>;
-  getScheduleCount(userId: string): Promise<number>;
   
   // Security events methods
   getSecurityEvents(userId: string, limit?: number): Promise<SecurityEvent[]>;
