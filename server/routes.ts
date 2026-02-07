@@ -8,7 +8,7 @@ import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 
 let poeClient: OpenAI | null = null;
@@ -507,6 +507,25 @@ export async function registerRoutes(
   // Resume Endpoints
   // ============================================
 
+  // Get all resumes for the authenticated user
+  app.get("/api/resumes", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      // Get all resumes for this user
+      const userResumes = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.userId, userId))
+        .orderBy(desc(resumes.updatedAt));
+
+      res.json(userResumes);
+    } catch (error) {
+      console.error('[API] Error fetching resumes:', error);
+      res.status(500).json({ error: "Failed to fetch resumes" });
+    }
+  });
+
   // Create a new resume
   app.post("/api/resumes", requireAuth, async (req: Request, res) => {
     try {
@@ -516,18 +535,19 @@ export async function registerRoutes(
       const createSchema = z.object({
         title: z.string().min(1).optional(),
         template: z.enum(['modern', 'professional']).optional(),
+        resumeData: resumeDataSchema.optional(),
       });
 
       const data = createSchema.parse(req.body);
 
-      // Create resume with empty data
+      // Create resume with provided data or empty data
       const [newResume] = await db
         .insert(resumes)
         .values({
           userId,
           title: data.title || "Untitled Resume",
           template: data.template || "modern",
-          resumeData: createEmptyResumeData(),
+          resumeData: data.resumeData || createEmptyResumeData(),
         })
         .returning();
 
@@ -633,6 +653,43 @@ export async function registerRoutes(
       }
       console.error('[API] Error updating resume:', error);
       res.status(500).json({ error: "Failed to update resume" });
+    }
+  });
+
+  // Delete a resume
+  app.delete("/api/resumes/:id", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, id));
+
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Check if user owns this resume
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "You do not have permission to delete this resume" });
+      }
+
+      // Delete the resume
+      await db
+        .delete(resumes)
+        .where(eq(resumes.id, id));
+
+      res.status(200).json({ message: "Resume deleted successfully" });
+    } catch (error) {
+      console.error('[API] Error deleting resume:', error);
+      res.status(500).json({ error: "Failed to delete resume" });
     }
   });
 
