@@ -9,43 +9,43 @@ export function ModernTemplate({ resumeData }: ModernTemplateProps) {
   const { personalInfo, summary, experience, education, skills, certifications, projects } = resumeData;
 
   return (
-    <div className="bg-white text-gray-900 p-8 max-w-[8.5in] mx-auto shadow-lg">
-      {/* Header Section - Two Column */}
-      <div className="grid grid-cols-3 gap-6 mb-6 pb-6 border-b-2 border-blue-600">
-        <div className="col-span-2">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+    <div className="bg-white text-slate-900 p-10 max-w-[8.5in] mx-auto shadow-xl border border-slate-200 font-sans">
+      {/* Header Section */}
+      <div className="flex flex-col gap-4 mb-6 pb-4 border-b border-slate-200">
+        <div>
+          <h1 className="text-4xl font-semibold tracking-tight text-slate-900 mb-2">
             {personalInfo.name || "Your Name"}
           </h1>
-          <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+          <div className="flex flex-wrap gap-4 text-sm text-slate-600">
             {personalInfo.email && (
               <div className="flex items-center gap-1">
-                <Mail className="w-4 h-4" />
+                <Mail className="w-4 h-4 text-slate-500" />
                 <span>{personalInfo.email}</span>
               </div>
             )}
             {personalInfo.phone && (
               <div className="flex items-center gap-1">
-                <Phone className="w-4 h-4" />
+                <Phone className="w-4 h-4 text-slate-500" />
                 <span>{personalInfo.phone}</span>
               </div>
             )}
             {personalInfo.location && (
               <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
+                <MapPin className="w-4 h-4 text-slate-500" />
                 <span>{personalInfo.location}</span>
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-3 text-sm text-gray-600 mt-1">
+          <div className="flex flex-wrap gap-4 text-sm text-slate-600 mt-1">
             {personalInfo.linkedin && (
               <div className="flex items-center gap-1">
-                <Linkedin className="w-4 h-4" />
+                <Linkedin className="w-4 h-4 text-slate-500" />
                 <span className="truncate">{personalInfo.linkedin}</span>
               </div>
             )}
             {personalInfo.website && (
               <div className="flex items-center gap-1">
-                <Globe className="w-4 h-4" />
+                <Globe className="w-4 h-4 text-slate-500" />
                 <span className="truncate">{personalInfo.website}</span>
               </div>
             )}
@@ -60,28 +60,28 @@ export function ModernTemplate({ resumeData }: ModernTemplateProps) {
           {/* Summary */}
           {summary && (
             <section>
-              <h2 className="text-lg font-bold text-blue-600 mb-2 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
                 Professional Summary
               </h2>
-              <p className="text-sm text-gray-700 leading-relaxed">{summary}</p>
+              <p className="text-sm text-slate-700 leading-relaxed">{summary}</p>
             </section>
           )}
 
           {/* Experience */}
           {experience && experience.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-blue-600 mb-3 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-4">
                 Experience
               </h2>
               <div className="space-y-4">
                 {experience.map((exp, idx) => (
                   <div key={idx}>
-                    <div className="flex justify-between items-start mb-1">
+                    <div className="flex justify-between items-start gap-4 mb-1">
                       <div>
-                        <h3 className="font-bold text-gray-900">{exp.title}</h3>
-                        <p className="text-sm text-gray-600">{exp.company}</p>
+                        <h3 className="font-semibold text-slate-900">{exp.title}</h3>
+                        <p className="text-sm text-slate-600">{exp.company}</p>
                       </div>
-                      <div className="text-right text-sm text-gray-500">
+                      <div className="text-right text-sm text-slate-500">
                         <p>{exp.location}</p>
                         <p>
                           {exp.startDate} - {exp.endDate || "Present"}
@@ -89,7 +89,7 @@ export function ModernTemplate({ resumeData }: ModernTemplateProps) {
                       </div>
                     </div>
                     {exp.description && exp.description.length > 0 && (
-                      <ul className="list-disc list-outside ml-5 space-y-1 text-sm text-gray-700">
+                      <ul className="list-disc list-outside ml-5 space-y-1 text-sm text-slate-700">
                         {exp.description.map((item, i) => (
                           <li key={i}>{item}</li>
                         ))}
@@ -104,17 +104,17 @@ export function ModernTemplate({ resumeData }: ModernTemplateProps) {
           {/* Projects */}
           {projects && projects.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-blue-600 mb-3 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-4">
                 Projects
               </h2>
               <div className="space-y-3">
                 {projects.map((project, idx) => (
                   <div key={idx}>
-                    <h3 className="font-bold text-gray-900">{project.name}</h3>
-                    <p className="text-sm text-gray-700 mb-1">{project.description}</p>
+                    <h3 className="font-semibold text-slate-900">{project.name}</h3>
+                    <p className="text-sm text-slate-700 mb-1">{project.description}</p>
                     {project.technologies && project.technologies.length > 0 && (
-                      <p className="text-xs text-gray-600">
-                        <span className="font-semibold">Technologies:</span>{" "}
+                      <p className="text-xs text-slate-600">
+                        <span className="font-semibold text-slate-700">Technologies:</span>{" "}
                         {project.technologies.join(", ")}
                       </p>
                     )}
@@ -130,17 +130,17 @@ export function ModernTemplate({ resumeData }: ModernTemplateProps) {
           {/* Education */}
           {education && education.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-blue-600 mb-3 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-4">
                 Education
               </h2>
               <div className="space-y-3">
                 {education.map((edu, idx) => (
                   <div key={idx}>
-                    <h3 className="font-bold text-sm text-gray-900">{edu.degree}</h3>
-                    <p className="text-sm text-gray-700">{edu.field}</p>
-                    <p className="text-sm text-gray-600">{edu.school}</p>
-                    <p className="text-xs text-gray-500">{edu.graduationDate}</p>
-                    {edu.gpa && <p className="text-xs text-gray-600">GPA: {edu.gpa}</p>}
+                    <h3 className="font-semibold text-sm text-slate-900">{edu.degree}</h3>
+                    <p className="text-sm text-slate-700">{edu.field}</p>
+                    <p className="text-sm text-slate-600">{edu.school}</p>
+                    <p className="text-xs text-slate-500">{edu.graduationDate}</p>
+                    {edu.gpa && <p className="text-xs text-slate-600">GPA: {edu.gpa}</p>}
                   </div>
                 ))}
               </div>
@@ -150,14 +150,14 @@ export function ModernTemplate({ resumeData }: ModernTemplateProps) {
           {/* Skills */}
           {skills && skills.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-blue-600 mb-3 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-4">
                 Skills
               </h2>
               <div className="flex flex-wrap gap-2">
                 {skills.map((skill, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded"
+                    className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full border border-slate-200"
                   >
                     {skill}
                   </span>
@@ -169,15 +169,15 @@ export function ModernTemplate({ resumeData }: ModernTemplateProps) {
           {/* Certifications */}
           {certifications && certifications.length > 0 && (
             <section>
-              <h2 className="text-lg font-bold text-blue-600 mb-3 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-4">
                 Certifications
               </h2>
               <div className="space-y-2">
                 {certifications.map((cert, idx) => (
                   <div key={idx}>
-                    <h3 className="font-bold text-sm text-gray-900">{cert.name}</h3>
-                    <p className="text-xs text-gray-600">{cert.issuer}</p>
-                    <p className="text-xs text-gray-500">{cert.date}</p>
+                    <h3 className="font-semibold text-sm text-slate-900">{cert.name}</h3>
+                    <p className="text-xs text-slate-600">{cert.issuer}</p>
+                    <p className="text-xs text-slate-500">{cert.date}</p>
                   </div>
                 ))}
               </div>
