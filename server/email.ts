@@ -221,7 +221,7 @@ export async function sendWelcomeEmail(email: string, username: string): Promise
 
   return sendEmail({
     to: email,
-    subject: "Welcome to Joblify - Let's find your next opportunity!",
-    html: getEmailTemplate(content, "Your Joblify account is ready. Start discovering freelance opportunities."),
+    subject: "Welcome to Joblify - Let's build your resume!",
+    html: getEmailTemplate(content, "Your Joblify account is ready. Start building your professional resume."),
   });
 }
