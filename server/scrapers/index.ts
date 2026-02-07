@@ -1,4 +1,3 @@
-import { scrapeRedditJobs } from './reddit';
 import { scrapeXJobs } from './x';
 import type { Skill, JobPost } from '@shared/schema';
 import { randomUUID } from 'crypto';
@@ -17,8 +16,6 @@ const openai = new OpenAI({
 });
 
 interface ScraperParameters {
-  redditQuery: string;
-  redditSubreddits: string;
   xQuery: string;
   xBroadKeyword: string; // Broader keyword for X searches to get more results
 }
@@ -86,22 +83,7 @@ const SKILL_TO_BROAD_KEYWORD: Record<string, string> = {
   'email marketing': 'marketing',
 };
 
-// Expanded list of subreddits focused on hiring
-const EXPANDED_SUBREDDITS = [
-  'forhire',
-  'freelance_forhire', 
-  'hiring',
-  'jobbit',
-  'remotework',
-  'freelance',
-  'jobs',
-  'designjobs',
-  'webdev',
-  'programming',
-  'startups',
-  'entrepreneur',
-  'slavelabour'
-].join(',');
+
 
 /**
  * Get a broader keyword for X searches based on a specific skill
@@ -145,17 +127,16 @@ User Profile:
 Introduction: ${intro}
 Skills: ${skillNames}
 
-Generate EXTREMELY SIMPLE search queries that find hiring posts on Reddit and X (Twitter).
+Generate EXTREMELY SIMPLE search queries that find hiring posts on X (Twitter).
 
 CRITICAL RULES:
-1. Reddit query: Use ONLY 1-2 words max. Examples: "hiring", "freelance", "looking for"
+1. Use ONLY 1-2 words max. Examples: "hiring", "freelance", "looking for"
 2. DO NOT use AND, OR, or complex operators
 3. DO NOT combine multiple skills in one query
-4. Keep queries as simple as possible to avoid 404 errors
-5. For X/Twitter: Use broad single-word terms
+4. Keep queries as simple as possible
+5. Use broad single-word terms
 
 GOOD EXAMPLES:
-- Reddit: "hiring" or "freelance" or "looking for"
 - X: "freelance" or "hiring"
 
 BAD EXAMPLES (DO NOT USE):
@@ -165,8 +146,6 @@ BAD EXAMPLES (DO NOT USE):
 
 Return a JSON object with:
 {
-  "redditQuery": "hiring",
-  "redditSubreddits": "${EXPANDED_SUBREDDITS}",
   "xQuery": "freelance"
 }
 
@@ -185,8 +164,6 @@ Keep it absolutely minimal - single words work best.`;
     console.log('[Scraper] AI-generated parameters:', params);
     
     return {
-      redditQuery: params.redditQuery || 'hiring',
-      redditSubreddits: params.redditSubreddits || EXPANDED_SUBREDDITS,
       xQuery: params.xQuery || 'freelance',
       xBroadKeyword: broadKeyword
     };
@@ -194,8 +171,6 @@ Keep it absolutely minimal - single words work best.`;
     console.error('[Scraper] Error generating scraper parameters:', error);
     // Fallback to ultra-simple, proven defaults
     const fallbackParams = {
-      redditQuery: 'hiring',
-      redditSubreddits: EXPANDED_SUBREDDITS,
       xQuery: 'freelance',
       xBroadKeyword: broadKeyword
     };
@@ -287,86 +262,6 @@ function parseAndValidateDate(dateValue: any, fallbackToNow: boolean = true): { 
  * Parse and normalize scraped data into JobPost format
  * Uses more lenient skill matching to ensure jobs are returned
  */
-function parseRedditJob(item: any, userSkills: Skill[]): JobPost | null {
-  if (!item.title || !item.url) return null;
-  
-  // More lenient filtering - only exclude obvious job seeking posts
-  const title = item.title.toLowerCase();
-  const text = (item.selftext || '').toLowerCase();
-  const fullText = title + ' ' + text;
-  
-  // Only filter out very explicit job seeking patterns (where someone is clearly offering their own services)
-  const seekingPatterns = [
-    /\b(?:i am|i'm)\s+(?:a|an)\s+\w+\s+(?:available for hire|for hire|seeking (?:work|clients))/i,
-    /\b(?:i am|i'm)\s+offering\s+(?:my\s+)?services/i,
-    /\bhire me\b/i,
-  ];
-  
-  if (seekingPatterns.some(pattern => pattern.test(fullText))) {
-    console.log('[Scraper] Reddit - Filtered out job seeking post:', title.substring(0, 50));
-    return null;
-  }
-  
-  // Match skills - be more flexible with partial matches and related terms
-  const matchedSkills = userSkills
-    .filter(skill => {
-      const skillLower = skill.name.toLowerCase();
-      
-      // Check for exact match or skill as part of a word
-      if (fullText.includes(skillLower)) return true;
-      
-      // Check for related terms (e.g., "react" matches "react.js", "reactjs")
-      const skillVariants = getSkillVariants(skillLower);
-      return skillVariants.some(variant => fullText.includes(variant));
-    })
-    .map(s => s.name);
-  
-  // If no skills matched but this looks like a hiring post, include it with a generic match
-  const hiringIndicators = /\b(hiring|looking for|need|seeking|freelancer|contractor|developer|designer)\b/i;
-  const isHiringPost = hiringIndicators.test(fullText);
-  
-  if (matchedSkills.length === 0 && !isHiringPost) {
-    console.log('[Scraper] Reddit - No skill match and not a hiring post:', title.substring(0, 50));
-    return null;
-  }
-  
-  // For hiring posts without exact skill matches, use a lower relevance score
-  const relevanceScore = matchedSkills.length || (isHiringPost ? 0.5 : 0);
-  
-  console.log('[Scraper] Reddit - Matched job:', title.substring(0, 50), 'Skills:', matchedSkills.join(', ') || 'none (hiring post)');
-  
-  // Parse and validate date using helper function
-  const timestamp = (item.created_utc !== null && item.created_utc !== undefined) 
-    ? item.created_utc * 1000 
-    : Date.now();
-  const { date: postedDate, isoString: postedAt } = parseAndValidateDate(timestamp);
-  
-  // Filter out posts older than 7 days
-  if (!isPostRecent(postedDate)) {
-    console.log('[Scraper] Reddit - Post too old (>7 days):', title.substring(0, 50));
-    return null;
-  }
-  
-  return {
-    id: randomUUID(),
-    title: item.title,
-    description: item.selftext || item.title,
-    source: 'reddit',
-    sourceUrl: item.url,
-    author: item.author || 'unknown',
-    authorHandle: item.author,
-    postedAt,
-    matchedSkills, // Return actual matched skills (may be empty for generic hiring posts)
-    budget: extractBudget(item.title + ' ' + (item.selftext || '')),
-    isRemote: true,
-    saved: false,
-    applied: false,
-    relevanceScore,
-    rawData: item,
-    scrapedAt: new Date()
-  };
-}
-
 function parseXJob(item: any, userSkills: Skill[]): JobPost | null {
   if (!item.text || !item.url) return null;
   
@@ -583,73 +478,41 @@ async function performScraping(intro: string, skills: Skill[], maxJobs: number):
   
   // Fetch more items than needed to ensure we have enough after filtering
   // We fetch 3x the target because many items get filtered out (job seekers, no skill match, etc.)
-  // Cap at 15 items per source to limit API costs while still getting diverse results
+  // Cap at 30 items to limit API costs while still getting diverse results
   const FETCH_MULTIPLIER = 3;
-  const MAX_ITEMS_PER_SOURCE = 15;
-  const fetchCount = Math.min(maxJobs * FETCH_MULTIPLIER, MAX_ITEMS_PER_SOURCE);
+  const MAX_ITEMS = 30;
+  const fetchCount = Math.min(maxJobs * FETCH_MULTIPLIER, MAX_ITEMS);
   
-  // Use Promise.allSettled for graceful degradation - if one fails, continue with the other
-  const [redditResults, xResults] = await Promise.allSettled([
-    scrapeRedditJobs({
-      searchQuery: params.redditQuery,
-      subreddit: params.redditSubreddits,
-      maxPosts: fetchCount
-    }, {
-      perSubreddit: true, // Search each subreddit individually to avoid 404s
-      enableFallback: true // Use direct Reddit API if Apify fails
-    }).catch((error) => {
-      console.error('[Scraper] Reddit scraper caught error:', error.message);
-      return []; // Return empty array on error for graceful degradation
-    }),
-    scrapeXJobs({
+  // Scrape from X (Twitter) only
+  let xResults;
+  try {
+    xResults = await scrapeXJobs({
       query: params.xQuery,
       maxItems: fetchCount
-    }).catch((error) => {
-      console.error('[Scraper] X scraper caught error:', error.message);
-      return []; // Return empty array on error for graceful degradation
-    })
-  ]);
+    });
+  } catch (error: any) {
+    console.error('[Scraper] X scraper caught error:', error.message);
+    xResults = []; // Return empty array on error for graceful degradation
+  }
   
   const allJobs: JobPost[] = [];
-  let scrapersSucceeded = 0;
-  let scrapersFailed = 0;
   
-  if (redditResults.status === 'fulfilled') {
-    const redditItems = redditResults.value || [];
-    console.log('[Scraper] Reddit scraping succeeded - raw items:', redditItems.length);
-    const parsedReddit = redditItems
-      .map((item: any) => parseRedditJob(item, skills))
-      .filter((job): job is JobPost => job !== null);
-    console.log('[Scraper] Reddit jobs after parsing and filtering:', parsedReddit.length);
-    allJobs.push(...parsedReddit);
-    scrapersSucceeded++;
-  } else {
-    console.error('[Scraper] Reddit scraping failed:', redditResults.reason?.message || redditResults.reason);
-    scrapersFailed++;
+  let xItems = xResults || [];
+  console.log('[Scraper] X scraping - raw items:', xItems.length);
+  
+  // Apply AI filtering to X results for better relevance
+  if (xItems.length > 0) {
+    xItems = await filterXResultsWithAI(xItems, skills);
+    console.log('[Scraper] X items after AI filtering:', xItems.length);
   }
   
-  if (xResults.status === 'fulfilled') {
-    let xItems = xResults.value || [];
-    console.log('[Scraper] X scraping succeeded - raw items:', xItems.length);
-    
-    // Apply AI filtering to X results for better relevance
-    if (xItems.length > 0) {
-      xItems = await filterXResultsWithAI(xItems, skills);
-      console.log('[Scraper] X items after AI filtering:', xItems.length);
-    }
-    
-    const parsedX = xItems
-      .map((item: any) => parseXJob(item, skills))
-      .filter((job): job is JobPost => job !== null);
-    console.log('[Scraper] X jobs after parsing and skill filtering:', parsedX.length);
-    allJobs.push(...parsedX);
-    scrapersSucceeded++;
-  } else {
-    console.error('[Scraper] X scraping failed:', xResults.reason?.message || xResults.reason);
-    scrapersFailed++;
-  }
+  const parsedX = xItems
+    .map((item: any) => parseXJob(item, skills))
+    .filter((job): job is JobPost => job !== null);
+  console.log('[Scraper] X jobs after parsing and skill filtering:', parsedX.length);
+  allJobs.push(...parsedX);
   
-  console.log(`[Scraper] Scraping complete - ${scrapersSucceeded} succeeded, ${scrapersFailed} failed`);
+  console.log('[Scraper] Scraping complete');
   
   // Sort by relevance and return max based on plan limits
   const sortedJobs = allJobs
@@ -658,9 +521,9 @@ async function performScraping(intro: string, skills: Skill[], maxJobs: number):
   
   console.log('[Scraper] Final job count after sorting and limiting to', maxJobs, ':', sortedJobs.length);
   
-  // If both scrapers failed and we have no jobs, log a warning but don't throw
-  if (scrapersSucceeded === 0) {
-    console.warn('[Scraper] WARNING: All scrapers failed, returning empty results');
+  // If scraper failed and we have no jobs, log a warning but don't throw
+  if (sortedJobs.length === 0) {
+    console.warn('[Scraper] WARNING: Scraper failed or returned no results');
   }
   
   return sortedJobs;

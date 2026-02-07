@@ -280,51 +280,6 @@ export async function registerRoutes(
     }
   });
 
-    app.post("/api/export/cover-letter/pdf/:id", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
-    const userId = req.session.userId!;
-    const id = req.params.id as string;
-    try {
-      console.log('[API] Exporting cover letter as PDF:', id, 'user:', userId);
-      
-      // Validate user owns the cover letter
-      const coverLetter = await storage.getCoverLetter(id);
-      if (!coverLetter) {
-        return res.status(404).json({ error: "Cover letter not found", code: "COVER_LETTER_NOT_FOUND" });
-      }
-      
-      if (coverLetter.userId !== userId) {
-        return res.status(403).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
-      }
-
-      // Generate PDF
-      const doc = new PDFDocument({ margin: 50 });
-      const chunks: Buffer[] = [];
-
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => {
-        const pdfBuffer = Buffer.concat(chunks);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="cover_letter.pdf"`);
-        res.send(pdfBuffer);
-        console.log('[API] Cover letter PDF exported successfully:', id, 'user:', userId);
-      });
-
-      doc.fontSize(12).text(coverLetter.content, {
-        align: 'left',
-        lineGap: 5,
-      });
-
-      doc.end();
-    } catch (error) {
-      console.error('[API] Error exporting cover letter PDF:', id, 'user:', userId, error);
-      res.status(500).json({ 
-        error: "Failed to export cover letter PDF",
-        message: error instanceof Error ? error.message : "Unknown error occurred",
-        code: "COVER_LETTER_PDF_EXPORT_ERROR"
-      });
-    }
-  });
-
   // LinkedIn Import Endpoint
   app.post("/api/jobs/import-linkedin", requireAuth, requireVerifiedEmail, async (req: Request, res) => {
     const userId = req.session.userId!;

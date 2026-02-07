@@ -29,16 +29,6 @@ const mainMenuItems = [
     url: "/dashboard",
     icon: Home,
   },
-  {
-    title: "ATS Scanner",
-    url: "/dashboard/ats-scanner",
-    icon: Scan,
-  },
-  {
-    title: "Cover Letters",
-    url: "/dashboard/cover-letter",
-    icon: Mail,
-  },
 ];
 
 export function AppSidebar() {
