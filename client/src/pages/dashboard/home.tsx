@@ -27,10 +27,10 @@ export default function DashboardHome() {
     onSuccess: (data) => {
       setLocation(`/dashboard/resume-builder/${data.id}`);
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to create resume. Please try again.",
+        description: error.message || "Failed to create resume. Please try again.",
         variant: "destructive",
       });
     },
