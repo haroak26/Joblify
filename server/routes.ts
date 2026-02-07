@@ -52,10 +52,10 @@ function mergeResumeData(
     const currentValue = currentData[typedKey];
     
     // For personalInfo, merge object properties
-    if (key === 'personalInfo' && typeof value === 'object' && typeof currentValue === 'object') {
-      (merged.personalInfo as any) = {
+    if (key === 'personalInfo' && typeof value === 'object' && value !== null && typeof currentValue === 'object' && currentValue !== null) {
+      merged.personalInfo = {
         ...currentValue,
-        ...(value as object),
+        ...(value as Partial<ResumeData['personalInfo']>),
       };
     }
     // For array fields, append new items
