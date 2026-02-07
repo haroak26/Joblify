@@ -198,7 +198,7 @@ export default function ResumeDashboard() {
                   className="p-6 cursor-pointer hover:border-primary transition-colors"
                   onClick={() => {
                     setCreateModeDialogOpen(false);
-                    navigate("/dashboard/resumes/new");
+                    navigate("/dashboard/resumes/template-select");
                   }}
                 >
                   <div className="flex items-start gap-4">
@@ -268,7 +268,7 @@ export default function ResumeDashboard() {
                   className="p-6 cursor-pointer hover:border-primary transition-colors"
                   onClick={() => {
                     setCreateModeDialogOpen(false);
-                    navigate("/dashboard/resumes/new");
+                    navigate("/dashboard/resumes/template-select");
                   }}
                 >
                   <div className="flex items-start gap-4">

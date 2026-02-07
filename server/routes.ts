@@ -542,7 +542,7 @@ export async function registerRoutes(
       
       const schema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'classic', 'creative']).optional(),
+        template: z.enum(['modern', 'professional', 'creative', 'executive', 'technical']).optional(),
         resumeData: resumeDataSchema.optional(),
       });
       
