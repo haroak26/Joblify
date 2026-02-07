@@ -644,19 +644,19 @@ export async function registerRoutes(
 
       // Add content to PDF
       // Header with name and contact info
-      if (resumeData.personalInfo.name) {
+      if (resumeData.personalInfo?.name) {
         doc.fontSize(24).font('Helvetica-Bold').text(resumeData.personalInfo.name, { align: 'center' });
         doc.moveDown(0.5);
       }
 
       // Contact information
-      const contactInfo = [
+      const contactInfo = resumeData.personalInfo ? [
         resumeData.personalInfo.email,
         resumeData.personalInfo.phone,
         resumeData.personalInfo.location,
         resumeData.personalInfo.linkedin,
         resumeData.personalInfo.website,
-      ].filter(Boolean).join(' | ');
+      ].filter(Boolean).join(' | ') : '';
 
       if (contactInfo) {
         doc.fontSize(10).font('Helvetica').text(contactInfo, { align: 'center' });
