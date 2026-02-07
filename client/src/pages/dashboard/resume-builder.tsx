@@ -132,10 +132,10 @@ export default function ResumeBuilder() {
     }
   };
 
-  const updateResumeData = (section: string, data: any) => {
+  const updateResumeData = (data: Partial<ResumeData>) => {
     setResumeData((prev) => ({
       ...prev!,
-      [section]: data,
+      ...data,
     }));
   };
 
@@ -254,7 +254,7 @@ export default function ResumeBuilder() {
             {ActiveSectionComponent && (
               <ActiveSectionComponent
                 data={resumeData}
-                onUpdate={(data: any) => updateResumeData(activeSection, data)}
+                onUpdate={updateResumeData}
               />
             )}
           </div>
