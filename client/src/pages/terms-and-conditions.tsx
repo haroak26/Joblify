@@ -83,7 +83,7 @@ export default function TermsAndConditions() {
                 <li><strong>ATS Scanner:</strong> Analysis tools to optimize resumes for Applicant Tracking Systems</li>
                 <li><strong>Cover Letter Generator:</strong> AI-assisted cover letter creation</li>
                 <li><strong>Export Features:</strong> Ability to download resumes in PDF and DOCX formats</li>
-                <li><strong>Job Search Tools:</strong> Features to help you find and apply for job opportunities</li>
+                <li><strong>Professional Export:</strong> Download your resume in multiple formats (PDF, DOCX)</li>
                 <li><strong>Additional Features:</strong> Other tools and services we may introduce from time to time</li>
               </ul>
             </section>

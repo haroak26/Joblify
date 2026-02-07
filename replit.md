@@ -1,33 +1,34 @@
-# Joblify - Freelance Job Discovery Platform
+# Joblify - AI Resume Builder
 
 ## Overview
-Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter), and Facebook for freelance hiring opportunities. Users can add their skills and receive matching job listings, then generate personalized follow-up messages to apply.
+Joblify is an AI-powered resume builder that helps you create professional, ATS-optimized resumes through natural conversation. Build your resume by chatting with AI, get intelligent suggestions, and export to PDF or DOCX.
 
 ## Project Architecture
 
 ### Frontend (React + Vite)
 - **Landing Page** (`/`) - Marketing page with platform overview
 - **Dashboard** with sidebar navigation:
-  - **Home** (`/dashboard`) - Overview with stats, job finder, and profile setup
-  - **My Jobs** (`/dashboard/jobs`) - Browse and manage job opportunities
-  - **Generator** (`/dashboard/generator`) - Standalone AI message generator
-  - **Schedules** (`/dashboard/schedules`) - Recurring automated job scans
-  - **Account** (`/dashboard/account`) - Profile, subscription, and settings management (at sidebar bottom)
+  - **Home** (`/dashboard`) - Overview with stats and quick actions
+  - **My Resumes** (`/dashboard/resumes`) - Browse and manage your resumes
+  - **Resume Builder** (`/dashboard/resume-builder/:id`) - AI-powered resume creation and editing
+  - **ATS Scanner** (`/dashboard/ats-scanner`) - Analyze resume ATS compatibility
+  - **Cover Letter** (`/dashboard/cover-letter`) - Generate personalized cover letters
+  - **Account** (`/dashboard/account`) - Profile, subscription, and settings management
 
 ### Backend (Express)
 - PostgreSQL database with Drizzle ORM
-- API endpoints for CRUD operations
-- OpenAI integration for skill suggestions and message generation
-- Stripe integration for subscription payments (via Replit connector)
-- Apify integration for job scraping from social platforms
+- API endpoints for resume CRUD operations
+- OpenAI integration via Poe API for AI features
+- Stripe integration for subscription payments
+- Email notifications via Brevo
 
 ### Key Components
-- `AppSidebar` - Navigation sidebar with Home, My Jobs, Generator, Account
+- `AppSidebar` - Navigation sidebar with Home, My Resumes, Account
 - `DashboardLayout` - Wrapper with sidebar and header
-- `ProfileSetup` - Introduction textarea with AI skill suggestions + manual skill management
-- `JobCard` - Display job listings with save and generate message actions
-- `JobFilters` - Search and filter jobs by source/status
-- `MessageGenerator` - AI-powered personalized follow-up messages with tone selection
+- `ResumeBuilder` - AI-powered resume creation with chat interface
+- `ResumeEditor` - Visual editor with live preview
+- `ATSScanner` - Document analysis and optimization suggestions
+- `CoverLetterGenerator` - AI-powered cover letter creation
 
 ## API Routes
 
@@ -40,33 +41,38 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 | GET | `/api/auth/me` | Get current authenticated user |
 | GET | `/api/auth/verify-email` | Verify email with token |
 | POST | `/api/auth/resend-verification` | Resend verification email |
+| POST | `/api/auth/request-password-reset` | Request password reset |
+| POST | `/api/auth/reset-password` | Reset password with token |
 
 ### Protected Routes (Require Authentication)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/profile` | Get user profile (intro + skills) |
-| POST | `/api/profile` | Save profile and trigger job matching |
-| GET | `/api/skills` | Get user's skills |
-| POST | `/api/skills` | Save skills (triggers job matching) |
-| POST | `/api/suggest-skills` | AI suggests skills from intro text |
-| GET | `/api/jobs` | Get matched job listings |
-| POST | `/api/jobs/refresh` | Refresh job listings |
-| POST | `/api/jobs/:id/save` | Toggle save status |
-| POST | `/api/jobs/:id/apply` | Mark as applied |
-| POST | `/api/generate-message` | Generate follow-up message |
-| GET | `/api/subscription` | Get user subscription details and limits |
-| GET | `/api/usage` | Get current usage stats and remaining limits |
-| POST | `/api/stripe/create-checkout` | Create Stripe checkout session for upgrade |
-| POST | `/api/stripe/cancel` | Cancel subscription at period end |
+| GET | `/api/profile` | Get user profile |
+| POST | `/api/profile` | Update user profile |
+| GET | `/api/resumes` | Get user's resumes |
+| POST | `/api/resumes` | Create new resume |
+| GET | `/api/resumes/:id` | Get specific resume |
+| PATCH | `/api/resumes/:id` | Update resume |
+| DELETE | `/api/resumes/:id` | Delete resume |
+| POST | `/api/resumes/:id/pdf` | Generate PDF export |
+| POST | `/api/resumes/:id/docx` | Generate DOCX export |
+| POST | `/api/chat` | AI chat for resume building |
+| POST | `/api/ai/enhance` | AI content enhancement |
+| POST | `/api/ats/scan` | Scan resume for ATS compatibility |
+| POST | `/api/cover-letter/generate` | Generate cover letter |
+| GET | `/api/subscription` | Get subscription details and limits |
+| GET | `/api/usage` | Get usage stats and limits |
+| POST | `/api/stripe/create-checkout` | Create Stripe checkout session |
+| POST | `/api/stripe/cancel` | Cancel subscription |
 | GET | `/api/stripe/portal` | Get Stripe billing portal URL |
-| DELETE | `/api/account` | Delete user account and all data |
+| DELETE | `/api/account` | Delete account and all data |
 
 ## Design System
 
 ### Colors
-- **Primary**: Green (#1B9C5D) inspired by Fiverr/Upwork
+- **Primary**: Green (#1B9C5D) - Professional and modern
 - **Background**: Clean white/dark mode support
-- **No gradients, no shadows** as per requirements
+- **No gradients, minimal shadows** - Clean, professional design
 - **Rounded corners**: 0.75rem (12px) for cards and buttons
 
 ### Typography
@@ -74,25 +80,30 @@ Joblify is a freelance job platform that simulates scraping Reddit, X (Twitter),
 - Clean, professional hierarchy
 
 ## Features
-1. **Personal Introduction** - Write about yourself to help AI understand your background
-2. **AI Skill Suggestions** - Get skill recommendations based on your intro using GPT-4o-mini
-3. **Skill-Based Matching** - Add skills to see relevant opportunities from sample data
-4. **Multi-Platform Discovery** - Jobs from Reddit, X, and Facebook via Apify scraping
-5. **Smart Filtering** - Filter by source, status, or search
-6. **AI Message Generation** - Personalized messages with tone selection (professional/friendly/enthusiastic)
-7. **Job Tracking** - Save and mark jobs as applied
-8. **Dark Mode** - Full dark mode support
-9. **Two-Tier Subscription System**:
-   - **Free Plan**: 5 skills max, 5 job scrapes/month
-   - **Plus Plan ($19/mo)**: Unlimited skills, 300 job scrapes/month, schedule access
-10. **Email Verification** - Required before accessing dashboard features
-11. **Stripe Payments** - Secure subscription billing via Stripe
-12. **Account Management** - View usage, upgrade/cancel subscription, delete account
+1. **AI Chat Builder** - Create resumes through natural conversation with Claude 3.5 Haiku
+2. **Professional Templates** - Modern, Professional, Creative, Executive, Technical
+3. **ATS Scanner** - Upload and analyze existing resumes (PDF/DOCX)
+4. **AI-Powered Enhancements** - Content improvement, keyword optimization, grammar check
+5. **Cover Letter Generator** - Generate personalized cover letters from resume data
+6. **Multiple Export Formats** - PDF (all plans), DOCX (Plus and above)
+7. **Dark Mode** - Full dark mode support
+8. **Multi-Tier Subscription System**:
+   - **Free Plan**: 1 resume, 5 AI edits/month, PDF export
+   - **Plus Plan ($15/mo)**: 5 resumes, 100 AI edits/month, all features except cover letters
+   - **Ultra Plan ($30/mo)**: Unlimited resumes, unlimited AI edits, all features
+   - **Lifetime ($100)**: One-time payment, unlimited access forever
+9. **Email Verification** - Required before accessing dashboard features
+10. **Two-Factor Authentication** - Optional 2FA for enhanced security
+11. **Stripe Payments** - Secure subscription billing
+12. **GDPR Compliance** - Data export, account deletion, privacy controls
 
 ## AI Integration (Poe)
-Uses Poe's OpenAI-compatible API with the gpt-5-nano model for:
-- Suggesting skills from user's introduction
-- Generating personalized follow-up messages
+Uses Poe's OpenAI-compatible API with Claude 3.5 Haiku for:
+- Building resumes through conversational AI
+- Enhancing resume content and bullet points
+- Generating cover letters
+- Providing keyword suggestions
+- ATS optimization recommendations
 
 Environment variables (stored in Replit secrets):
 - `POE_API_KEY`

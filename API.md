@@ -402,56 +402,6 @@ Export cover letter as PDF.
 **Response:** `200 OK`
 - Content-Type: `application/pdf`
 
-## Job Scraping Endpoints
-
-### GET /api/jobs
-Get scraped jobs for user.
-
-**Response:** `200 OK`
-```json
-{
-  "jobs": [
-    {
-      "id": "uuid",
-      "title": "string",
-      "description": "string",
-      "source": "string",
-      "sourceUrl": "string",
-      "saved": "boolean",
-      "applied": "boolean"
-    }
-  ]
-}
-```
-
-### POST /api/jobs/refresh
-Trigger new job search.
-
-**Request Body:**
-```json
-{
-  "skills": ["skill1", "skill2"],
-  "keywords": ["keyword1"]
-}
-```
-
-**Response:** `200 OK`
-
-**Rate Limits:**
-- Free: 5 req/min
-- Plus: 30 req/min
-- Ultra/Lifetime: 100 req/min
-
-### POST /api/jobs/:id/save
-Save/bookmark a job.
-
-**Response:** `200 OK`
-
-### POST /api/jobs/:id/apply
-Mark job as applied.
-
-**Response:** `200 OK`
-
 ## Subscription & Account Endpoints
 
 ### GET /api/subscription
