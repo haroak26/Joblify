@@ -45,7 +45,7 @@ export default function DashboardHome() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-header mb-2">Welcome back, {user?.name || user?.username}!</h1>
+        <h1 className="text-header font-bold mb-2">Welcome back, {user?.name || user?.username}!</h1>
         <p className="text-body text-muted-foreground">Track your job applications and search for opportunities</p>
       </div>
 
@@ -104,7 +104,7 @@ export default function DashboardHome() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-body">ATS Scanner</CardTitle>
+            <CardTitle className="text-large font-semibold">ATS Scanner</CardTitle>
             <CardDescription className="text-small">
               Analyze documents for ATS compatibility
             </CardDescription>
@@ -120,7 +120,7 @@ export default function DashboardHome() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-body">Cover Letters</CardTitle>
+            <CardTitle className="text-large font-semibold">Cover Letters</CardTitle>
             <CardDescription className="text-small">
               Generate professional cover letters
             </CardDescription>
@@ -136,7 +136,7 @@ export default function DashboardHome() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-body">Resume Builder</CardTitle>
+            <CardTitle className="text-large font-semibold">Resume Builder</CardTitle>
             <CardDescription className="text-small">
               Create ATS-optimized resumes
             </CardDescription>
@@ -154,7 +154,7 @@ export default function DashboardHome() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-body">Jobs</CardTitle>
+            <CardTitle className="text-large font-semibold">Jobs</CardTitle>
             <CardDescription className="text-small">
               Track and manage job applications
             </CardDescription>
