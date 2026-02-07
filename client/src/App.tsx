@@ -18,7 +18,6 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsAndConditions from "@/pages/terms-and-conditions";
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
-import AIResumeBuilderFeature from "@/pages/features/ai-resume-builder";
 import ATSScannerFeature from "@/pages/features/ats-scanner";
 import CoverLetterFeature from "@/pages/features/cover-letter";
 import Login from "@/pages/login";
@@ -33,11 +32,6 @@ import JobDetails from "@/pages/dashboard/job-details";
 import Generator from "@/pages/dashboard/generator";
 import Schedules from "@/pages/dashboard/schedules";
 import Account from "@/pages/dashboard/account";
-import ResumeDashboard from "@/pages/dashboard/resumes";
-import ResumeEditor from "@/pages/dashboard/resume-editor";
-import ResumeChat from "@/pages/dashboard/resume-chat";
-import ResumeBuilderWizard from "@/pages/dashboard/resume-builder-wizard";
-import TemplateSelect from "@/pages/dashboard/template-select";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetterGenerator from "@/pages/dashboard/cover-letter";
 
@@ -50,7 +44,6 @@ function Router() {
       <Route path="/why-us" component={WhyUs} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
-      <Route path="/features/ai-resume-builder" component={AIResumeBuilderFeature} />
       <Route path="/features/ats-scanner" component={ATSScannerFeature} />
       <Route path="/features/cover-letter" component={CoverLetterFeature} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
@@ -106,48 +99,6 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <Account />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeDashboard />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes/:id/edit">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeEditor />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resume-chat">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeChat />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes/:id/chat">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeChat />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes/template-select">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <TemplateSelect />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes/new">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeBuilderWizard />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

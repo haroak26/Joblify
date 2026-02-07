@@ -3,12 +3,11 @@ import {
   type Subscription, type Usage, type PlanType, PLAN_LIMITS, normalizePlan,
   type Schedule, type InsertSchedule, type SeenJob,
   type JobCache, type InsertJobCache,
-  type Resume, type InsertResume, type ChatConversation, type InsertChatConversation,
   type CoverLetter, type InsertCoverLetter,
   type SecurityEvent, type InsertSecurityEvent,
   type SupportInteraction, type InsertSupportInteraction,
   users, profiles, jobs, subscriptions, usage, schedules, seenJobs, jobCache,
-  resumes, chatConversations, coverLetters, securityEvents, supportInteractions, resumeDataSchema,
+  coverLetters, securityEvents, supportInteractions,
   deletedAccountsTracker
 } from "@shared/schema";
 import { db } from "./db";
@@ -77,23 +76,6 @@ export interface IStorage {
   cleanupExpiredCachedJobs(): Promise<number>;
   getCachedJobByUrl(sourceUrl: string): Promise<JobCache | undefined>;
   
-  // Resume methods
-  getResumes(userId: string): Promise<Resume[]>;
-  getResume(id: string): Promise<Resume | undefined>;
-  createResume(userId: string, data: InsertResume): Promise<Resume>;
-  updateResume(id: string, updates: Partial<InsertResume>): Promise<Resume>;
-  deleteResume(id: string): Promise<void>;
-  countUserResumes(userId: string): Promise<number>;
-  
-  // Chat methods
-  getChatConversation(resumeId: string): Promise<ChatConversation | undefined>;
-  createChatConversation(userId: string, resumeId: string): Promise<ChatConversation>;
-  updateChatConversation(id: string, messages: unknown[]): Promise<ChatConversation>;
-  
-  // AI Usage methods
-  incrementAiEdits(userId: string): Promise<void>;
-  canUseAiEdit(userId: string): Promise<boolean>;
-  
   // Cover letter methods
   getCoverLetter(id: string): Promise<CoverLetter | undefined>;
   getCoverLetters(userId: string): Promise<CoverLetter[]>;
@@ -103,7 +85,6 @@ export interface IStorage {
   deleteCoverLetter(id: string): Promise<void>;
   
   // Count methods for GDPR
-  getResumeCount(userId: string): Promise<number>;
   getJobCount(userId: string): Promise<number>;
   getScheduleCount(userId: string): Promise<number>;
   
@@ -995,116 +976,6 @@ export class DatabaseStorage implements IStorage {
     return cached || undefined;
   }
   
-  // Resume methods
-  async getResumes(userId: string): Promise<Resume[]> {
-    const userResumes = await db
-      .select()
-      .from(resumes)
-      .where(eq(resumes.userId, userId))
-      .orderBy(sql`${resumes.updatedAt} DESC`);
-    return userResumes;
-  }
-  
-  async getResume(id: string): Promise<Resume | undefined> {
-    const [resume] = await db
-      .select()
-      .from(resumes)
-      .where(eq(resumes.id, id));
-    return resume || undefined;
-  }
-  
-  async createResume(userId: string, data: InsertResume): Promise<Resume> {
-    const [resume] = await db
-      .insert(resumes)
-      .values({
-        userId,
-        title: data.title,
-        template: data.template || 'modern',
-        resumeData: data.resumeData,
-        targetJobId: data.targetJobId || null,
-        isTailored: data.isTailored || false,
-      })
-      .returning();
-    return resume;
-  }
-  
-  async updateResume(id: string, updates: Partial<InsertResume>): Promise<Resume> {
-    const [resume] = await db
-      .update(resumes)
-      .set({
-        ...updates,
-        updatedAt: new Date(),
-      })
-      .where(eq(resumes.id, id))
-      .returning();
-    return resume;
-  }
-  
-  async deleteResume(id: string): Promise<void> {
-    await db.delete(resumes).where(eq(resumes.id, id));
-  }
-  
-  async countUserResumes(userId: string): Promise<number> {
-    const result = await db
-      .select({ count: count() })
-      .from(resumes)
-      .where(eq(resumes.userId, userId));
-    return result[0]?.count || 0;
-  }
-  
-  // Chat methods
-  async getChatConversation(resumeId: string): Promise<ChatConversation | undefined> {
-    const [conversation] = await db
-      .select()
-      .from(chatConversations)
-      .where(eq(chatConversations.resumeId, resumeId));
-    return conversation || undefined;
-  }
-  
-  async createChatConversation(userId: string, resumeId: string): Promise<ChatConversation> {
-    const [conversation] = await db
-      .insert(chatConversations)
-      .values({
-        userId,
-        resumeId,
-        messages: [],
-      })
-      .returning();
-    return conversation;
-  }
-  
-  async updateChatConversation(id: string, messages: unknown[]): Promise<ChatConversation> {
-    const [conversation] = await db
-      .update(chatConversations)
-      .set({
-        messages,
-        updatedAt: new Date(),
-      })
-      .where(eq(chatConversations.id, id))
-      .returning();
-    return conversation;
-  }
-  
-  // AI Usage methods
-  async incrementAiEdits(userId: string): Promise<void> {
-    const userUsage = await this.getUsage(userId);
-    await db
-      .update(usage)
-      .set({
-        aiEditsThisMonth: userUsage.aiEditsThisMonth + 1,
-      })
-      .where(eq(usage.userId, userId));
-  }
-  
-  async canUseAiEdit(userId: string): Promise<boolean> {
-    const userUsage = await this.checkAndResetMonthlyUsage(userId);
-    const subscription = await this.getSubscription(userId);
-    const plan = normalizePlan(subscription?.plan);
-    const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
-    
-    return userUsage.aiEditsThisMonth < planLimits.maxAiEditsPerMonth;
-  }
-  
   // Cover letter methods
   async getCoverLetter(id: string): Promise<CoverLetter | undefined> {
     const [coverLetter] = await db
@@ -1150,14 +1021,6 @@ export class DatabaseStorage implements IStorage {
   async getUserById(id: string): Promise<User | undefined> {
     // Alias for getUser - for GDPR compliance clarity
     return this.getUser(id);
-  }
-  
-  async getResumeCount(userId: string): Promise<number> {
-    const result = await db
-      .select({ count: count() })
-      .from(resumes)
-      .where(eq(resumes.userId, userId));
-    return result[0]?.count || 0;
   }
   
   async getCoverLetterCount(userId: string): Promise<number> {

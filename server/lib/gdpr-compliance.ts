@@ -24,7 +24,6 @@ export async function exportUserData(userId: string) {
       profile,
       subscription,
       usage,
-      resumes,
       coverLetters,
       jobs,
       schedules,
@@ -35,7 +34,6 @@ export async function exportUserData(userId: string) {
       storage.getProfile(userId),
       storage.getSubscription(userId),
       storage.getUsage(userId),
-      storage.getResumes(userId),
       storage.getCoverLetters(userId),
       storage.getJobs(userId),
       storage.getSchedules(userId),
@@ -66,7 +64,6 @@ export async function exportUserData(userId: string) {
       profile: profile || null,
       subscription: subscription || null,
       usage: usage || null,
-      resumes: resumes || [],
       coverLetters: coverLetters || [],
       jobs: jobs || [],
       schedules: schedules || [],
@@ -102,14 +99,12 @@ export async function getUserDataSummary(userId: string) {
     const [
       user,
       profile,
-      resumeCount,
       coverLetterCount,
       jobCount,
       scheduleCount,
     ] = await Promise.all([
       storage.getUserById(userId),
       storage.getProfile(userId),
-      storage.getResumeCount(userId),
       storage.getCoverLetterCount(userId),
       storage.getJobCount(userId),
       storage.getScheduleCount(userId),
@@ -145,21 +140,12 @@ export async function getUserDataSummary(userId: string) {
           purpose: "Job matching and personalization",
           retention: "As long as your account exists",
         },
-        resumeData: {
-          description: "Resume content and history",
-          fields: ["resume content", "templates", "chat history"],
-          dataPresent: resumeCount > 0,
-          count: resumeCount,
-          source: "Created by you using our AI resume builder",
-          purpose: "Resume building and storage",
-          retention: "As long as your account exists",
-        },
         coverLetterData: {
           description: "Cover letter content",
           fields: ["cover letter text", "job information", "customization"],
           dataPresent: coverLetterCount > 0,
           count: coverLetterCount,
-          source: "Generated using your resume data and AI",
+          source: "Generated using AI based on job description and user input",
           purpose: "Cover letter creation and storage",
           retention: "As long as your account exists",
         },
@@ -191,7 +177,7 @@ export async function getUserDataSummary(userId: string) {
         },
         usageData: {
           description: "Usage metrics and limits",
-          fields: ["AI edits count", "jobs scraped count", "monthly reset date"],
+          fields: ["jobs scraped count", "monthly reset date"],
           dataPresent: true,
           source: "Automatically tracked as you use features",
           purpose: "Enforce plan limits and usage tracking",
@@ -223,8 +209,8 @@ export async function getUserDataSummary(userId: string) {
         },
         poe: {
           name: "Poe AI (Claude API)",
-          purpose: "AI-powered resume building and improvements",
-          dataShared: ["resume content", "chat messages"],
+          purpose: "AI-powered features",
+          dataShared: ["chat messages"],
           privacyPolicy: "https://poe.com/privacy",
         },
         posthog: {
@@ -307,7 +293,6 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
       profile,
       subscription,
       usage,
-      resumes,
       coverLetters,
       jobs,
     ] = await Promise.all([
@@ -315,7 +300,6 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
       storage.getProfile(userId),
       storage.getSubscription(userId),
       storage.getUsage(userId),
-      storage.getResumes(userId),
       storage.getCoverLetters(userId),
       storage.getJobs(userId),
     ]);
@@ -410,24 +394,6 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
           if (doc.y > 700 && index < jobs.length - 1) {
             doc.addPage();
           }
-        });
-      }
-
-      // Resumes
-      if (resumes && resumes.length > 0) {
-        doc.addPage();
-        doc.fontSize(16).font('Helvetica-Bold').text('RESUMES');
-        doc.moveDown(0.5);
-        doc.fontSize(10).font('Helvetica');
-
-        resumes.forEach((resume: { title?: string; template?: string }, index: number) => {
-          doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${resume.title || 'Untitled Resume'}`);
-          doc.fontSize(9).font('Helvetica');
-          doc.text(`   Template: ${resume.template || 'N/A'}`);
-          
-          // Note: We don't include full resume data to keep PDF concise
-          doc.text('   [Resume data available in your account]');
-          doc.moveDown(0.8);
         });
       }
 

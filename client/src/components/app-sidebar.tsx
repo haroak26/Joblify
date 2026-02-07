@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, FileText, Scan, Mail, User, Briefcase, Moon, Sun } from "lucide-react";
+import { Home, Scan, Mail, User, Briefcase, Moon, Sun } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -28,11 +28,6 @@ const mainMenuItems = [
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
-  },
-  {
-    title: "My Resumes",
-    url: "/dashboard/resumes",
-    icon: FileText,
   },
   {
     title: "ATS Scanner",

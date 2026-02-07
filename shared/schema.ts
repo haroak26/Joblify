@@ -274,45 +274,21 @@ export const PLAN_LIMITS = {
     maxJobsPerMonth: 5, // Reduced to encourage upgrades
     maxSchedules: 0,
     hasScheduleAccess: false,
-    // Resume builder limits
-    maxResumes: 1,
-    maxAiEditsPerMonth: 3, // Reduced to encourage upgrades
-    hasAtsScanner: false,
-    hasCoverLetterGenerator: false,
-    allowedFormats: ['pdf'] as const,
   },
   plus: {
     maxJobsPerMonth: 100, // Reduced from 300 to encourage ultra
     maxSchedules: 2,
     hasScheduleAccess: true,
-    // Resume builder limits
-    maxResumes: 5,
-    maxAiEditsPerMonth: 50, // Reduced from 100 to encourage ultra
-    hasAtsScanner: true,
-    hasCoverLetterGenerator: true,
-    allowedFormats: ['pdf', 'docx'] as const,
   },
   ultra: {
     maxJobsPerMonth: Infinity,
     maxSchedules: Infinity,
     hasScheduleAccess: true,
-    // Resume builder limits
-    maxResumes: Infinity,
-    maxAiEditsPerMonth: Infinity,
-    hasAtsScanner: true,
-    hasCoverLetterGenerator: true,
-    allowedFormats: ['pdf', 'docx'] as const,
   },
   lifetime: {
     maxJobsPerMonth: Infinity,
     maxSchedules: Infinity,
     hasScheduleAccess: true,
-    // Resume builder limits
-    maxResumes: Infinity,
-    maxAiEditsPerMonth: Infinity,
-    hasAtsScanner: true,
-    hasCoverLetterGenerator: true,
-    allowedFormats: ['pdf', 'docx'] as const,
   },
 } as const;
 

@@ -1,53 +1,21 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, XCircle, Target, BarChart3, Search, Lightbulb, TrendingUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { CleanTabs, CleanTabsContent, CleanTabsList, CleanTabsTrigger } from "@/components/ui/clean-tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import type { Resume } from "@shared/schema";
 
 export default function AtsScanner() {
   const [file, setFile] = useState<File | null>(null);
-  const [selectedResumeId, setSelectedResumeId] = useState<string>("");
   const [jobDescription, setJobDescription] = useState<string>("");
   const [result, setResult] = useState<any>(null);
-  const [scanMode, setScanMode] = useState<"joblify" | "upload">("joblify");
   const { toast } = useToast();
-
-  const { data: resumesData } = useQuery<Resume[]>({
-    queryKey: ["/api/resumes"],
-  });
-  
-  const resumes = Array.isArray(resumesData) ? resumesData : [];
-
-  const scanJoblifyResumeMutation = useMutation({
-    mutationFn: async (resumeId: string) => {
-      const res = await fetch(`/api/ats/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId, jobDescription: jobDescription.trim() || undefined }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Failed to scan");
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setResult(data);
-      toast({ title: "Scan Complete", description: `ATS Score: ${data.score}/100` });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Scan Failed", description: error.message, variant: "destructive" });
-    },
-  });
 
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
