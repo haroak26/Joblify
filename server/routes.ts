@@ -926,9 +926,10 @@ Use this information to personalize your responses and avoid asking for data alr
       const schema = z.object({
         content: z.string().min(1, "Content is required"),
         section: z.string().min(1, "Section is required"),
+        customPrompt: z.string().optional(),
       });
       
-      const { content, section } = schema.parse(req.body);
+      const { content, section, customPrompt } = schema.parse(req.body);
       
       // Check AI usage limits
       const canUse = await storage.canUseAiEdit(userId);
@@ -945,12 +946,17 @@ Use this information to personalize your responses and avoid asking for data alr
         });
       }
       
+      // Build system prompt based on custom prompt or default
+      const systemPrompt = customPrompt 
+        ? `You are a professional resume editor. ${customPrompt}. Keep the same information but make it better. Return only the improved content without any explanations.`
+        : `You are a professional resume editor. Improve the following ${section} section to be more professional, impactful, and ATS-friendly. Keep the same information but make it more compelling. Return only the improved content without any explanations.`;
+      
       const response = await getPoeClient().chat.completions.create({
         model: "claude-4.5-haiku",
         messages: [
           {
             role: "system",
-            content: `You are a professional resume editor. Improve the following ${section} section to be more professional, impactful, and ATS-friendly. Keep the same information but make it more compelling. Return only the improved content without any explanations.`
+            content: systemPrompt,
           },
           {
             role: "user",
@@ -960,13 +966,13 @@ Use this information to personalize your responses and avoid asking for data alr
         max_tokens: 500,
       });
       
-      const improved = response.choices[0]?.message?.content || content;
+      const improvedContent = response.choices[0]?.message?.content || content;
       
       // Increment usage
       await storage.incrementAiEdits(userId);
       console.log('[API] AI content improved for user:', userId);
       
-      res.json({ improved });
+      res.json({ improvedContent });
     } catch (error) {
       if (error instanceof z.ZodError) {
         console.error('[API] AI improve validation error for user:', userId, error.errors);
