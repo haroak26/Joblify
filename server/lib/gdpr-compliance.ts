@@ -365,7 +365,7 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
         doc.text('Skills:');
         doc.moveDown(0.3);
         doc.fontSize(9);
-        profile.skills.forEach((skill: any) => {
+        profile.skills.forEach((skill: string | { name: string }) => {
           const skillText = typeof skill === 'string' ? skill : skill.name || 'Unknown';
           doc.text(`• ${skillText}`, { indent: 20 });
         });
@@ -380,7 +380,7 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
         doc.moveDown(0.5);
         doc.fontSize(10).font('Helvetica');
 
-        jobs.forEach((job: any, index: number) => {
+        jobs.forEach((job: { title?: string; company?: string; location?: string; description?: string; applied?: boolean }, index: number) => {
           doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${job.title || 'Untitled Job'}`);
           doc.fontSize(9).font('Helvetica');
           
@@ -420,7 +420,7 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
         doc.moveDown(0.5);
         doc.fontSize(10).font('Helvetica');
 
-        resumes.forEach((resume: any, index: number) => {
+        resumes.forEach((resume: { title?: string; template?: string }, index: number) => {
           doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${resume.title || 'Untitled Resume'}`);
           doc.fontSize(9).font('Helvetica');
           doc.text(`   Template: ${resume.template || 'N/A'}`);
@@ -438,7 +438,7 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
         doc.moveDown(0.5);
         doc.fontSize(10).font('Helvetica');
 
-        coverLetters.forEach((letter: any, index: number) => {
+        coverLetters.forEach((letter: { jobTitle?: string; companyName?: string }, index: number) => {
           doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${letter.jobTitle || 'Cover Letter'}`);
           doc.fontSize(9).font('Helvetica');
           

@@ -376,6 +376,7 @@ export default function Account() {
                 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="w-4 h-4" />
+                  {/* TODO: Display actual account creation date when available in user object */}
                   <span>Member since {new Date().getFullYear()}</span>
                 </div>
               </div>
@@ -464,7 +465,7 @@ export default function Account() {
                 </CardContent>
               </Card>
 
-              {/* AI Edits */}
+              {/* AI Edits - No limit tracking as limits vary by plan and are not enforced here */}
               <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
