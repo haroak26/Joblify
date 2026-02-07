@@ -23,14 +23,14 @@ import {
 import type { Resume, ResumeData } from "@shared/schema";
 
 // Resume section components
-import { PersonalInfoSection } from "@/components/resume-sections/PersonalInfoSection";
-import { ExperienceSection } from "@/components/resume-sections/ExperienceSection";
-import { EducationSection } from "@/components/resume-sections/EducationSection";
-import { SkillsSection } from "@/components/resume-sections/SkillsSection";
-import { SummarySection } from "@/components/resume-sections/SummarySection";
+import PersonalInfoSection from "@/components/resume-sections/PersonalInfoSection";
+import ExperienceSection from "@/components/resume-sections/ExperienceSection";
+import EducationSection from "@/components/resume-sections/EducationSection";
+import SkillsSection from "@/components/resume-sections/SkillsSection";
+import SummarySection from "@/components/resume-sections/SummarySection";
 
 // Resume preview component
-import { ResumePreview } from "@/components/resume-preview/ResumePreview";
+import ResumePreview from "@/components/resume-preview/ResumePreview";
 
 type ResumeSection = {
   id: string;
