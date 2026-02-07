@@ -230,9 +230,9 @@ export default function ResumeDashboard() {
                     <div>
                       <h3 className="font-semibold mb-1">Traditional Mode</h3>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Manually fill out a step-by-step form with traditional input fields and sections.
+                        Start with a blank resume and add sections manually using the visual editor.
                       </p>
-                      <p className="text-xs text-muted-foreground font-medium">For those who prefer structured forms</p>
+                      <p className="text-xs text-muted-foreground font-medium">Build your resume from scratch with full control</p>
                     </div>
                   </div>
                 </Card>
@@ -300,9 +300,9 @@ export default function ResumeDashboard() {
                     <div>
                       <h3 className="font-semibold mb-1">Traditional Mode</h3>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Manually fill out a step-by-step form with traditional input fields and sections.
+                        Start with a blank resume and add sections manually using the visual editor.
                       </p>
-                      <p className="text-xs text-muted-foreground font-medium">For those who prefer structured forms</p>
+                      <p className="text-xs text-muted-foreground font-medium">Build your resume from scratch with full control</p>
                     </div>
                   </div>
                 </Card>
