@@ -9,6 +9,7 @@
 
 import { storage } from "../storage";
 import type { User } from "@shared/schema";
+import PDFDocument from 'pdfkit';
 
 /**
  * Export all user data in a portable JSON format
@@ -290,5 +291,195 @@ export async function logConsentWithdrawal(userId: string, reason?: string) {
   } catch (error) {
     console.error("[GDPR] Error logging consent withdrawal:", error);
     throw new Error("Failed to log consent withdrawal");
+  }
+}
+
+/**
+ * Export user data as a PDF document
+ * Only includes user-entered data, excludes system metadata
+ * Implements GDPR Article 20 - Right to Data Portability (PDF format)
+ */
+export async function exportUserDataPDF(userId: string): Promise<Buffer> {
+  try {
+    // Fetch user data
+    const [
+      user,
+      profile,
+      subscription,
+      usage,
+      resumes,
+      coverLetters,
+      jobs,
+    ] = await Promise.all([
+      storage.getUserById(userId),
+      storage.getProfile(userId),
+      storage.getSubscription(userId),
+      storage.getUsage(userId),
+      storage.getResumes(userId),
+      storage.getCoverLetters(userId),
+      storage.getJobs(userId),
+    ]);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        resolve(pdfBuffer);
+      });
+      doc.on('error', reject);
+
+      // Header
+      doc.fontSize(24).font('Helvetica-Bold').text('JOBLIFY DATA EXPORT', { align: 'center' });
+      doc.moveDown(0.5);
+      doc.fontSize(10).font('Helvetica').text(`User: ${user.username}`, { align: 'center' });
+      doc.text(`Email: ${user.email}`, { align: 'center' });
+      doc.text(`Export Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, { align: 'center' });
+      doc.moveDown(2);
+
+      // Profile Information
+      doc.fontSize(16).font('Helvetica-Bold').text('PROFILE INFORMATION');
+      doc.moveDown(0.5);
+      doc.fontSize(10).font('Helvetica');
+      
+      if (user.name) {
+        doc.text(`Name: ${user.name}`);
+        doc.moveDown(0.3);
+      }
+      
+      if (profile?.intro) {
+        doc.text('Introduction:', { continued: false });
+        doc.moveDown(0.3);
+        doc.fontSize(9).text(profile.intro, { indent: 20 });
+        doc.fontSize(10);
+        doc.moveDown(0.5);
+      }
+      
+      if (profile?.skills && Array.isArray(profile.skills) && profile.skills.length > 0) {
+        doc.text('Skills:');
+        doc.moveDown(0.3);
+        doc.fontSize(9);
+        profile.skills.forEach((skill: any) => {
+          const skillText = typeof skill === 'string' ? skill : skill.name || 'Unknown';
+          doc.text(`• ${skillText}`, { indent: 20 });
+        });
+        doc.fontSize(10);
+        doc.moveDown(1);
+      }
+
+      // Saved Jobs
+      if (jobs && jobs.length > 0) {
+        doc.addPage();
+        doc.fontSize(16).font('Helvetica-Bold').text('SAVED JOBS');
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica');
+
+        jobs.forEach((job: any, index: number) => {
+          doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${job.title || 'Untitled Job'}`);
+          doc.fontSize(9).font('Helvetica');
+          
+          if (job.company) {
+            doc.text(`   Company: ${job.company}`);
+          }
+          
+          if (job.location) {
+            doc.text(`   Location: ${job.location}`);
+          }
+          
+          if (job.description) {
+            doc.text('   Description:', { continued: false });
+            const truncatedDesc = job.description.length > 200 
+              ? job.description.substring(0, 200) + '...' 
+              : job.description;
+            doc.text(`   ${truncatedDesc}`, { indent: 25 });
+          }
+          
+          if (job.applied !== undefined) {
+            doc.text(`   Status: ${job.applied ? 'Applied' : 'Saved'}`);
+          }
+          
+          doc.moveDown(0.8);
+          
+          // Add page break if needed
+          if (doc.y > 700 && index < jobs.length - 1) {
+            doc.addPage();
+          }
+        });
+      }
+
+      // Resumes
+      if (resumes && resumes.length > 0) {
+        doc.addPage();
+        doc.fontSize(16).font('Helvetica-Bold').text('RESUMES');
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica');
+
+        resumes.forEach((resume: any, index: number) => {
+          doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${resume.title || 'Untitled Resume'}`);
+          doc.fontSize(9).font('Helvetica');
+          doc.text(`   Template: ${resume.template || 'N/A'}`);
+          
+          // Note: We don't include full resume data to keep PDF concise
+          doc.text('   [Resume data available in your account]');
+          doc.moveDown(0.8);
+        });
+      }
+
+      // Cover Letters
+      if (coverLetters && coverLetters.length > 0) {
+        doc.addPage();
+        doc.fontSize(16).font('Helvetica-Bold').text('COVER LETTERS');
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica');
+
+        coverLetters.forEach((letter: any, index: number) => {
+          doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${letter.jobTitle || 'Cover Letter'}`);
+          doc.fontSize(9).font('Helvetica');
+          
+          if (letter.companyName) {
+            doc.text(`   Company: ${letter.companyName}`);
+          }
+          
+          doc.text('   [Cover letter content available in your account]');
+          doc.moveDown(0.8);
+        });
+      }
+
+      // Usage Summary
+      doc.addPage();
+      doc.fontSize(16).font('Helvetica-Bold').text('USAGE SUMMARY');
+      doc.moveDown(0.5);
+      doc.fontSize(10).font('Helvetica');
+
+      if (usage) {
+        doc.text(`Jobs Scraped This Month: ${usage.jobsScrapedThisMonth || 0}`);
+        doc.text(`AI Edits This Month: ${usage.aiEditsThisMonth || 0}`);
+        doc.text(`Cover Letters This Month: ${usage.coverLettersThisMonth || 0}`);
+        doc.text(`ATS Scans This Month: ${usage.atsScansThisMonth || 0}`);
+        doc.moveDown(0.5);
+      }
+
+      if (subscription) {
+        doc.text(`Current Plan: ${subscription.plan || 'free'}`);
+        doc.text(`Subscription Status: ${subscription.status || 'active'}`);
+      }
+
+      // Footer
+      doc.moveDown(2);
+      doc.fontSize(8).font('Helvetica-Oblique')
+        .text('This export contains your personal data as stored in Joblify.', { align: 'center' });
+      doc.text('For questions, contact privacy@joblifyai.com', { align: 'center' });
+
+      doc.end();
+    });
+  } catch (error) {
+    console.error("[GDPR] Error generating PDF export:", error);
+    throw new Error("Failed to generate PDF export");
   }
 }
