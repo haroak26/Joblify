@@ -23,8 +23,8 @@ const features = [
   },
   {
     icon: Search,
-    title: "Job Search",
-    description: "Find relevant freelance opportunities that match your skills automatically."
+    title: "ATS Scanner",
+    description: "Upload existing resumes and get instant feedback on ATS compatibility and optimization."
   },
   {
     icon: Zap,
@@ -37,7 +37,7 @@ const benefits = [
   "Build resumes through natural conversation",
   "AI suggests improvements and keywords",
   "Export as PDF or DOCX instantly",
-  "Find freelance jobs that match your skills",
+  "ATS-compatible resume templates",
 ];
 
 export default function Landing() {
