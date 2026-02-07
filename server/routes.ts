@@ -13,6 +13,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
+import { generateResumePdfBuffer } from "./lib/resume-pdf";
 
 let poeClient: OpenAI | null = null;
 
@@ -147,6 +148,123 @@ function resumeDataToText(resumeData: ResumeData): string {
   
   return parts.join('\n');
 }
+
+const normalizeImportedResumeData = (rawData: any, parsedText: string): ResumeData => {
+  const normalizeUrl = (value: unknown) => {
+    if (typeof value !== "string") return "";
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    if (/^https?:\\/\\//i.test(trimmed)) return trimmed;
+    if (/^[\\w.-]+\\.[a-z]{2,}/i.test(trimmed)) return `https://${trimmed}`;
+    return "";
+  };
+
+  const normalizeEmail = (value: unknown) => {
+    if (typeof value !== "string") return "";
+    const trimmed = value.trim();
+    return /.+@.+\\..+/.test(trimmed) ? trimmed : "";
+  };
+
+  const base: ResumeData = {
+    personalInfo: {
+      name: "",
+      email: "",
+      phone: "",
+      location: "",
+      linkedin: "",
+      website: "",
+    },
+    summary: "",
+    experience: [],
+    education: [],
+    skills: [],
+    certifications: [],
+    projects: [],
+  };
+
+  const data = typeof rawData === "object" && rawData !== null ? rawData : {};
+
+  const personalInfo = {
+    ...base.personalInfo,
+    ...(data.personalInfo || {}),
+  };
+  personalInfo.email = normalizeEmail(personalInfo.email);
+  personalInfo.linkedin = normalizeUrl(personalInfo.linkedin);
+  personalInfo.website = normalizeUrl(personalInfo.website);
+
+  const experience = Array.isArray(data.experience)
+    ? data.experience.map((exp: any) => {
+        const description = Array.isArray(exp?.description)
+          ? exp.description.filter(Boolean)
+          : typeof exp?.description === "string"
+          ? exp.description.split(/\n|•|-/).map((item: string) => item.trim()).filter(Boolean)
+          : [];
+        const endDateRaw = exp?.endDate || exp?.end_date || "";
+        const endDate = typeof endDateRaw === "string" && /present/i.test(endDateRaw) ? null : endDateRaw || null;
+
+        return {
+          company: exp?.company || "",
+          title: exp?.title || exp?.position || exp?.role || "",
+          location: exp?.location || "",
+          startDate: exp?.startDate || exp?.start_date || "",
+          endDate,
+          description,
+        };
+      })
+    : [];
+
+  const education = Array.isArray(data.education)
+    ? data.education.map((edu: any) => ({
+        school: edu?.school || "",
+        degree: edu?.degree || "",
+        field: edu?.field || "",
+        graduationDate: edu?.graduationDate || edu?.graduation_date || "",
+        gpa: edu?.gpa || "",
+      }))
+    : [];
+
+  const skills = Array.isArray(data.skills)
+    ? data.skills.filter(Boolean)
+    : typeof data.skills === "string"
+    ? data.skills.split(/,|\\n/).map((skill: string) => skill.trim()).filter(Boolean)
+    : [];
+
+  const certifications = Array.isArray(data.certifications)
+    ? data.certifications.map((cert: any) => ({
+        name: cert?.name || "",
+        issuer: cert?.issuer || "",
+        date: cert?.date || "",
+      }))
+    : [];
+
+  const projects = Array.isArray(data.projects)
+    ? data.projects.map((proj: any) => ({
+        name: proj?.name || "",
+        description: proj?.description || "",
+        technologies: Array.isArray(proj?.technologies)
+          ? proj.technologies.filter(Boolean)
+          : typeof proj?.technologies === "string"
+          ? proj.technologies.split(/,|\\n/).map((tech: string) => tech.trim()).filter(Boolean)
+          : [],
+        url: proj?.url || "",
+      }))
+    : [];
+
+  const summary = typeof data.summary === "string" && data.summary.trim()
+    ? data.summary.trim()
+    : parsedText.trim().slice(0, 600);
+
+  return resumeDataSchema.parse({
+    ...base,
+    personalInfo,
+    summary,
+    experience,
+    education,
+    skills,
+    certifications,
+    projects,
+  });
+};
 
 export async function registerRoutes(
   httpServer: Server,
@@ -406,7 +524,7 @@ export async function registerRoutes(
     try {
       console.log('[API] Fetching resumes for user:', userId);
       const resumes = await storage.getResumes(userId);
-      res.json({ resumes });
+      res.json(resumes);
     } catch (error) {
       console.error('[API] Error fetching resumes for user:', userId, error);
       res.status(500).json({ 
@@ -2004,6 +2122,9 @@ Return ONLY valid JSON in this exact format:
       }
 
       const title = req.body.title || 'Imported Resume';
+      const template = ['modern', 'professional', 'creative', 'executive', 'technical'].includes(req.body.template)
+        ? req.body.template
+        : 'professional';
 
       // Check plan limits
       const subscription = await storage.getSubscription(userId);
@@ -2042,7 +2163,7 @@ Return ONLY valid JSON in this exact format:
       // Use AI to parse the resume into structured data
       const parsePrompt = `You are a resume parser. Extract structured data from this resume text and return it as JSON.
 
-Return JSON with this exact structure:
+Return JSON with this exact structure (match the keys precisely):
 {
   "personalInfo": {
     "name": "string",
@@ -2056,9 +2177,10 @@ Return JSON with this exact structure:
   "experience": [
     {
       "company": "string",
-      "position": "string",
+      "title": "string",
+      "location": "string",
       "startDate": "YYYY-MM",
-      "endDate": "YYYY-MM or Present",
+      "endDate": "YYYY-MM or Present (null if current)",
       "description": ["bullet point 1", "bullet point 2"]
     }
   ],
@@ -2078,10 +2200,17 @@ Return JSON with this exact structure:
       "date": "YYYY-MM"
     }
   ],
-  "projects": []
+  "projects": [
+    {
+      "name": "string",
+      "description": "string",
+      "technologies": ["string"],
+      "url": "string"
+    }
+  ]
 }
 
-Extract all information accurately. If a field is not found, use empty string or empty array.`;
+Extract all information accurately. If a field is not found, use empty string, null, or empty array. Return valid JSON only.`;
 
       const response = await getPoeClient().chat.completions.create({
         model: "claude-4.5-haiku",
@@ -2099,30 +2228,22 @@ Extract all information accurately. If a field is not found, use empty string or
       });
 
       const aiResponse = response.choices[0]?.message?.content || '{}';
-      let resumeData;
+      let resumeData: ResumeData;
 
       try {
         const cleanContent = aiResponse.replace(/```json\n?|\n?```/g, "").trim();
-        resumeData = JSON.parse(cleanContent);
+        const parsed = JSON.parse(cleanContent);
+        resumeData = normalizeImportedResumeData(parsed, parsedText);
       } catch (parseError) {
         console.error('[API] Failed to parse resume data:', parseError);
-        // Fallback to basic structure with parsed text as summary
-        resumeData = {
-          personalInfo: { name: "", email: "", phone: "", location: "", linkedin: "", website: "" },
-          summary: parsedText.substring(0, 500),
-          experience: [],
-          education: [],
-          skills: [],
-          certifications: [],
-          projects: [],
-        };
+        resumeData = normalizeImportedResumeData({}, parsedText);
       }
 
       // Create the resume in Joblify
       const resume = await storage.createResume(userId, {
         userId,
         title,
-        template: 'modern',
+        template,
         resumeData,
       });
 
@@ -2518,109 +2639,16 @@ Return ONLY the cover letter text, no JSON or markdown formatting.`;
         });
       }
 
-      // Generate PDF
-      const doc = new PDFDocument({ margin: 50 });
-      const chunks: Buffer[] = [];
-
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => {
-        const pdfBuffer = Buffer.concat(chunks);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${resume.title.replace(/[^a-z0-9]/gi, '_')}.pdf"`);
-        res.send(pdfBuffer);
-        console.log('[API] PDF exported successfully:', id, 'user:', userId);
+      const pdfBuffer = await generateResumePdfBuffer({
+        title: resume.title,
+        template: resume.template,
+        resumeData: resume.resumeData,
       });
 
-      const { resumeData } = resume;
-
-      // Title
-      doc.fontSize(24).text(resumeData.personalInfo.name || 'Resume', { align: 'center' });
-      doc.moveDown(0.5);
-
-      // Contact Info
-      doc.fontSize(10);
-      const contact = [];
-      if (resumeData.personalInfo.email) contact.push(resumeData.personalInfo.email);
-      if (resumeData.personalInfo.phone) contact.push(resumeData.personalInfo.phone);
-      if (resumeData.personalInfo.location) contact.push(resumeData.personalInfo.location);
-      if (contact.length > 0) {
-        doc.text(contact.join(' | '), { align: 'center' });
-      }
-      if (resumeData.personalInfo.linkedin || resumeData.personalInfo.website) {
-        const links = [];
-        if (resumeData.personalInfo.linkedin) links.push(resumeData.personalInfo.linkedin);
-        if (resumeData.personalInfo.website) links.push(resumeData.personalInfo.website);
-        doc.text(links.join(' | '), { align: 'center' });
-      }
-      doc.moveDown();
-
-      // Summary
-      if (resumeData.summary) {
-        doc.fontSize(14).text('SUMMARY', { underline: true });
-        doc.fontSize(10).moveDown(0.3);
-        doc.text(resumeData.summary);
-        doc.moveDown();
-      }
-
-      // Experience
-      if (resumeData.experience?.length > 0) {
-        doc.fontSize(14).text('EXPERIENCE', { underline: true });
-        doc.moveDown(0.3);
-        resumeData.experience.forEach((exp) => {
-          doc.fontSize(12).text(`${exp.title} at ${exp.company}`);
-          doc.fontSize(10).text(`${exp.location} | ${exp.startDate} - ${exp.endDate || 'Present'}`);
-          doc.moveDown(0.2);
-          exp.description.forEach((desc) => {
-            doc.text(`• ${desc}`, { indent: 20 });
-          });
-          doc.moveDown();
-        });
-      }
-
-      // Education
-      if (resumeData.education?.length > 0) {
-        doc.fontSize(14).text('EDUCATION', { underline: true });
-        doc.moveDown(0.3);
-        resumeData.education.forEach((edu) => {
-          doc.fontSize(12).text(`${edu.degree} in ${edu.field}`);
-          doc.fontSize(10).text(`${edu.school} | ${edu.graduationDate}`);
-          if (edu.gpa) doc.text(`GPA: ${edu.gpa}`);
-          doc.moveDown();
-        });
-      }
-
-      // Skills
-      if (resumeData.skills?.length > 0) {
-        doc.fontSize(14).text('SKILLS', { underline: true });
-        doc.fontSize(10).moveDown(0.3);
-        doc.text(resumeData.skills.join(', '));
-        doc.moveDown();
-      }
-
-      // Certifications
-      if (resumeData.certifications?.length > 0) {
-        doc.fontSize(14).text('CERTIFICATIONS', { underline: true });
-        doc.moveDown(0.3);
-        resumeData.certifications.forEach((cert) => {
-          doc.fontSize(10).text(`${cert.name} - ${cert.issuer} (${cert.date})`);
-        });
-        doc.moveDown();
-      }
-
-      // Projects
-      if (resumeData.projects?.length > 0) {
-        doc.fontSize(14).text('PROJECTS', { underline: true });
-        doc.moveDown(0.3);
-        resumeData.projects.forEach((proj) => {
-          doc.fontSize(12).text(proj.name);
-          doc.fontSize(10).text(proj.description);
-          doc.text(`Technologies: ${proj.technologies.join(', ')}`);
-          if (proj.url) doc.text(`URL: ${proj.url}`);
-          doc.moveDown();
-        });
-      }
-
-      doc.end();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${resume.title.replace(/[^a-z0-9]/gi, '_')}.pdf"`);
+      res.send(pdfBuffer);
+      console.log('[API] PDF exported successfully:', id, 'user:', userId);
     } catch (error) {
       console.error('[API] Error exporting PDF:', id, 'user:', userId, error);
       res.status(500).json({ 

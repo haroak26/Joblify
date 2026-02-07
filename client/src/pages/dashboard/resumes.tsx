@@ -13,10 +13,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import type { Resume } from "@shared/schema";
+import { RESUME_TEMPLATES, type Resume, type ResumeTemplateId } from "@shared/schema";
 import { ResumeListSkeleton } from "@/components/loading-skeleton";
 
 export default function ResumeDashboard() {
@@ -27,6 +28,7 @@ export default function ResumeDashboard() {
   const [createModeDialogOpen, setCreateModeDialogOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
+  const [template, setTemplate] = useState<ResumeTemplateId>("professional");
 
   const { data: resumesData, isLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
@@ -74,6 +76,7 @@ export default function ResumeDashboard() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("title", title || file.name.replace(/\.(pdf|docx)$/i, ""));
+      formData.append("template", template);
       
       const res = await fetch("/api/resumes/upload", {
         method: "POST",
@@ -96,6 +99,7 @@ export default function ResumeDashboard() {
       setUploadDialogOpen(false);
       setFile(null);
       setTitle("");
+      setTemplate("professional");
       navigate(`/dashboard/resumes/${data.resume.id}/edit`);
     },
     onError: (error: Error) => {
@@ -148,6 +152,24 @@ export default function ResumeDashboard() {
                       Selected: {file.name}
                     </p>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Resume Style</Label>
+                  <Select value={template} onValueChange={(value: ResumeTemplateId) => setTemplate(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(RESUME_TEMPLATES).map((templateOption) => (
+                        <SelectItem key={templateOption.id} value={templateOption.id}>
+                          {templateOption.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Choose the design that best matches the look you want for your imported resume.
+                  </p>
                 </div>
                 <Button
                   onClick={() => uploadMutation.mutate()}
