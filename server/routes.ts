@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { skillSchema, normalizePlan, resumes, type ResumeData, resumeDataSchema, type Resume } from "@shared/schema";
+import { skillSchema, normalizePlan, resumes, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
@@ -506,6 +506,48 @@ export async function registerRoutes(
   // ============================================
   // Resume Endpoints
   // ============================================
+
+  // Create a new resume
+  app.post("/api/resumes", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Validate request body
+      const createSchema = z.object({
+        title: z.string().min(1).optional(),
+        template: z.enum(['modern', 'professional', 'creative', 'executive', 'technical']).optional(),
+      });
+
+      const data = createSchema.parse(req.body);
+
+      // Create resume with empty data
+      const [newResume] = await db
+        .insert(resumes)
+        .values({
+          userId,
+          title: data.title || "Untitled Resume",
+          template: data.template || "modern",
+          resumeData: createEmptyResumeData(),
+        })
+        .returning();
+
+      res.status(201).json(newResume);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] Resume creation validation error:', error.errors);
+        return res.status(400).json({ 
+          error: "Invalid resume data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      }
+      console.error('[API] Error creating resume:', error);
+      res.status(500).json({ error: "Failed to create resume" });
+    }
+  });
 
   // Get a single resume by ID
   app.get("/api/resumes/:id", requireAuth, async (req: Request, res) => {
