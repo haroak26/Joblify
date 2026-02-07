@@ -426,6 +426,25 @@ export const resumeDataSchema = z.object({
 
 export type ResumeData = z.infer<typeof resumeDataSchema>;
 
+// Helper function to create empty resume data
+export const createEmptyResumeData = (): ResumeData => ({
+  personalInfo: {
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    linkedin: "",
+    website: "",
+  },
+  summary: "",
+  experience: [],
+  education: [],
+  skills: [],
+  certifications: [],
+  projects: [],
+});
+
+
 export const resumes = pgTable("resumes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

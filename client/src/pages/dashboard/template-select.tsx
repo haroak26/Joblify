@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, FileText, Briefcase, Palette, Crown, Code } from "lucide-react";
-import { RESUME_TEMPLATES } from "@shared/schema";
+import { RESUME_TEMPLATES, createEmptyResumeData } from "@shared/schema";
 import type { ResumeTemplateId } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,22 +31,7 @@ export default function TemplateSelect() {
         body: JSON.stringify({
           title: `New ${RESUME_TEMPLATES[templateId].name} Resume`,
           template: templateId,
-          resumeData: {
-            personalInfo: {
-              name: "",
-              email: "",
-              phone: "",
-              location: "",
-              linkedin: "",
-              website: "",
-            },
-            summary: "",
-            experience: [],
-            education: [],
-            skills: [],
-            certifications: [],
-            projects: [],
-          },
+          resumeData: createEmptyResumeData(),
         }),
       });
       if (!res.ok) {
@@ -65,7 +50,10 @@ export default function TemplateSelect() {
         description: error.message,
         variant: "destructive",
       });
-      setSelectedTemplate(null);
+      // Reset selection after a brief delay to provide clear feedback
+      setTimeout(() => {
+        setSelectedTemplate(null);
+      }, 2000);
     },
   });
 
