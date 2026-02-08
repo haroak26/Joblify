@@ -26,11 +26,8 @@ import VerifyEmail from "@/pages/verify-email";
 import Onboarding from "@/pages/onboarding";
 import ResumeBuilder from "@/pages/dashboard/resume-builder";
 import Resumes from "@/pages/dashboard/resumes";
-import ResumeEditor from "@/pages/dashboard/resume-editor";
-import ResumeChat from "@/pages/dashboard/resume-chat";
-import ResumeBuilderWizard from "@/pages/dashboard/resume-builder-wizard";
-import AtsScanner from "@/pages/dashboard/ats-scanner";
-import CoverLetterGenerator from "@/pages/dashboard/cover-letter";
+import Account from "@/pages/dashboard/account";
+import Home from "@/pages/dashboard/home";
 
 function Router() {
   return (
@@ -57,7 +54,7 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedRoute>
           <DashboardLayout>
-            <DashboardHome />
+            <Home />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
@@ -79,48 +76,6 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <ResumeBuilder />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes/:id/edit">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeEditor />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resume-chat">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeChat />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes/:id/chat">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeChat />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/resumes/new">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeBuilderWizard />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/ats-scanner">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <AtsScanner />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/cover-letter">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <CoverLetterGenerator />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
