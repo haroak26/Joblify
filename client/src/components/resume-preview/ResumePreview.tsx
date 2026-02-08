@@ -25,13 +25,13 @@ export default function ResumePreview({ data, template }: ResumePreviewProps) {
   };
 
   return (
-    <div className="w-full bg-gray-100 p-8 print:p-0 print:bg-white">
+    <div className="w-full max-w-full">
       <div 
         className="mx-auto bg-white shadow-lg print:shadow-none"
         style={{
           width: '8.5in',
           minHeight: '11in',
-          aspectRatio: '8.5 / 11',
+          maxWidth: '100%',
         }}
       >
         {renderTemplate()}

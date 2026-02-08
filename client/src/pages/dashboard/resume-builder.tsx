@@ -256,22 +256,31 @@ export default function ResumeBuilder() {
           <div className="border-t border-border">
             <div className="p-2 space-y-1">
               <button
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-not-allowed opacity-50"
+                disabled
+                title="Coming soon"
               >
                 <FileSearch className="w-4 h-4" />
                 <span>ATS Scanner</span>
+                <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded">Soon</span>
               </button>
               <button
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-not-allowed opacity-50"
+                disabled
+                title="Coming soon"
               >
                 <Mail className="w-4 h-4" />
                 <span>Cover Letter</span>
+                <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded">Soon</span>
               </button>
               <button
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-not-allowed opacity-50"
+                disabled
+                title="Coming soon"
               >
                 <Target className="w-4 h-4" />
                 <span>Job Matcher</span>
+                <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded">Soon</span>
               </button>
             </div>
             <div className="p-2 border-t border-border">
