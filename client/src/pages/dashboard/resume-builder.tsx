@@ -211,8 +211,8 @@ export default function ResumeBuilder() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
+        {/* Header - Hidden on mobile in AI mode */}
+        <div className={`h-16 border-b border-border bg-card flex items-center justify-between px-6 ${isAIMode ? 'hidden md:flex' : 'flex'}`}>
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"

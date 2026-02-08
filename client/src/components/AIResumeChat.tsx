@@ -210,13 +210,13 @@ export default function AIResumeChat({
             onKeyDown={handleKeyDown}
             placeholder={isComplete ? "Chat complete! Switch to manual editor to continue." : "Type your message..."}
             disabled={isLoading || isComplete}
-            className="flex-1 text-sm pr-12"
+            className="flex-1 text-sm pr-12 sm:pr-14"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isLoading || isComplete}
             size="icon"
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 flex-shrink-0"
+            className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 z-10"
           >
             <ArrowUp className="w-4 h-4" />
           </Button>
