@@ -219,6 +219,7 @@ export default function ResumeBuilder() {
               size="sm"
               onClick={() => setLocation("/dashboard")}
               className="flex-shrink-0"
+              aria-label="Go back to dashboard"
             >
               <ChevronLeft className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Back</span>
@@ -271,7 +272,7 @@ export default function ResumeBuilder() {
                 AI Chat
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={handleSave} className="text-xs sm:text-sm">
+            <Button variant="outline" size="sm" onClick={handleSave} className="text-xs sm:text-sm" aria-label="Save resume">
               <Save className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
               <span className="hidden sm:inline">Save</span>
             </Button>

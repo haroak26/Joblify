@@ -217,6 +217,7 @@ export default function AIResumeChat({
             disabled={!inputValue.trim() || isLoading || isComplete}
             size="icon"
             className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 z-10"
+            aria-label="Send message"
           >
             <ArrowUp className="w-4 h-4" />
           </Button>
