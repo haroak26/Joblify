@@ -135,7 +135,7 @@ export default function ExperienceSection({ data, onUpdate }: ExperienceSectionP
       ))}
 
       {(isAdding || editingIndex !== null) && (
-        <Card className="border border-dashed">
+        <Card className="border border-input">
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -284,28 +284,17 @@ export default function ResumeBuilder() {
         <div className="flex-1 flex overflow-hidden">
           {/* Conditionally render AI Chat or Manual Editor */}
           {isAIMode ? (
-            <div className="flex-1 overflow-hidden">
-              <AIResumeChat
-                resumeId={resumeId!}
-                resumeData={resumeData}
-                onUpdate={updateResumeData}
-                onSwitchToManual={handleSwitchToManual}
-              />
-            </div>
-          ) : (
             <>
-              {/* Editor Section */}
-              <div className="flex-1 overflow-auto p-6">
-                {ActiveSectionComponent && (
-                  <ActiveSectionComponent
-                    data={resumeData}
-                    onUpdate={updateResumeData}
-                  />
-                )}
+              <div className="flex-1 overflow-hidden">
+                <AIResumeChat
+                  resumeId={resumeId!}
+                  resumeData={resumeData}
+                  onUpdate={updateResumeData}
+                  onSwitchToManual={handleSwitchToManual}
+                />
               </div>
-
-              {/* Live Preview Section */}
-              <div className="w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
+              {/* Preview in AI mode - hidden on mobile, shown on desktop */}
+              <div className="hidden lg:block w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}
@@ -314,18 +303,46 @@ export default function ResumeBuilder() {
                 </div>
               </div>
             </>
-          )}
-
-          {/* Preview in AI mode - on the right */}
-          {isAIMode && (
-            <div className="w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
-              <div className="sticky top-0">
-                <ResumePreview
-                  data={resumeData}
-                  template={selectedTemplate}
-                />
+          ) : (
+            <>
+              {/* Editor Section - hidden on mobile, shown on desktop */}
+              <div className="hidden md:block flex-1 overflow-auto p-6">
+                {ActiveSectionComponent && (
+                  <ActiveSectionComponent
+                    data={resumeData}
+                    onUpdate={updateResumeData}
+                  />
+                )}
               </div>
-            </div>
+
+              {/* Mobile view - show message to use desktop */}
+              <div className="md:hidden flex-1 overflow-auto p-6 flex items-center justify-center">
+                <div className="text-center space-y-4 max-w-md">
+                  <Settings className="w-16 h-16 mx-auto text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Desktop Required for Editing</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Manual resume editing is optimized for desktop screens. Please use a desktop or laptop computer to edit your resume, or try our AI Chat mode for a mobile-friendly experience.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation(`/dashboard/resume-builder/${resumeId}?mode=ai`)}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Switch to AI Chat
+                  </Button>
+                </div>
+              </div>
+
+              {/* Live Preview Section - hidden on mobile */}
+              <div className="hidden md:block w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
+                <div className="sticky top-0">
+                  <ResumePreview
+                    data={resumeData}
+                    template={selectedTemplate}
+                  />
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
