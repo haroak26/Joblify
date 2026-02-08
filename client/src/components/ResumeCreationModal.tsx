@@ -59,69 +59,71 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto border mx-4">
-        <DialogHeader>
-          <DialogTitle className="text-xl sm:text-2xl font-bold">Create Your Resume</DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
-            Choose how you'd like to start building your professional resume
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-[90vw] max-w-[500px] max-h-[85vh] overflow-y-auto p-0 border-none sm:border sm:p-6 rounded-xl">
+        <div className="p-6">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-2xl font-bold">Create Your Resume</DialogTitle>
+            <DialogDescription className="text-base">
+              Choose how you'd like to start building your professional resume
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 mt-4">
-          {/* Traditional Builder Option */}
-          <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                  <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+          <div className="space-y-4">
+            {/* Traditional Builder Option */}
+            <Card className="border hover:border-primary/50 transition-colors cursor-pointer group overflow-hidden">
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <FileText className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold mb-1">Traditional Builder</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Build step-by-step with our guided resume editor. Perfect for those who prefer full control.
+                    </p>
+                    <Button 
+                      onClick={handleTraditionalBuilder}
+                      disabled={createResumeMutation.isPending}
+                      className="w-full sm:w-auto"
+                    >
+                      Get Started
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold mb-1">Traditional Builder</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-                    Build step-by-step with our guided resume editor. Perfect for those who prefer full control.
-                  </p>
-                  <Button 
-                    onClick={handleTraditionalBuilder}
-                    disabled={createResumeMutation.isPending}
-                    className="w-full sm:w-auto text-sm"
-                  >
-                    Get Started
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* AI-Powered Option */}
-          <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">
-                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            {/* AI-Powered Option */}
+            <Card className="border hover:border-primary/50 transition-colors cursor-pointer group overflow-hidden">
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                      AI-Powered Creation
+                      <span className="text-[10px] uppercase tracking-wider bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full font-bold">
+                        New
+                      </span>
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Chat with our AI assistant to build your resume naturally through conversation.
+                    </p>
+                    <Button 
+                      onClick={handleAIBuilder}
+                      disabled={createResumeMutation.isPending}
+                      className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                    >
+                      Start Chat
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold mb-1 flex items-center gap-2 flex-wrap">
-                    AI-Powered Creation
-                    <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full">
-                      New
-                    </span>
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-                    Chat with our AI assistant to build your resume naturally through conversation.
-                  </p>
-                  <Button 
-                    onClick={handleAIBuilder}
-                    disabled={createResumeMutation.isPending}
-                    className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-sm"
-                  >
-                    Start Chat
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
