@@ -209,20 +209,20 @@ export default function AIResumeChat({
 
       {/* Input Area */}
       <div className="border-t border-border p-3 sm:p-4 bg-card">
-        <div className="max-w-3xl mx-auto relative">
+        <div className="max-w-3xl mx-auto flex items-center gap-2">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isComplete ? "Chat complete! Switch to manual editor to continue." : "Type your message..."}
+            placeholder={isComplete ? "Chat complete!" : "Type your message..."}
             disabled={isLoading || isComplete}
-            className="flex-1 text-sm pr-12 sm:pr-14"
+            className="flex-1 text-sm h-10"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isLoading || isComplete}
             size="icon"
-            className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0 z-10"
+            className="h-10 w-10 flex-shrink-0"
             aria-label="Send message"
           >
             <ArrowUp className="w-4 h-4" />
