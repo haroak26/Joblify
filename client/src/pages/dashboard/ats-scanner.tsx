@@ -208,7 +208,7 @@ export default function AtsScanner() {
       {result && (
         <div className="space-y-6">
           {/* Overall Score Card */}
-          <Card className={`border-2 ${getScoreBgColor(result.score)}`}>
+          <Card className={`border ${getScoreBgColor(result.score)}`}>
             <CardContent className="p-8">
               <div className="flex flex-col md:flex-row items-center gap-8">
                 <div className="text-center">
