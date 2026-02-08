@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import ResumePreview from "@/components/resume-preview/ResumePreview";
 import {
   FileText,
   Plus,
@@ -198,8 +199,28 @@ export default function Resumes() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="aspect-[8.5/11] bg-muted rounded-md mb-4 flex items-center justify-center border">
-                  <FileText className="w-12 h-12 text-muted-foreground" />
+                <div className="aspect-[8.5/11] bg-gray-100 rounded-md mb-4 overflow-hidden border relative group">
+                  {/* Thumbnail preview */}
+                  <div className="absolute inset-0 scale-[0.35] origin-top-left pointer-events-none">
+                    <div style={{ width: '285%', height: '285%' }}>
+                      <ResumePreview
+                        data={resume.resumeData}
+                        template={resume.template}
+                      />
+                    </div>
+                  </div>
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleEdit(resume.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
                   <span>Updated {formatDate(resume.updatedAt)}</span>

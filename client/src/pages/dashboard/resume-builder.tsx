@@ -47,6 +47,9 @@ import ResumePreview from "@/components/resume-preview/ResumePreview";
 // AI Resume Chat component
 import AIResumeChat from "@/components/AIResumeChat";
 
+// Resume Compiling component
+import ResumeCompiling from "@/components/ResumeCompiling";
+
 type ResumeSection = {
   id: string;
   name: string;
@@ -71,6 +74,7 @@ export default function ResumeBuilder() {
   
   // Check if AI mode is enabled via query parameter
   const isAIMode = search.includes("mode=ai");
+  const isCompiling = search.includes("compiling=true");
   
   const [activeSection, setActiveSection] = useState<string>("personal");
   const [resumeTitle, setResumeTitle] = useState<string>("Untitled Resume");
@@ -190,6 +194,11 @@ export default function ResumeBuilder() {
     setLocation(`/dashboard/resume-builder/${resumeId}`);
   };
 
+  const handleAIComplete = () => {
+    // Navigate to compiling screen
+    setLocation(`/dashboard/resume-builder/${resumeId}?compiling=true`);
+  };
+
   const ActiveSectionComponent = sections.find((s) => s.id === activeSection)?.component;
 
   if (isLoading) {
@@ -206,6 +215,11 @@ export default function ResumeBuilder() {
         <div className="text-muted-foreground">Resume not found</div>
       </div>
     );
+  }
+
+  // Show compiling screen if in compiling mode
+  if (isCompiling) {
+    return <ResumeCompiling resumeId={resumeId!} />;
   }
 
   return (
@@ -354,6 +368,7 @@ export default function ResumeBuilder() {
                   resumeData={resumeData}
                   onUpdate={updateResumeData}
                   onSwitchToManual={handleSwitchToManual}
+                  onComplete={handleAIComplete}
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile, shown on desktop */}
