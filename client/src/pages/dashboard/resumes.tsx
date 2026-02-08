@@ -148,7 +148,7 @@ export default function Resumes() {
       </div>
 
       {!resumes || resumes.length === 0 ? (
-        <Card className="border-dashed border-2">
+        <Card className="border-dashed border">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <FileText className="w-16 h-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">No resumes yet</h3>

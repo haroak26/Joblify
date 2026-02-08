@@ -57,7 +57,7 @@ export function SearchLoadingOverlay({ isSearching, onComplete }: SearchLoadingO
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <Card className="w-full max-w-md mx-4 shadow-2xl border-2">
+      <Card className="w-full max-w-md mx-4 shadow-2xl border">
         <CardContent className="pt-8 pb-8 px-8">
           <div className="flex flex-col items-center text-center space-y-6">
             {/* Animated Icon */}

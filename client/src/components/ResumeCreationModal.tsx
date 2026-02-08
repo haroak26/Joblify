@@ -69,7 +69,7 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
 
         <div className="space-y-4 mt-4">
           {/* Traditional Builder Option */}
-          <Card className="border-2 hover:border-primary/50 transition-colors cursor-pointer group">
+          <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
@@ -94,7 +94,7 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
           </Card>
 
           {/* AI-Powered Option */}
-          <Card className="border-2 hover:border-primary/50 transition-colors cursor-pointer group">
+          <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">

@@ -87,13 +87,13 @@ export function AISupportDialog({ open, onOpenChange }: AISupportDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-w-[95vw] mx-4">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             Get Help
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             {aiResponse
               ? 'Here\'s what we found. Does this answer your question?'
               : 'Describe your question and our AI will try to help you instantly.'}
@@ -108,20 +108,20 @@ export function AISupportDialog({ open, onOpenChange }: AISupportDialogProps) {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 rows={5}
-                className="resize-none"
+                className="resize-none text-sm"
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Our AI will check our knowledge base and try to answer your question immediately.
               </p>
             </div>
           ) : (
             <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex gap-3">
-                  <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex gap-2 sm:gap-3">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 mt-0.5" />
                   <div className="space-y-2">
-                    <p className="font-medium text-sm">AI Assistant:</p>
-                    <p className="text-sm whitespace-pre-wrap">{aiResponse}</p>
+                    <p className="font-medium text-xs sm:text-sm">AI Assistant:</p>
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{aiResponse}</p>
                   </div>
                 </div>
               </CardContent>
@@ -132,18 +132,18 @@ export function AISupportDialog({ open, onOpenChange }: AISupportDialogProps) {
         <DialogFooter className="flex-col sm:flex-row gap-2">
           {!aiResponse ? (
             <>
-              <Button variant="outline" onClick={handleClose}>
+              <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto text-sm">
                 Cancel
               </Button>
-              <Button onClick={handleSubmitQuestion} disabled={loading || !question.trim()}>
+              <Button onClick={handleSubmitQuestion} disabled={loading || !question.trim()} className="w-full sm:w-auto text-sm">
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
                     Analyzing...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                     Get AI Help
                   </>
                 )}
@@ -151,11 +151,11 @@ export function AISupportDialog({ open, onOpenChange }: AISupportDialogProps) {
             </>
           ) : (
             <>
-              <Button variant="outline" onClick={handleAcceptAnswer}>
+              <Button variant="outline" onClick={handleAcceptAnswer} className="w-full sm:w-auto text-sm">
                 This Helped!
               </Button>
-              <Button onClick={handleProceedToSupport}>
-                <MessageSquare className="w-4 h-4 mr-2" />
+              <Button onClick={handleProceedToSupport} className="w-full sm:w-auto text-sm">
+                <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Contact Support
               </Button>
             </>
