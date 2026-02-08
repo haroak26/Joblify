@@ -26,6 +26,7 @@ import VerifyEmail from "@/pages/verify-email";
 import Onboarding from "@/pages/onboarding";
 import ResumeBuilder from "@/pages/dashboard/resume-builder";
 import Resumes from "@/pages/dashboard/resumes";
+import CreateResume from "@/pages/dashboard/create-resume";
 import Account from "@/pages/dashboard/account";
 import Home from "@/pages/dashboard/home";
 
@@ -72,11 +73,14 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/dashboard/resumes/create">
+        <ProtectedRoute>
+          <CreateResume />
+        </ProtectedRoute>
+      </Route>
       <Route path="/dashboard/resume-builder/:id">
         <ProtectedRoute>
-          <DashboardLayout>
-            <ResumeBuilder />
-          </DashboardLayout>
+          <ResumeBuilder />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />

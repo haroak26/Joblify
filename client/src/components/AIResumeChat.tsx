@@ -14,6 +14,7 @@ interface AIResumeChatProps {
   resumeData: ResumeData;
   onUpdate: (data: Partial<ResumeData>) => void;
   onSwitchToManual: () => void;
+  onComplete?: () => void;
 }
 
 interface ChatMessage {
@@ -26,7 +27,8 @@ export default function AIResumeChat({
   resumeId, 
   resumeData, 
   onUpdate,
-  onSwitchToManual 
+  onSwitchToManual,
+  onComplete
 }: AIResumeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -102,6 +104,10 @@ export default function AIResumeChat({
       // Check if conversation is complete
       if (data.isComplete) {
         setIsComplete(true);
+        // Trigger completion callback if provided
+        if (onComplete) {
+          onComplete();
+        }
       }
     } catch (error) {
       console.error("AI chat error:", error);
