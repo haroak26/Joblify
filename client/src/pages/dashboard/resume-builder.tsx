@@ -212,17 +212,18 @@ export default function ResumeBuilder() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header - Hidden on mobile in AI mode */}
-        <div className={`h-16 border-b border-border bg-card flex items-center justify-between px-6 ${isAIMode ? 'hidden md:flex' : 'flex'}`}>
-          <div className="flex items-center gap-4">
+        <div className={`h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 ${isAIMode ? 'hidden md:flex' : 'flex'}`}>
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setLocation("/dashboard")}
+              className="flex-shrink-0"
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Back
+              <ChevronLeft className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-6 hidden sm:block" />
             {isEditingTitle ? (
               <Input
                 value={resumeTitle}
@@ -231,24 +232,24 @@ export default function ResumeBuilder() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") setIsEditingTitle(false);
                 }}
-                className="max-w-xs h-8"
+                className="max-w-[120px] sm:max-w-xs h-8 text-sm"
                 autoFocus
               />
             ) : (
               <button
                 onClick={() => setIsEditingTitle(true)}
-                className="text-body font-semibold hover:text-primary transition-colors"
+                className="text-sm sm:text-body font-semibold hover:text-primary transition-colors truncate"
               >
                 {resumeTitle}
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {/* Template Selector */}
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-              <SelectTrigger className="w-[150px] h-9">
-                <Palette className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-[100px] sm:w-[150px] h-8 sm:h-9 text-xs sm:text-sm">
+                <Palette className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <SelectValue placeholder="Template" />
               </SelectTrigger>
               <SelectContent>
@@ -264,16 +265,17 @@ export default function ResumeBuilder() {
                 variant="outline"
                 size="sm"
                 onClick={() => setLocation(`/dashboard/resume-builder/${resumeId}?mode=ai`)}
+                className="hidden lg:flex"
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 AI Chat
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={handleSave}>
-              <Save className="w-4 h-4 mr-2" />
-              Save
+            <Button variant="outline" size="sm" onClick={handleSave} className="text-xs sm:text-sm">
+              <Save className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Save</span>
             </Button>
-            <Button size="sm" onClick={handleDownloadPDF}>
+            <Button size="sm" onClick={handleDownloadPDF} className="hidden sm:flex">
               <Download className="w-4 h-4 mr-2" />
               Download PDF
             </Button>
