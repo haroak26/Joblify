@@ -26,7 +26,11 @@ import {
   Plus,
   Save,
   Settings,
-  Palette
+  Palette,
+  Home,
+  FileSearch,
+  Mail,
+  Target
 } from "lucide-react";
 import type { Resume, ResumeData } from "@shared/schema";
 
@@ -73,6 +77,9 @@ export default function ResumeBuilder() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("modern");
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Fetch resume data
   const { data: resume, isLoading } = useQuery<Resume>({
@@ -97,12 +104,12 @@ export default function ResumeBuilder() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/resumes/${resumeId}`] });
-      toast({
-        title: "Resume saved",
-        description: "Your changes have been saved successfully.",
-      });
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      setIsSaving(false);
     },
     onError: () => {
+      setIsSaving(false);
       toast({
         title: "Error",
         description: "Failed to save resume. Please try again.",
@@ -111,8 +118,32 @@ export default function ResumeBuilder() {
     },
   });
 
+  // Auto-save every 30 seconds if there are unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges || !resumeData) return;
+    
+    const autoSaveTimer = setTimeout(() => {
+      setIsSaving(true);
+      saveResumeMutation.mutate({
+        title: resumeTitle,
+        resumeData,
+        template: selectedTemplate,
+      });
+    }, 30000); // 30 seconds
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [hasUnsavedChanges, resumeData, resumeTitle, selectedTemplate]);
+
+  // Mark as having unsaved changes when data changes
+  useEffect(() => {
+    if (resumeData && resume) {
+      setHasUnsavedChanges(true);
+    }
+  }, [resumeData, resumeTitle, selectedTemplate]);
+
   const handleSave = () => {
     if (!resumeData) return;
+    setIsSaving(true);
     saveResumeMutation.mutate({
       title: resumeTitle,
       resumeData,
@@ -183,7 +214,7 @@ export default function ResumeBuilder() {
       {!isAIMode && (
         <div className="w-64 border-r border-border bg-card flex flex-col">
           <div className="p-4 border-b border-border">
-            <h2 className="text-small font-semibold text-foreground">Resume Sections</h2>
+            <h2 className="text-small font-semibold text-foreground">Components</h2>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
@@ -206,6 +237,40 @@ export default function ResumeBuilder() {
               })}
             </div>
           </ScrollArea>
+          
+          {/* Bottom section with new tabs */}
+          <div className="border-t border-border">
+            <div className="p-2 space-y-1">
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <FileSearch className="w-4 h-4" />
+                <span>ATS Scanner</span>
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Cover Letter</span>
+              </button>
+              <button
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Target className="w-4 h-4" />
+                <span>Job Matcher</span>
+              </button>
+            </div>
+            <div className="p-2 border-t border-border">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setLocation("/dashboard")}
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Return to Home
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -214,17 +279,6 @@ export default function ResumeBuilder() {
         {/* Header - Hidden on mobile in AI mode */}
         <div className={`h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 ${isAIMode ? 'hidden md:flex' : 'flex'}`}>
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation("/dashboard")}
-              className="flex-shrink-0"
-              aria-label="Go back to dashboard"
-            >
-              <ChevronLeft className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
-            <Separator orientation="vertical" className="h-6 hidden sm:block" />
             {isEditingTitle ? (
               <Input
                 value={resumeTitle}
@@ -233,7 +287,7 @@ export default function ResumeBuilder() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") setIsEditingTitle(false);
                 }}
-                className="max-w-[120px] sm:max-w-xs h-8 text-sm"
+                className="max-w-[200px] sm:max-w-md h-8 text-sm"
                 autoFocus
               />
             ) : (
@@ -244,13 +298,22 @@ export default function ResumeBuilder() {
                 {resumeTitle}
               </button>
             )}
+            {/* Save status indicator */}
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              {isSaving ? "Saving..." : hasUnsavedChanges ? "Unsaved changes" : lastSaved ? `Saved ${new Date(lastSaved).toLocaleTimeString()}` : ""}
+            </span>
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving} className="text-xs sm:text-sm" aria-label="Save resume">
+              <Save className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Save</span>
+            </Button>
+            
             {/* Template Selector */}
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-              <SelectTrigger className="w-[100px] sm:w-[150px] h-8 sm:h-9 text-xs sm:text-sm">
-                <Palette className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <SelectTrigger className="w-[100px] sm:w-[130px] h-8 sm:h-9 text-xs sm:text-sm">
+                <Palette className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <SelectValue placeholder="Template" />
               </SelectTrigger>
               <SelectContent>
@@ -272,13 +335,10 @@ export default function ResumeBuilder() {
                 AI Chat
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={handleSave} className="text-xs sm:text-sm" aria-label="Save resume">
-              <Save className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Save</span>
-            </Button>
+            
             <Button size="sm" onClick={handleDownloadPDF} className="hidden sm:flex">
               <Download className="w-4 h-4 mr-2" />
-              Download PDF
+              Download
             </Button>
           </div>
         </div>

@@ -5,14 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import ResumeCreationModal from "@/components/ResumeCreationModal";
 import {
   FileText,
   Plus,
   Edit,
   Copy,
   Trash2,
-  Download,
   MoreVertical,
 } from "lucide-react";
 import {
@@ -37,14 +35,11 @@ export default function Resumes() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
-  const [showCreationModal, setShowCreationModal] = useState(false);
 
   // Fetch all resumes
   const { data: resumes, isLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
-
-  // Create resume mutation - removed as it's now in the modal
 
   // Duplicate resume mutation
   const duplicateResumeMutation = useMutation({
@@ -95,7 +90,7 @@ export default function Resumes() {
   });
 
   const handleCreateResume = () => {
-    setShowCreationModal(true);
+    setLocation("/dashboard/resumes/create");
   };
 
   const handleEdit = (id: string) => {
@@ -250,12 +245,6 @@ export default function Resumes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Resume Creation Modal */}
-      <ResumeCreationModal 
-        open={showCreationModal} 
-        onOpenChange={setShowCreationModal}
-      />
     </div>
   );
 }
