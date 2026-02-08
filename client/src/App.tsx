@@ -24,15 +24,13 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import VerifyEmail from "@/pages/verify-email";
 import Onboarding from "@/pages/onboarding";
-import DashboardHome from "@/pages/dashboard/home";
-import MyJobs from "@/pages/dashboard/jobs";
-import JobDetails from "@/pages/dashboard/job-details";
-import Generator from "@/pages/dashboard/generator";
-import Schedules from "@/pages/dashboard/schedules";
-import Account from "@/pages/dashboard/account";
 import ResumeBuilder from "@/pages/dashboard/resume-builder";
 import Resumes from "@/pages/dashboard/resumes";
-
+import ResumeEditor from "@/pages/dashboard/resume-editor";
+import ResumeChat from "@/pages/dashboard/resume-chat";
+import ResumeBuilderWizard from "@/pages/dashboard/resume-builder-wizard";
+import AtsScanner from "@/pages/dashboard/ats-scanner";
+import CoverLetterGenerator from "@/pages/dashboard/cover-letter";
 
 function Router() {
   return (
@@ -63,34 +61,6 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
-      <Route path="/dashboard/jobs/:id">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <JobDetails />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/jobs">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <MyJobs />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/generator">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <Generator />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/schedules">
-        <ProtectedRoute>
-          <DashboardLayout>
-            <Schedules />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
       <Route path="/dashboard/account">
         <ProtectedRoute>
           <DashboardLayout>
@@ -107,10 +77,53 @@ function Router() {
       </Route>
       <Route path="/dashboard/resume-builder/:id">
         <ProtectedRoute>
-          <ResumeBuilder />
+          <DashboardLayout>
+            <ResumeBuilder />
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
-
+      <Route path="/dashboard/resumes/:id/edit">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeEditor />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resume-chat">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeChat />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resumes/:id/chat">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeChat />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/resumes/new">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ResumeBuilderWizard />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/ats-scanner">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <AtsScanner />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/cover-letter">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <CoverLetterGenerator />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
