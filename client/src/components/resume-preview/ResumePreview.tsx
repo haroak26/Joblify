@@ -1,6 +1,8 @@
 import { ResumeData } from "@shared/schema";
 import ModernTemplate from "./ModernTemplate";
 import ProfessionalTemplate from "./ProfessionalTemplate";
+import AcademicTemplate from "./AcademicTemplate";
+import MinimalTemplate from "./MinimalTemplate";
 
 interface ResumePreviewProps {
   data: ResumeData;
@@ -8,6 +10,20 @@ interface ResumePreviewProps {
 }
 
 export default function ResumePreview({ data, template }: ResumePreviewProps) {
+  const renderTemplate = () => {
+    switch (template) {
+      case "professional":
+        return <ProfessionalTemplate data={data} />;
+      case "academic":
+        return <AcademicTemplate data={data} />;
+      case "minimal":
+        return <MinimalTemplate data={data} />;
+      case "modern":
+      default:
+        return <ModernTemplate data={data} />;
+    }
+  };
+
   return (
     <div className="w-full bg-gray-100 p-8 print:p-0 print:bg-white">
       <div 
@@ -18,11 +34,7 @@ export default function ResumePreview({ data, template }: ResumePreviewProps) {
           aspectRatio: '8.5 / 11',
         }}
       >
-        {template === 'professional' ? (
-          <ProfessionalTemplate data={data} />
-        ) : (
-          <ModernTemplate data={data} />
-        )}
+        {renderTemplate()}
       </div>
     </div>
   );

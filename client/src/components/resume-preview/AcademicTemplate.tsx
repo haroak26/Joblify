@@ -1,0 +1,188 @@
+import { ResumeData } from "@shared/schema";
+import { Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
+
+interface AcademicTemplateProps {
+  data: ResumeData;
+}
+
+// Academic Template - Clean professional design with left sidebar
+export default function AcademicTemplate({ data }: AcademicTemplateProps) {
+  const { personalInfo, summary, experience, education, skills, certifications, projects } = data;
+
+  return (
+    <div className="flex h-full">
+      {/* Left Sidebar - Gray background */}
+      <div className="w-[35%] bg-gray-100 p-6 print:p-6">
+        <div className="mb-6">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
+            Contact
+          </h2>
+          <div className="space-y-2 text-xs">
+            {personalInfo.email && (
+              <div className="flex items-start gap-2">
+                <Mail className="w-3 h-3 mt-0.5 flex-shrink-0 text-gray-600" />
+                <span className="break-all">{personalInfo.email}</span>
+              </div>
+            )}
+            {personalInfo.phone && (
+              <div className="flex items-start gap-2">
+                <Phone className="w-3 h-3 mt-0.5 flex-shrink-0 text-gray-600" />
+                <span>{personalInfo.phone}</span>
+              </div>
+            )}
+            {personalInfo.location && (
+              <div className="flex items-start gap-2">
+                <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-gray-600" />
+                <span>{personalInfo.location}</span>
+              </div>
+            )}
+            {personalInfo.linkedin && (
+              <div className="flex items-start gap-2">
+                <Linkedin className="w-3 h-3 mt-0.5 flex-shrink-0 text-gray-600" />
+                <span className="break-all">{personalInfo.linkedin}</span>
+              </div>
+            )}
+            {personalInfo.website && (
+              <div className="flex items-start gap-2">
+                <Globe className="w-3 h-3 mt-0.5 flex-shrink-0 text-gray-600" />
+                <span className="break-all">{personalInfo.website}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Education */}
+        {education.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
+              Education
+            </h2>
+            <div className="space-y-3">
+              {education.map((edu, index) => (
+                <div key={index} className="text-xs">
+                  <h3 className="font-bold text-sm">{edu.degree}</h3>
+                  <p className="text-gray-700 font-medium">{edu.school}</p>
+                  <p className="text-gray-600">{edu.field}</p>
+                  <p className="text-gray-600">{edu.graduationDate}</p>
+                  {edu.gpa && <p className="text-gray-700">GPA: {edu.gpa}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Skills */}
+        {skills.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
+              Skills
+            </h2>
+            <div className="space-y-1 text-xs">
+              {skills.map((skill, index) => (
+                <div key={index} className="text-gray-800">• {skill}</div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Certifications */}
+        {certifications && certifications.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
+              Certifications
+            </h2>
+            <div className="space-y-3">
+              {certifications.map((cert, index) => (
+                <div key={index} className="text-xs">
+                  <h3 className="font-bold">{cert.name}</h3>
+                  <p className="text-gray-700">{cert.issuer}</p>
+                  <p className="text-gray-600">{cert.date}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right Main Content */}
+      <div className="flex-1 p-8 print:p-8">
+        {/* Name */}
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold mb-2">{personalInfo.name || "Your Name"}</h1>
+        </div>
+
+        {/* Summary */}
+        {summary && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-2 uppercase tracking-wide text-gray-800">
+              Professional Summary
+            </h2>
+            <p className="text-sm leading-relaxed text-gray-800">{summary}</p>
+          </div>
+        )}
+
+        {/* Experience */}
+        {experience.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+              Experience
+            </h2>
+            <div className="space-y-4">
+              {experience.map((exp, index) => (
+                <div key={index}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <div>
+                      <h3 className="font-bold text-base">{exp.title}</h3>
+                      <p className="text-sm text-gray-700 font-medium">{exp.company} • {exp.location}</p>
+                    </div>
+                    <p className="text-sm text-gray-600 font-medium">
+                      {exp.startDate} - {exp.endDate || "Present"}
+                    </p>
+                  </div>
+                  {exp.description.length > 0 && (
+                    <ul className="list-disc list-outside ml-5 mt-2 space-y-1">
+                      {exp.description.map((item, i) => (
+                        <li key={i} className="text-sm text-gray-800 leading-relaxed">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Projects */}
+        {projects && projects.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+              Projects
+            </h2>
+            <div className="space-y-3">
+              {projects.map((project, index) => (
+                <div key={index}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <h3 className="font-bold text-base">{project.name}</h3>
+                    {project.url && (
+                      <span className="text-sm text-gray-600 break-all">{project.url}</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-800 leading-relaxed mb-1">
+                    {project.description}
+                  </p>
+                  {project.technologies.length > 0 && (
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">Technologies:</span> {project.technologies.join(", ")}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

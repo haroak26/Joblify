@@ -8,7 +8,7 @@ import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 
 let poeClient: OpenAI | null = null;
@@ -507,6 +507,25 @@ export async function registerRoutes(
   // Resume Endpoints
   // ============================================
 
+  // Get all resumes for the authenticated user
+  app.get("/api/resumes", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      // Get all resumes for this user
+      const userResumes = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.userId, userId))
+        .orderBy(desc(resumes.updatedAt));
+
+      res.json(userResumes);
+    } catch (error) {
+      console.error('[API] Error fetching resumes:', error);
+      res.status(500).json({ error: "Failed to fetch resumes" });
+    }
+  });
+
   // Create a new resume
   app.post("/api/resumes", requireAuth, async (req: Request, res) => {
     try {
@@ -515,19 +534,20 @@ export async function registerRoutes(
       // Validate request body
       const createSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional']).optional(),
+        template: z.enum(['modern', 'professional', 'academic', 'minimal']).optional(),
+        resumeData: resumeDataSchema.optional(),
       });
 
       const data = createSchema.parse(req.body);
 
-      // Create resume with empty data
+      // Create resume with provided data or empty data
       const [newResume] = await db
         .insert(resumes)
         .values({
           userId,
           title: data.title || "Untitled Resume",
           template: data.template || "modern",
-          resumeData: createEmptyResumeData(),
+          resumeData: data.resumeData || createEmptyResumeData(),
         })
         .returning();
 
@@ -606,7 +626,7 @@ export async function registerRoutes(
       // Validate and update resume
       const updateSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional']).optional(),
+        template: z.enum(['modern', 'professional', 'academic', 'minimal']).optional(),
         resumeData: resumeDataSchema.optional(),
       });
 
@@ -633,6 +653,176 @@ export async function registerRoutes(
       }
       console.error('[API] Error updating resume:', error);
       res.status(500).json({ error: "Failed to update resume" });
+    }
+  });
+
+  // Delete a resume
+  app.delete("/api/resumes/:id", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, id));
+
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Check if user owns this resume
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "You do not have permission to delete this resume" });
+      }
+
+      // Delete the resume
+      await db
+        .delete(resumes)
+        .where(eq(resumes.id, id));
+
+      res.status(200).json({ message: "Resume deleted successfully" });
+    } catch (error) {
+      console.error('[API] Error deleting resume:', error);
+      res.status(500).json({ error: "Failed to delete resume" });
+    }
+  });
+
+  // AI Chat endpoint for resume building
+  app.post("/api/resumes/:id/ai-chat", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, id));
+
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Check if user owns this resume
+      if (resume.userId !== userId) {
+        return res.status(403).json({ error: "You do not have permission to access this resume" });
+      }
+
+      // Validate request body
+      const chatSchema = z.object({
+        message: z.string().min(1),
+        currentData: resumeDataSchema,
+        conversationHistory: z.array(z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string(),
+          timestamp: z.string(),
+        })).optional(),
+      });
+
+      const { message, currentData, conversationHistory = [] } = chatSchema.parse(req.body);
+
+      // Sanitize inputs by limiting size and truncating if needed
+      const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
+      const sanitizedHistory = conversationHistory.slice(-10); // Keep only last 10 messages
+
+      // Build conversation context for AI
+      const conversationContext = sanitizedHistory.map(msg => 
+        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.slice(0, 500)}`
+      ).join('\n');
+
+      // Create AI prompt
+      const systemPrompt = `You are a professional resume assistant helping a user build their resume through natural conversation. Your job is to:
+1. Ask one question at a time in a friendly, conversational manner
+2. Extract structured information from user responses
+3. Guide users to provide quantifiable achievements when discussing experience
+4. Be encouraging and professional
+
+Current resume data: ${JSON.stringify(currentData, null, 2)}
+
+Guidelines for extracting data:
+- For personal info: extract name, email, phone, location, LinkedIn, website
+- For summary: help craft a compelling 2-3 sentence professional summary
+- For experience: collect company, title, location, dates, and bullet points of achievements
+- For education: collect school, degree, field, graduation date, GPA (optional)
+- For skills: collect a list of technical and professional skills
+
+When you have collected enough information across all sections, set isComplete to true.
+
+Conversation so far:
+${conversationContext}
+
+User's message: ${sanitizedMessage}
+
+Respond with:
+1. A friendly reply with your next question or acknowledgment
+2. Any extracted data that should be added to their resume
+3. Whether the conversation is complete
+
+Format your response as JSON with these fields:
+{
+  "reply": "Your conversational response",
+  "updatedData": { /* Only include fields that changed */ },
+  "isComplete": false
+}`;
+
+      try {
+        const poeClient = getPoeClient();
+        const completion = await poeClient.chat.completions.create({
+          model: "Claude-3.5-Sonnet",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: sanitizedMessage }
+          ],
+          max_tokens: 1000,
+          temperature: 0.7,
+        });
+
+        const aiResponse = completion.choices[0]?.message?.content || '';
+        
+        // Try to parse as JSON, fallback to text-only response
+        let parsedResponse;
+        try {
+          parsedResponse = JSON.parse(aiResponse);
+        } catch {
+          // If not valid JSON, create a simple response
+          parsedResponse = {
+            reply: aiResponse || "I understand. Could you tell me more?",
+            updatedData: {},
+            isComplete: false,
+          };
+        }
+
+        res.json(parsedResponse);
+      } catch (aiError) {
+        console.error('[API] AI chat error:', aiError);
+        // Fallback response if AI fails
+        res.json({
+          reply: "I'm having trouble processing that. Could you please rephrase?",
+          updatedData: {},
+          isComplete: false,
+        });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        console.error('[API] AI chat validation error:', error.errors);
+        return res.status(400).json({ 
+          error: "Invalid chat data", 
+          details: error.errors,
+          code: "VALIDATION_ERROR"
+        });
+      }
+      console.error('[API] Error in AI chat:', error);
+      res.status(500).json({ error: "Failed to process chat message" });
     }
   });
 

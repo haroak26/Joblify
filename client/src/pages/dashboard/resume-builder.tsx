@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useRoute } from "wouter";
+import { useLocation, useRoute, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   FileText,
   User,
@@ -18,7 +25,8 @@ import {
   ChevronLeft,
   Plus,
   Save,
-  Settings
+  Settings,
+  Palette
 } from "lucide-react";
 import type { Resume, ResumeData } from "@shared/schema";
 
@@ -31,6 +39,9 @@ import SummarySection from "@/components/resume-sections/SummarySection";
 
 // Resume preview component
 import ResumePreview from "@/components/resume-preview/ResumePreview";
+
+// AI Resume Chat component
+import AIResumeChat from "@/components/AIResumeChat";
 
 type ResumeSection = {
   id: string;
@@ -50,8 +61,12 @@ const sections: ResumeSection[] = [
 export default function ResumeBuilder() {
   const [, params] = useRoute("/dashboard/resume-builder/:id");
   const resumeId = params?.id;
+  const search = useSearch();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Check if AI mode is enabled via query parameter
+  const isAIMode = search.includes("mode=ai");
   
   const [activeSection, setActiveSection] = useState<string>("personal");
   const [resumeTitle, setResumeTitle] = useState<string>("Untitled Resume");
@@ -132,11 +147,16 @@ export default function ResumeBuilder() {
     }
   };
 
-  const updateResumeData = (section: string, data: any) => {
+  const updateResumeData = (data: Partial<ResumeData>) => {
     setResumeData((prev) => ({
       ...prev!,
-      [section]: data,
+      ...data,
     }));
+  };
+
+  const handleSwitchToManual = () => {
+    // Remove mode=ai from URL to switch to manual mode
+    setLocation(`/dashboard/resume-builder/${resumeId}`);
   };
 
   const ActiveSectionComponent = sections.find((s) => s.id === activeSection)?.component;
@@ -159,33 +179,35 @@ export default function ResumeBuilder() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Secondary Sidebar - Resume Sections */}
-      <div className="w-64 border-r border-border bg-card flex flex-col">
-        <div className="p-4 border-b border-border">
-          <h2 className="text-small font-semibold text-foreground">Resume Sections</h2>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
-                    activeSection === section.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{section.name}</span>
-                </button>
-              );
-            })}
+      {/* Conditionally render sidebar only in manual mode */}
+      {!isAIMode && (
+        <div className="w-64 border-r border-border bg-card flex flex-col">
+          <div className="p-4 border-b border-border">
+            <h2 className="text-small font-semibold text-foreground">Resume Sections</h2>
           </div>
-        </ScrollArea>
-      </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {sections.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
+                      activeSection === section.id
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{section.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -223,19 +245,30 @@ export default function ResumeBuilder() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                toast({
-                  title: "AI Chat",
-                  description: "AI chat feature coming soon!",
-                });
-              }}
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              AI Chat
-            </Button>
+            {/* Template Selector */}
+            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+              <SelectTrigger className="w-[150px] h-9">
+                <Palette className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Template" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="modern">Modern</SelectItem>
+                <SelectItem value="professional">Professional</SelectItem>
+                <SelectItem value="academic">Academic</SelectItem>
+                <SelectItem value="minimal">Minimal</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {!isAIMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation(`/dashboard/resume-builder/${resumeId}?mode=ai`)}
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                AI Chat
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={handleSave}>
               <Save className="w-4 h-4 mr-2" />
               Save
@@ -249,23 +282,51 @@ export default function ResumeBuilder() {
 
         {/* Editor and Preview */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Editor Section */}
-          <div className="flex-1 overflow-auto p-6">
-            {ActiveSectionComponent && (
-              <ActiveSectionComponent
-                data={resumeData}
-                onUpdate={(data: any) => updateResumeData(activeSection, data)}
+          {/* Conditionally render AI Chat or Manual Editor */}
+          {isAIMode ? (
+            <div className="flex-1 overflow-hidden">
+              <AIResumeChat
+                resumeId={resumeId!}
+                resumeData={resumeData}
+                onUpdate={updateResumeData}
+                onSwitchToManual={handleSwitchToManual}
               />
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              {/* Editor Section */}
+              <div className="flex-1 overflow-auto p-6">
+                {ActiveSectionComponent && (
+                  <ActiveSectionComponent
+                    data={resumeData}
+                    onUpdate={updateResumeData}
+                  />
+                )}
+              </div>
 
-          {/* Live Preview Section */}
-          <div className="w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
-            <div className="sticky top-0">
-              <ResumePreview
-                data={resumeData}
-                template={selectedTemplate}
-              />
+              {/* Live Preview Section */}
+              <div className="w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
+                <div className="sticky top-0">
+                  <ResumePreview
+                    data={resumeData}
+                    template={selectedTemplate}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Preview in AI mode - on the right */}
+          {isAIMode && (
+            <div className="w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
+              <div className="sticky top-0">
+                <ResumePreview
+                  data={resumeData}
+                  template={selectedTemplate}
+                />
+              </div>
+            </div>
+          )}
             </div>
           </div>
         </div>
