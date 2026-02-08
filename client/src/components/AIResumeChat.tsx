@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { Send, Bot, User as UserIcon, Sparkles, Edit } from "lucide-react";
+import { ArrowUp, Bot, User as UserIcon, Sparkles, Edit } from "lucide-react";
 import type { ResumeData } from "@shared/schema";
 
 interface AIResumeChatProps {
@@ -203,22 +203,22 @@ export default function AIResumeChat({
 
       {/* Input Area */}
       <div className="border-t border-border p-3 sm:p-4 bg-card">
-        <div className="max-w-3xl mx-auto flex gap-2">
+        <div className="max-w-3xl mx-auto relative">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isComplete ? "Chat complete! Switch to manual editor to continue." : "Type your message..."}
             disabled={isLoading || isComplete}
-            className="flex-1 text-sm"
+            className="flex-1 text-sm pr-12"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isLoading || isComplete}
             size="icon"
-            className="flex-shrink-0"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 flex-shrink-0"
           >
-            <Send className="w-4 h-4" />
+            <ArrowUp className="w-4 h-4" />
           </Button>
         </div>
         {isComplete && (
