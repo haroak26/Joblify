@@ -143,7 +143,7 @@ export default function ResumeBuilder() {
     if (resumeData && resume) {
       setHasUnsavedChanges(true);
     }
-  }, [resumeData, resumeTitle, selectedTemplate]);
+  }, [resumeData, resumeTitle, selectedTemplate, resume]);
 
   const handleSave = () => {
     if (!resumeData) return;
@@ -187,6 +187,13 @@ export default function ResumeBuilder() {
       ...prev!,
       ...data,
     }));
+  };
+
+  const getSaveStatus = () => {
+    if (isSaving) return "Saving...";
+    if (hasUnsavedChanges) return "Unsaved changes";
+    if (lastSaved) return `Saved ${new Date(lastSaved).toLocaleTimeString()}`;
+    return "";
   };
 
   const handleSwitchToManual = () => {
@@ -323,7 +330,7 @@ export default function ResumeBuilder() {
             )}
             {/* Save status indicator */}
             <span className="text-xs text-muted-foreground hidden sm:inline">
-              {isSaving ? "Saving..." : hasUnsavedChanges ? "Unsaved changes" : lastSaved ? `Saved ${new Date(lastSaved).toLocaleTimeString()}` : ""}
+              {getSaveStatus()}
             </span>
           </div>
 
