@@ -1,7 +1,17 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { clearStoredUser, getStoredUser, setStoredUser, type StoredUser } from "@/lib/auth-storage";
+import { 
+  clearStoredUser, 
+  getStoredUser, 
+  setStoredUser, 
+  getStoredTokens, 
+  setStoredTokens, 
+  clearStoredTokens,
+  isTokenExpired,
+  type StoredUser,
+  type Auth0Tokens
+} from "@/lib/auth-storage";
 
 interface User {
   id: string;
@@ -27,10 +37,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
 
+  // Token refresh function
+  const refreshAccessToken = useCallback(async () => {
+    const tokens = getStoredTokens();
+    if (!tokens || !tokens.refreshToken) {
+      return false;
+    }
+
+    try {
+      const response = await fetch("/api/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const expiresIn = data.expiresIn || 3600; // Default to 1 hour if not provided
+        const newTokens: Auth0Tokens = {
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken || tokens.refreshToken,
+          idToken: data.idToken,
+          expiresAt: Date.now() + (expiresIn * 1000),
+        };
+        setStoredTokens(newTokens);
+        return true;
+      }
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+    }
+    
+    return false;
+  }, []);
+
   const fetchUser = useCallback(async () => {
     try {
+      // Check if we have tokens and if they're expired
+      const tokens = getStoredTokens();
+      if (tokens && isTokenExpired(tokens)) {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) {
+          setUser(null);
+          clearStoredUser();
+          clearStoredTokens();
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch("/api/auth/me", {
         credentials: "include",
+        headers: tokens?.accessToken ? {
+          "Authorization": `Bearer ${tokens.accessToken}`
+        } : {},
       });
       if (response.ok) {
         const data = await response.json();
@@ -39,14 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         clearStoredUser();
+        clearStoredTokens();
       }
     } catch {
       setUser(null);
       clearStoredUser();
+      clearStoredTokens();
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [refreshAccessToken]);
 
   useEffect(() => {
     fetchUser();
@@ -66,6 +128,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUser(data.user);
       setStoredUser(data.user as StoredUser);
+      
+      // Store Auth0 tokens if present
+      if (data.accessToken) {
+        const expiresIn = data.expiresIn || 3600; // Default to 1 hour if not provided
+        const tokens: Auth0Tokens = {
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          idToken: data.idToken,
+          expiresAt: Date.now() + (expiresIn * 1000),
+        };
+        setStoredTokens(tokens);
+      }
+      
       queryClient.clear();
       setLocation("/dashboard");
     } catch (error) {
@@ -113,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     clearStoredUser();
+    clearStoredTokens();
     queryClient.clear();
     setLocation("/login");
   };
