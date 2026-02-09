@@ -157,16 +157,20 @@ export default function AIResumeChat({
       }
 
       // Handle dynamic component addition
-      if (data.addedComponents && Array.isArray(data.addedComponents)) {
-        setSelectedComponents((prev) => {
-          const newComponents = [...prev];
-          data.addedComponents.forEach((comp: string) => {
-            if (!newComponents.includes(comp)) {
-              newComponents.push(comp);
-            }
+      if (data.addedComponents) {
+        if (!Array.isArray(data.addedComponents)) {
+          console.error("addedComponents should be an array, received:", typeof data.addedComponents);
+        } else {
+          setSelectedComponents((prev) => {
+            const newComponents = [...prev];
+            data.addedComponents.forEach((comp: string) => {
+              if (!newComponents.includes(comp)) {
+                newComponents.push(comp);
+              }
+            });
+            return newComponents;
           });
-          return newComponents;
-        });
+        }
       }
 
       // Check if conversation is complete

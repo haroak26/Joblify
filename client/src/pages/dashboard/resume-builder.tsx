@@ -107,7 +107,10 @@ export default function ResumeBuilder() {
   useEffect(() => {
     if (!isAIMode && resumeData && user && !userDataPrefilled) {
       // Check if personal info is empty and user data is available
-      if (resumeData.personalInfo.name === "" && resumeData.personalInfo.email === "") {
+      const nameEmpty = !resumeData.personalInfo.name || resumeData.personalInfo.name.trim() === "";
+      const emailEmpty = !resumeData.personalInfo.email || resumeData.personalInfo.email.trim() === "";
+      
+      if (nameEmpty && emailEmpty) {
         setResumeData((prev) => ({
           ...prev!,
           personalInfo: {
@@ -117,7 +120,17 @@ export default function ResumeBuilder() {
           },
         }));
         setUserDataPrefilled(true);
-        setHasUnsavedChanges(true);
+        // Auto-save pre-filled data without marking as unsaved
+        saveResumeMutation.mutate({
+          resumeData: {
+            ...resumeData,
+            personalInfo: {
+              ...resumeData.personalInfo,
+              name: user.name || "",
+              email: user.email || "",
+            },
+          },
+        });
       }
     }
   }, [isAIMode, resumeData, user, userDataPrefilled]);

@@ -761,12 +761,24 @@ export async function registerRoutes(
       ).join('\n');
 
       // Create AI prompt
+      const COMPONENT_LABELS: Record<string, string> = {
+        experience: "Work Experience",
+        education: "Education",
+        skills: "Skills",
+        certifications: "Professional Certifications",
+        projects: "Personal/Professional Projects",
+        awards: "Awards & Honors",
+        leadership: "Leadership Roles",
+        research: "Research Work",
+        publications: "Academic/Professional Publications",
+      };
+      
       const componentsList = selectedComponents.length > 0 
-        ? `User initially selected these components: ${selectedComponents.join(', ')}` 
+        ? `User initially selected these components: ${selectedComponents.map(id => COMPONENT_LABELS[id] || id).join(', ')}` 
         : 'User has not yet selected components.';
       
       const focusedMode = focusedComponent 
-        ? `\n\n**FOCUSED EDITING MODE**: The user is specifically editing the "${focusedComponent}" section. Focus your questions and data extraction on this component only. Be concise and help them make quick, targeted edits.`
+        ? `\n\n**FOCUSED EDITING MODE**: The user is specifically editing the "${COMPONENT_LABELS[focusedComponent] || focusedComponent}" section. Focus your questions and data extraction on this component only. Be concise and help them make quick, targeted edits.`
         : '';
       
       const systemPrompt = `You are a professional resume assistant helping a user build their resume through natural conversation. Your job is to:
