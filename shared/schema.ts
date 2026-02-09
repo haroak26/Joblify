@@ -103,6 +103,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   email: true,
   password: true,
+  auth0Id: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
