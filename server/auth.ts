@@ -3,28 +3,14 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { expressjwt } from "express-jwt";
-import jwksRsa from "jwks-rsa";
 import { storage } from "./storage";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "./email";
-import { 
-  auth0Config, 
-  validateAuth0Config, 
-  getManagementClient, 
-  getAuthenticationClient 
-} from "./auth0-config";
 
 const scryptAsync = promisify(scrypt);
-
-// Check if Auth0 is configured
-const isAuth0Enabled = validateAuth0Config();
 
 declare module "express-session" {
   interface SessionData {
     userId?: string;
-    auth0AccessToken?: string;
-    auth0RefreshToken?: string;
-    auth0IdToken?: string;
   }
 }
 
@@ -91,95 +77,6 @@ function generateUsername(email: string): string {
   return email.split('@')[0] + randomBytes(3).toString('hex');
 }
 
-// Auth0 helper functions
-async function createAuth0User(email: string, password: string, name?: string, username?: string) {
-  const management = getManagementClient();
-  
-  try {
-    const auth0User = await management.users.create({
-      email,
-      password,
-      name: name || email.split('@')[0],
-      username: username || generateUsername(email),
-      connection: 'Username-Password-Authentication',
-      email_verified: false,
-      verify_email: true,
-    });
-    
-    return auth0User;
-  } catch (error: any) {
-    console.error("[Auth0] User creation error:", error);
-    throw new Error(error.message || "Failed to create Auth0 user");
-  }
-}
-
-async function authenticateWithAuth0(username: string, password: string) {
-  const authClient = getAuthenticationClient();
-  
-  try {
-    const result = await authClient.oauth.passwordGrant({
-      username,
-      password,
-      audience: auth0Config.audience,
-      scope: 'openid profile email offline_access',
-    });
-    
-    return result.data;
-  } catch (error: any) {
-    console.error("[Auth0] Authentication error:", error);
-    throw new Error("Invalid credentials");
-  }
-}
-
-async function syncAuth0UserToLocal(auth0User: any, intro?: string, skills?: any[]) {
-  // Check if user exists in local DB by email
-  let localUser = await storage.getUserByEmail(auth0User.email);
-  
-  if (!localUser) {
-    // Create new local user
-    const username = auth0User.username || generateUsername(auth0User.email);
-    localUser = await storage.createUser({
-      name: auth0User.name || auth0User.email.split('@')[0],
-      username,
-      email: auth0User.email,
-      password: 'auth0', // Placeholder - not used with Auth0
-      verificationToken: undefined,
-      emailVerified: auth0User.email_verified || false,
-    });
-    
-    // Set profile if provided
-    if (intro || skills) {
-      await storage.setProfile(localUser.id, {
-        intro: intro || '',
-        skills: skills || [],
-        isComplete: !!(intro && skills && skills.length > 0),
-      });
-    }
-  } else {
-    // Update existing user with Auth0 data
-    await storage.updateUser(localUser.id, {
-      emailVerified: auth0User.email_verified || false,
-      name: auth0User.name || localUser.name,
-    });
-  }
-  
-  return localUser;
-}
-
-async function requestAuth0PasswordReset(email: string) {
-  const authClient = getAuthenticationClient();
-  
-  try {
-    await authClient.database.changePassword({
-      email,
-      connection: 'Username-Password-Authentication',
-    });
-  } catch (error: any) {
-    console.error("[Auth0] Password reset error:", error);
-    // Don't throw - silently fail for security
-  }
-}
-
 export function setupAuth(app: Express) {
   const MemoryStoreSession = MemoryStore(session);
   const authLimiter = createRateLimiter(15 * 60 * 1000, 20);
@@ -203,7 +100,7 @@ export function setupAuth(app: Express) {
     })
   );
 
-  // Register endpoint - works with both Auth0 and legacy auth
+  // Register endpoint - session-based authentication
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       if (!authLimiter(req, res)) return;
@@ -255,76 +152,39 @@ export function setupAuth(app: Express) {
 
       let user;
       
-      if (isAuth0Enabled) {
-        // Create user in Auth0
-        try {
-          const auth0User = await createAuth0User(email, password, name, finalUsername);
-          
-          // Sync to local database
-          user = await syncAuth0UserToLocal(auth0User, intro, skills);
-          
-          // Note: Auth0 sends verification email automatically
-          const emailSent = true;
-          
-          res.json({
-            user: {
-              id: user.id,
-              name: user.name,
-              username: user.username,
-              email: user.email,
-              emailVerified: user.emailVerified,
-            },
-            message: emailSent 
-              ? "Account created. Please check your email to verify your account."
-              : "Account created. Email verification is pending.",
-          });
-        } catch (error: any) {
-          console.error("Auth0 registration error:", error);
-          return res.status(500).json({ error: error.message || "Registration failed" });
-        }
-      } else {
-        // Legacy authentication
-        const hashedPassword = await hashPassword(password);
-        const verificationToken = generateVerificationToken();
-        
-        user = await storage.createUser({
-          name,
-          username: finalUsername,
-          email,
-          password: hashedPassword,
-          verificationToken,
-        });
+      // Create user with legacy authentication
+      const hashedPassword = await hashPassword(password);
+      const verificationToken = generateVerificationToken();
+      
+      user = await storage.createUser({
+        name,
+        username: finalUsername,
+        email,
+        password: hashedPassword,
+        verificationToken,
+      });
 
-        // If intro and skills are provided (from multi-step form), save them to profile
-        if (intro || skills) {
-          await storage.setProfile(user.id, {
-            intro: intro || '',
-            skills: skills || [],
-            isComplete: !!(intro && skills && skills.length > 0),
-          });
-        }
+      // Profile will be set up later in account settings, not during registration
+      req.session.userId = user.id;
 
-        req.session.userId = user.id;
-
-        // Send verification email
-        const emailSent = await sendVerificationEmail(user.email, user.username, verificationToken);
-        if (!emailSent) {
-          console.error("Failed to send verification email.");
-        }
-
-        res.json({
-          user: {
-            id: user.id,
-            name: user.name,
-            username: user.username,
-            email: user.email,
-            emailVerified: user.emailVerified,
-          },
-          message: emailSent 
-            ? "Account created. Please check your email to verify your account."
-            : "Account created. Email verification is pending.",
-        });
+      // Send verification email
+      const emailSent = await sendVerificationEmail(user.email, user.username, verificationToken);
+      if (!emailSent) {
+        console.error("Failed to send verification email.");
       }
+
+      res.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          emailVerified: user.emailVerified,
+        },
+        message: emailSent 
+          ? "Account created. Please check your email to verify your account."
+          : "Account created. Email verification is pending.",
+      });
     } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ error: "Registration failed" });
@@ -340,88 +200,28 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Username and password are required" });
       }
 
-      if (isAuth0Enabled) {
-        // Authenticate with Auth0
-        try {
-          const tokens = await authenticateWithAuth0(username, password);
-          
-          // Get user info from Auth0 token
-          // For now, we'll look up the user in our local DB
-          const user = await storage.getUserByUsername(username);
-          if (!user) {
-            // Try by email
-            const userByEmail = await storage.getUserByEmail(username);
-            if (userByEmail) {
-              // Store tokens in session
-              req.session.userId = userByEmail.id;
-              req.session.auth0AccessToken = tokens.access_token;
-              req.session.auth0RefreshToken = tokens.refresh_token;
-              req.session.auth0IdToken = tokens.id_token;
-              
-              return res.json({
-                user: {
-                  id: userByEmail.id,
-                  name: userByEmail.name,
-                  username: userByEmail.username,
-                  email: userByEmail.email,
-                  emailVerified: userByEmail.emailVerified,
-                },
-                accessToken: tokens.access_token,
-                refreshToken: tokens.refresh_token,
-                idToken: tokens.id_token,
-                expiresIn: tokens.expires_in || 3600,
-              });
-            }
-            return res.status(401).json({ error: "Invalid credentials" });
-          }
-          
-          // Store tokens in session
-          req.session.userId = user.id;
-          req.session.auth0AccessToken = tokens.access_token;
-          req.session.auth0RefreshToken = tokens.refresh_token;
-          req.session.auth0IdToken = tokens.id_token;
-
-          res.json({
-            user: {
-              id: user.id,
-              name: user.name,
-              username: user.username,
-              email: user.email,
-              emailVerified: user.emailVerified,
-            },
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token,
-            idToken: tokens.id_token,
-            expiresIn: tokens.expires_in || 3600,
-          });
-        } catch (error: any) {
-          console.error("Auth0 login error:", error);
-          return res.status(401).json({ error: "Invalid credentials" });
-        }
-      } else {
-        // Legacy authentication
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return res.status(401).json({ error: "Invalid credentials" });
-        }
-
-        const isValid = await comparePasswords(password, user.password);
-        if (!isValid) {
-          return res.status(401).json({ error: "Invalid credentials" });
-        }
-
-        req.session.userId = user.id;
-
-        res.json({
-          user: {
-            id: user.id,
-            name: user.name,
-            username: user.username,
-            email: user.email,
-            emailVerified: user.emailVerified,
-          },
-        });
+      // Use session-based authentication
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
       }
+
+      const isValid = await comparePasswords(password, user.password);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      req.session.userId = user.id;
+
+      res.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          emailVerified: user.emailVerified,
+        },
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
@@ -429,13 +229,6 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/auth/logout", (req: Request, res: Response) => {
-    // Clear Auth0 tokens if present
-    if (req.session.auth0AccessToken) {
-      req.session.auth0AccessToken = undefined;
-      req.session.auth0RefreshToken = undefined;
-      req.session.auth0IdToken = undefined;
-    }
-    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ error: "Logout failed" });
@@ -446,20 +239,7 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/auth/me", async (req: Request, res: Response) => {
-    // Check for JWT token in Authorization header (for Auth0)
-    const authHeader = req.headers.authorization;
-    
-    if (authHeader && authHeader.startsWith('Bearer ') && isAuth0Enabled) {
-      // JWT token authentication
-      const token = authHeader.substring(7);
-      
-      // For now, we'll still use session-based lookup
-      // In production, you'd validate the JWT and extract user info from it
-      if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-    } else if (!req.session.userId) {
-      // Session-based authentication
+    if (!req.session.userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
@@ -546,21 +326,16 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email is required" });
       }
 
-      if (isAuth0Enabled) {
-        // Use Auth0 password reset
-        await requestAuth0PasswordReset(email);
-      } else {
-        // Legacy password reset
-        const user = await storage.getUserByEmail(email);
-        if (user) {
-          const token = randomBytes(32).toString("hex");
-          const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-          await storage.updateUser(user.id, {
-            passwordResetToken: token,
-            passwordResetExpiresAt: expiresAt,
-          });
-          await sendPasswordResetEmail(user.email, user.username, token);
-        }
+      // Session-based password reset
+      const user = await storage.getUserByEmail(email);
+      if (user) {
+        const token = randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+        await storage.updateUser(user.id, {
+          passwordResetToken: token,
+          passwordResetExpiresAt: expiresAt,
+        });
+        await sendPasswordResetEmail(user.email, user.username, token);
       }
 
       res.json({ message: "If that email exists, a reset link has been sent." });
@@ -606,73 +381,12 @@ export function setupAuth(app: Express) {
       res.status(500).json({ error: "Failed to reset password" });
     }
   });
-
-  // Auth0 callback endpoint (for future OAuth flow support)
-  app.get("/api/auth/callback", async (req: Request, res: Response) => {
-    if (!isAuth0Enabled) {
-      return res.status(404).json({ error: "Auth0 not configured" });
-    }
-    
-    // This endpoint would be used if we implement OAuth flow in the future
-    // For now, we're using Resource Owner Password Grant which doesn't need a callback
-    res.redirect("/dashboard");
-  });
-
-  // Token refresh endpoint
-  app.post("/api/auth/refresh", async (req: Request, res: Response) => {
-    if (!isAuth0Enabled) {
-      return res.status(404).json({ error: "Auth0 not configured" });
-    }
-
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ error: "Refresh token required" });
-    }
-
-    try {
-      const authClient = getAuthenticationClient();
-      const result = await authClient.oauth.refreshTokenGrant({
-        refresh_token: refreshToken,
-      });
-
-      // Update session with new tokens
-      if (req.session.userId) {
-        req.session.auth0AccessToken = result.data.access_token;
-        if (result.data.refresh_token) {
-          req.session.auth0RefreshToken = result.data.refresh_token;
-        }
-        if (result.data.id_token) {
-          req.session.auth0IdToken = result.data.id_token;
-        }
-      }
-
-      res.json({
-        accessToken: result.data.access_token,
-        refreshToken: result.data.refresh_token,
-        idToken: result.data.id_token,
-        expiresIn: result.data.expires_in || 3600,
-      });
-    } catch (error: any) {
-      console.error("Token refresh error:", error);
-      res.status(401).json({ error: "Failed to refresh token" });
-    }
-  });
 }
 
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  // Check for Authorization header with Bearer token (Auth0 JWT)
-  const authHeader = req.headers.authorization;
-  
-  if (authHeader && authHeader.startsWith('Bearer ') && isAuth0Enabled) {
-    // For JWT authentication, we still rely on session for user ID
-    // In production, you'd decode and validate the JWT here
-    if (!req.session.userId) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-  } else if (!req.session.userId) {
+  if (!req.session.userId) {
     return res.status(401).json({ error: "Authentication required" });
   }
-  
   next();
 }
 
