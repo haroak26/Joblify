@@ -204,8 +204,9 @@ export function setupAuth(app: Express) {
 
       // Check if user signed up with OAuth
       if (!user.password && user.oauthProvider) {
+        const providerName = user.oauthProvider.charAt(0).toUpperCase() + user.oauthProvider.slice(1);
         return res.status(401).json({ 
-          error: `This account uses ${user.oauthProvider} sign-in. Please use the "${user.oauthProvider}" button to login.` 
+          error: `This account uses ${providerName} sign-in. Please use the "${providerName}" button to login.` 
         });
       }
 

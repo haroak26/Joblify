@@ -71,12 +71,18 @@ async function findOrCreateOAuthUser(profile: OAuthProfile) {
   }
 
   // Create new user
-  const username = profile.email.split('@')[0] + randomBytes(3).toString('hex');
+  // Sanitize email prefix: remove special chars, keep alphanumeric only, max 20 chars
+  const emailPrefix = profile.email.split('@')[0]
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase()
+    .slice(0, 20);
+  const username = emailPrefix + randomBytes(3).toString('hex');
+  
   const user = await storage.createUser({
     name: profile.name,
     username,
     email: profile.email,
-    password: null, // OAuth users don't have passwords
+    password: null,
     oauthProvider: profile.provider,
     oauthProviderId: profile.providerId,
     emailVerified: profile.emailVerified,
