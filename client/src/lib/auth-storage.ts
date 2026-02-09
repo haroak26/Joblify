@@ -75,7 +75,7 @@ export function clearStoredTokens() {
 }
 
 export function isTokenExpired(tokens: Auth0Tokens): boolean {
-  if (!tokens.expiresAt) return false;
+  if (!tokens.expiresAt) return true; // Consider expired if no expiration metadata
   return Date.now() >= tokens.expiresAt;
 }
 

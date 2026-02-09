@@ -54,11 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
+        const expiresIn = data.expiresIn || 3600; // Default to 1 hour if not provided
         const newTokens: Auth0Tokens = {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken || tokens.refreshToken,
           idToken: data.idToken,
-          expiresAt: Date.now() + 3600 * 1000, // 1 hour
+          expiresAt: Date.now() + (expiresIn * 1000),
         };
         setStoredTokens(newTokens);
         return true;
@@ -130,11 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Store Auth0 tokens if present
       if (data.accessToken) {
+        const expiresIn = data.expiresIn || 3600; // Default to 1 hour if not provided
         const tokens: Auth0Tokens = {
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
           idToken: data.idToken,
-          expiresAt: Date.now() + 3600 * 1000, // 1 hour
+          expiresAt: Date.now() + (expiresIn * 1000),
         };
         setStoredTokens(tokens);
       }

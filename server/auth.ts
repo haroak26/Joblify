@@ -86,6 +86,11 @@ function createRateLimiter(windowMs: number, maxRequests: number) {
   };
 }
 
+// Helper to generate username from email
+function generateUsername(email: string): string {
+  return email.split('@')[0] + randomBytes(3).toString('hex');
+}
+
 // Auth0 helper functions
 async function createAuth0User(email: string, password: string, name?: string, username?: string) {
   const management = getManagementClient();
@@ -95,7 +100,7 @@ async function createAuth0User(email: string, password: string, name?: string, u
       email,
       password,
       name: name || email.split('@')[0],
-      username: username || email.split('@')[0] + randomBytes(3).toString('hex'),
+      username: username || generateUsername(email),
       connection: 'Username-Password-Authentication',
       email_verified: false,
       verify_email: true,
@@ -132,7 +137,7 @@ async function syncAuth0UserToLocal(auth0User: any, intro?: string, skills?: any
   
   if (!localUser) {
     // Create new local user
-    const username = auth0User.username || auth0User.email.split('@')[0] + randomBytes(3).toString('hex');
+    const username = auth0User.username || generateUsername(auth0User.email);
     localUser = await storage.createUser({
       name: auth0User.name || auth0User.email.split('@')[0],
       username,
@@ -209,7 +214,7 @@ export function setupAuth(app: Express) {
       }
 
       // Username is optional - we can generate from email if not provided
-      const finalUsername = username || email.split('@')[0] + randomBytes(3).toString('hex');
+      const finalUsername = username || generateUsername(email);
 
       if (finalUsername.length < 3) {
         return res.status(400).json({ error: "Username must be at least 3 characters" });
@@ -364,6 +369,7 @@ export function setupAuth(app: Express) {
                 accessToken: tokens.access_token,
                 refreshToken: tokens.refresh_token,
                 idToken: tokens.id_token,
+                expiresIn: tokens.expires_in || 3600,
               });
             }
             return res.status(401).json({ error: "Invalid credentials" });
@@ -386,6 +392,7 @@ export function setupAuth(app: Express) {
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token,
             idToken: tokens.id_token,
+            expiresIn: tokens.expires_in || 3600,
           });
         } catch (error: any) {
           console.error("Auth0 login error:", error);
@@ -643,6 +650,7 @@ export function setupAuth(app: Express) {
         accessToken: result.data.access_token,
         refreshToken: result.data.refresh_token,
         idToken: result.data.id_token,
+        expiresIn: result.data.expires_in || 3600,
       });
     } catch (error: any) {
       console.error("Token refresh error:", error);
