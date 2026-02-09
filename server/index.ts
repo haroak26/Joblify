@@ -16,7 +16,6 @@ function validateEnvVars() {
 
   const optional = {
     POE_API_KEY: process.env.POE_API_KEY,
-    APIFY_TOKEN: process.env.APIFY_TOKEN,
     BREVO_API_KEY: process.env.BREVO_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   };
