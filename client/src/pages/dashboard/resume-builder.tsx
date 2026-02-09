@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Select,
@@ -28,6 +29,7 @@ import {
   Settings,
   Palette,
   Home,
+  X,
 } from "lucide-react";
 import type { Resume, ResumeData } from "@shared/schema";
 
@@ -68,6 +70,7 @@ export default function ResumeBuilder() {
   const search = useSearch();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Check if AI mode is enabled via query parameter
   const isAIMode = search.includes("mode=ai");
@@ -81,6 +84,9 @@ export default function ResumeBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [userDataPrefilled, setUserDataPrefilled] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [aiEditingComponent, setAiEditingComponent] = useState<string | undefined>(undefined);
 
   // Fetch resume data
   const { data: resume, isLoading } = useQuery<Resume>({
@@ -96,6 +102,25 @@ export default function ResumeBuilder() {
       setSelectedTemplate(resume.template || "modern");
     }
   }, [resume]);
+
+  // Pre-fill user data in traditional mode
+  useEffect(() => {
+    if (!isAIMode && resumeData && user && !userDataPrefilled) {
+      // Check if personal info is empty and user data is available
+      if (resumeData.personalInfo.name === "" && resumeData.personalInfo.email === "") {
+        setResumeData((prev) => ({
+          ...prev!,
+          personalInfo: {
+            ...prev!.personalInfo,
+            name: user.name || "",
+            email: user.email || "",
+          },
+        }));
+        setUserDataPrefilled(true);
+        setHasUnsavedChanges(true);
+      }
+    }
+  }, [isAIMode, resumeData, user, userDataPrefilled]);
 
   // Save resume mutation
   const saveResumeMutation = useMutation({
@@ -239,18 +264,29 @@ export default function ResumeBuilder() {
               {sections.map((section) => {
                 const Icon = section.icon;
                 return (
-                  <button
-                    key={section.id}
-                    onClick={() => setActiveSection(section.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
-                      activeSection === section.id
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{section.name}</span>
-                  </button>
+                  <div key={section.id} className="relative group">
+                    <button
+                      onClick={() => setActiveSection(section.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
+                        activeSection === section.id
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="flex-1 text-left">{section.name}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAiEditingComponent(section.id);
+                        setShowAIAssistant(true);
+                      }}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
+                      title="Edit with AI"
+                    >
+                      <Sparkles className="w-3 h-3 text-primary" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -326,11 +362,11 @@ export default function ResumeBuilder() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setLocation(`/dashboard/resume-builder/${resumeId}?mode=ai`)}
-                className="hidden lg:flex"
+                onClick={() => setShowAIAssistant(true)}
+                className="text-xs sm:text-sm"
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                AI Chat
+                <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">AI Help</span>
               </Button>
             )}
             
@@ -408,6 +444,46 @@ export default function ResumeBuilder() {
           )}
         </div>
       </div>
+
+      {/* AI Assistant Overlay for Manual Mode */}
+      {!isAIMode && showAIAssistant && resumeData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-4xl h-[80vh] bg-background rounded-lg shadow-lg flex flex-col m-4">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold">AI Assistant</h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowAIAssistant(false);
+                  setAiEditingComponent(undefined);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            {/* AI Chat Component */}
+            <div className="flex-1 overflow-hidden">
+              <AIResumeChat
+                resumeId={resumeId!}
+                resumeData={resumeData}
+                onUpdate={updateResumeData}
+                onSwitchToManual={() => {
+                  setShowAIAssistant(false);
+                  setAiEditingComponent(undefined);
+                }}
+                focusedComponent={aiEditingComponent}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
