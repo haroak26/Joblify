@@ -143,6 +143,7 @@ async function syncAuth0UserToLocal(auth0User: any, intro?: string, skills?: any
       username,
       email: auth0User.email,
       password: 'auth0', // Placeholder - not used with Auth0
+      auth0Id: auth0User.user_id,
       verificationToken: undefined,
       emailVerified: auth0User.email_verified || false,
     });

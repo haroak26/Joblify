@@ -107,6 +107,7 @@ export class DatabaseStorage implements IStorage {
         username: insertUser.username,
         email: insertUser.email,
         password: insertUser.password,
+        auth0Id: (insertUser as any).auth0Id || null,
         verificationToken: insertUser.verificationToken || null,
         emailVerified: false,
       })
