@@ -6,11 +6,51 @@ import {
   type SupportInteraction, type InsertSupportInteraction,
   users, profiles, subscriptions, usage,
   coverLetters, securityEvents, supportInteractions,
-  deletedAccountsTracker
+  deletedAccountsTracker, resumes
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
+
+// Plan limits configuration
+export const PLAN_LIMITS = {
+  free: {
+    maxResumes: 3,
+    maxSkills: 10,
+    maxAIEditsPerMonth: 10,
+    maxCoverLettersPerMonth: 3,
+    maxJobAnalysesPerMonth: 5,
+    maxATSScansPerMonth: 5,
+    maxImportedResumesPerMonth: 1,
+  },
+  plus: {
+    maxResumes: 10,
+    maxSkills: Infinity,
+    maxAIEditsPerMonth: 100,
+    maxCoverLettersPerMonth: 50,
+    maxJobAnalysesPerMonth: 50,
+    maxATSScansPerMonth: 50,
+    maxImportedResumesPerMonth: 10,
+  },
+  ultra: {
+    maxResumes: Infinity,
+    maxSkills: Infinity,
+    maxAIEditsPerMonth: Infinity,
+    maxCoverLettersPerMonth: Infinity,
+    maxJobAnalysesPerMonth: Infinity,
+    maxATSScansPerMonth: Infinity,
+    maxImportedResumesPerMonth: Infinity,
+  },
+  lifetime: {
+    maxResumes: Infinity,
+    maxSkills: Infinity,
+    maxAIEditsPerMonth: Infinity,
+    maxCoverLettersPerMonth: Infinity,
+    maxJobAnalysesPerMonth: Infinity,
+    maxATSScansPerMonth: Infinity,
+    maxImportedResumesPerMonth: Infinity,
+  },
+} as const;
 
 /**
  * Represents a user's profile information
@@ -50,6 +90,10 @@ export interface IStorage {
   getUsage(userId: string): Promise<Usage>;
   resetMonthlyUsage(userId: string): Promise<Usage>;
   checkAndResetMonthlyUsage(userId: string): Promise<Usage>;
+  
+  // Limit checking methods
+  canAddSkills(userId: string, skillCount: number): Promise<{ allowed: boolean; limit: number; current: number }>;
+  canAddResume(userId: string): Promise<{ allowed: boolean; limit: number; current: number }>;
   
   // Cover letter methods
   getCoverLetter(id: string): Promise<CoverLetter | undefined>;
@@ -278,6 +322,41 @@ export class DatabaseStorage implements IStorage {
     }
     
     return current;
+  }
+
+  // Limit checking methods
+  async canAddSkills(userId: string, skillCount: number): Promise<{ allowed: boolean; limit: number; current: number }> {
+    const subscription = await this.getSubscription(userId);
+    const plan = normalizePlan(subscription?.plan);
+    const limits = PLAN_LIMITS[plan];
+    
+    const allowed = skillCount <= limits.maxSkills;
+    return {
+      allowed,
+      limit: limits.maxSkills,
+      current: skillCount,
+    };
+  }
+
+  async canAddResume(userId: string): Promise<{ allowed: boolean; limit: number; current: number }> {
+    const subscription = await this.getSubscription(userId);
+    const plan = normalizePlan(subscription?.plan);
+    const limits = PLAN_LIMITS[plan];
+    
+    // Count current resumes
+    const result = await db
+      .select({ count: count() })
+      .from(resumes)
+      .where(eq(resumes.userId, userId));
+    
+    const currentCount = result[0]?.count || 0;
+    const allowed = currentCount < limits.maxResumes;
+    
+    return {
+      allowed,
+      limit: limits.maxResumes,
+      current: currentCount,
+    };
   }
 
 
