@@ -187,6 +187,34 @@ export const resumeDataSchema = z.object({
     technologies: z.array(z.string()),
     url: z.string().url().optional().or(z.literal("")),
   })).optional().default([]),
+  awards: z.array(z.object({
+    title: z.string(),
+    issuer: z.string(),
+    date: z.string(),
+    description: z.string().optional(),
+  })).optional().default([]),
+  leadership: z.array(z.object({
+    title: z.string(),
+    organization: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullable(),
+    description: z.string(),
+  })).optional().default([]),
+  research: z.array(z.object({
+    title: z.string(),
+    institution: z.string(),
+    startDate: z.string(),
+    endDate: z.string().nullable(),
+    description: z.string(),
+    url: z.string().url().optional().or(z.literal("")),
+  })).optional().default([]),
+  publications: z.array(z.object({
+    title: z.string(),
+    authors: z.string(),
+    journal: z.string(),
+    date: z.string(),
+    url: z.string().url().optional().or(z.literal("")),
+  })).optional().default([]),
 });
 
 export type ResumeData = z.infer<typeof resumeDataSchema>;
@@ -207,6 +235,10 @@ export const createEmptyResumeData = (): ResumeData => ({
   skills: [],
   certifications: [],
   projects: [],
+  awards: [],
+  leadership: [],
+  research: [],
+  publications: [],
 });
 
 

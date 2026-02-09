@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowUp, Bot, User as UserIcon, Sparkles, Edit } from "lucide-react";
 import type { ResumeData } from "@shared/schema";
 
@@ -23,6 +24,19 @@ interface ChatMessage {
   timestamp: string;
 }
 
+// Components that can be selected
+const RESUME_COMPONENTS = [
+  { id: "experience", label: "Work Experience", description: "Your professional work history" },
+  { id: "education", label: "Education", description: "Your academic background" },
+  { id: "skills", label: "Skills", description: "Your technical and soft skills" },
+  { id: "certifications", label: "Certifications", description: "Professional certifications" },
+  { id: "projects", label: "Projects", description: "Personal or professional projects" },
+  { id: "awards", label: "Awards & Honors", description: "Recognition and achievements" },
+  { id: "leadership", label: "Leadership", description: "Leadership roles and positions" },
+  { id: "research", label: "Research", description: "Research work and publications" },
+  { id: "publications", label: "Publications", description: "Academic or professional publications" },
+];
+
 export default function AIResumeChat({ 
   resumeId, 
   resumeData, 
@@ -34,10 +48,29 @@ export default function AIResumeChat({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [showComponentSelector, setShowComponentSelector] = useState(true);
+  const [selectedComponents, setSelectedComponents] = useState<string[]>([
+    "experience",
+    "education",
+    "skills",
+  ]);
   const { toast } = useToast();
   const { user } = useAuth();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Pre-fill user info when component mounts
+  useEffect(() => {
+    if (user && resumeData.personalInfo.name === "" && resumeData.personalInfo.email === "") {
+      onUpdate({
+        personalInfo: {
+          ...resumeData.personalInfo,
+          name: user.name || "",
+          email: user.email || "",
+        },
+      });
+    }
+  }, [user, resumeData, onUpdate]);
 
   // Initialize with personalized greeting
   useEffect(() => {
@@ -53,13 +86,16 @@ export default function AIResumeChat({
       }
     }
 
-    const greeting: ChatMessage = {
-      role: "assistant",
-      content: `Hi ${firstName}! I'm your AI resume assistant. I'll help you build a professional resume through a friendly conversation. Let's start with the basics - what's your full name?`,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages([greeting]);
-  }, [user]);
+    // Only initialize if no messages yet
+    if (messages.length === 0) {
+      const greeting: ChatMessage = {
+        role: "assistant",
+        content: `Hi ${firstName}! I'm your AI resume assistant. I'll help you build a professional resume through a friendly conversation. First, select which sections you'd like to add to your resume, then we'll start collecting the information.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages([greeting]);
+    }
+  }, [user, messages.length]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -128,6 +164,31 @@ export default function AIResumeChat({
     }
   };
 
+  const handleComponentToggle = (componentId: string) => {
+    setSelectedComponents((prev) =>
+      prev.includes(componentId)
+        ? prev.filter((id) => id !== componentId)
+        : [...prev, componentId]
+    );
+  };
+
+  const handleStartConversation = () => {
+    setShowComponentSelector(false);
+    
+    // Send initial message to AI with selected components
+    const componentsList = selectedComponents
+      .map((id) => RESUME_COMPONENTS.find((c) => c.id === id)?.label)
+      .join(", ");
+    
+    const assistantMessage: ChatMessage = {
+      role: "assistant",
+      content: `Great! We'll focus on: ${componentsList}. Your name and email are already filled in. Let's start with your professional summary. Can you tell me about your professional background and what you're looking for in your next role?`,
+      timestamp: new Date().toISOString(),
+    };
+    
+    setMessages((prev) => [...prev, assistantMessage]);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -139,7 +200,7 @@ export default function AIResumeChat({
           <div>
             <h2 className="text-base sm:text-lg font-semibold">AI Resume Assistant</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              {isComplete ? "Resume complete!" : "Building your resume..."}
+              {isComplete ? "Resume complete!" : showComponentSelector ? "Select components" : "Building your resume..."}
             </p>
           </div>
         </div>
@@ -153,6 +214,54 @@ export default function AIResumeChat({
           Switch to Manual Editor
         </Button>
       </div>
+
+      {/* Component Selector */}
+      {showComponentSelector && (
+        <div className="p-4 sm:p-6 border-b border-border bg-card">
+          <div className="max-w-3xl mx-auto">
+            <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">
+              What would you like to include in your resume?
+            </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+              Select the sections you want to add. You can always add more later.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {RESUME_COMPONENTS.map((component) => (
+                <div
+                  key={component.id}
+                  className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => handleComponentToggle(component.id)}
+                >
+                  <Checkbox
+                    id={component.id}
+                    checked={selectedComponents.includes(component.id)}
+                    onCheckedChange={() => handleComponentToggle(component.id)}
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor={component.id}
+                      className="text-sm font-medium leading-none cursor-pointer"
+                    >
+                      {component.label}
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {component.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button
+              onClick={handleStartConversation}
+              disabled={selectedComponents.length === 0}
+              className="w-full mt-4"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Start Building Resume
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Chat Messages */}
       <ScrollArea className="flex-1 p-3 sm:p-4" ref={scrollAreaRef}>
@@ -194,10 +303,13 @@ export default function AIResumeChat({
               </div>
               <Card className="bg-muted">
                 <CardContent className="p-2.5 sm:p-3">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm text-muted-foreground">AI is thinking</span>
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -208,38 +320,40 @@ export default function AIResumeChat({
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t border-border p-3 sm:p-4 bg-card">
-        <div className="max-w-3xl mx-auto flex items-center gap-2">
-          <Input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isComplete ? "Chat complete!" : "Type your message..."}
-            disabled={isLoading || isComplete}
-            className="flex-1 text-sm h-10"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading || isComplete}
-            size="icon"
-            className="h-10 w-10 flex-shrink-0"
-            aria-label="Send message"
-          >
-            <ArrowUp className="w-4 h-4" />
-          </Button>
-        </div>
-        {isComplete && (
-          <div className="max-w-3xl mx-auto mt-3">
-            <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
-              <CardContent className="p-2.5 sm:p-3">
-                <p className="text-xs sm:text-sm text-green-800 dark:text-green-200">
-                  ✨ Great job! Your resume is ready. You can now switch to the manual editor to make any final adjustments.
-                </p>
-              </CardContent>
-            </Card>
+      {!showComponentSelector && (
+        <div className="border-t border-border p-3 sm:p-4 bg-card">
+          <div className="max-w-3xl mx-auto flex items-center gap-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={isComplete ? "Chat complete!" : "Type your message..."}
+              disabled={isLoading || isComplete}
+              className="flex-1 text-sm h-10"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isLoading || isComplete}
+              size="icon"
+              className="h-10 w-10 flex-shrink-0"
+              aria-label="Send message"
+            >
+              <ArrowUp className="w-4 h-4" />
+            </Button>
           </div>
-        )}
-      </div>
+          {isComplete && (
+            <div className="max-w-3xl mx-auto mt-3">
+              <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+                <CardContent className="p-2.5 sm:p-3">
+                  <p className="text-xs sm:text-sm text-green-800 dark:text-green-200">
+                    ✨ Great job! Your resume is ready. You can now switch to the manual editor to make any final adjustments.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
