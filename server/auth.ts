@@ -202,6 +202,17 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
+      // Check if user signed up with OAuth
+      if (!user.password && user.oauthProvider) {
+        return res.status(401).json({ 
+          error: `This account uses ${user.oauthProvider} sign-in. Please use the "${user.oauthProvider}" button to login.` 
+        });
+      }
+
+      if (!user.password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
       const isValid = await comparePasswords(password, user.password);
       if (!isValid) {
         return res.status(401).json({ error: "Invalid credentials" });

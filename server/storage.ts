@@ -32,6 +32,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
   getUserByPasswordResetToken(token: string): Promise<User | undefined>;
+  getUserByOAuthProvider(provider: string, providerId: string): Promise<User | undefined>;
   createUser(user: InsertUser & { verificationToken?: string }): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
@@ -99,16 +100,28 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser & { verificationToken?: string; name?: string }): Promise<User> {
+  async getUserByOAuthProvider(provider: string, providerId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(
+      and(
+        eq(users.oauthProvider, provider),
+        eq(users.oauthProviderId, providerId)
+      )
+    );
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser & { verificationToken?: string; name?: string; oauthProvider?: string | null; oauthProviderId?: string | null; emailVerified?: boolean }): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({
         name: insertUser.name || null,
         username: insertUser.username,
         email: insertUser.email,
-        password: insertUser.password,
+        password: insertUser.password || null,
         verificationToken: insertUser.verificationToken || null,
-        emailVerified: false,
+        emailVerified: insertUser.emailVerified || false,
+        oauthProvider: insertUser.oauthProvider || null,
+        oauthProviderId: insertUser.oauthProviderId || null,
       })
       .returning();
 

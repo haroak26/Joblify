@@ -11,11 +11,14 @@ export const users = pgTable("users", {
   name: text("name"),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"),
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpiresAt: timestamp("password_reset_expires_at"),
+  // OAuth fields
+  oauthProvider: text("oauth_provider"), // 'google', 'apple', null for local auth
+  oauthProviderId: text("oauth_provider_id"), // Provider's user ID
   // Two-Factor Authentication
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   twoFactorSecret: text("two_factor_secret"), // Encrypted TOTP secret

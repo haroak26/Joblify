@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { PasswordStrengthIndicator } from "@/components/password-strength-indicator";
 import { ProfileSetup } from "@/components/profile-setup";
+import { OAuthButtons } from "@/components/oauth-buttons";
 import type { Skill } from "@shared/schema";
 
 const passwordSchema = z.string()
@@ -213,6 +214,17 @@ export default function Register() {
                 exit="exit"
                 transition={{ duration: 0.3 }}
               >
+                <OAuthButtons />
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or continue with email
+                    </span>
+                  </div>
+                </div>
                 <Form {...step1Form}>
                   <form onSubmit={step1Form.handleSubmit(handleStep1Next)} className="space-y-4">
                     <FormField
