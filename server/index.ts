@@ -16,6 +16,7 @@ function validateEnvVars() {
 
   const optional = {
     POE_API_KEY: process.env.POE_API_KEY,
+    APIFY_TOKEN: process.env.APIFY_TOKEN,
     BREVO_API_KEY: process.env.BREVO_API_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   };
@@ -46,6 +47,9 @@ function validateEnvVars() {
     console.warn('[Startup] Some features may not work correctly:');
     if (!optional.POE_API_KEY) {
       console.warn('[Startup]   - AI features (skill suggestions, message generation) will not work');
+    }
+    if (!optional.APIFY_TOKEN) {
+      console.warn('[Startup]   - Job scraping from Reddit and X will not work');
     }
     if (!optional.BREVO_API_KEY) {
       console.warn('[Startup]   - Email notifications will not work');
