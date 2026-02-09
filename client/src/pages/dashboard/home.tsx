@@ -1,13 +1,11 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, FileText, Plus, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import ResumeCreationModal from "@/components/ResumeCreationModal";
+import ResumePreview from "@/components/resume-preview/ResumePreview";
 
 interface Resume {
   id: string;
@@ -26,128 +24,131 @@ interface ResumesResponse {
 export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const [showCreationModal, setShowCreationModal] = useState(false);
 
   const { data: resumesData, isLoading: resumesLoading } = useQuery<ResumesResponse>({
     queryKey: ["/api/resumes"],
   });
 
-  // Remove createResumeMutation as it's now in the modal
-  
   // Ensure resumes is always an array
   const resumes = Array.isArray(resumesData?.resumes) ? resumesData.resumes : [];
   const totalResumes = resumes.length;
+  const recentResumes = resumes.slice(0, 3);
+
+  const formatDate = (date: Date | string) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-header font-bold mb-2">Welcome back, {user?.name || user?.username}!</h1>
-        <p className="text-body text-muted-foreground">Create professional resumes with AI-powered tools</p>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-small font-medium">My Resumes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {resumesLoading ? (
-              <div className="h-8 bg-muted animate-pulse rounded" />
-            ) : (
-              <>
-                <div className="text-large font-bold">{totalResumes}</div>
-                <p className="text-small text-muted-foreground mt-1">
-                  {totalResumes === 0 ? 'Create your first resume' : `${totalResumes} resume${totalResumes === 1 ? '' : 's'} created`}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-small font-medium">ATS Scanner</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-large font-bold text-muted-foreground">Available</div>
-            <p className="text-small text-muted-foreground mt-1">
-              Scan documents for ATS compatibility
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-small font-medium">Cover Letters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-large font-bold text-muted-foreground">Ready</div>
-            <p className="text-small text-muted-foreground mt-1">
-              Generate professional cover letters
-            </p>
-          </CardContent>
-        </Card>
+        <h1 className="text-2xl font-semibold mb-1">Welcome back, {user?.name || user?.username}!</h1>
+        <p className="text-sm text-muted-foreground">Create professional resumes with AI-powered tools</p>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-large font-semibold">Resume Builder</CardTitle>
-            <CardDescription className="text-small">
-              Create ATS-optimized resumes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="grid gap-4 md:grid-cols-2 mb-8">
+        <Card className="border">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium">AI Resume Builder</h3>
+              <p className="text-xs text-muted-foreground">Build with AI chat assistance</p>
+            </div>
             <Button
-              className="w-full"
-              onClick={() => setShowCreationModal(true)}
+              size="sm"
+              onClick={() => setLocation("/dashboard/resumes/create")}
             >
-              Build Resume <ArrowRight className="ml-2 h-4 w-4" />
+              Create <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-large font-semibold">ATS Scanner</CardTitle>
-            <CardDescription className="text-small">
-              Analyze documents for ATS compatibility
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/dashboard/ats-scanner">
-              <Button className="w-full">
-                Scan Now <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-large font-semibold">Cover Letters</CardTitle>
-            <CardDescription className="text-small">
-              Generate professional cover letters
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/dashboard/cover-letter">
-              <Button className="w-full">
-                Create Letter <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+        <Card className="border">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium">My Resumes</h3>
+              <p className="text-xs text-muted-foreground">
+                {resumesLoading ? "Loading..." : `${totalResumes} resume${totalResumes === 1 ? '' : 's'}`}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/dashboard/resumes")}
+            >
+              View All
+            </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Resume Creation Modal */}
-      <ResumeCreationModal 
-        open={showCreationModal} 
-        onOpenChange={setShowCreationModal}
-      />
+      {/* Recent Resumes */}
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-medium text-muted-foreground">Recent Resumes</h2>
+        {totalResumes > 0 && (
+          <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard/resumes")}>
+            View all
+          </Button>
+        )}
+      </div>
+
+      {resumesLoading ? (
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+          ))}
+        </div>
+      ) : totalResumes === 0 ? (
+        <Card className="border border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="w-10 h-10 text-muted-foreground mb-3" />
+            <h3 className="text-sm font-medium mb-1">No resumes yet</h3>
+            <p className="text-xs text-muted-foreground mb-4 text-center">
+              Get started by creating your first professional resume.
+            </p>
+            <Button size="sm" onClick={() => setLocation("/dashboard/resumes/create")}>
+              <Plus className="w-3 h-3 mr-1" />
+              Create Resume
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {recentResumes.map((resume) => (
+            <Card
+              key={resume.id}
+              className="border cursor-pointer transition-colors hover:bg-muted/50"
+              onClick={() => setLocation(`/dashboard/resume-builder/${resume.id}`)}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-14 bg-gray-100 rounded border overflow-hidden flex-shrink-0">
+                  <div className="scale-[0.1] origin-top-left pointer-events-none">
+                    <div style={{ width: '1000%', height: '1000%' }}>
+                      <ResumePreview
+                        data={resume.resumeData}
+                        template={resume.template}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium truncate">{resume.title}</h3>
+                  <p className="text-xs text-muted-foreground">Updated {formatDate(resume.updatedAt)}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

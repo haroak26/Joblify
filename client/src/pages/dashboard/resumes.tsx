@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ResumePreview from "@/components/resume-preview/ResumePreview";
@@ -12,14 +12,7 @@ import {
   Edit,
   Copy,
   Trash2,
-  MoreVertical,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,13 +125,13 @@ export default function Resumes() {
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">My Resumes</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl font-semibold">My Resumes</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             Create and manage your professional resumes
           </p>
         </div>
-        <Button onClick={handleCreateResume} size="lg">
-          <Plus className="w-5 h-5 mr-2" />
+        <Button onClick={handleCreateResume} size="sm">
+          <Plus className="w-4 h-4 mr-2" />
           Create New Resume
         </Button>
       </div>
@@ -146,93 +139,57 @@ export default function Resumes() {
       {!resumes || resumes.length === 0 ? (
         <Card className="border-dashed border">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <FileText className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No resumes yet</h3>
-            <p className="text-muted-foreground mb-6 text-center max-w-md">
+            <FileText className="w-12 h-12 text-muted-foreground mb-3" />
+            <h3 className="text-base font-medium mb-1">No resumes yet</h3>
+            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
               Get started by creating your first professional resume. Choose from
               our beautifully designed templates.
             </p>
-            <Button onClick={handleCreateResume} size="lg">
-              <Plus className="w-5 h-5 mr-2" />
+            <Button onClick={handleCreateResume} size="sm">
+              <Plus className="w-4 h-4 mr-2" />
               Create Your First Resume
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-3">
           {resumes.map((resume) => (
-            <Card key={resume.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">
-                      {resume.title}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {resume.template.charAt(0).toUpperCase() + resume.template.slice(1)} Template
-                    </p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(resume.id)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDuplicate(resume)}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(resume.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="aspect-[8.5/11] bg-gray-100 rounded-md mb-4 overflow-hidden border relative group">
-                  {/* Thumbnail preview */}
-                  <div className="absolute inset-0 scale-[0.35] origin-top-left pointer-events-none">
-                    <div style={{ width: '285%', height: '285%' }}>
+            <Card key={resume.id} className="border">
+              <CardContent className="p-4 flex items-center gap-4">
+                {/* Small preview on the left */}
+                <div
+                  className="w-16 h-20 bg-gray-100 rounded border overflow-hidden flex-shrink-0 cursor-pointer"
+                  onClick={() => handleEdit(resume.id)}
+                >
+                  <div className="scale-[0.08] origin-top-left pointer-events-none">
+                    <div style={{ width: '1250%', height: '1250%' }}>
                       <ResumePreview
                         data={resume.resumeData}
                         template={resume.template}
                       />
                     </div>
                   </div>
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleEdit(resume.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
                 </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-                  <span>Updated {formatDate(resume.updatedAt)}</span>
+
+                {/* Name and date */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium truncate">{resume.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {resume.template.charAt(0).toUpperCase() + resume.template.slice(1)} Template
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Updated {formatDate(resume.updatedAt)}
+                  </p>
                 </div>
-                <div className="flex gap-2">
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
                     onClick={() => handleEdit(resume.id)}
                   >
-                    <Edit className="w-4 h-4 mr-1" />
+                    <Edit className="w-3 h-3 mr-1" />
                     Edit
                   </Button>
                   <Button
@@ -240,7 +197,15 @@ export default function Resumes() {
                     size="sm"
                     onClick={() => handleDuplicate(resume)}
                   >
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(resume.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
               </CardContent>

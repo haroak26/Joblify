@@ -156,8 +156,8 @@ export const resumeDataSchema = z.object({
     email: z.string().email().optional().or(z.literal("")),
     phone: z.string().default(""),
     location: z.string().default(""),
-    linkedin: z.string().url().optional().or(z.literal("")),
-    website: z.string().url().optional().or(z.literal("")),
+    linkedin: z.string().default(""),
+    website: z.string().default(""),
   }),
   summary: z.string().default(""),
   experience: z.array(z.object({

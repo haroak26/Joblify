@@ -27,7 +27,7 @@ export default function ResumePreview({ data, template }: ResumePreviewProps) {
   return (
     <div className="w-full max-w-full">
       <div 
-        className="mx-auto bg-white shadow-lg print:shadow-none"
+        className="mx-auto bg-white print:shadow-none"
         style={{
           width: '8.5in',
           minHeight: '11in',

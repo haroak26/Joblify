@@ -65,23 +65,23 @@ export default function PersonalInfoSection({ data, onUpdate }: PersonalInfoSect
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="linkedin">LinkedIn URL</Label>
+          <Label htmlFor="linkedin">LinkedIn Handle</Label>
           <Input
             id="linkedin"
-            type="url"
+            type="text"
             value={data.personalInfo.linkedin || ""}
             onChange={(e) => handleChange("linkedin", e.target.value)}
-            placeholder="https://linkedin.com/in/johndoe"
+            placeholder="johndoe"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="website">Website URL</Label>
+          <Label htmlFor="website">Website Domain</Label>
           <Input
             id="website"
-            type="url"
+            type="text"
             value={data.personalInfo.website || ""}
             onChange={(e) => handleChange("website", e.target.value)}
-            placeholder="https://johndoe.com"
+            placeholder="johndoe.com"
           />
         </div>
       </div>
