@@ -175,7 +175,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
                 </p>
                 {project.technologies.length > 0 && (
                   <p className="text-sm text-gray-700">
-                    <span className="font-medium">Technologies:</span> {project.technologies.join(", ")}
+                    <span>Technologies:</span> {project.technologies.join(", ")}
                   </p>
                 )}
               </div>
