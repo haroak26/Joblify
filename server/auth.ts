@@ -3,28 +3,14 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { expressjwt } from "express-jwt";
-import jwksRsa from "jwks-rsa";
 import { storage } from "./storage";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "./email";
-import { 
-  auth0Config, 
-  validateAuth0Config, 
-  getManagementClient, 
-  getAuthenticationClient 
-} from "./auth0-config";
 
 const scryptAsync = promisify(scrypt);
-
-// Check if Auth0 is configured
-const isAuth0Enabled = validateAuth0Config();
 
 declare module "express-session" {
   interface SessionData {
     userId?: string;
-    auth0AccessToken?: string;
-    auth0RefreshToken?: string;
-    auth0IdToken?: string;
   }
 }
 
