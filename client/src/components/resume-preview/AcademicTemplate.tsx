@@ -7,7 +7,7 @@ interface AcademicTemplateProps {
 
 // Academic Template - Clean professional design with left sidebar
 export default function AcademicTemplate({ data }: AcademicTemplateProps) {
-  const { personalInfo, summary, experience, education, skills, certifications, projects } = data;
+  const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
     <div className="flex h-full">
@@ -60,8 +60,8 @@ export default function AcademicTemplate({ data }: AcademicTemplateProps) {
             <div className="space-y-3">
               {education.map((edu, index) => (
                 <div key={index} className="text-xs">
-                  <h3 className="font-bold text-sm">{edu.degree}</h3>
-                  <p className="text-gray-700 font-medium">{edu.school}</p>
+                  <h3 className="font-semibold text-sm">{edu.degree}</h3>
+                  <p className="text-gray-700">{edu.school}</p>
                   <p className="text-gray-600">{edu.field}</p>
                   <p className="text-gray-600">{edu.graduationDate}</p>
                   {edu.gpa && <p className="text-gray-700">GPA: {edu.gpa}</p>}
@@ -94,9 +94,30 @@ export default function AcademicTemplate({ data }: AcademicTemplateProps) {
             <div className="space-y-3">
               {certifications.map((cert, index) => (
                 <div key={index} className="text-xs">
-                  <h3 className="font-bold">{cert.name}</h3>
+                  <h3 className="font-semibold">{cert.name}</h3>
                   <p className="text-gray-700">{cert.issuer}</p>
                   <p className="text-gray-600">{cert.date}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Awards */}
+        {awards && awards.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
+              Awards & Honors
+            </h2>
+            <div className="space-y-3">
+              {awards.map((award, index) => (
+                <div key={index} className="text-xs">
+                  <h3 className="font-semibold">{award.title}</h3>
+                  <p className="text-gray-700">{award.issuer}</p>
+                  {award.description && (
+                    <p className="text-gray-700 mt-1">{award.description}</p>
+                  )}
+                  <p className="text-gray-600">{award.date}</p>
                 </div>
               ))}
             </div>
@@ -132,10 +153,10 @@ export default function AcademicTemplate({ data }: AcademicTemplateProps) {
                 <div key={index}>
                   <div className="flex justify-between items-baseline mb-1">
                     <div>
-                      <h3 className="font-bold text-base">{exp.title}</h3>
-                      <p className="text-sm text-gray-700 font-medium">{exp.company} • {exp.location}</p>
+                      <h3 className="font-semibold text-base">{exp.title}</h3>
+                      <p className="text-sm text-gray-700">{exp.company} • {exp.location}</p>
                     </div>
-                    <p className="text-sm text-gray-600 font-medium">
+                    <p className="text-sm text-gray-600">
                       {exp.startDate} - {exp.endDate || "Present"}
                     </p>
                   </div>
@@ -164,7 +185,7 @@ export default function AcademicTemplate({ data }: AcademicTemplateProps) {
               {projects.map((project, index) => (
                 <div key={index}>
                   <div className="flex justify-between items-baseline mb-1">
-                    <h3 className="font-bold text-base">{project.name}</h3>
+                    <h3 className="font-semibold text-base">{project.name}</h3>
                     {project.url && (
                       <span className="text-sm text-gray-600 break-all">{project.url}</span>
                     )}
@@ -174,8 +195,84 @@ export default function AcademicTemplate({ data }: AcademicTemplateProps) {
                   </p>
                   {project.technologies.length > 0 && (
                     <p className="text-sm text-gray-700">
-                      <span className="font-semibold">Technologies:</span> {project.technologies.join(", ")}
+                      <span>Technologies:</span> {project.technologies.join(", ")}
                     </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leadership */}
+        {leadership && leadership.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+              Leadership Experience
+            </h2>
+            <div className="space-y-3">
+              {leadership.map((lead, index) => (
+                <div key={index}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <div>
+                      <h3 className="font-semibold text-base">{lead.title}</h3>
+                      <p className="text-sm text-gray-700">{lead.organization}</p>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {lead.startDate} - {lead.endDate || "Present"}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-800 leading-relaxed">{lead.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Research */}
+        {research && research.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+              Research Experience
+            </h2>
+            <div className="space-y-3">
+              {research.map((res, index) => (
+                <div key={index}>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <div>
+                      <h3 className="font-semibold text-base">{res.title}</h3>
+                      <p className="text-sm text-gray-700">{res.institution}</p>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {res.startDate} - {res.endDate || "Present"}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-800 leading-relaxed mb-1">{res.description}</p>
+                  {res.url && (
+                    <p className="text-sm text-gray-700 break-all">{res.url}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Publications */}
+        {publications && publications.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+              Publications
+            </h2>
+            <div className="space-y-2">
+              {publications.map((pub, index) => (
+                <div key={index}>
+                  <h3 className="font-semibold text-sm">{pub.title}</h3>
+                  <p className="text-sm text-gray-700">{pub.authors}</p>
+                  <p className="text-sm text-gray-700">
+                    {pub.journal} • {pub.date}
+                  </p>
+                  {pub.url && (
+                    <p className="text-sm text-gray-700 break-all">{pub.url}</p>
                   )}
                 </div>
               ))}

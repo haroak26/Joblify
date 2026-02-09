@@ -7,7 +7,7 @@ interface ProfessionalTemplateProps {
 
 // Professional Template - Centered header design inspired by Sophia Williams
 export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps) {
-  const { personalInfo, summary, experience, education, skills, certifications, projects } = data;
+  const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
     <div className="p-8 print:p-8 text-black h-full">
@@ -76,10 +76,10 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
               <div key={index} className="font-sans">
                 <div className="flex justify-between items-baseline mb-1">
                   <div>
-                    <h3 className="font-bold text-base">{exp.title}</h3>
+                    <h3 className="font-semibold text-base">{exp.title}</h3>
                     <p className="text-sm italic text-gray-700">{exp.company}, {exp.location}</p>
                   </div>
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-sm text-gray-700">
                     {exp.startDate} - {exp.endDate || "Present"}
                   </p>
                 </div>
@@ -109,13 +109,13 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
               <div key={index}>
                 <div className="flex justify-between items-baseline">
                   <div>
-                    <h3 className="font-bold text-base">{edu.school}</h3>
+                    <h3 className="font-semibold text-base">{edu.school}</h3>
                     <p className="text-sm text-gray-700">
                       {edu.degree} in {edu.field}
                       {edu.gpa && ` • GPA: ${edu.gpa}`}
                     </p>
                   </div>
-                  <p className="text-sm font-medium text-gray-700">{edu.graduationDate}</p>
+                  <p className="text-sm text-gray-700">{edu.graduationDate}</p>
                 </div>
               </div>
             ))}
@@ -145,10 +145,10 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
             {certifications.map((cert, index) => (
               <div key={index} className="flex justify-between items-baseline">
                 <div>
-                  <h3 className="font-bold text-sm">{cert.name}</h3>
+                  <h3 className="font-semibold text-sm">{cert.name}</h3>
                   <p className="text-sm text-gray-700">{cert.issuer}</p>
                 </div>
-                <p className="text-sm font-medium text-gray-700">{cert.date}</p>
+                <p className="text-sm text-gray-700">{cert.date}</p>
               </div>
             ))}
           </div>
@@ -165,7 +165,7 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
             {projects.map((project, index) => (
               <div key={index}>
                 <div className="flex justify-between items-baseline mb-1">
-                  <h3 className="font-bold text-base">{project.name}</h3>
+                  <h3 className="font-semibold text-base">{project.name}</h3>
                   {project.url && (
                     <span className="text-sm text-gray-700 break-all">{project.url}</span>
                   )}
@@ -175,8 +175,107 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
                 </p>
                 {project.technologies.length > 0 && (
                   <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Technologies:</span> {project.technologies.join(", ")}
+                    <span className="font-medium">Technologies:</span> {project.technologies.join(", ")}
                   </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Awards */}
+      {awards && awards.length > 0 && (
+        <div className="mb-5">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+            Awards & Honors
+          </h2>
+          <div className="space-y-2 font-sans">
+            {awards.map((award, index) => (
+              <div key={index} className="flex justify-between items-baseline">
+                <div>
+                  <h3 className="font-semibold text-sm">{award.title}</h3>
+                  <p className="text-sm text-gray-700">{award.issuer}</p>
+                  {award.description && (
+                    <p className="text-sm text-gray-700 mt-1">{award.description}</p>
+                  )}
+                </div>
+                <p className="text-sm text-gray-700">{award.date}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Leadership */}
+      {leadership && leadership.length > 0 && (
+        <div className="mb-5">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+            Leadership Experience
+          </h2>
+          <div className="space-y-3 font-sans">
+            {leadership.map((lead, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <div>
+                    <h3 className="font-semibold text-base">{lead.title}</h3>
+                    <p className="text-sm text-gray-700">{lead.organization}</p>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    {lead.startDate} - {lead.endDate || "Present"}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-800 leading-relaxed">{lead.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Research */}
+      {research && research.length > 0 && (
+        <div className="mb-5">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+            Research Experience
+          </h2>
+          <div className="space-y-3 font-sans">
+            {research.map((res, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <div>
+                    <h3 className="font-semibold text-base">{res.title}</h3>
+                    <p className="text-sm text-gray-700">{res.institution}</p>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    {res.startDate} - {res.endDate || "Present"}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-800 leading-relaxed mb-1">{res.description}</p>
+                {res.url && (
+                  <p className="text-sm text-gray-700 break-all">{res.url}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Publications */}
+      {publications && publications.length > 0 && (
+        <div className="mb-5">
+          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+            Publications
+          </h2>
+          <div className="space-y-2 font-sans">
+            {publications.map((pub, index) => (
+              <div key={index}>
+                <h3 className="font-semibold text-sm">{pub.title}</h3>
+                <p className="text-sm text-gray-700">{pub.authors}</p>
+                <p className="text-sm text-gray-700">
+                  {pub.journal} • {pub.date}
+                </p>
+                {pub.url && (
+                  <p className="text-sm text-gray-700 break-all">{pub.url}</p>
                 )}
               </div>
             ))}

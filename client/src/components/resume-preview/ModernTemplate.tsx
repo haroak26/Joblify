@@ -7,7 +7,7 @@ interface ModernTemplateProps {
 
 // Modern Template - Two-column layout inspired by Olivia Mills design
 export default function ModernTemplate({ data }: ModernTemplateProps) {
-  const { personalInfo, summary, experience, education, skills, certifications, projects } = data;
+  const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
     <div className="p-8 print:p-8 font-sans text-black h-full">
@@ -75,12 +75,12 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
                   <div key={index}>
                     <div className="flex justify-between items-baseline mb-1">
                       <div className="flex-1">
-                        <h3 className="font-bold text-base">{exp.title}</h3>
-                        <p className="text-sm text-gray-700 font-medium">{exp.company}</p>
+                        <h3 className="font-semibold text-base">{exp.title}</h3>
+                        <p className="text-sm text-gray-700">{exp.company}</p>
                       </div>
                       <div className="text-right text-sm text-gray-600 ml-2">
                         <p>{exp.location}</p>
-                        <p className="font-medium">
+                        <p>
                           {exp.startDate} - {exp.endDate || "Present"}
                         </p>
                       </div>
@@ -110,7 +110,7 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
                 {projects.map((project, index) => (
                   <div key={index}>
                     <div className="flex justify-between items-baseline mb-1">
-                      <h3 className="font-bold text-base">{project.name}</h3>
+                      <h3 className="font-semibold text-base">{project.name}</h3>
                       {project.url && (
                         <span className="text-sm text-gray-600 break-all ml-2">{project.url}</span>
                       )}
@@ -120,7 +120,7 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
                     </p>
                     {project.technologies.length > 0 && (
                       <p className="text-sm text-gray-700">
-                        <span className="font-semibold">Technologies:</span> {project.technologies.join(", ")}
+                        <span>Technologies:</span> {project.technologies.join(", ")}
                       </p>
                     )}
                   </div>
@@ -141,8 +141,8 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
               <div className="space-y-3">
                 {education.map((edu, index) => (
                   <div key={index}>
-                    <h3 className="font-bold text-sm">{edu.school}</h3>
-                    <p className="text-sm text-gray-700 font-medium">
+                    <h3 className="font-semibold text-sm">{edu.school}</h3>
+                    <p className="text-sm text-gray-700">
                       {edu.degree}
                     </p>
                     <p className="text-sm text-gray-700">
@@ -184,7 +184,7 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
               <div className="space-y-3">
                 {certifications.map((cert, index) => (
                   <div key={index}>
-                    <h3 className="font-bold text-sm">{cert.name}</h3>
+                    <h3 className="font-semibold text-sm">{cert.name}</h3>
                     <p className="text-sm text-gray-700">{cert.issuer}</p>
                     <p className="text-sm text-gray-600">{cert.date}</p>
                   </div>
@@ -192,8 +192,105 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
               </div>
             </div>
           )}
+
+          {/* Awards */}
+          {awards && awards.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-lg font-bold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+                Awards & Honors
+              </h2>
+              <div className="space-y-3">
+                {awards.map((award, index) => (
+                  <div key={index}>
+                    <h3 className="font-semibold text-sm">{award.title}</h3>
+                    <p className="text-sm text-gray-700">{award.issuer}</p>
+                    {award.description && (
+                      <p className="text-sm text-gray-700 mt-1">{award.description}</p>
+                    )}
+                    <p className="text-sm text-gray-600">{award.date}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Leadership */}
+      {leadership && leadership.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-lg font-bold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            Leadership Experience
+          </h2>
+          <div className="space-y-3">
+            {leadership.map((lead, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <div>
+                    <h3 className="font-semibold text-base">{lead.title}</h3>
+                    <p className="text-sm text-gray-700">{lead.organization}</p>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {lead.startDate} - {lead.endDate || "Present"}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-800 leading-relaxed">{lead.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Research */}
+      {research && research.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-lg font-bold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            Research Experience
+          </h2>
+          <div className="space-y-3">
+            {research.map((res, index) => (
+              <div key={index}>
+                <div className="flex justify-between items-baseline mb-1">
+                  <div>
+                    <h3 className="font-semibold text-base">{res.title}</h3>
+                    <p className="text-sm text-gray-700">{res.institution}</p>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {res.startDate} - {res.endDate || "Present"}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-800 leading-relaxed mb-1">{res.description}</p>
+                {res.url && (
+                  <p className="text-sm text-gray-700 break-all">{res.url}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Publications */}
+      {publications && publications.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-lg font-bold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            Publications
+          </h2>
+          <div className="space-y-2">
+            {publications.map((pub, index) => (
+              <div key={index}>
+                <h3 className="font-semibold text-sm">{pub.title}</h3>
+                <p className="text-sm text-gray-700">{pub.authors}</p>
+                <p className="text-sm text-gray-700">
+                  {pub.journal} • {pub.date}
+                </p>
+                {pub.url && (
+                  <p className="text-sm text-gray-700 break-all">{pub.url}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
