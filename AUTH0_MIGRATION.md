@@ -198,7 +198,13 @@ Ensure your production environment has:
 - Proper CORS configuration
 - HTTPS enabled
 - Secure session configuration
-- CSRF protection
+- **CSRF protection** (IMPORTANT: Not currently implemented - see Production Checklist)
+
+**Note on CSRF Protection**: The current implementation uses session-based cookies without CSRF tokens. For production deployment, consider:
+1. Implementing CSRF token validation for state-changing operations
+2. Using SameSite cookie attributes (already set to 'lax')
+3. Validating Origin/Referer headers
+4. Consider using httpOnly cookies with CSRF tokens for token storage
 
 ## Fallback to Legacy Authentication
 
@@ -265,6 +271,7 @@ To migrate existing users from legacy authentication:
 - [ ] Token expiration times reviewed
 - [ ] Logging and monitoring enabled
 - [ ] Backup authentication method tested
+- [ ] **CSRF protection implemented** (see Security Considerations above)
 
 ## Support
 
