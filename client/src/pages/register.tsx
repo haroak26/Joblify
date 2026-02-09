@@ -4,17 +4,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Briefcase, Loader2, ArrowRight, ArrowLeft, Mail, Lock, User, FileText, Sparkles } from "lucide-react";
+import { Briefcase, Loader2, ArrowRight, ArrowLeft, Mail, Lock, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { PasswordStrengthIndicator } from "@/components/password-strength-indicator";
-import { ProfileSetup } from "@/components/profile-setup";
-import type { Skill } from "@shared/schema";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -37,22 +34,14 @@ const step2Schema = z.object({
   path: ["confirmPassword"],
 });
 
-// Step 3: Introduction
-const step3Schema = z.object({
-  intro: z.string().min(20, "Please write at least 20 characters about yourself"),
-});
-
 type Step1Data = z.infer<typeof step1Schema>;
 type Step2Data = z.infer<typeof step2Schema>;
-type Step3Data = z.infer<typeof step3Schema>;
 
 type RegistrationData = {
   name: string;
   email: string;
   password: string;
   confirmPassword: string;
-  intro: string;
-  skills: Skill[];
 };
 
 export default function Register() {
@@ -65,8 +54,6 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    intro: "",
-    skills: [],
   });
 
   // Step 1 form
@@ -84,14 +71,6 @@ export default function Register() {
     defaultValues: {
       password: formData.password,
       confirmPassword: formData.confirmPassword,
-    },
-  });
-
-  // Step 3 form
-  const step3Form = useForm<Step3Data>({
-    resolver: zodResolver(step3Schema),
-    defaultValues: {
-      intro: formData.intro,
     },
   });
 
@@ -121,30 +100,15 @@ export default function Register() {
     setStep(2);
   };
 
-  const handleStep2Next = async (data: Step2Data) => {
+  const handleStep2Submit = async (data: Step2Data) => {
     setFormData({ ...formData, ...data });
-    setStep(3);
-  };
-
-  const handleStep3Next = async (data: Step3Data) => {
-    setFormData({ ...formData, ...data });
-    setStep(4);
-  };
-
-  const handleStep4Submit = async () => {
-    if (formData.skills.length === 0) {
-      step3Form.setError("root", { message: "Please add at least one skill" });
-      return;
-    }
-
+    
     setIsSubmitting(true);
     try {
       await register(
         formData.email,
-        formData.password,
-        formData.name,
-        formData.intro,
-        formData.skills
+        data.password,
+        formData.name
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Registration failed";
@@ -152,18 +116,14 @@ export default function Register() {
         setStep(1);
         step1Form.setError("email", { message });
       } else {
-        step3Form.setError("root", { message });
+        step2Form.setError("root", { message });
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleSkillsChange = (skills: Skill[]) => {
-    setFormData({ ...formData, skills });
-  };
-
-  const progress = (step / 4) * 100;
+  const progress = (step / 2) * 100;
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
@@ -187,19 +147,15 @@ export default function Register() {
             <CardTitle className="text-2xl mt-2">
               {step === 1 && "Create your account"}
               {step === 2 && "Choose a password"}
-              {step === 3 && "Tell us about yourself"}
-              {step === 4 && "Add your skills"}
             </CardTitle>
             <CardDescription className="mt-1">
               {step === 1 && "Let's get started with the basics"}
               {step === 2 && "Keep your account secure"}
-              {step === 3 && "Help us understand your expertise"}
-              {step === 4 && "What are you good at?"}
             </CardDescription>
           </div>
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
-            <p className="text-xs text-muted-foreground">Step {step} of 4</p>
+            <p className="text-xs text-muted-foreground">Step {step} of 2</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -343,119 +299,22 @@ export default function Register() {
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back
                       </Button>
-                      <Button type="submit" className="flex-1">
-                        Next
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                      <Button type="submit" disabled={isSubmitting} className="flex-1">
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating account...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Create Account
+                          </>
+                        )}
                       </Button>
                     </div>
                   </form>
                 </Form>
-              </motion.div>
-            )}
-
-            {step === 3 && (
-              <motion.div
-                key="step3"
-                variants={pageVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={{ duration: 0.3 }}
-              >
-                <Form {...step3Form}>
-                  <form onSubmit={step3Form.handleSubmit(handleStep3Next)} className="space-y-4">
-                    <FormField
-                      control={step3Form.control}
-                      name="intro"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tell us about yourself</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Textarea 
-                                placeholder="I'm a web developer with 5 years of experience in React and Node.js. I specialize in building scalable web applications..."
-                                className="min-h-[120px] resize-none"
-                                {...field} 
-                              />
-                              <div className="absolute bottom-3 right-3 text-xs text-muted-foreground">
-                                {field.value.length} / 20 min
-                              </div>
-                            </div>
-                          </FormControl>
-                          <FormDescription>
-                            Write at least 20 characters about your background and experience
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex gap-2">
-                      <Button type="button" variant="outline" onClick={() => setStep(2)} className="flex-1">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
-                      </Button>
-                      <Button type="submit" className="flex-1">
-                        Next
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </motion.div>
-            )}
-
-            {step === 4 && (
-              <motion.div
-                key="step4"
-                variants={pageVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={{ duration: 0.3 }}
-              >
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium mb-3">Select your skills</h3>
-                    <ProfileSetup
-                      intro={formData.intro}
-                      skills={formData.skills}
-                      onIntroChange={() => {}}
-                      onSkillsChange={handleSkillsChange}
-                      hideIntro={true}
-                    />
-                  </div>
-
-                  {formData.skills.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      Add at least one skill to continue
-                    </p>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => setStep(3)} className="flex-1">
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      Back
-                    </Button>
-                    <Button 
-                      onClick={handleStep4Submit} 
-                      disabled={isSubmitting || formData.skills.length === 0}
-                      className="flex-1"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Creating account...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Create Account
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
