@@ -4,6 +4,14 @@
 
 ## ✨ Features
 
+### 🔐 Flexible Authentication
+- Email/password authentication with strong password requirements
+- **OAuth 2.0 Support**: Sign in with Google or Apple
+- Email verification system
+- Two-factor authentication (2FA) support
+- Password reset functionality
+- Secure session management
+
 ### 🤖 AI Chat Builder
 - Create resumes through natural conversation with Claude 3.5 Haiku
 - AI extracts structured information from your responses
@@ -117,6 +125,15 @@ VITE_POSTHOG_HOST=https://app.posthog.com
 VITE_ZENDESK_KEY=your-zendesk-key
 VITE_ZENDESK_SUBDOMAIN=your-subdomain
 
+# OAuth (optional - for social login)
+# See OAUTH_SETUP.md for detailed setup instructions
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+APPLE_CLIENT_ID=your-apple-client-id
+APPLE_TEAM_ID=your-apple-team-id
+APPLE_KEY_ID=your-apple-key-id
+APPLE_PRIVATE_KEY=your-apple-private-key
+
 # Application Configuration
 BASE_URL=http://localhost:5000
 PORT=5000
@@ -136,6 +153,7 @@ NODE_ENV=development
 - **Brevo** (for email notifications): `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`
 - **PostHog** (for analytics): `VITE_POSTHOG_API_KEY`, `VITE_POSTHOG_HOST`
 - **Zendesk** (for customer support): `VITE_ZENDESK_KEY`, `VITE_ZENDESK_SUBDOMAIN`
+- **OAuth** (for social login): See [OAUTH_SETUP.md](./OAUTH_SETUP.md) for detailed setup instructions
 
 **Note:** Variables prefixed with `VITE_` are exposed to the client-side application.
 
