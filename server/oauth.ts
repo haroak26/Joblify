@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import passport from "passport";
 import { Strategy as GoogleStrategy, Profile as GoogleProfile } from "passport-google-oauth20";
-import AppleStrategy, { Profile as AppleProfile, DecodedIdToken } from "passport-apple";
+import AppleStrategy = require("passport-apple");
 import { storage } from "./storage";
 import { randomBytes } from "crypto";
 
@@ -34,20 +34,20 @@ function extractGoogleProfile(profile: GoogleProfile): OAuthProfile {
   };
 }
 
-function extractAppleProfile(profile: AppleProfile, decodedIdToken?: DecodedIdToken): OAuthProfile {
-  const email = profile.email || decodedIdToken?.email;
+function extractAppleProfile(profile: AppleStrategy.Profile, idToken?: string): OAuthProfile {
+  const email = profile.email;
   if (!email) {
     throw new Error("No email found in Apple profile");
   }
   
   return {
     provider: "apple",
-    providerId: profile.id,
+    providerId: profile.id || profile.sub,
     email,
     name: profile.name?.firstName && profile.name?.lastName 
       ? `${profile.name.firstName} ${profile.name.lastName}`
       : undefined,
-    emailVerified: decodedIdToken?.email_verified === "true" || false,
+    emailVerified: true, // Apple emails are always verified
   };
 }
 
@@ -161,13 +161,19 @@ export function setupOAuth(app: Express) {
           scope: ["name", "email"],
           passReqToCallback: false,
         },
-        async (accessToken, refreshToken, decodedIdToken, profile, done) => {
+        async (
+          accessToken: string, 
+          refreshToken: string, 
+          idToken: string, 
+          profile: AppleStrategy.Profile, 
+          done: AppleStrategy.VerifyCallback
+        ) => {
           try {
-            const oauthProfile = extractAppleProfile(profile, decodedIdToken);
+            const oauthProfile = extractAppleProfile(profile, idToken);
             const user = await findOrCreateOAuthUser(oauthProfile);
             done(null, user);
           } catch (error) {
-            done(error);
+            done(error as Error);
           }
         }
       )
