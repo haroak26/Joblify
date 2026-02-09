@@ -1,6 +1,6 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
 import { skillSchema, normalizePlan, resumes, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
@@ -530,6 +530,24 @@ export async function registerRoutes(
   app.post("/api/resumes", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
+
+      // Check resume limit
+      const resumeCheck = await storage.canAddResume(userId);
+      if (!resumeCheck.allowed) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const planLimits = PLAN_LIMITS[plan];
+        
+        return res.status(403).json({ 
+          error: "Resume limit reached", 
+          code: "RESUME_LIMIT",
+          limit: resumeCheck.limit,
+          current: resumeCheck.current,
+          message: planLimits.maxResumes === Infinity
+            ? "Resume limit reached."
+            : `Your plan allows up to ${resumeCheck.limit} resumes. Upgrade to Ultra or Lifetime for unlimited resumes.`
+        });
+      }
 
       // Validate request body
       const createSchema = z.object({
