@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
-import { skillSchema, normalizePlan, resumes, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData } from "@shared/schema";
+import { skillSchema, normalizePlan, resumes, users, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
@@ -736,20 +736,29 @@ export async function registerRoutes(
         return res.status(403).json({ error: "You do not have permission to access this resume" });
       }
 
+      // Get user data
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
       // Validate request body
       const chatSchema = z.object({
         message: z.string().min(1),
-        currentData: resumeDataSchema,
+        currentData: resumeDataSchema.optional(),
         conversationHistory: z.array(z.object({
-          role: z.enum(["user", "assistant"]),
+          role: z.enum(["user", "ai"]),
           content: z.string(),
-          timestamp: z.string(),
         })).optional(),
         selectedComponents: z.array(z.string()).optional(),
         focusedComponent: z.string().optional(),
       });
 
-      const { message, currentData, conversationHistory = [], selectedComponents = [], focusedComponent } = chatSchema.parse(req.body);
+      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent } = chatSchema.parse(req.body);
 
       // Sanitize inputs by limiting size and truncating if needed
       const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
@@ -757,8 +766,11 @@ export async function registerRoutes(
 
       // Build conversation context for AI
       const conversationContext = sanitizedHistory.map(msg => 
-        `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.slice(0, 500)}`
+        `${msg.role === 'user' ? 'User' : 'AI Assistant'}: ${msg.content.slice(0, 500)}`
       ).join('\n');
+
+      // Get current resume data - prefer client data (most recent) over database
+      const currentData = clientData || resumeDataSchema.parse(resume.resumeData);
 
       // Create AI prompt
       const COMPONENT_LABELS: Record<string, string> = {
@@ -774,12 +786,17 @@ export async function registerRoutes(
       };
       
       const componentsList = selectedComponents.length > 0 
-        ? `User initially selected these components: ${selectedComponents.map(id => COMPONENT_LABELS[id] || id).join(', ')}` 
-        : 'User has not yet selected components.';
+        ? `User selected these components to work on: ${selectedComponents.map(id => COMPONENT_LABELS[id] || id).join(', ')}. ONLY ask about and help with these selected components.` 
+        : 'User has not selected specific components, so help with all resume sections as needed.';
       
       const focusedMode = focusedComponent 
         ? `\n\n**FOCUSED EDITING MODE**: The user is specifically editing the "${COMPONENT_LABELS[focusedComponent] || focusedComponent}" section. Focus your questions and data extraction on this component only. Be concise and help them make quick, targeted edits.`
         : '';
+      
+      const userInfo = `**USER INFORMATION** (Already known - DO NOT ask for this):
+- Name: ${user.name || '[Name not yet provided in profile]'}
+- Email: ${user.email}
+- These are already saved in the resume's personal info section.`;
       
       const systemPrompt = `You are a professional resume assistant helping a user build their resume through natural conversation. Your job is to:
 1. Ask one question at a time in a friendly, conversational manner
@@ -788,6 +805,9 @@ export async function registerRoutes(
 4. Be encouraging and professional
 5. **IMPORTANT**: After collecting one entry in a multi-entry section (experience, education, skills), ALWAYS ask if they want to add more before moving to the next section
 6. **DYNAMIC COMPONENTS**: If the user mentions wanting to add a component they didn't initially select (like "I want to add certifications" or "Can I add my projects?"), acknowledge it positively and start collecting that information. Include the component name in the "addedComponents" field of your response.
+7. **NEVER ASK FOR NAME OR EMAIL** - These are already known and saved in the user's profile.
+
+${userInfo}
 
 ${componentsList}
 ${focusedMode}
@@ -806,17 +826,17 @@ Available components that can be added dynamically:
 - publications: Academic/Professional Publications
 
 Guidelines for extracting data:
-- For personal info: extract name, email, phone, location, LinkedIn, website
+- For personal info: SKIP name and email (already known). Only collect: phone, location, LinkedIn, website if user mentions them
 - For summary: help craft a compelling 2-3 sentence professional summary
 - For experience: collect company, title, location, dates, and bullet points of achievements
   * After each work experience entry, ask: "Great! Is this it, or do you have more work experience to add?"
-  * Only proceed to education if user confirms they're done with experience
+  * Only proceed to next section if user confirms they're done with experience
 - For education: collect school, degree, field, graduation date, GPA (optional)
   * After each education entry, ask: "Perfect! Would you like to add another degree or educational qualification?"
-  * Only proceed to skills if user confirms they're done with education
+  * Only proceed to next section if user confirms they're done with education
 - For skills: collect a list of technical and professional skills
   * After collecting initial skills, ask: "Excellent! Do you have any other skills you'd like to add?"
-  * Only proceed to summary/completion if user confirms they're done with skills
+  * Only proceed to next section if user confirms they're done with skills
 - For certifications: collect name, issuer, and date
 - For projects: collect name, description, technologies used, and optional URL
 - For awards: collect title, issuer, date, and optional description
