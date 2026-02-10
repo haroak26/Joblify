@@ -67,6 +67,7 @@ interface UserResponse {
     id: string;
     username: string;
     email: string;
+    name?: string;
     emailVerified: boolean;
   };
 }
@@ -82,6 +83,37 @@ interface UserPreferences {
   weeklySummaryEmails: boolean;
   inAppNotifications: boolean;
 }
+
+interface DataCategory {
+  description: string;
+  fields: string[];
+  dataPresent: boolean;
+  count?: number;
+  source: string;
+  purpose: string;
+  retention: string;
+}
+
+interface ThirdPartyService {
+  name: string;
+  purpose: string;
+  dataShared: string[];
+  privacyPolicy: string;
+}
+
+interface ContactInformation {
+  privacyEmail: string;
+  dataProtectionOfficer: string;
+  responseTime: string;
+}
+
+interface DataSummaryResponse {
+  dataCategories: Record<string, DataCategory>;
+  thirdPartySharing: Record<string, ThirdPartyService>;
+  yourRights: Record<string, string>;
+  contactInformation: ContactInformation;
+}
+
 
 const plans = [
   {
@@ -195,7 +227,7 @@ export default function Account() {
   });
 
   // GDPR/CCPA Data Rights Queries
-  const dataSummaryQuery = useQuery({
+  const dataSummaryQuery = useQuery<DataSummaryResponse>({
     queryKey: ["/api/user/data-summary"],
     enabled: showDataSummary,
   });
@@ -338,7 +370,7 @@ export default function Account() {
   // Get user initials for avatar
   const getUserInitials = () => {
     if (user?.name) {
-      return user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      return user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
     }
     return user?.username?.slice(0, 2).toUpperCase() || 'U';
   };

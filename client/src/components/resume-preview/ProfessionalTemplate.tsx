@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ResumeData } from "@shared/schema";
 import { Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
 
@@ -6,7 +7,7 @@ interface ProfessionalTemplateProps {
 }
 
 // Professional Template - Centered header design inspired by Sophia Williams
-export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps) {
+const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: ProfessionalTemplateProps) {
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
@@ -284,4 +285,6 @@ export default function ProfessionalTemplate({ data }: ProfessionalTemplateProps
       )}
     </div>
   );
-}
+});
+
+export default ProfessionalTemplate;

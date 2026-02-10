@@ -53,7 +53,7 @@ export async function exportUserData(userId: string) {
       name: user.name,
       emailVerified: user.emailVerified,
       twoFactorEnabled: user.twoFactorEnabled,
-      createdAt: user.createdAt || null,
+      createdAt: null, // No createdAt field in schema
     };
 
     // Prepare complete data export
@@ -404,12 +404,15 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
         doc.moveDown(0.5);
         doc.fontSize(10).font('Helvetica');
 
-        coverLetters.forEach((letter: { jobTitle?: string; companyName?: string }, index: number) => {
-          doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. ${letter.jobTitle || 'Cover Letter'}`);
+        coverLetters.forEach((letter, index: number) => {
+          doc.fontSize(11).font('Helvetica-Bold').text(`Cover Letter ${index + 1}`);
           doc.fontSize(9).font('Helvetica');
           
-          if (letter.companyName) {
-            doc.text(`   Company: ${letter.companyName}`);
+          if (letter.jobDescription) {
+            const truncatedDesc = letter.jobDescription.length > 100 
+              ? letter.jobDescription.substring(0, 100) + '...' 
+              : letter.jobDescription;
+            doc.text(`   Job Description: ${truncatedDesc}`);
           }
           
           doc.text('   [Cover letter content available in your account]');
@@ -424,7 +427,6 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
       doc.fontSize(10).font('Helvetica');
 
       if (usage) {
-        doc.text(`Jobs Scraped This Month: ${usage.jobsScrapedThisMonth || 0}`);
         doc.text(`AI Edits This Month: ${usage.aiEditsThisMonth || 0}`);
         doc.text(`Cover Letters This Month: ${usage.coverLettersThisMonth || 0}`);
         doc.text(`ATS Scans This Month: ${usage.atsScansThisMonth || 0}`);

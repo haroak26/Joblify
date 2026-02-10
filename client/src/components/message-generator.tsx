@@ -18,9 +18,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Copy, Check, RefreshCw, Wand2 } from "lucide-react";
-import type { JobPost } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+
+interface JobPost {
+  id: string;
+  title: string;
+  description: string;
+  matchedSkills: string[];
+}
 
 
 interface MessageGeneratorProps {
@@ -128,7 +134,7 @@ export function MessageGenerator({
               {job.description}
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
-              {job.matchedSkills.map((skill) => (
+              {job.matchedSkills.map((skill: string) => (
                 <Badge key={skill} variant="secondary" className="rounded-md text-xs">
                   {skill}
                 </Badge>
