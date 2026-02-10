@@ -29,6 +29,9 @@ import Resumes from "@/pages/dashboard/resumes";
 import CreateResume from "@/pages/dashboard/create-resume";
 import Account from "@/pages/dashboard/account";
 import Home from "@/pages/dashboard/home";
+import JobMatch from "@/pages/dashboard/job-match";
+import AtsScanner from "@/pages/dashboard/ats-scanner";
+import CoverLetter from "@/pages/dashboard/cover-letter";
 
 function Router() {
   return (
@@ -81,6 +84,27 @@ function Router() {
       <Route path="/dashboard/resume-builder/:id">
         <ProtectedRoute>
           <ResumeBuilder />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/job-match">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <JobMatch />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/ats-scanner">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <AtsScanner />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/cover-letter">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <CoverLetter />
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />
