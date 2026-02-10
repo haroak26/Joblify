@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Loader2, User as UserIcon, Edit3 } from "lucide-react";
+import { Sparkles, Send, Loader2, User as UserIcon, Edit3, Settings2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import type { ResumeData } from "@shared/schema";
@@ -17,6 +17,7 @@ interface AIResumeChatProps {
   onComplete?: () => void;
   focusedComponent?: string;
   selectedComponents?: string[];
+  onEditComponents?: () => void;
 }
 
 interface ChatMessage {
@@ -36,6 +37,7 @@ export default function AIResumeChat({
   onComplete,
   focusedComponent,
   selectedComponents = [],
+  onEditComponents,
 }: AIResumeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -210,7 +212,7 @@ export default function AIResumeChat({
         </div>
         
         {/* Active Components Badges */}
-        {activeComponents.length > 0 && (
+        {activeComponents.length > 0 && !focusedComponent && (
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-xs text-muted-foreground">Active sections:</span>
             {activeComponents.map((component) => (
@@ -218,6 +220,17 @@ export default function AIResumeChat({
                 {component}
               </Badge>
             ))}
+            {onEditComponents && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onEditComponents}
+                className="h-6 text-xs"
+              >
+                <Settings2 className="w-3 h-3 mr-1" />
+                Edit
+              </Button>
+            )}
           </div>
         )}
       </div>

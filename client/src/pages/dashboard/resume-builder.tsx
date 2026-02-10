@@ -252,6 +252,10 @@ export default function ResumeBuilder() {
     setSelectedComponents(components);
   };
 
+  const handleEditComponents = () => {
+    setShowComponentSelector(true);
+  };
+
   const handleAIComplete = () => {
     // Navigate to compiling screen
     setLocation(`/dashboard/resume-builder/${resumeId}?compiling=true`);
@@ -419,7 +423,7 @@ export default function ResumeBuilder() {
                   onSwitchToManual={handleSwitchToManual}
                   onComplete={handleAIComplete}
                   selectedComponents={selectedComponents}
-                />
+                  onEditComponents={handleEditComponents}
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile, shown on desktop */}
@@ -521,6 +525,7 @@ export default function ResumeBuilder() {
         open={showComponentSelector}
         onOpenChange={setShowComponentSelector}
         onSelect={handleComponentsSelected}
+        initialComponents={selectedComponents}
       />
     </div>
   );

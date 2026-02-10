@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -94,18 +94,25 @@ interface ComponentSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (components: string[]) => void;
+  initialComponents?: string[];
 }
 
 export default function ComponentSelector({
   open,
   onOpenChange,
   onSelect,
+  initialComponents,
 }: ComponentSelectorProps) {
-  const [selectedComponents, setSelectedComponents] = useState<string[]>([
-    "experience",
-    "education",
-    "skills",
-  ]);
+  const [selectedComponents, setSelectedComponents] = useState<string[]>(
+    initialComponents || ["experience", "education", "skills"]
+  );
+
+  // Update selection when dialog opens with initial components
+  useEffect(() => {
+    if (open && initialComponents && initialComponents.length > 0) {
+      setSelectedComponents(initialComponents);
+    }
+  }, [open, initialComponents]);
 
   const handleToggle = (componentId: string) => {
     setSelectedComponents((prev) =>
