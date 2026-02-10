@@ -44,3 +44,4 @@ integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_database:
 [userenv]
 
 [userenv.shared]
+TWO_FACTOR_ENCRYPTION_KEY = "a3a6755f8e201252e5f8198a3807506e"
