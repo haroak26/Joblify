@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { Sparkles, Send, Loader2, User as UserIcon, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +16,7 @@ interface AIResumeChatProps {
   onSwitchToManual: () => void;
   onComplete?: () => void;
   focusedComponent?: string;
+  selectedComponents?: string[];
 }
 
 interface ChatMessage {
@@ -33,10 +35,12 @@ export default function AIResumeChat({
   onSwitchToManual,
   onComplete,
   focusedComponent,
+  selectedComponents = [],
 }: AIResumeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isComplete, setIsComplete] = useState(false);
+  const [activeComponents, setActiveComponents] = useState<string[]>(selectedComponents);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -48,17 +52,33 @@ export default function AIResumeChat({
     }
   }, [messages]);
 
-  // Initial greeting
+  // Initial greeting and user data prefill
   useEffect(() => {
-    if (messages.length === 0 && resumeData) {
-      const firstName = resumeData.personalInfo?.name?.split(" ")[0] || user?.username || "there";
+    if (messages.length === 0 && resumeData && user) {
+      // Extract first name from user.name, fallback to username
+      const firstName = user.name?.split(" ")[0] || user.username || "there";
+      
+      // Pre-fill user data if not already filled
+      const shouldPrefill = !resumeData.personalInfo?.name && !resumeData.personalInfo?.email;
+      if (shouldPrefill && user.name && user.email) {
+        onUpdate({
+          personalInfo: {
+            ...resumeData.personalInfo,
+            name: user.name,
+            email: user.email,
+          },
+        });
+      }
+      
       const greeting = focusedComponent
-        ? `Hi ${firstName}! I'm here to help you improve your ${focusedComponent}. What would you like to work on?`
-        : `Hi ${firstName}! I'm your AI resume assistant. I'll help you build your resume step by step. Let's start with your personal information. What's your full name?`;
+        ? `Welcome ${firstName}! I'm here to help you improve your ${focusedComponent}. What would you like to work on?`
+        : activeComponents.length > 0
+        ? `Welcome ${firstName}! I see you want to work on: ${activeComponents.join(', ')}. Let's start building your resume! First, let's confirm your professional summary. How would you describe your professional background in 2-3 sentences?`
+        : `Welcome ${firstName}! I'm your AI resume assistant. I'll help you build your resume step by step. Let's start with your professional summary. How would you describe your professional background in 2-3 sentences?`;
       
       setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
     }
-  }, [messages.length, resumeData, user?.username, focusedComponent]);
+  }, [messages.length, resumeData, user, focusedComponent, activeComponents, onUpdate]);
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
@@ -71,6 +91,7 @@ export default function AIResumeChat({
         body: JSON.stringify({
           message: sanitizedMessage,
           focusedComponent,
+          selectedComponents: activeComponents,
           conversationHistory: messages.slice(-MAX_MESSAGES).map(m => ({
             role: m.role,
             content: m.content,
@@ -93,6 +114,21 @@ export default function AIResumeChat({
       // Update resume data if AI extracted new information
       if (data.updatedData && Object.keys(data.updatedData).length > 0) {
         onUpdate(data.updatedData);
+      }
+
+      // Handle dynamically added components
+      if (data.addedComponents && data.addedComponents.length > 0) {
+        setActiveComponents((prev) => {
+          const newComponents = data.addedComponents!.filter(c => !prev.includes(c));
+          if (newComponents.length > 0) {
+            toast({
+              title: "Components Added",
+              description: `Added: ${newComponents.join(', ')}`,
+            });
+            return [...prev, ...newComponents];
+          }
+          return prev;
+        });
       }
 
       // Check if resume is complete
@@ -148,28 +184,42 @@ export default function AIResumeChat({
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
+      <div className="flex flex-col p-4 border-b bg-muted/30">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold">AI Resume Assistant</h3>
+              <p className="text-xs text-muted-foreground">
+                {focusedComponent ? `Editing ${focusedComponent}` : "Building your resume"}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold">AI Resume Assistant</h3>
-            <p className="text-xs text-muted-foreground">
-              {focusedComponent ? `Editing ${focusedComponent}` : "Building your resume"}
-            </p>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSwitchToManual}
+            className="flex items-center gap-2"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Switch to Manual Editor</span>
+            <span className="sm:hidden">Manual</span>
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onSwitchToManual}
-          className="flex items-center gap-2"
-        >
-          <Edit3 className="w-4 h-4" />
-          <span className="hidden sm:inline">Switch to Manual Editor</span>
-          <span className="sm:hidden">Manual</span>
-        </Button>
+        
+        {/* Active Components Badges */}
+        {activeComponents.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span className="text-xs text-muted-foreground">Active sections:</span>
+            {activeComponents.map((component) => (
+              <Badge key={component} variant="secondary" className="text-xs">
+                {component}
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Chat Messages */}

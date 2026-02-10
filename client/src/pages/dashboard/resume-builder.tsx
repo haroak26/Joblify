@@ -46,6 +46,9 @@ import ResumePreview from "@/components/resume-preview/ResumePreview";
 // AI Resume Chat component
 import AIResumeChat from "@/components/AIResumeChat";
 
+// Component Selector
+import ComponentSelector from "@/components/ComponentSelector";
+
 // Resume Compiling component
 import ResumeCompiling from "@/components/ResumeCompiling";
 
@@ -87,6 +90,8 @@ export default function ResumeBuilder() {
   const [userDataPrefilled, setUserDataPrefilled] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [aiEditingComponent, setAiEditingComponent] = useState<string | undefined>(undefined);
+  const [showComponentSelector, setShowComponentSelector] = useState(false);
+  const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
 
   // Fetch resume data
   const { data: resume, isLoading } = useQuery<Resume>({
@@ -102,6 +107,13 @@ export default function ResumeBuilder() {
       setSelectedTemplate(resume.template || "modern");
     }
   }, [resume]);
+
+  // Show component selector when entering AI mode for the first time
+  useEffect(() => {
+    if (isAIMode && resumeData && selectedComponents.length === 0) {
+      setShowComponentSelector(true);
+    }
+  }, [isAIMode, resumeData, selectedComponents.length]);
 
   // Pre-fill user data in traditional mode
   useEffect(() => {
@@ -234,6 +246,10 @@ export default function ResumeBuilder() {
   const handleSwitchToManual = () => {
     // Remove mode=ai from URL to switch to manual mode
     setLocation(`/dashboard/resume-builder/${resumeId}`);
+  };
+
+  const handleComponentsSelected = (components: string[]) => {
+    setSelectedComponents(components);
   };
 
   const handleAIComplete = () => {
@@ -402,6 +418,8 @@ export default function ResumeBuilder() {
                   onUpdate={updateResumeData}
                   onSwitchToManual={handleSwitchToManual}
                   onComplete={handleAIComplete}
+                  selectedComponents={selectedComponents}
+                />
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile, shown on desktop */}
@@ -497,6 +515,13 @@ export default function ResumeBuilder() {
           </div>
         </div>
       )}
+
+      {/* Component Selector Dialog */}
+      <ComponentSelector
+        open={showComponentSelector}
+        onOpenChange={setShowComponentSelector}
+        onSelect={handleComponentsSelected}
+      />
     </div>
   );
 }
