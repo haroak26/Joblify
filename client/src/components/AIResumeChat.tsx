@@ -236,7 +236,7 @@ export default function AIResumeChat({
 
       {/* Input Area */}
       <div className="p-4 border-t bg-muted/30">
-        <div className="max-w-3xl mx-auto flex gap-2">
+        <div className="max-w-3xl mx-auto relative flex items-center">
           <Input
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
@@ -244,19 +244,22 @@ export default function AIResumeChat({
             placeholder={isComplete ? "Resume complete!" : "Type your message..."}
             disabled={chatMutation.isPending || isComplete}
             maxLength={MAX_MESSAGE_LENGTH}
-            className="flex-1"
+            className="flex-1 pr-12 h-11"
           />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || chatMutation.isPending || isComplete}
-            size="icon"
-          >
-            {chatMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
+          <div className="absolute right-1.5 flex items-center">
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || chatMutation.isPending || isComplete}
+              size="icon"
+              className="h-8 w-8"
+            >
+              {chatMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground text-center mt-2">
           {inputMessage.length}/{MAX_MESSAGE_LENGTH} characters
