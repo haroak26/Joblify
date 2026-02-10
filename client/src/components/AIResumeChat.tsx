@@ -16,6 +16,7 @@ interface AIResumeChatProps {
   onUpdate: (data: Partial<ResumeData>) => void;
   onSwitchToManual: () => void;
   onComplete?: () => void;
+  focusedComponent?: string; // For component-specific editing
 }
 
 interface ChatMessage {
@@ -42,7 +43,8 @@ export default function AIResumeChat({
   resumeData, 
   onUpdate,
   onSwitchToManual,
-  onComplete
+  onComplete,
+  focusedComponent
 }: AIResumeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -88,14 +90,29 @@ export default function AIResumeChat({
 
     // Only initialize if no messages yet
     if (messages.length === 0) {
+      let greetingContent = "";
+      
+      if (focusedComponent) {
+        // If in focused component mode, provide a specialized greeting
+        const componentName = RESUME_COMPONENTS.find(c => c.id === focusedComponent)?.label || focusedComponent;
+        greetingContent = `Hi ${firstName}! I see you want to edit your ${componentName}. What changes would you like to make? You can describe the edits or ask me questions about this section.`;
+      } else {
+        greetingContent = `Hi ${firstName}! I'm your AI resume assistant. I'll help you build a professional resume through a friendly conversation. First, select which sections you'd like to add to your resume, then we'll start collecting the information.`;
+      }
+      
       const greeting: ChatMessage = {
         role: "assistant",
-        content: `Hi ${firstName}! I'm your AI resume assistant. I'll help you build a professional resume through a friendly conversation. First, select which sections you'd like to add to your resume, then we'll start collecting the information.`,
+        content: greetingContent,
         timestamp: new Date().toISOString(),
       };
       setMessages([greeting]);
+      
+      // If in focused mode, skip component selector
+      if (focusedComponent) {
+        setShowComponentSelector(false);
+      }
     }
-  }, [user, messages.length]);
+  }, [user, messages.length, focusedComponent]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -120,6 +137,8 @@ export default function AIResumeChat({
         message: inputValue,
         currentData: resumeData,
         conversationHistory: messages,
+        selectedComponents,
+        focusedComponent,
       });
 
       const data = await response.json();
@@ -135,6 +154,23 @@ export default function AIResumeChat({
       // Update resume data if AI extracted new information
       if (data.updatedData) {
         onUpdate(data.updatedData);
+      }
+
+      // Handle dynamic component addition
+      if (data.addedComponents) {
+        if (!Array.isArray(data.addedComponents)) {
+          console.error("addedComponents should be an array, received:", typeof data.addedComponents);
+        } else {
+          setSelectedComponents((prev) => {
+            const newComponents = [...prev];
+            data.addedComponents.forEach((comp: string) => {
+              if (!newComponents.includes(comp)) {
+                newComponents.push(comp);
+              }
+            });
+            return newComponents;
+          });
+        }
       }
 
       // Check if conversation is complete

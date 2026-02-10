@@ -745,9 +745,11 @@ export async function registerRoutes(
           content: z.string(),
           timestamp: z.string(),
         })).optional(),
+        selectedComponents: z.array(z.string()).optional(),
+        focusedComponent: z.string().optional(),
       });
 
-      const { message, currentData, conversationHistory = [] } = chatSchema.parse(req.body);
+      const { message, currentData, conversationHistory = [], selectedComponents = [], focusedComponent } = chatSchema.parse(req.body);
 
       // Sanitize inputs by limiting size and truncating if needed
       const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
@@ -759,14 +761,49 @@ export async function registerRoutes(
       ).join('\n');
 
       // Create AI prompt
+      const COMPONENT_LABELS: Record<string, string> = {
+        experience: "Work Experience",
+        education: "Education",
+        skills: "Skills",
+        certifications: "Professional Certifications",
+        projects: "Personal/Professional Projects",
+        awards: "Awards & Honors",
+        leadership: "Leadership Roles",
+        research: "Research Work",
+        publications: "Academic/Professional Publications",
+      };
+      
+      const componentsList = selectedComponents.length > 0 
+        ? `User initially selected these components: ${selectedComponents.map(id => COMPONENT_LABELS[id] || id).join(', ')}` 
+        : 'User has not yet selected components.';
+      
+      const focusedMode = focusedComponent 
+        ? `\n\n**FOCUSED EDITING MODE**: The user is specifically editing the "${COMPONENT_LABELS[focusedComponent] || focusedComponent}" section. Focus your questions and data extraction on this component only. Be concise and help them make quick, targeted edits.`
+        : '';
+      
       const systemPrompt = `You are a professional resume assistant helping a user build their resume through natural conversation. Your job is to:
 1. Ask one question at a time in a friendly, conversational manner
 2. Extract structured information from user responses
 3. Guide users to provide quantifiable achievements when discussing experience
 4. Be encouraging and professional
 5. **IMPORTANT**: After collecting one entry in a multi-entry section (experience, education, skills), ALWAYS ask if they want to add more before moving to the next section
+6. **DYNAMIC COMPONENTS**: If the user mentions wanting to add a component they didn't initially select (like "I want to add certifications" or "Can I add my projects?"), acknowledge it positively and start collecting that information. Include the component name in the "addedComponents" field of your response.
+
+${componentsList}
+${focusedMode}
 
 Current resume data: ${JSON.stringify(currentData, null, 2)}
+
+Available components that can be added dynamically:
+- experience: Work Experience
+- education: Education
+- skills: Skills
+- certifications: Professional Certifications
+- projects: Personal/Professional Projects
+- awards: Awards & Honors
+- leadership: Leadership Roles
+- research: Research Work
+- publications: Academic/Professional Publications
 
 Guidelines for extracting data:
 - For personal info: extract name, email, phone, location, LinkedIn, website
@@ -780,6 +817,24 @@ Guidelines for extracting data:
 - For skills: collect a list of technical and professional skills
   * After collecting initial skills, ask: "Excellent! Do you have any other skills you'd like to add?"
   * Only proceed to summary/completion if user confirms they're done with skills
+- For certifications: collect name, issuer, and date
+- For projects: collect name, description, technologies used, and optional URL
+- For awards: collect title, issuer, date, and optional description
+- For leadership: collect title, organization, dates, and description
+- For research: collect title, institution, dates, description, and optional URL
+- For publications: collect title, authors, journal/venue, date, and optional URL
+
+**Dynamic Component Addition**:
+When a user says something like:
+- "I want to add my certifications"
+- "Can I include my projects?"
+- "I'd like to add awards"
+- "Let me tell you about my publications"
+
+Respond with:
+1. Positive acknowledgment: "Absolutely! I'd love to add your [component] to your resume."
+2. Ask for the first entry in that section
+3. In your JSON response, include "addedComponents": ["component-id"]
 
 **Multi-Entry Section Flow**:
 When user provides information for experience, education, or skills:
@@ -799,12 +854,14 @@ User's message: ${sanitizedMessage}
 Respond with:
 1. A friendly reply with your next question or acknowledgment
 2. Any extracted data that should be added to their resume
-3. Whether the conversation is complete
+3. Any components that were dynamically added (if user requested a new section)
+4. Whether the conversation is complete
 
 Format your response as JSON with these fields:
 {
   "reply": "Your conversational response",
   "updatedData": { /* Only include fields that changed */ },
+  "addedComponents": ["component-id"], // Optional: only if user requested a new component
   "isComplete": false
 }`;
 
