@@ -3,8 +3,20 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wand2, Copy, Check, RefreshCw, Briefcase } from "lucide-react";
-import type { FreelancerProfile, JobPost } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+
+interface FreelancerProfile {
+  intro: string;
+  skills: Array<{ id: string; name: string }>;
+}
+
+interface JobPost {
+  id: number | string;
+  title: string;
+  description: string;
+  source: string;
+  postedAt: string;
+}
 
 
 type Tone = "professional" | "friendly" | "enthusiastic";
@@ -51,7 +63,7 @@ export default function Generator() {
       const response = await apiRequest("POST", "/api/generate-message", {
         jobTitle: selectedJob?.title ?? "Custom Job",
         jobDescription: selectedJob?.description ?? "",
-        skills: profileQuery.data?.skills.map(s => s.name) ?? [],
+        skills: profileQuery.data?.skills.map((s: { name: string }) => s.name) ?? [],
         tone,
         messageType,
         intro: profileQuery.data?.intro ?? "",

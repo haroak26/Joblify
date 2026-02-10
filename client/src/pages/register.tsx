@@ -231,7 +231,7 @@ export default function Register() {
                 transition={{ duration: 0.3 }}
               >
                 <Form {...step2Form}>
-                  <form onSubmit={step2Form.handleSubmit(handleStep2Next)} className="space-y-4">
+                  <form onSubmit={step2Form.handleSubmit(handleStep2Submit)} className="space-y-4">
                     <FormField
                       control={step2Form.control}
                       name="password"

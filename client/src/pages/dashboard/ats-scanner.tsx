@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2, XCircle, Target, BarChart3, Search, Lightbulb, TrendingUp } from "lucide-react";
@@ -9,13 +9,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AtsScanner() {
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState<string>("");
   const [result, setResult] = useState<any>(null);
+  const [scanMode, setScanMode] = useState<"joblify" | "upload">("upload");
+  const [selectedResumeId, setSelectedResumeId] = useState<string>("");
   const { toast } = useToast();
+
+  // Query to fetch user's Joblify resumes
+  const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({
+    queryKey: ["/api/resumes"],
+    enabled: scanMode === "joblify",
+  });
+
+  const resumes = resumesData?.resumes || [];
 
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -27,6 +38,28 @@ export default function AtsScanner() {
       const res = await fetch("/api/ats/scan", {
         method: "POST",
         body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to scan");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      toast({ title: "Scan Complete", description: `ATS Score: ${data.score}/100` });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Scan Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const scanJoblifyResumeMutation = useMutation({
+    mutationFn: async (resumeId: string) => {
+      const res = await fetch(`/api/ats/scan-resume/${resumeId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobDescription: jobDescription.trim() || undefined }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

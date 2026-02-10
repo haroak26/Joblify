@@ -111,6 +111,12 @@ export interface IStorage {
   getSupportInteractions(userId: string, limit?: number): Promise<SupportInteraction[]>;
   createSupportInteraction(data: InsertSupportInteraction): Promise<SupportInteraction>;
   
+  // GDPR helper methods
+  getJobs(userId: string): Promise<any[]>;
+  getSchedules(userId: string): Promise<any[]>;
+  getJobCount(userId: string): Promise<number>;
+  getScheduleCount(userId: string): Promise<number>;
+  
   // Deleted accounts tracker methods (abuse prevention)
   checkDeletedAccount(email: string): Promise<{ isBlocked: boolean; expiresAt?: Date }>;
   addDeletedAccount(email: string, reason?: string): Promise<void>;
@@ -448,6 +454,28 @@ export class DatabaseStorage implements IStorage {
       .values(data)
       .returning();
     return interaction;
+  }
+
+  // GDPR helper methods
+  async getJobs(_userId: string): Promise<any[]> {
+    // Jobs are not stored in the database - they are fetched from external sources
+    // Return empty array for now
+    return [];
+  }
+
+  async getSchedules(_userId: string): Promise<any[]> {
+    // Schedules are not implemented yet
+    return [];
+  }
+
+  async getJobCount(_userId: string): Promise<number> {
+    // Jobs are not stored in the database
+    return 0;
+  }
+
+  async getScheduleCount(_userId: string): Promise<number> {
+    // Schedules are not implemented yet
+    return 0;
   }
   
   // Deleted accounts tracker methods (abuse prevention)
