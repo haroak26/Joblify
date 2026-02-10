@@ -47,9 +47,6 @@ function validateEnvVars() {
     if (!optional.POE_API_KEY) {
       console.warn('[Startup]   - AI features (skill suggestions, message generation) will not work');
     }
-    if (!optional.APIFY_TOKEN) {
-      console.warn('[Startup]   - Job scraping from Reddit and X will not work');
-    }
     if (!optional.BREVO_API_KEY) {
       console.warn('[Startup]   - Email notifications will not work');
     }
