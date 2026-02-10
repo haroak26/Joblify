@@ -294,6 +294,19 @@ export default function ResumeBuilder() {
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
+              {/* AI Chat button */}
+              <button
+                onClick={() => setShowAIAssistant(true)}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 text-primary font-medium border border-primary/20"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="flex-1 text-left">AI Chat</span>
+              </button>
+              
+              <div className="py-2">
+                <Separator />
+              </div>
+              
               {sections.map((section) => {
                 const Icon = section.icon;
                 return (
