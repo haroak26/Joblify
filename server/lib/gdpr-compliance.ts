@@ -405,8 +405,7 @@ export async function exportUserDataPDF(userId: string): Promise<Buffer> {
         doc.fontSize(10).font('Helvetica');
 
         coverLetters.forEach((letter, index: number) => {
-          // CoverLetter has id, content, userId, jobDescription, createdAt, updatedAt, resumeId
-          doc.fontSize(11).font('Helvetica-Bold').text(`${index + 1}. Cover Letter ${index + 1}`);
+          doc.fontSize(11).font('Helvetica-Bold').text(`Cover Letter ${index + 1}`);
           doc.fontSize(9).font('Helvetica');
           
           if (letter.jobDescription) {

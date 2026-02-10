@@ -589,7 +589,7 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
 
-      let { id } = req.params;
+      const { id } = req.params;
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
       }
@@ -621,7 +621,7 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
 
-      let { id } = req.params;
+      const { id } = req.params;
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
       }
@@ -679,7 +679,7 @@ export async function registerRoutes(
     try {
       const userId = req.session.userId!;
 
-      let { id } = req.params;
+      const { id } = req.params;
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
       }
@@ -715,7 +715,7 @@ export async function registerRoutes(
   app.post("/api/resumes/:id/ai-chat", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
-      let { id } = req.params;
+      const { id } = req.params;
 
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
@@ -921,7 +921,7 @@ Format your response as JSON with these fields:
     try {
       const userId = req.session.userId!;
 
-      let { id } = req.params;
+      const { id } = req.params;
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
       }
