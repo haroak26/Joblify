@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ResumeData } from "@shared/schema";
 import { Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
 
@@ -6,7 +7,7 @@ interface ModernTemplateProps {
 }
 
 // Modern Template - Two-column layout inspired by Olivia Mills design
-export default function ModernTemplate({ data }: ModernTemplateProps) {
+const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProps) {
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
@@ -293,4 +294,6 @@ export default function ModernTemplate({ data }: ModernTemplateProps) {
       )}
     </div>
   );
-}
+});
+
+export default ModernTemplate;

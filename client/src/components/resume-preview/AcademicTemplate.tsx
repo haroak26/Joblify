@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ResumeData } from "@shared/schema";
 import { Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
 
@@ -6,7 +7,7 @@ interface AcademicTemplateProps {
 }
 
 // Academic Template - Clean professional design with left sidebar
-export default function AcademicTemplate({ data }: AcademicTemplateProps) {
+const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTemplateProps) {
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
@@ -282,4 +283,6 @@ export default function AcademicTemplate({ data }: AcademicTemplateProps) {
       </div>
     </div>
   );
-}
+});
+
+export default AcademicTemplate;

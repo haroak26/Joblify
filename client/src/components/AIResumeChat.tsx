@@ -20,6 +20,7 @@ interface AIResumeChatProps {
 interface ChatMessage {
   role: "user" | "ai";
   content: string;
+  id: string; // Add unique ID for proper key usage
 }
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -55,7 +56,7 @@ export default function AIResumeChat({
         ? `Hi ${firstName}! I'm here to help you improve your ${focusedComponent}. What would you like to work on?`
         : `Hi ${firstName}! I'm your AI resume assistant. I'll help you build your resume step by step. Let's start with your personal information. What's your full name?`;
       
-      setMessages([{ role: "ai", content: greeting }]);
+      setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
     }
   }, [messages.length, resumeData, user?.username, focusedComponent]);
 
@@ -86,8 +87,8 @@ export default function AIResumeChat({
       return response.json();
     },
     onSuccess: (data: { reply: string; updatedData?: Partial<ResumeData>; isComplete?: boolean; addedComponents?: string[] }) => {
-      // Add AI response to messages
-      setMessages((prev) => [...prev, { role: "ai", content: data.reply }]);
+      // Add AI response to messages with unique ID
+      setMessages((prev) => [...prev, { role: "ai", content: data.reply, id: `ai-${Date.now()}` }]);
 
       // Update resume data if AI extracted new information
       if (data.updatedData && Object.keys(data.updatedData).length > 0) {
@@ -122,8 +123,12 @@ export default function AIResumeChat({
   const handleSendMessage = () => {
     if (!inputMessage.trim() || chatMutation.isPending) return;
 
-    // Add user message to chat
-    const userMessage: ChatMessage = { role: "user", content: inputMessage.trim() };
+    // Add user message to chat with unique ID
+    const userMessage: ChatMessage = { 
+      role: "user", 
+      content: inputMessage.trim(),
+      id: `user-${Date.now()}`
+    };
     setMessages((prev) => [...prev, userMessage]);
     
     // Send to backend
@@ -170,9 +175,9 @@ export default function AIResumeChat({
       {/* Chat Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4 max-w-3xl mx-auto">
-          {messages.map((message, index) => (
+          {messages.map((message) => (
             <div
-              key={index}
+              key={message.id}
               className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
             >
               {/* Avatar */}

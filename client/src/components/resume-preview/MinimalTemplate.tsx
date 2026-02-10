@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ResumeData } from "@shared/schema";
 import { Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
 
@@ -6,7 +7,7 @@ interface MinimalTemplateProps {
 }
 
 // Minimal Template - Clean minimal design with strategic use of whitespace
-export default function MinimalTemplate({ data }: MinimalTemplateProps) {
+const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateProps) {
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
@@ -280,4 +281,6 @@ export default function MinimalTemplate({ data }: MinimalTemplateProps) {
       </div>
     </div>
   );
-}
+});
+
+export default MinimalTemplate;
