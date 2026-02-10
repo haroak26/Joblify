@@ -749,6 +749,7 @@ export async function registerRoutes(
       // Validate request body
       const chatSchema = z.object({
         message: z.string().min(1),
+        currentData: resumeDataSchema.optional(),
         conversationHistory: z.array(z.object({
           role: z.enum(["user", "ai"]),
           content: z.string(),
@@ -757,7 +758,7 @@ export async function registerRoutes(
         focusedComponent: z.string().optional(),
       });
 
-      const { message, conversationHistory = [], selectedComponents = [], focusedComponent } = chatSchema.parse(req.body);
+      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent } = chatSchema.parse(req.body);
 
       // Sanitize inputs by limiting size and truncating if needed
       const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
@@ -765,11 +766,11 @@ export async function registerRoutes(
 
       // Build conversation context for AI
       const conversationContext = sanitizedHistory.map(msg => 
-        `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content.slice(0, 500)}`
+        `${msg.role === 'user' ? 'User' : 'AI Assistant'}: ${msg.content.slice(0, 500)}`
       ).join('\n');
 
-      // Get current resume data
-      const currentData = resumeDataSchema.parse(resume.resumeData);
+      // Get current resume data - prefer client data (most recent) over database
+      const currentData = clientData || resumeDataSchema.parse(resume.resumeData);
 
       // Create AI prompt
       const COMPONENT_LABELS: Record<string, string> = {
@@ -793,7 +794,7 @@ export async function registerRoutes(
         : '';
       
       const userInfo = `**USER INFORMATION** (Already known - DO NOT ask for this):
-- Name: ${user.name || 'Not provided'}
+- Name: ${user.name || '[Name not yet provided in profile]'}
 - Email: ${user.email}
 - These are already saved in the resume's personal info section.`;
       

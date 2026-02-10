@@ -22,6 +22,8 @@ import {
   BookOpen
 } from "lucide-react";
 
+const DEFAULT_COMPONENTS = ["experience", "education", "skills"];
+
 interface ComponentOption {
   id: string;
   label: string;
@@ -104,7 +106,7 @@ export default function ComponentSelector({
   initialComponents,
 }: ComponentSelectorProps) {
   const [selectedComponents, setSelectedComponents] = useState<string[]>(
-    initialComponents || ["experience", "education", "skills"]
+    initialComponents || DEFAULT_COMPONENTS
   );
 
   // Update selection when dialog opens with initial components

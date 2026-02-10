@@ -60,16 +60,21 @@ export default function AIResumeChat({
       // Extract first name from user.name, fallback to username
       const firstName = user.name?.split(" ")[0] || user.username || "there";
       
-      // Pre-fill user data if not already filled
-      const shouldPrefill = !resumeData.personalInfo?.name && !resumeData.personalInfo?.email;
-      if (shouldPrefill && user.name && user.email) {
-        onUpdate({
-          personalInfo: {
-            ...resumeData.personalInfo,
-            name: user.name,
-            email: user.email,
-          },
-        });
+      // Pre-fill user data if individual fields are missing
+      const shouldPrefillName = !resumeData.personalInfo?.name && user.name;
+      const shouldPrefillEmail = !resumeData.personalInfo?.email && user.email;
+      
+      if (shouldPrefillName || shouldPrefillEmail) {
+        const updates: any = { personalInfo: { ...resumeData.personalInfo } };
+        
+        if (shouldPrefillName) {
+          updates.personalInfo.name = user.name;
+        }
+        if (shouldPrefillEmail) {
+          updates.personalInfo.email = user.email;
+        }
+        
+        onUpdate(updates);
       }
       
       const greeting = focusedComponent
@@ -80,7 +85,7 @@ export default function AIResumeChat({
       
       setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
     }
-  }, [messages.length, resumeData, user, focusedComponent, activeComponents, onUpdate]);
+  }, [messages.length, resumeData, user, focusedComponent, activeComponents]);
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
@@ -94,6 +99,7 @@ export default function AIResumeChat({
           message: sanitizedMessage,
           focusedComponent,
           selectedComponents: activeComponents,
+          currentData: resumeData,
           conversationHistory: messages.slice(-MAX_MESSAGES).map(m => ({
             role: m.role,
             content: m.content,

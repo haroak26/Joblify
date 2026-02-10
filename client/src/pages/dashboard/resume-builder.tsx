@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useRoute, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -229,12 +229,12 @@ export default function ResumeBuilder() {
     }
   };
 
-  const updateResumeData = (data: Partial<ResumeData>) => {
+  const updateResumeData = useCallback((data: Partial<ResumeData>) => {
     setResumeData((prev) => ({
       ...prev!,
       ...data,
     }));
-  };
+  }, []);
 
   const getSaveStatus = () => {
     if (isSaving) return "Saving...";
