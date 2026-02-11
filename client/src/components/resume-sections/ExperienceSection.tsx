@@ -122,7 +122,7 @@ export default function ExperienceSection({ data, onUpdate }: ExperienceSectionP
               </div>
             </div>
           </CardHeader>
-          {exp.description.length > 0 && (
+          {exp.description && exp.description.length > 0 && (
             <CardContent>
               <ul className="list-disc list-inside space-y-1">
                 {exp.description.map((desc, i) => (

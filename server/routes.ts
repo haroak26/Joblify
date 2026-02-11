@@ -1253,7 +1253,7 @@ Format your response as JSON with these fields:
       try {
         const poeClient = getPoeClient();
         const completion = await poeClient.chat.completions.create({
-          model: "Claude-3.5-Sonnet",
+          model: "gpt-5-nano", // Resume builder uses gpt-5-nano model
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: sanitizedMessage }
@@ -1613,6 +1613,132 @@ Format your response as JSON with these fields:
   });
 
   // ============================================
+  // Cover Letter Generation Endpoints
+  // ============================================
+
+  // Generate cover letter
+  app.post("/api/cover-letter/generate", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({
+        resumeId: z.string().min(1, "Resume ID is required"),
+        jobDescription: z.string().min(20, "Job description must be at least 20 characters"),
+        tone: z.enum(["professional", "enthusiastic", "creative"]).default("professional"),
+      });
+
+      const { resumeId, jobDescription, tone } = schema.parse(req.body);
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, resumeId))
+        .limit(1);
+
+      if (!resume || resume.userId !== userId) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Get user data
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId));
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Convert resume data to text
+      const resumeText = convertResumeDataToText(resume.resumeData);
+
+      // Create prompt based on tone
+      const toneInstructions = {
+        professional: "Write in a formal, business-appropriate tone. Be confident but not overly enthusiastic.",
+        enthusiastic: "Write with energy and passion. Show genuine excitement about the opportunity while remaining professional.",
+        creative: "Write with personality and creativity. Stand out while maintaining professionalism.",
+      };
+
+      const systemPrompt = `You are an expert cover letter writer. Create a compelling, personalized cover letter based on the user's resume and the job description they're applying to.
+
+Guidelines:
+- ${toneInstructions[tone]}
+- Keep it to 3-4 concise paragraphs
+- Start with a strong opening that grabs attention
+- Highlight 2-3 key qualifications that match the job requirements
+- Show genuine interest in the role and company
+- End with a call to action
+- Use the candidate's name from their resume
+- Be specific about their achievements
+- Do NOT use generic phrases or clichés
+- Make it authentic and personal
+
+Return ONLY the cover letter text, no additional commentary.`;
+
+      const poeClient = getPoeClient();
+      const completion = await poeClient.chat.completions.create({
+        model: "claude-4.5-haiku", // Cover letter generation uses claude-4.5-haiku
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: `Job Description:\n${jobDescription}\n\nCandidate's Resume:\n${resumeText}`,
+          },
+        ],
+        max_tokens: 800,
+        temperature: 0.7,
+      });
+
+      const coverLetter = completion.choices[0]?.message?.content || '';
+
+      res.json({ 
+        content: coverLetter,
+        tone,
+      });
+    } catch (error) {
+      console.error('[API] Error generating cover letter:', error);
+      res.status(500).json({ error: "Failed to generate cover letter" });
+    }
+  });
+
+  // Tailor cover letter for specific job
+  app.post("/api/cover-letter/tailor", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({
+        resumeId: z.string().min(1, "Resume ID is required"),
+        jobId: z.string().min(1, "Job ID is required"),
+      });
+
+      const { resumeId, jobId } = schema.parse(req.body);
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, resumeId))
+        .limit(1);
+
+      if (!resume || resume.userId !== userId) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // For now, return a placeholder since job management is not fully implemented
+      // This endpoint would integrate with job tracking when available
+      res.json({ 
+        content: "Cover letter tailoring for saved jobs coming soon!",
+        message: "This feature will be available when job management is fully integrated.",
+      });
+    } catch (error) {
+      console.error('[API] Error tailoring cover letter:', error);
+      res.status(500).json({ error: "Failed to tailor cover letter" });
+    }
+  });
+
+  // ============================================
   // Redeemable Code System Endpoints
   // ============================================
 
@@ -1821,7 +1947,7 @@ Guidelines:
       // Call POE API with fast, efficient model for customer support
       const poe = getPoeClient();
       const completion = await poe.chat.completions.create({
-        model: "Claude-3.5-Haiku", // Fast model optimized for customer support responses
+        model: "claude-4.5-haiku", // Fast model optimized for customer support responses
         messages: [
           {
             role: "system",
