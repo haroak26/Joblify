@@ -9,6 +9,8 @@ import { Copy, Download, Loader2, Sparkles, FileText, Wand2, CheckCircle2 } from
 import { useToast } from "@/hooks/use-toast";
 import type { Resume } from "@shared/schema";
 
+const MIN_JOB_DESCRIPTION_LENGTH = 20;
+
 export default function CoverLetterGenerator() {
   const [resumeId, setResumeId] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -77,7 +79,7 @@ export default function CoverLetterGenerator() {
     }
   };
 
-  const isFormValid = resumeId && jobDescription.trim().length > 20;
+  const isFormValid = resumeId && jobDescription.trim().length > MIN_JOB_DESCRIPTION_LENGTH;
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -175,7 +177,7 @@ export default function CoverLetterGenerator() {
                 <p className="text-xs text-muted-foreground">
                   {jobDescription.length} characters
                 </p>
-                {jobDescription.length > 20 && (
+                {jobDescription.length > MIN_JOB_DESCRIPTION_LENGTH && (
                   <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                     <CheckCircle2 className="w-3 h-3" />
                     Good length

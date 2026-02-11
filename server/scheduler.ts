@@ -4,7 +4,7 @@ import { db } from "./db";
 import { users, resumes, usage } from "@shared/schema";
 import { eq, and, lt, sql } from "drizzle-orm";
 
-// Track when we last ran the cleanup
+// Track when we last ran tasks
 let lastCleanupTime = Date.now();
 let lastReminderCheckTime = Date.now();
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
