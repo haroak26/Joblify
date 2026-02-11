@@ -1179,5 +1179,131 @@ Format your response as JSON with these fields:
     }
   });
 
+  // Contact form AI response endpoint
+  app.post("/api/contact/ai-response", async (req: Request, res) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Valid email is required"),
+        message: z.string().min(1, "Message is required"),
+      });
+
+      const { name, email, message } = schema.parse(req.body);
+      console.log('[API] Contact form AI request from:', name, email);
+
+      // Build knowledge base context
+      const knowledgeBase = `
+You are a helpful customer support AI for Joblify, an AI-powered resume builder platform.
+
+Key information about Joblify:
+- We help job seekers create professional, ATS-optimized resumes using AI
+- Features: AI Resume Builder, Cover Letter Generator, ATS Scanner, Job Matching, Resume Tailoring
+- Plans: Free (limited features), Plus ($9.99/mo), Ultra ($19.99/mo), Lifetime ($99 one-time)
+- We use secure Auth0 authentication and encrypt all user data
+- Export formats: PDF and DOCX
+- Contact email: support@joblifyai.com for technical issues, privacy@joblifyai.com for privacy concerns
+
+Common questions:
+- How to build a resume: Use our AI chat interface in the dashboard
+- ATS optimization: Our AI automatically optimizes content for Applicant Tracking Systems
+- Data security: All data is encrypted, we're GDPR compliant
+- Pricing: Free plan available, paid plans unlock unlimited features
+- Export: Download as PDF or DOCX from the resume builder
+
+Guidelines:
+- Be friendly, professional, and concise
+- If you can answer the question with the knowledge base, provide a helpful response
+- If the question requires account-specific help or is complex, recommend contacting support
+- Keep responses under 200 words
+- Don't make up information not in the knowledge base
+      `.trim();
+
+      // Call POE API with fast, efficient model for customer support
+      const poe = getPoeClient();
+      const completion = await poe.chat.completions.create({
+        model: "Claude-3.5-Haiku", // Fast model optimized for customer support responses
+        messages: [
+          {
+            role: "system",
+            content: knowledgeBase,
+          },
+          {
+            role: "user",
+            content: `User question from ${name} (${email}):\n\n${message}`,
+          },
+        ],
+        max_tokens: 300,
+        temperature: 0.7,
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content || "I apologize, but I'm unable to process your request at the moment. Please contact our support team at support@joblifyai.com for assistance.";
+
+      console.log('[API] AI response generated successfully');
+      res.json({ 
+        success: true,
+        response: aiResponse,
+        canAnswer: true, // Indicate AI attempted to answer
+      });
+    } catch (error) {
+      console.error('[API] Error generating AI response:', error);
+      
+      // If AI fails, return a graceful fallback
+      res.json({
+        success: false,
+        response: "I apologize, but I'm experiencing technical difficulties. Please contact our support team directly at support@joblifyai.com, and we'll respond within 24 hours.",
+        canAnswer: false,
+      });
+    }
+  });
+
+  // Contact form send email endpoint (for when user wants to contact support anyway)
+  app.post("/api/contact/send-email", async (req: Request, res) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1, "Name is required"),
+        email: z.string().email("Valid email is required"),
+        message: z.string().min(1, "Message is required"),
+        aiResponse: z.string().optional(),
+      });
+
+      const { name, email, message, aiResponse } = schema.parse(req.body);
+      console.log('[API] Sending contact form email from:', name, email);
+
+      // Import email function
+      const { sendContactFormEmail, sendContactConfirmationEmail } = await import("./email");
+
+      // Send email to support
+      const supportEmailSent = await sendContactFormEmail({
+        fromName: name,
+        fromEmail: email,
+        message,
+        aiResponse,
+      });
+
+      // Send confirmation email to user
+      const userEmailSent = await sendContactConfirmationEmail({
+        toEmail: email,
+        name,
+        message,
+      });
+
+      if (!supportEmailSent) {
+        throw new Error("Failed to send email to support");
+      }
+
+      console.log('[API] Contact form emails sent successfully');
+      res.json({ 
+        success: true,
+        message: "Your message has been sent successfully. We'll respond within 24-48 hours.",
+      });
+    } catch (error) {
+      console.error('[API] Error sending contact form email:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Failed to send message. Please try emailing us directly at support@joblifyai.com",
+      });
+    }
+  });
+
   return httpServer;
 }
