@@ -130,13 +130,13 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
       <div className="flex-1 p-8 print:p-8">
         {/* Name */}
         <div className="mb-6">
-          <h1 className="text-4xl font-bold mb-2">{personalInfo.name || "Your Name"}</h1>
+          <h1 className="text-3xl font-semibold mb-2">{personalInfo.name || "Your Name"}</h1>
         </div>
 
         {/* Summary */}
         {summary && (
           <div className="mb-6">
-            <h2 className="text-lg font-bold mb-2 uppercase tracking-wide text-gray-800">
+            <h2 className="text-base font-semibold mb-2 uppercase tracking-wide text-gray-800">
               Professional Summary
             </h2>
             <p className="text-sm leading-relaxed text-gray-800">{summary}</p>
@@ -146,7 +146,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
         {/* Experience */}
         {experience.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+            <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Experience
             </h2>
             <div className="space-y-4">
@@ -179,7 +179,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
         {/* Projects */}
         {projects && projects.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+            <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Projects
             </h2>
             <div className="space-y-3">
@@ -208,7 +208,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
         {/* Leadership */}
         {leadership && leadership.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+            <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Leadership Experience
             </h2>
             <div className="space-y-3">
@@ -233,7 +233,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
         {/* Research */}
         {research && research.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+            <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Research Experience
             </h2>
             <div className="space-y-3">
@@ -261,7 +261,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
         {/* Publications */}
         {publications && publications.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-bold mb-3 uppercase tracking-wide text-gray-800">
+            <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Publications
             </h2>
             <div className="space-y-2">

@@ -325,7 +325,7 @@ export default function ResumeBuilder() {
                 <Separator />
               </div>
               
-              {/* AI Chat button - moved below components */}
+              {/* AI Enhancement button - moved below components */}
               <button
                 onClick={() => setActiveSection("ai-chat")}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
@@ -335,7 +335,7 @@ export default function ResumeBuilder() {
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
-                <span className="flex-1 text-left">AI Chat</span>
+                <span className="flex-1 text-left">AI Enhancement</span>
               </button>
             </div>
           </ScrollArea>
@@ -414,7 +414,7 @@ export default function ResumeBuilder() {
                 className="text-xs sm:text-sm"
               >
                 <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">AI Help</span>
+                <span className="hidden sm:inline">AI Enhancement</span>
               </Button>
             )}
             

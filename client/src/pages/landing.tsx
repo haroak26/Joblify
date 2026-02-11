@@ -86,7 +86,7 @@ export default function Landing() {
                 <Star className="w-3 h-3 mr-1.5" />
                 AI-Powered Resume Builder
               </Badge>
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-semibold tracking-tight mb-6 leading-[1.1]">
                 Build your perfect resume
                 <span className="text-primary block mt-1">with AI</span>
               </h1>
