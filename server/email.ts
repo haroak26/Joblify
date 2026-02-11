@@ -416,3 +416,90 @@ function getFeatureInfo(featureName: string): {
       };
   }
 }
+
+// Contact form email to support
+export async function sendContactFormEmail(options: {
+  fromName: string;
+  fromEmail: string;
+  message: string;
+  aiResponse?: string;
+}): Promise<boolean> {
+  const { fromName, fromEmail, message, aiResponse } = options;
+
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      New Contact Form Submission
+    </h1>
+    <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0;"><strong>From:</strong></p>
+      <p style="font-size: 16px; color: #0f172a; margin: 0 0 12px 0;">${fromName} (${fromEmail})</p>
+      
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0;"><strong>Message:</strong></p>
+      <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0; white-space: pre-wrap;">${message}</p>
+    </div>
+    ${
+      aiResponse
+        ? `
+    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
+      <p style="font-size: 14px; color: #92400e; margin: 0 0 8px 0;"><strong>⚠️ Note: AI Response Was Shown</strong></p>
+      <p style="font-size: 14px; color: #78350f; margin: 0; white-space: pre-wrap;">${aiResponse}</p>
+      <p style="font-size: 13px; color: #92400e; margin: 12px 0 0 0; font-style: italic;">The user was not satisfied with the AI response and chose to contact support.</p>
+    </div>
+    `
+        : ""
+    }
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      Reply to this inquiry by emailing <a href="mailto:${fromEmail}" style="color: #16a34a;">${fromEmail}</a>
+    </p>
+  `;
+
+  return sendEmail({
+    to: "support@joblifyai.com",
+    subject: `Contact Form: Message from ${fromName}`,
+    html: getEmailTemplate(
+      content,
+      `New contact form message from ${fromName}`
+    ),
+  });
+}
+
+// Confirmation email to user
+export async function sendContactConfirmationEmail(options: {
+  toEmail: string;
+  name: string;
+  message: string;
+}): Promise<boolean> {
+  const { toEmail, name, message } = options;
+
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      We've Received Your Message
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${name},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Thank you for contacting Joblify! We've received your message and our support team will review it shortly.
+    </p>
+    <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0;"><strong>Your Message:</strong></p>
+      <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0; white-space: pre-wrap;">${message}</p>
+    </div>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      We typically respond within 24-48 hours during business days. For urgent matters, please mention "urgent" in your message.
+    </p>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      Best regards,<br>
+      <strong>The Joblify Team</strong>
+    </p>
+  `;
+
+  return sendEmail({
+    to: toEmail,
+    subject: "We've received your message - Joblify Support",
+    html: getEmailTemplate(
+      content,
+      "Thank you for contacting Joblify support"
+    ),
+  });
+}
