@@ -424,7 +424,9 @@ export type SupportInteraction = typeof supportInteractions.$inferSelect;
 export const userFeatureUsage = pgTable("user_feature_usage", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  featureName: text("feature_name").notNull(), // 'resume_builder', 'ats_scanner', 'cover_letter', 'job_match', 'tailor'
+  // Valid feature names: 'resume_builder', 'ats_scanner', 'cover_letter', 'job_match', 'tailor'
+  // Note: Consider adding CHECK constraint in future migration for stricter validation
+  featureName: text("feature_name").notNull(),
   firstUsedAt: timestamp("first_used_at").notNull().default(sql`NOW()`),
   lastUsedAt: timestamp("last_used_at").notNull().default(sql`NOW()`),
   usageCount: integer("usage_count").notNull().default(1),
@@ -438,11 +440,15 @@ export const userFeatureUsage = pgTable("user_feature_usage", {
 export const scheduledEmails = pgTable("scheduled_emails", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  emailType: text("email_type").notNull(), // 'welcome', 'feature_engagement_24h', 'feature_engagement_48h', 'feature_engagement_72h'
+  // Valid email types: 'welcome', 'feature_engagement_24h', 'feature_engagement_48h', 'feature_engagement_72h'
+  // Note: Consider adding CHECK constraint in future migration for stricter validation
+  emailType: text("email_type").notNull(),
   featureName: text("feature_name"), // For feature engagement emails
   scheduledFor: timestamp("scheduled_for").notNull(),
   sentAt: timestamp("sent_at"),
-  status: text("status").notNull().default("pending"), // 'pending', 'sent', 'failed', 'cancelled'
+  // Valid status values: 'pending', 'sent', 'failed', 'cancelled'
+  // Note: Consider adding CHECK constraint in future migration for stricter validation
+  status: text("status").notNull().default("pending"),
   error: text("error"),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 }, (table) => ({

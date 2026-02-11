@@ -601,6 +601,8 @@ export async function registerRoutes(
         .returning();
 
       // Track feature usage
+      // Note: Tracking is non-critical and failures won't affect resume creation
+      // Errors are logged for monitoring but don't block the user's workflow
       const { trackFeatureUsage, FEATURES } = await import("./email-engagement");
       trackFeatureUsage(userId, FEATURES.RESUME_BUILDER).catch(err => {
         console.error("Failed to track resume builder usage:", err);

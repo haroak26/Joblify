@@ -249,13 +249,12 @@ async function sendFeatureEngagementEmail(
     .from(scheduledEmails)
     .where(and(
       eq(scheduledEmails.userId, user.id),
-      eq(scheduledEmails.status, "sent"),
-      ne(scheduledEmails.featureName, null as any)
+      eq(scheduledEmails.status, "sent")
     ));
 
   const featuresAlreadyEmailed = previousEmails
-    .map(e => e.featureName)
-    .filter((f): f is string => f !== null);
+    .filter(e => e.featureName !== null)
+    .map(e => e.featureName as string);
 
   // Get features we haven't emailed about yet
   const availableFeatures = unusedFeatures.filter(

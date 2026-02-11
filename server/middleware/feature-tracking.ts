@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { trackFeatureUsage, FEATURES } from "./email-engagement";
+import { trackFeatureUsage, FEATURES } from "../email-engagement";
 
 /**
  * Middleware to track feature usage
@@ -37,4 +37,4 @@ export function trackFeatures(featureNames: string[]) {
   };
 }
 
-export { FEATURES } from "./email-engagement";
+export { FEATURES } from "../email-engagement";
