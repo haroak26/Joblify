@@ -179,9 +179,13 @@ export default function DashboardHome() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium">My Resumes</h3>
-              <p className="text-xs text-muted-foreground">
-                {resumesLoading ? <Skeleton className="h-4 w-20" /> : `${totalResumes} resume${totalResumes === 1 ? '' : 's'}`}
-              </p>
+              {resumesLoading ? (
+                <Skeleton className="h-4 w-20" />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {totalResumes} resume{totalResumes === 1 ? '' : 's'}
+                </p>
+              )}
             </div>
             <Button
               variant="outline"

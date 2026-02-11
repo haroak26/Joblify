@@ -114,21 +114,26 @@ export default function Resumes() {
     });
   };
 
+  // Header component to avoid duplication
+  const pageHeader = (
+    <div className="flex justify-between items-center mb-8">
+      <div>
+        <h1 className="text-2xl font-semibold">My Resumes</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Create and manage your professional resumes
+        </p>
+      </div>
+      <Button onClick={handleCreateResume} size="sm">
+        <Plus className="w-4 h-4 mr-2" />
+        Create New Resume
+      </Button>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold">My Resumes</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Create and manage your professional resumes
-            </p>
-          </div>
-          <Button onClick={handleCreateResume} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Resume
-          </Button>
-        </div>
+        {pageHeader}
         <ResumeListSkeleton />
       </div>
     );
@@ -137,18 +142,7 @@ export default function Resumes() {
   if (isError) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold">My Resumes</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Create and manage your professional resumes
-            </p>
-          </div>
-          <Button onClick={handleCreateResume} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Resume
-          </Button>
-        </div>
+        {pageHeader}
         <Card className="border">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <FileText className="w-12 h-12 text-muted-foreground mb-3" />
@@ -164,18 +158,7 @@ export default function Resumes() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold">My Resumes</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Create and manage your professional resumes
-          </p>
-        </div>
-        <Button onClick={handleCreateResume} size="sm">
-          <Plus className="w-4 h-4 mr-2" />
-          Create New Resume
-        </Button>
-      </div>
+      {pageHeader}
 
       {!resumes || resumes.length === 0 ? (
         <Card className="border-dashed border">
