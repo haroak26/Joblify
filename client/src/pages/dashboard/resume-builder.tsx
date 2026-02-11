@@ -52,6 +52,9 @@ import ComponentSelector from "@/components/ComponentSelector";
 // Resume Compiling component
 import ResumeCompiling from "@/components/ResumeCompiling";
 
+// Loading skeleton
+import { ResumeEditorSkeleton } from "@/components/loading-skeleton";
+
 type ResumeSection = {
   id: string;
   name: string;
@@ -263,11 +266,7 @@ export default function ResumeBuilder() {
   const ActiveSectionComponent = sections.find((s) => s.id === activeSection)?.component;
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-muted-foreground">Loading resume...</div>
-      </div>
-    );
+    return <ResumeEditorSkeleton />;
   }
 
   if (!resume || !resumeData) {
@@ -411,7 +410,7 @@ export default function ResumeBuilder() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowAIAssistant(true)}
+                onClick={() => setActiveSection("ai-chat")}
                 className="text-xs sm:text-sm"
               >
                 <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />

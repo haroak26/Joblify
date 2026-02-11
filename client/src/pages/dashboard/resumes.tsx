@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ResumePreview from "@/components/resume-preview/ResumePreview";
+import { ResumeListSkeleton } from "@/components/loading-skeleton";
 import {
   FileText,
   Plus,
@@ -115,8 +116,20 @@ export default function Resumes() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-muted-foreground">Loading resumes...</div>
+      <div className="container mx-auto py-8 px-4 max-w-7xl">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold">My Resumes</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Create and manage your professional resumes
+            </p>
+          </div>
+          <Button onClick={handleCreateResume} size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Create New Resume
+          </Button>
+        </div>
+        <ResumeListSkeleton />
       </div>
     );
   }
