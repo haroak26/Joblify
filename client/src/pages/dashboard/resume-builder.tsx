@@ -88,7 +88,6 @@ export default function ResumeBuilder() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [userDataPrefilled, setUserDataPrefilled] = useState(false);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [aiEditingComponent, setAiEditingComponent] = useState<string | undefined>(undefined);
   const [showComponentSelector, setShowComponentSelector] = useState(false);
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
@@ -294,19 +293,6 @@ export default function ResumeBuilder() {
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {/* AI Chat button */}
-              <button
-                onClick={() => setShowAIAssistant(true)}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 text-primary font-medium border border-primary/20"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span className="flex-1 text-left">AI Chat</span>
-              </button>
-              
-              <div className="py-2">
-                <Separator />
-              </div>
-              
               {sections.map((section) => {
                 const Icon = section.icon;
                 return (
@@ -325,7 +311,7 @@ export default function ResumeBuilder() {
                     <button
                       onClick={() => {
                         setAiEditingComponent(section.id);
-                        setShowAIAssistant(true);
+                        setActiveSection("ai-chat");
                       }}
                       className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-primary/10 rounded"
                       title="Edit with AI"
@@ -335,6 +321,23 @@ export default function ResumeBuilder() {
                   </div>
                 );
               })}
+              
+              <div className="py-2">
+                <Separator />
+              </div>
+              
+              {/* AI Chat button - moved below components */}
+              <button
+                onClick={() => setActiveSection("ai-chat")}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
+                  activeSection === "ai-chat"
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="flex-1 text-left">AI Chat</span>
+              </button>
             </div>
           </ScrollArea>
           
@@ -453,12 +456,20 @@ export default function ResumeBuilder() {
             <>
               {/* Editor Section - hidden on mobile, shown on desktop */}
               <div className="hidden md:block flex-1 overflow-auto p-6">
-                {ActiveSectionComponent && (
+                {activeSection === "ai-chat" ? (
+                  <AIResumeChat
+                    resumeId={resumeId!}
+                    resumeData={resumeData}
+                    onUpdate={updateResumeData}
+                    onSwitchToManual={() => setActiveSection("personal")}
+                    focusedComponent={aiEditingComponent}
+                  />
+                ) : ActiveSectionComponent ? (
                   <ActiveSectionComponent
                     data={resumeData}
                     onUpdate={updateResumeData}
                   />
-                )}
+                ) : null}
               </div>
 
               {/* Mobile view - show message to use desktop */}
@@ -492,46 +503,6 @@ export default function ResumeBuilder() {
           )}
         </div>
       </div>
-
-      {/* AI Assistant Overlay for Manual Mode */}
-      {!isAIMode && showAIAssistant && resumeData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-4xl h-[80vh] bg-background rounded-lg shadow-lg flex flex-col m-4">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold">AI Assistant</h3>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowAIAssistant(false);
-                  setAiEditingComponent(undefined);
-                }}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            {/* AI Chat Component */}
-            <div className="flex-1 overflow-hidden">
-              <AIResumeChat
-                resumeId={resumeId!}
-                resumeData={resumeData}
-                onUpdate={updateResumeData}
-                onSwitchToManual={() => {
-                  setShowAIAssistant(false);
-                  setAiEditingComponent(undefined);
-                }}
-                focusedComponent={aiEditingComponent}
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Component Selector Dialog */}
       <ComponentSelector

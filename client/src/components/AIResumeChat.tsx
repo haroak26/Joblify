@@ -28,7 +28,7 @@ interface ChatMessage {
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_MESSAGES = 10;
-const PROACTIVE_SUMMARY_START = "We will start with your professional summary. To craft the best summary for you, I'd like to know: What is your current or most recent job title?";
+const PROACTIVE_ENHANCEMENT_START = "I can help you polish and enhance any section of your resume. What would you like to improve today?";
 
 export default function AIResumeChat({
   resumeId,
@@ -79,10 +79,10 @@ export default function AIResumeChat({
       }
       
       const greeting = focusedComponent
-        ? `Welcome ${firstName}! I'm here to help you improve your ${focusedComponent}. What would you like to work on?`
+        ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
         : activeComponents.length > 0
-        ? `Welcome ${firstName}! I see you want to work on: ${activeComponents.join(', ')}. Let's start building your resume! ${PROACTIVE_SUMMARY_START}`
-        : `Welcome ${firstName}! I'm your AI resume assistant. I'll help you build your resume step by step. ${PROACTIVE_SUMMARY_START}`;
+        ? `Welcome ${firstName}! I can help you enhance these sections: ${activeComponents.join(', ')}. What would you like to refine or improve?`
+        : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
       
       setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
     }
@@ -200,9 +200,9 @@ export default function AIResumeChat({
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold">AI Resume Assistant</h3>
+              <h3 className="font-semibold">AI Resume Enhancement</h3>
               <p className="text-xs text-muted-foreground">
-                {focusedComponent ? `Editing ${focusedComponent}` : "Building your resume"}
+                {focusedComponent ? `Enhancing ${focusedComponent}` : "Polish and improve your resume"}
               </p>
             </div>
           </div>
