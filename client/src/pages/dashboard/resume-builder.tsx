@@ -160,6 +160,7 @@ export default function ResumeBuilder() {
       });
     }
     
+    // In AI mode, sidebar is hidden, so return empty array
     return [];
   };
 
@@ -383,7 +384,11 @@ export default function ResumeBuilder() {
                   const currentOptionalSections = visibleSections
                     .filter(s => !["personal", "summary", "experience", "education", "skills"].includes(s.id))
                     .map(s => s.id);
-                  if (selectedComponents.length === 0 || JSON.stringify(selectedComponents) !== JSON.stringify(currentOptionalSections)) {
+                  // Check if arrays have the same elements (order-independent)
+                  const arraysEqual = currentOptionalSections.length === selectedComponents.length &&
+                    currentOptionalSections.every(s => selectedComponents.includes(s)) &&
+                    selectedComponents.every(s => currentOptionalSections.includes(s));
+                  if (!arraysEqual) {
                     setSelectedComponents(currentOptionalSections);
                   }
                   setShowComponentSelector(true);

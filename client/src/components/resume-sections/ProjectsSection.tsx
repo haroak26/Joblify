@@ -21,7 +21,8 @@ export default function ProjectsSection({ data, onUpdate }: ProjectsSectionProps
     technologies: [] as string[],
     url: "",
   });
-  const [techInput, setTechInput] = useState("");
+  const [newProjectTechInput, setNewProjectTechInput] = useState("");
+  const [editTechInputs, setEditTechInputs] = useState<Record<number, string>>({});
 
   const handleAddProject = () => {
     if (!newProject.name.trim() || !newProject.description.trim()) return;
@@ -36,7 +37,7 @@ export default function ProjectsSection({ data, onUpdate }: ProjectsSectionProps
       technologies: [],
       url: "",
     });
-    setTechInput("");
+    setNewProjectTechInput("");
     setIsAdding(false);
   };
 
@@ -56,10 +57,10 @@ export default function ProjectsSection({ data, onUpdate }: ProjectsSectionProps
   };
 
   const handleAddTechnology = (projectIndex?: number) => {
-    const tech = techInput.trim();
-    if (!tech) return;
-
     if (projectIndex !== undefined) {
+      const tech = (editTechInputs[projectIndex] || "").trim();
+      if (!tech) return;
+
       const updatedProjects = [...(data.projects || [])];
       if (!updatedProjects[projectIndex].technologies.includes(tech)) {
         updatedProjects[projectIndex] = {
@@ -68,15 +69,19 @@ export default function ProjectsSection({ data, onUpdate }: ProjectsSectionProps
         };
         onUpdate({ projects: updatedProjects });
       }
+      setEditTechInputs({ ...editTechInputs, [projectIndex]: "" });
     } else {
+      const tech = newProjectTechInput.trim();
+      if (!tech) return;
+
       if (!newProject.technologies.includes(tech)) {
         setNewProject({
           ...newProject,
           technologies: [...newProject.technologies, tech],
         });
       }
+      setNewProjectTechInput("");
     }
-    setTechInput("");
   };
 
   const handleRemoveTechnology = (projectIndex: number | undefined, tech: string) => {
@@ -139,8 +144,8 @@ export default function ProjectsSection({ data, onUpdate }: ProjectsSectionProps
               <div className="flex gap-2">
                 <Input
                   id="project-tech"
-                  value={techInput}
-                  onChange={(e) => setTechInput(e.target.value)}
+                  value={newProjectTechInput}
+                  onChange={(e) => setNewProjectTechInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -227,8 +232,8 @@ export default function ProjectsSection({ data, onUpdate }: ProjectsSectionProps
               <Label>Technologies Used</Label>
               <div className="flex gap-2">
                 <Input
-                  value={techInput}
-                  onChange={(e) => setTechInput(e.target.value)}
+                  value={editTechInputs[index] || ""}
+                  onChange={(e) => setEditTechInputs({ ...editTechInputs, [index]: e.target.value })}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
