@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, FileText, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, FileText, Plus, Sparkles, CheckCircle2, Circle, Target, Search, FileEdit } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ResumePreview from "@/components/resume-preview/ResumePreview";
@@ -21,12 +21,22 @@ interface ResumesResponse {
   resumes: Resume[];
 }
 
+interface OnboardingStatus {
+  hasCreatedResume: boolean;
+  hasCreatedCoverLetter: boolean;
+  hasGottenATSScore: boolean;
+}
+
 export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: resumesData, isLoading: resumesLoading } = useQuery<ResumesResponse>({
     queryKey: ["/api/resumes"],
+  });
+
+  const { data: onboardingStatus } = useQuery<OnboardingStatus>({
+    queryKey: ["/api/user/onboarding-status"],
   });
 
   // Ensure resumes is always an array
@@ -42,6 +52,38 @@ export default function DashboardHome() {
     });
   };
 
+  // Calculate onboarding progress
+  const onboardingTasks = [
+    {
+      id: "resume",
+      title: "Create your first resume",
+      description: "Build a professional resume with AI assistance",
+      completed: onboardingStatus?.hasCreatedResume ?? false,
+      action: () => setLocation("/dashboard/resumes/create"),
+      icon: FileText,
+    },
+    {
+      id: "cover-letter",
+      title: "Create your first cover letter",
+      description: "Generate a tailored cover letter for any job",
+      completed: onboardingStatus?.hasCreatedCoverLetter ?? false,
+      action: () => setLocation("/dashboard/cover-letter"),
+      icon: FileEdit,
+    },
+    {
+      id: "ats-score",
+      title: "Get your ATS score",
+      description: "See how well your resume passes ATS systems",
+      completed: onboardingStatus?.hasGottenATSScore ?? false,
+      action: () => setLocation("/dashboard/ats-scanner"),
+      icon: Search,
+    },
+  ];
+
+  const completedTasks = onboardingTasks.filter(task => task.completed).length;
+  const totalTasks = onboardingTasks.length;
+  const progressPercentage = Math.round((completedTasks / totalTasks) * 100);
+
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-8">
@@ -49,8 +91,71 @@ export default function DashboardHome() {
         <p className="text-sm text-muted-foreground">Create professional resumes with AI-powered tools</p>
       </div>
 
+      {/* Onboarding Checklist - Only show if not all tasks are completed */}
+      {completedTasks < totalTasks && (
+        <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-primary" />
+                  Get Started with Joblify
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Complete these tasks to make the most of your account
+                </CardDescription>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-primary">{progressPercentage}%</div>
+                <div className="text-xs text-muted-foreground">Complete</div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {onboardingTasks.map((task) => {
+                const Icon = task.icon;
+                return (
+                  <div
+                    key={task.id}
+                    className={`flex items-center gap-4 p-4 rounded-lg border transition-all ${
+                      task.completed
+                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                        : "bg-background border-border hover:border-primary/50 cursor-pointer"
+                    }`}
+                    onClick={task.completed ? undefined : task.action}
+                  >
+                    <div className="flex-shrink-0">
+                      {task.completed ? (
+                        <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <Circle className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-muted-foreground" />
+                        <h4 className={`font-medium ${task.completed ? "text-green-700 dark:text-green-300" : ""}`}>
+                          {task.title}
+                        </h4>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-0.5">{task.description}</p>
+                    </div>
+                    {!task.completed && (
+                      <Button size="sm" variant="ghost" className="flex-shrink-0">
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 mb-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
         <Card className="border">
           <CardContent className="p-5 flex items-center gap-4">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -86,6 +191,63 @@ export default function DashboardHome() {
               onClick={() => setLocation("/dashboard/resumes")}
             >
               View All
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+              <FileEdit className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium">Cover Letter</h3>
+              <p className="text-xs text-muted-foreground">Generate tailored letters</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/dashboard/cover-letter")}
+            >
+              Create
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <Search className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium">ATS Scanner</h3>
+              <p className="text-xs text-muted-foreground">Check resume compatibility</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/dashboard/ats-scanner")}
+            >
+              Scan
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+              <Target className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium">Job Match</h3>
+              <p className="text-xs text-muted-foreground">Find perfect job matches</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/dashboard/job-match")}
+            >
+              Explore
             </Button>
           </CardContent>
         </Card>

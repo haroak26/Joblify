@@ -503,6 +503,37 @@ export async function registerRoutes(
     }
   });
 
+  // Get onboarding status
+  app.get("/api/user/onboarding-status", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Check if user has created a resume
+      const userResumes = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.userId, userId))
+        .limit(1);
+      const hasCreatedResume = userResumes.length > 0;
+      
+      // Check if user has created a cover letter
+      const usage = await storage.getUsage(userId);
+      const hasCreatedCoverLetter = usage.coverLettersThisMonth > 0;
+      
+      // Check if user has gotten ATS score
+      const hasGottenATSScore = usage.atsScansThisMonth > 0;
+      
+      res.json({
+        hasCreatedResume,
+        hasCreatedCoverLetter,
+        hasGottenATSScore,
+      });
+    } catch (error) {
+      console.error('[API] Error getting onboarding status:', error);
+      res.status(500).json({ error: "Failed to get onboarding status" });
+    }
+  });
+
   // ============================================
   // Resume Endpoints
   // ============================================

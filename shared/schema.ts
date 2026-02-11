@@ -23,6 +23,9 @@ export const users = pgTable("users", {
   marketingEmails: boolean("marketing_emails").notNull().default(true),
   weeklySummaryEmails: boolean("weekly_summary_emails").notNull().default(true),
   inAppNotifications: boolean("in_app_notifications").notNull().default(true),
+  // Onboarding tracking
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  onboardingReminderSent: boolean("onboarding_reminder_sent").notNull().default(false),
 });
 
 // Deleted accounts tracker for abuse prevention
