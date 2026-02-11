@@ -85,6 +85,7 @@ export interface IStorage {
   getSubscriptionByCustomerId(customerId: string): Promise<Subscription | undefined>;
   createSubscription(userId: string, plan?: PlanType): Promise<Subscription>;
   updateSubscription(userId: string, updates: Partial<Subscription>): Promise<Subscription | undefined>;
+  updateSubscriptionPlan(userId: string, plan: PlanType, expiresAt: Date): Promise<Subscription | undefined>;
   
   // Usage methods
   getUsage(userId: string): Promise<Usage>;
@@ -286,6 +287,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(subscriptions.userId, userId))
       .returning();
     return sub || undefined;
+  }
+
+  async updateSubscriptionPlan(userId: string, plan: PlanType, expiresAt: Date): Promise<Subscription | undefined> {
+    return this.updateSubscription(userId, {
+      plan,
+      currentPeriodEnd: expiresAt,
+    });
   }
 
   // Usage methods

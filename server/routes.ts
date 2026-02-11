@@ -2,13 +2,16 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
-import { skillSchema, normalizePlan, resumes, users, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData } from "@shared/schema";
+import { 
+  skillSchema, normalizePlan, resumes, users, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
+  redeemableCodes, perks, userPerks, type PlanType
+} from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import multer from "multer";
 import pdfParse from "pdf-parse";
@@ -1606,6 +1609,173 @@ Format your response as JSON with these fields:
     } catch (error) {
       console.error('[API] Error scanning Joblify resume:', error);
       res.status(500).json({ error: "Failed to scan resume" });
+    }
+  });
+
+  // ============================================
+  // Redeemable Code System Endpoints
+  // ============================================
+
+  // Redeem a code
+  app.post("/api/codes/redeem", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({
+        code: z.string().min(1, "Code is required"),
+      });
+
+      const { code } = schema.parse(req.body);
+
+      // Find the code in the database
+      const [redeemableCode] = await db
+        .select()
+        .from(redeemableCodes)
+        .where(eq(redeemableCodes.code, code.toUpperCase().trim()))
+        .limit(1);
+
+      if (!redeemableCode) {
+        return res.status(404).json({ error: "Invalid code" });
+      }
+
+      // Check if code is active
+      if (!redeemableCode.isActive) {
+        return res.status(400).json({ error: "This code is no longer active" });
+      }
+
+      // Check if code has expired
+      if (redeemableCode.expiresAt && new Date(redeemableCode.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "This code has expired" });
+      }
+
+      // Check if code has reached max redemptions
+      if (
+        redeemableCode.maxRedemptions !== null &&
+        redeemableCode.currentRedemptions >= redeemableCode.maxRedemptions
+      ) {
+        return res.status(400).json({ error: "This code has already been fully redeemed" });
+      }
+
+      // Check if user has already redeemed this code
+      const [existingRedemption] = await db
+        .select()
+        .from(userPerks)
+        .where(
+          and(
+            eq(userPerks.userId, userId),
+            eq(userPerks.codeId, redeemableCode.id)
+          )
+        )
+        .limit(1);
+
+      if (existingRedemption) {
+        return res.status(400).json({ error: "You have already redeemed this code" });
+      }
+
+      // Get the perk details
+      const [perk] = await db
+        .select()
+        .from(perks)
+        .where(eq(perks.id, redeemableCode.perkId))
+        .limit(1);
+
+      if (!perk) {
+        return res.status(500).json({ error: "Perk not found" });
+      }
+
+      // Calculate expiration date for temporary perks
+      let expiresAt: Date | null = null;
+      if (perk.perkType === 'temp_pro_access' || perk.perkType === 'temp_ultra_access') {
+        expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + (perk.value || 0));
+      }
+
+      // Create user perk record
+      await db.insert(userPerks).values({
+        userId,
+        perkId: perk.id,
+        codeId: redeemableCode.id,
+        expiresAt: expiresAt || undefined,
+        isActive: true,
+        remainingValue: perk.value,
+      });
+
+      // Update code redemption count
+      await db
+        .update(redeemableCodes)
+        .set({
+          currentRedemptions: redeemableCode.currentRedemptions + 1,
+        })
+        .where(eq(redeemableCodes.id, redeemableCode.id));
+
+      // Apply the perk immediately if it's a temporary plan upgrade
+      if (perk.perkType === 'temp_pro_access' || perk.perkType === 'temp_ultra_access') {
+        const subscription = await storage.getSubscription(userId);
+        const currentPlan = normalizePlan(subscription?.plan);
+        
+        // Only upgrade if current plan is lower
+        const planHierarchy: PlanType[] = ['free', 'plus', 'ultra', 'lifetime'];
+        const newPlan: PlanType = perk.perkType === 'temp_pro_access' ? 'plus' : 'ultra';
+        const currentPlanIndex = planHierarchy.indexOf(currentPlan);
+        const newPlanIndex = planHierarchy.indexOf(newPlan);
+        
+        if (newPlanIndex > currentPlanIndex) {
+          await storage.updateSubscriptionPlan(userId, newPlan, expiresAt!);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully redeemed: ${perk.name}`,
+        perk: {
+          name: perk.name,
+          description: perk.description,
+          perkType: perk.perkType,
+          value: perk.value,
+          expiresAt,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Invalid input",
+          details: error.errors,
+        });
+      }
+      console.error('[API] Error redeeming code:', error);
+      res.status(500).json({ error: "Failed to redeem code" });
+    }
+  });
+
+  // Get user's perks
+  app.get("/api/codes/user-perks", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      // Get all active perks for the user
+      const userPerksList = await db
+        .select({
+          id: userPerks.id,
+          perkName: perks.name,
+          perkDescription: perks.description,
+          perkType: perks.perkType,
+          redeemedAt: userPerks.redeemedAt,
+          expiresAt: userPerks.expiresAt,
+          isActive: userPerks.isActive,
+          remainingValue: userPerks.remainingValue,
+          code: redeemableCodes.code,
+        })
+        .from(userPerks)
+        .innerJoin(perks, eq(userPerks.perkId, perks.id))
+        .innerJoin(redeemableCodes, eq(userPerks.codeId, redeemableCodes.id))
+        .where(eq(userPerks.userId, userId))
+        .orderBy(desc(userPerks.redeemedAt));
+
+      res.json({
+        perks: userPerksList,
+      });
+    } catch (error) {
+      console.error('[API] Error fetching user perks:', error);
+      res.status(500).json({ error: "Failed to fetch perks" });
     }
   });
 
