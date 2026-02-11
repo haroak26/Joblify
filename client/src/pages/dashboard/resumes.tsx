@@ -114,8 +114,8 @@ export default function Resumes() {
     });
   };
 
-  // Page header component to avoid duplication
-  const PageHeader = (
+  // Page header JSX to avoid duplication
+  const pageHeaderContent = (
     <div className="flex justify-between items-center mb-8">
       <div>
         <h1 className="text-2xl font-semibold">My Resumes</h1>
@@ -133,7 +133,7 @@ export default function Resumes() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
-        {PageHeader}
+        {pageHeaderContent}
         <ResumeListSkeleton />
       </div>
     );
@@ -142,7 +142,7 @@ export default function Resumes() {
   if (isError) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
-        {PageHeader}
+        {pageHeaderContent}
         <Card className="border">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <FileText className="w-12 h-12 text-muted-foreground mb-3" />
@@ -158,7 +158,7 @@ export default function Resumes() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {PageHeader}
+      {pageHeaderContent}
 
       {!resumes || resumes.length === 0 ? (
         <Card className="border-dashed border">
