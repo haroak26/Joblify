@@ -78,12 +78,12 @@ export default function AIResumeChat({
         onUpdate(updates);
       }
       
-      // Determine the mode: full builder or enhancement
-      const isFullBuilder = activeComponents.length > 0 && !focusedComponent;
+      // Determine the mode: guided builder or enhancement
+      const isGuidedBuilder = activeComponents.length > 0 && !focusedComponent;
       
       const greeting = focusedComponent
         ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
-        : isFullBuilder
+        : isGuidedBuilder
         ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I'll guide you step-by-step through creating your professional resume, starting with ${activeComponents[0] || 'your personal information'}. Let's create something amazing together!`
         : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
       

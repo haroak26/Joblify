@@ -15,7 +15,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
       {/* Header with Name and Contact */}
       <div className="flex justify-between items-start mb-8 pb-4 border-b-2 border-black">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{personalInfo.name || "Your Name"}</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">{personalInfo.name || "Your Name"}</h1>
         </div>
         <div className="text-right text-sm space-y-1">
           {personalInfo.email && (
