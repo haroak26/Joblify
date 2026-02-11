@@ -10,8 +10,12 @@ import { Sparkles, FileText, Briefcase, Loader2, Download, Copy, AlertCircle } f
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Resume } from "@shared/schema";
+import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 
 export default function TailorPage() {
+  // Track feature usage
+  useFeatureTracking(FEATURES.TAILOR);
+  
   const [selectedJobId, setSelectedJobId] = useState("");
   const [selectedResumeId, setSelectedResumeId] = useState("");
   const [tailoredResume, setTailoredResume] = useState<any>(null);

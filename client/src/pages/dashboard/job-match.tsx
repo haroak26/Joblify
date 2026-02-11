@@ -6,8 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Target, Briefcase, MapPin, DollarSign, Clock, TrendingUp, CheckCircle2, Search, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 
 export default function JobMatch() {
+  // Track feature usage
+  useFeatureTracking(FEATURES.JOB_MATCH);
+  
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
 
   const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({
