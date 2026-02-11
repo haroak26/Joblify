@@ -62,8 +62,12 @@ function getEmailTemplate(content: string, previewText: string): string {
             <td style="padding-bottom: 20px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="width: 44px; height: 44px; background-color: #16a34a; border-radius: 12px; text-align: center; vertical-align: middle;">
-                    <span style="color: white; font-size: 20px; font-weight: 700;">J</span>
+                  <td style="width: 44px; height: 44px; background-color: #16a34a; border-radius: 12px; text-align: center; vertical-align: middle; padding: 10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="7" width="18" height="13" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M8 7V5C8 3.89543 8.89543 3 10 3H14C15.1046 3 16 3.89543 16 5V7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="3" y1="11" x2="21" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
                   </td>
                   <td style="padding-left: 12px; font-size: 18px; font-weight: 700; color: #0f172a;">
                     Joblify
@@ -183,25 +187,25 @@ export async function sendWelcomeEmail(email: string, username: string): Promise
       Hi ${username},
     </p>
     <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
-      Your email is verified and your workspace is ready. Here’s a quick checklist to get you moving:
+      Your email is verified and your workspace is ready. Here’s a quick checklist to get you started:
     </p>
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 24px 0;">
       <tr>
         <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-          <strong style="color: #0f172a;">1. Add your skills</strong>
-          <div style="font-size: 14px; color: #64748b; margin-top: 4px;">We’ll match you with the right gigs.</div>
+          <strong style="color: #0f172a;">1. Build your resume</strong>
+          <div style="font-size: 14px; color: #64748b; margin-top: 4px;">Create a professional, ATS-optimized resume with AI assistance.</div>
         </td>
       </tr>
       <tr>
         <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-          <strong style="color: #0f172a;">2. Browse curated leads</strong>
-          <div style="font-size: 14px; color: #64748b; margin-top: 4px;">Find opportunities across trusted sources.</div>
+          <strong style="color: #0f172a;">2. Scan with ATS</strong>
+          <div style="font-size: 14px; color: #64748b; margin-top: 4px;">See how your resume performs against applicant tracking systems.</div>
         </td>
       </tr>
       <tr>
         <td style="padding: 12px 0;">
-          <strong style="color: #0f172a;">3. Follow up faster</strong>
-          <div style="font-size: 14px; color: #64748b; margin-top: 4px;">Generate polished messages in seconds.</div>
+          <strong style="color: #0f172a;">3. Generate cover letters</strong>
+          <div style="font-size: 14px; color: #64748b; margin-top: 4px;">Create tailored cover letters for any job in seconds.</div>
         </td>
       </tr>
     </table>

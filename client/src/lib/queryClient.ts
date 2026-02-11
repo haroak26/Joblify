@@ -17,10 +17,10 @@ async function throwIfResNotOk(res: Response) {
       throw new Error(errorData.message || 'Email verification required');
     }
     
-    // Handle unauthorized - redirect to login
+    // Handle unauthorized - DON'T redirect for protected routes, let ProtectedRoute handle it
+    // Only throw the error so the component can decide what to do
     if (res.status === 401) {
-      window.location.href = '/login';
-      throw new Error(errorData.error || errorData.message || 'Session expired. Please log in again.');
+      throw new Error(errorData.error || errorData.message || 'Authentication required');
     }
     
     throw new Error(errorData.error || errorData.message || `${res.status}: ${text || res.statusText}`);
