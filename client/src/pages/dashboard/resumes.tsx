@@ -32,7 +32,7 @@ export default function Resumes() {
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
 
   // Fetch all resumes
-  const { data: resumes, isLoading } = useQuery<Resume[]>({
+  const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
 
@@ -130,6 +130,34 @@ export default function Resumes() {
           </Button>
         </div>
         <ResumeListSkeleton />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-7xl">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold">My Resumes</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Create and manage your professional resumes
+            </p>
+          </div>
+          <Button onClick={handleCreateResume} size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            Create New Resume
+          </Button>
+        </div>
+        <Card className="border">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <FileText className="w-12 h-12 text-muted-foreground mb-3" />
+            <h3 className="text-base font-medium mb-1">Failed to load resumes</h3>
+            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
+              {error instanceof Error ? error.message : 'An error occurred while loading your resumes. Please try refreshing the page.'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
