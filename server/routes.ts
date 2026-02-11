@@ -2,14 +2,20 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
-import { skillSchema, normalizePlan, resumes, users, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData } from "@shared/schema";
+import { 
+  skillSchema, normalizePlan, resumes, users, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
+  redeemableCodes, perks, userPerks, type PlanType
+} from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import PDFDocument from "pdfkit";
+import multer from "multer";
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
 
 let poeClient: OpenAI | null = null;
 
@@ -31,6 +37,305 @@ function getPoeClient(): OpenAI {
   });
 
   return poeClient;
+}
+
+// ============================================
+// ATS Scanner Helper Functions
+// ============================================
+
+/**
+ * Convert resume data to plain text for ATS analysis
+ */
+function convertResumeDataToText(resumeData: ResumeData): string {
+  const sections: string[] = [];
+
+  // Personal Info
+  if (resumeData.personalInfo) {
+    const pi = resumeData.personalInfo;
+    sections.push([pi.name, pi.email, pi.phone, pi.location].filter(Boolean).join(' | '));
+  }
+
+  // Summary
+  if (resumeData.summary) {
+    sections.push(`PROFESSIONAL SUMMARY\n${resumeData.summary}`);
+  }
+
+  // Experience
+  if (resumeData.experience?.length > 0) {
+    sections.push('EXPERIENCE');
+    resumeData.experience.forEach(exp => {
+      sections.push(`${exp.title} at ${exp.company} (${exp.startDate} - ${exp.endDate || 'Present'})`);
+      exp.description?.forEach(desc => sections.push(`• ${desc}`));
+    });
+  }
+
+  // Education
+  if (resumeData.education?.length > 0) {
+    sections.push('EDUCATION');
+    resumeData.education.forEach(edu => {
+      sections.push(`${edu.degree} in ${edu.field}, ${edu.school} (${edu.graduationDate})`);
+    });
+  }
+
+  // Skills
+  if (resumeData.skills?.length > 0) {
+    sections.push(`SKILLS\n${resumeData.skills.join(', ')}`);
+  }
+
+  // Certifications
+  if (resumeData.certifications?.length > 0) {
+    sections.push('CERTIFICATIONS');
+    resumeData.certifications.forEach(cert => {
+      sections.push(`${cert.name} - ${cert.issuer} (${cert.date})`);
+    });
+  }
+
+  // Projects
+  if (resumeData.projects?.length > 0) {
+    sections.push('PROJECTS');
+    resumeData.projects.forEach(proj => {
+      sections.push(`${proj.name}: ${proj.description}`);
+      if (proj.technologies?.length > 0) {
+        sections.push(`Technologies: ${proj.technologies.join(', ')}`);
+      }
+    });
+  }
+
+  return sections.join('\n\n');
+}
+
+/**
+ * Perform real data-driven ATS analysis
+ */
+async function performATSAnalysis(resumeText: string, jobDescription: string): Promise<any> {
+  // Extract keywords from job description if provided
+  const jobKeywords = jobDescription 
+    ? extractKeywords(jobDescription)
+    : [];
+
+  // Extract keywords from resume
+  const resumeKeywords = extractKeywords(resumeText);
+
+  // Identify found and missing keywords
+  const foundKeywords = jobKeywords.filter(keyword => 
+    resumeText.toLowerCase().includes(keyword.toLowerCase())
+  );
+  
+  const missingKeywords = jobKeywords.filter(keyword => 
+    !resumeText.toLowerCase().includes(keyword.toLowerCase())
+  );
+
+  // Analyze resume structure
+  const hasContactInfo = /email|phone|linkedin/i.test(resumeText);
+  const hasExperienceSection = /experience|work history|employment/i.test(resumeText);
+  const hasEducationSection = /education|academic|degree/i.test(resumeText);
+  const hasSkillsSection = /skills|competencies|expertise/i.test(resumeText);
+  const hasBulletPoints = /•|·|\*|-\s/.test(resumeText);
+  const hasActionVerbs = /(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved)/i.test(resumeText);
+  
+  // Calculate scores for each category
+  const formatScore = calculateFormatScore(resumeText);
+  const keywordScore = jobDescription 
+    ? (foundKeywords.length / Math.max(jobKeywords.length, 1)) * 100
+    : calculateGeneralKeywordScore(resumeText);
+  
+  const structureScore = calculateStructureScore({
+    hasContactInfo,
+    hasExperienceSection,
+    hasEducationSection,
+    hasSkillsSection,
+  });
+
+  const contentScore = calculateContentScore({
+    hasBulletPoints,
+    hasActionVerbs,
+    wordCount: resumeText.split(/\s+/).length,
+  });
+
+  // Calculate overall score
+  const overallScore = Math.round(
+    (formatScore * 0.25 + keywordScore * 0.35 + structureScore * 0.25 + contentScore * 0.15)
+  );
+
+  // Generate suggestions
+  const suggestions: string[] = [];
+  
+  if (formatScore < 80) {
+    suggestions.push("Use a simple, clean format without tables or complex layouts for better ATS parsing.");
+  }
+  
+  if (!hasContactInfo) {
+    suggestions.push("Add clear contact information (email, phone, LinkedIn) at the top of your resume.");
+  }
+  
+  if (!hasSkillsSection) {
+    suggestions.push("Add a dedicated Skills section with relevant keywords from your field.");
+  }
+  
+  if (!hasBulletPoints) {
+    suggestions.push("Use bullet points to list achievements and responsibilities for better readability.");
+  }
+  
+  if (!hasActionVerbs) {
+    suggestions.push("Start bullet points with strong action verbs (e.g., 'Managed', 'Developed', 'Led').");
+  }
+  
+  if (jobDescription && missingKeywords.length > 0) {
+    suggestions.push(`Include more keywords from the job description: ${missingKeywords.slice(0, 5).join(', ')}`);
+  }
+  
+  if (resumeText.split(/\s+/).length < 200) {
+    suggestions.push("Expand your resume with more detailed descriptions of your experience and achievements.");
+  }
+
+  // Build category breakdown
+  const categories = [
+    {
+      name: "Format Compatibility",
+      score: formatScore,
+      feedback: formatScore >= 80 
+        ? "Your resume format is ATS-friendly" 
+        : "Consider simplifying your resume format for better ATS compatibility",
+    },
+    {
+      name: "Keyword Optimization",
+      score: Math.round(keywordScore),
+      feedback: keywordScore >= 80
+        ? "Strong keyword alignment with industry standards"
+        : jobDescription
+        ? "Add more relevant keywords from the job description"
+        : "Include more industry-specific keywords",
+    },
+    {
+      name: "Section Structure",
+      score: structureScore,
+      feedback: structureScore >= 80
+        ? "Resume has all essential sections"
+        : "Add missing key sections (Experience, Education, Skills)",
+    },
+    {
+      name: "Content Quality",
+      score: contentScore,
+      feedback: contentScore >= 80
+        ? "Content is well-formatted with action verbs and achievements"
+        : "Use more bullet points and action verbs to describe achievements",
+    },
+  ];
+
+  return {
+    score: overallScore,
+    keywords: foundKeywords.slice(0, 20), // Top 20 found keywords
+    missingKeywords: missingKeywords.slice(0, 10), // Top 10 missing keywords
+    suggestions,
+    categories,
+  };
+}
+
+/**
+ * Extract important keywords from text
+ */
+function extractKeywords(text: string): string[] {
+  // Common technical and professional keywords
+  const commonKeywords = new Set<string>();
+  
+  // Technical skills patterns
+  const techPatterns = [
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|Ruby|PHP|Swift|Kotlin|Go|Rust)\b/gi,
+    /\b(React|Angular|Vue|Node\.js|Express|Django|Flask|Spring|\.NET)\b/gi,
+    /\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch)\b/gi,
+    /\b(AWS|Azure|GCP|Docker|Kubernetes|CI\/CD|DevOps)\b/gi,
+    /\b(Git|Agile|Scrum|Jira|REST API|GraphQL)\b/gi,
+  ];
+
+  // Soft skills patterns
+  const softSkillPatterns = [
+    /\b(leadership|management|communication|collaboration|teamwork)\b/gi,
+    /\b(analytical|problem-solving|critical thinking|strategic)\b/gi,
+  ];
+
+  // Extract technical keywords
+  techPatterns.forEach(pattern => {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => commonKeywords.add(match));
+    }
+  });
+
+  // Extract soft skills
+  softSkillPatterns.forEach(pattern => {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => commonKeywords.add(match.toLowerCase()));
+    }
+  });
+
+  // Extract action verbs
+  const actionVerbs = text.match(/\b(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved|optimized|built|launched|delivered|coordinated|analyzed|established|drove|executed|facilitated|generated|initiated|mentored|negotiated|organized|planned|resolved|spearheaded|streamlined|supervised|trained)\b/gi);
+  if (actionVerbs) {
+    actionVerbs.forEach(verb => commonKeywords.add(verb.toLowerCase()));
+  }
+
+  return Array.from(commonKeywords);
+}
+
+/**
+ * Calculate format compatibility score
+ */
+function calculateFormatScore(text: string): number {
+  let score = 100;
+  
+  // Penalize complex formatting indicators
+  if (/<[^>]+>/g.test(text)) score -= 20; // HTML tags
+  if (/\t{2,}/g.test(text)) score -= 10; // Multiple tabs
+  if (/\|{3,}/g.test(text)) score -= 15; // Table indicators
+  
+  return Math.max(0, score);
+}
+
+/**
+ * Calculate general keyword score (when no job description)
+ */
+function calculateGeneralKeywordScore(text: string): number {
+  const keywords = extractKeywords(text);
+  // Base score on number of relevant keywords found
+  // 0-5 keywords = low, 6-15 = medium, 16+ = high
+  if (keywords.length >= 16) return 90;
+  if (keywords.length >= 10) return 75;
+  if (keywords.length >= 6) return 60;
+  return 40;
+}
+
+/**
+ * Calculate structure score based on essential sections
+ */
+function calculateStructureScore(sections: {
+  hasContactInfo: boolean;
+  hasExperienceSection: boolean;
+  hasEducationSection: boolean;
+  hasSkillsSection: boolean;
+}): number {
+  let score = 0;
+  if (sections.hasContactInfo) score += 30;
+  if (sections.hasExperienceSection) score += 30;
+  if (sections.hasEducationSection) score += 20;
+  if (sections.hasSkillsSection) score += 20;
+  return score;
+}
+
+/**
+ * Calculate content quality score
+ */
+function calculateContentScore(content: {
+  hasBulletPoints: boolean;
+  hasActionVerbs: boolean;
+  wordCount: number;
+}): number {
+  let score = 0;
+  if (content.hasBulletPoints) score += 40;
+  if (content.hasActionVerbs) score += 40;
+  if (content.wordCount >= 300 && content.wordCount <= 800) score += 20;
+  else if (content.wordCount >= 200) score += 10;
+  return score;
 }
 
 
@@ -1176,6 +1481,301 @@ Format your response as JSON with these fields:
       console.error('[API] Error tracking feature usage:', error);
       // Don't fail the request if tracking fails
       res.json({ success: false });
+    }
+  });
+
+  // ============================================
+  // ATS Scanner Endpoints
+  // ============================================
+
+  // Configure multer for file uploads
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max file size
+    },
+    fileFilter: (req, file, cb) => {
+      // Only accept PDF and DOCX files
+      const allowedMimes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only PDF and DOCX are allowed.'));
+      }
+    },
+  });
+
+  // ATS Scanner - Upload file and scan
+  app.post("/api/ats/scan", requireAuth, upload.single('file'), async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Check usage limits
+      const usage = await storage.getUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+
+      if (usage.atsScansThisMonth >= limits.atsScans) {
+        return res.status(403).json({ 
+          error: "ATS scan limit reached for this month",
+          limit: limits.atsScans,
+          current: usage.atsScansThisMonth
+        });
+      }
+
+      // Extract text from file
+      let resumeText = "";
+      if (req.file.mimetype === 'application/pdf') {
+        const pdfData = await pdfParse(req.file.buffer);
+        resumeText = pdfData.text;
+      } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+        resumeText = result.value;
+      }
+
+      if (!resumeText || resumeText.trim().length === 0) {
+        return res.status(400).json({ error: "Could not extract text from file" });
+      }
+
+      // Get job description from request if provided
+      const jobDescription = req.body.jobDescription || "";
+
+      // Perform ATS analysis
+      const analysis = await performATSAnalysis(resumeText, jobDescription);
+
+      // Update usage counter
+      await storage.incrementUsage(userId, 'atsScansThisMonth');
+
+      res.json(analysis);
+    } catch (error) {
+      console.error('[API] Error scanning resume:', error);
+      res.status(500).json({ error: "Failed to scan resume" });
+    }
+  });
+
+  // ATS Scanner - Scan existing Joblify resume
+  app.post("/api/ats/scan-resume/:id", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { id } = req.params;
+
+      if (!id || Array.isArray(id)) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Check usage limits
+      const usage = await storage.getUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+
+      if (usage.atsScansThisMonth >= limits.atsScans) {
+        return res.status(403).json({ 
+          error: "ATS scan limit reached for this month",
+          limit: limits.atsScans,
+          current: usage.atsScansThisMonth
+        });
+      }
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, id))
+        .limit(1);
+
+      if (!resume || resume.userId !== userId) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Convert resume data to text
+      const resumeText = convertResumeDataToText(resume.resumeData);
+
+      // Get job description from request if provided
+      const jobDescription = req.body.jobDescription || "";
+
+      // Perform ATS analysis
+      const analysis = await performATSAnalysis(resumeText, jobDescription);
+
+      // Update usage counter
+      await storage.incrementUsage(userId, 'atsScansThisMonth');
+
+      res.json(analysis);
+    } catch (error) {
+      console.error('[API] Error scanning Joblify resume:', error);
+      res.status(500).json({ error: "Failed to scan resume" });
+    }
+  });
+
+  // ============================================
+  // Redeemable Code System Endpoints
+  // ============================================
+
+  // Redeem a code
+  app.post("/api/codes/redeem", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({
+        code: z.string().min(1, "Code is required"),
+      });
+
+      const { code } = schema.parse(req.body);
+
+      // Find the code in the database
+      const [redeemableCode] = await db
+        .select()
+        .from(redeemableCodes)
+        .where(eq(redeemableCodes.code, code.toUpperCase().trim()))
+        .limit(1);
+
+      if (!redeemableCode) {
+        return res.status(404).json({ error: "Invalid code" });
+      }
+
+      // Check if code is active
+      if (!redeemableCode.isActive) {
+        return res.status(400).json({ error: "This code is no longer active" });
+      }
+
+      // Check if code has expired
+      if (redeemableCode.expiresAt && new Date(redeemableCode.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "This code has expired" });
+      }
+
+      // Check if code has reached max redemptions
+      if (
+        redeemableCode.maxRedemptions !== null &&
+        redeemableCode.currentRedemptions >= redeemableCode.maxRedemptions
+      ) {
+        return res.status(400).json({ error: "This code has already been fully redeemed" });
+      }
+
+      // Check if user has already redeemed this code
+      const [existingRedemption] = await db
+        .select()
+        .from(userPerks)
+        .where(
+          and(
+            eq(userPerks.userId, userId),
+            eq(userPerks.codeId, redeemableCode.id)
+          )
+        )
+        .limit(1);
+
+      if (existingRedemption) {
+        return res.status(400).json({ error: "You have already redeemed this code" });
+      }
+
+      // Get the perk details
+      const [perk] = await db
+        .select()
+        .from(perks)
+        .where(eq(perks.id, redeemableCode.perkId))
+        .limit(1);
+
+      if (!perk) {
+        return res.status(500).json({ error: "Perk not found" });
+      }
+
+      // Calculate expiration date for temporary perks
+      let expiresAt: Date | null = null;
+      if (perk.perkType === 'temp_pro_access' || perk.perkType === 'temp_ultra_access') {
+        expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + (perk.value || 0));
+      }
+
+      // Create user perk record
+      await db.insert(userPerks).values({
+        userId,
+        perkId: perk.id,
+        codeId: redeemableCode.id,
+        expiresAt: expiresAt ?? undefined,
+        isActive: true,
+        remainingValue: perk.value,
+      });
+
+      // Update code redemption count
+      await db
+        .update(redeemableCodes)
+        .set({
+          currentRedemptions: redeemableCode.currentRedemptions + 1,
+        })
+        .where(eq(redeemableCodes.id, redeemableCode.id));
+
+      // Apply the perk immediately if it's a temporary plan upgrade
+      if (perk.perkType === 'temp_pro_access' || perk.perkType === 'temp_ultra_access') {
+        const subscription = await storage.getSubscription(userId);
+        const currentPlan = normalizePlan(subscription?.plan);
+        
+        // Only upgrade if current plan is lower
+        const planHierarchy: PlanType[] = ['free', 'plus', 'ultra', 'lifetime'];
+        const newPlan: PlanType = perk.perkType === 'temp_pro_access' ? 'plus' : 'ultra';
+        const currentPlanIndex = planHierarchy.indexOf(currentPlan);
+        const newPlanIndex = planHierarchy.indexOf(newPlan);
+        
+        if (newPlanIndex > currentPlanIndex) {
+          await storage.updateSubscriptionPlan(userId, newPlan, expiresAt!);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully redeemed: ${perk.name}`,
+        perk: {
+          name: perk.name,
+          description: perk.description,
+          perkType: perk.perkType,
+          value: perk.value,
+          expiresAt,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          error: "Invalid input",
+          details: error.errors,
+        });
+      }
+      console.error('[API] Error redeeming code:', error);
+      res.status(500).json({ error: "Failed to redeem code" });
+    }
+  });
+
+  // Get user's perks
+  app.get("/api/codes/user-perks", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      // Get all active perks for the user
+      const userPerksList = await db
+        .select({
+          id: userPerks.id,
+          perkName: perks.name,
+          perkDescription: perks.description,
+          perkType: perks.perkType,
+          redeemedAt: userPerks.redeemedAt,
+          expiresAt: userPerks.expiresAt,
+          isActive: userPerks.isActive,
+          remainingValue: userPerks.remainingValue,
+          code: redeemableCodes.code,
+        })
+        .from(userPerks)
+        .innerJoin(perks, eq(userPerks.perkId, perks.id))
+        .innerJoin(redeemableCodes, eq(userPerks.codeId, redeemableCodes.id))
+        .where(eq(userPerks.userId, userId))
+        .orderBy(desc(userPerks.redeemedAt));
+
+      res.json({
+        perks: userPerksList,
+      });
+    } catch (error) {
+      console.error('[API] Error fetching user perks:', error);
+      res.status(500).json({ error: "Failed to fetch perks" });
     }
   });
 

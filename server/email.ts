@@ -62,14 +62,14 @@ function getEmailTemplate(content: string, previewText: string): string {
             <td style="padding-bottom: 20px;">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="width: 44px; height: 44px; background-color: #16a34a; border-radius: 12px; text-align: center; vertical-align: middle; padding: 10px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="7" width="18" height="13" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M8 7V5C8 3.89543 8.89543 3 10 3H14C15.1046 3 16 3.89543 16 5V7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="3" y1="11" x2="21" y2="11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                  <td style="padding-right: 12px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="7" width="18" height="13" rx="2" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M8 7V5C8 3.89543 8.89543 3 10 3H14C15.1046 3 16 3.89543 16 5V7" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="3" y1="11" x2="21" y2="11" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                   </td>
-                  <td style="padding-left: 12px; font-size: 18px; font-weight: 700; color: #0f172a;">
+                  <td style="font-size: 18px; font-weight: 700; color: #0f172a;">
                     Joblify
                   </td>
                 </tr>
@@ -118,7 +118,7 @@ export async function sendVerificationEmail(email: string, username: string, tok
     </p>
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
       <tr>
-        <td style="background-color: #16a34a; border-radius: 10px;">
+        <td style="background-color: #10b981; border-radius: 10px;">
           <a href="${verifyUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Verify email
           </a>
@@ -127,7 +127,7 @@ export async function sendVerificationEmail(email: string, username: string, tok
     </table>
     <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
       Or paste this link in your browser:<br>
-      <a href="${verifyUrl}" style="color: #16a34a; word-break: break-all;">${verifyUrl}</a>
+      <a href="${verifyUrl}" style="color: #10b981; word-break: break-all;">${verifyUrl}</a>
     </p>
   `;
 
@@ -153,7 +153,7 @@ export async function sendPasswordResetEmail(email: string, username: string, to
     </p>
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
       <tr>
-        <td style="background-color: #16a34a; border-radius: 10px;">
+        <td style="background-color: #10b981; border-radius: 10px;">
           <a href="${resetUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Reset password
           </a>
@@ -162,7 +162,7 @@ export async function sendPasswordResetEmail(email: string, username: string, to
     </table>
     <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
       Or paste this link in your browser:<br>
-      <a href="${resetUrl}" style="color: #16a34a; word-break: break-all;">${resetUrl}</a>
+      <a href="${resetUrl}" style="color: #10b981; word-break: break-all;">${resetUrl}</a>
     </p>
     <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
       If you didn’t request this, you can safely ignore this email.
@@ -192,26 +192,26 @@ export async function sendWelcomeEmail(email: string, username: string): Promise
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 24px 0;">
       <tr>
         <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-          <strong style="color: #0f172a;">1. Build your resume</strong>
+          <span style="color: #0f172a; font-weight: 600;">1. Build your resume</span>
           <div style="font-size: 14px; color: #64748b; margin-top: 4px;">Create a professional, ATS-optimized resume with AI assistance.</div>
         </td>
       </tr>
       <tr>
         <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-          <strong style="color: #0f172a;">2. Scan with ATS</strong>
+          <span style="color: #0f172a; font-weight: 600;">2. Scan with ATS</span>
           <div style="font-size: 14px; color: #64748b; margin-top: 4px;">See how your resume performs against applicant tracking systems.</div>
         </td>
       </tr>
       <tr>
         <td style="padding: 12px 0;">
-          <strong style="color: #0f172a;">3. Generate cover letters</strong>
+          <span style="color: #0f172a; font-weight: 600;">3. Generate cover letters</span>
           <div style="font-size: 14px; color: #64748b; margin-top: 4px;">Create tailored cover letters for any job in seconds.</div>
         </td>
       </tr>
     </table>
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 20px 0;">
       <tr>
-        <td style="background-color: #16a34a; border-radius: 10px;">
+        <td style="background-color: #10b981; border-radius: 10px;">
           <a href="${dashboardUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Open your dashboard
           </a>
@@ -250,10 +250,10 @@ export async function sendFeatureEngagementEmailTemplate(
       Hi ${username},
     </p>
     <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
-      We noticed you haven't tried our <strong>${featureInfo.name}</strong> feature yet. ${featureInfo.description}
+      We noticed you haven't tried our ${featureInfo.name} feature yet. ${featureInfo.description}
     </p>
     
-    <div style="background-color: #f8fafc; border-left: 4px solid #16a34a; padding: 16px 20px; margin: 24px 0; border-radius: 8px;">
+    <div style="background-color: #f8fafc; border-left: 4px solid #10b981; padding: 16px 20px; margin: 24px 0; border-radius: 8px;">
       <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0f172a;">
         How to use ${featureInfo.name}:
       </h3>
@@ -262,7 +262,7 @@ export async function sendFeatureEngagementEmailTemplate(
     
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
       <tr>
-        <td style="background-color: #16a34a; border-radius: 10px;">
+        <td style="background-color: #10b981; border-radius: 10px;">
           <a href="${featureInfo.url}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Try ${featureInfo.name} now
           </a>
@@ -310,15 +310,15 @@ function getFeatureInfo(featureName: string): {
         description: "Our AI-powered resume builder helps you create a professional, ATS-optimized resume that gets noticed by employers.",
         instructions: `
           <ol style="margin: 0; padding-left: 20px; color: #334155;">
-            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → My Resumes</strong></li>
-            <li style="margin-bottom: 8px;">Click <strong>"Create New Resume"</strong></li>
+            <li style="margin-bottom: 8px;">Go to Dashboard → My Resumes</li>
+            <li style="margin-bottom: 8px;">Click "Create New Resume"</li>
             <li style="margin-bottom: 8px;">Chat with our AI assistant to build your resume</li>
             <li style="margin-bottom: 8px;">Review and customize your content</li>
             <li>Download your resume as PDF or DOCX</li>
           </ol>
         `,
         url: `${baseUrl}/dashboard/resumes/create`,
-        benefits: "💡 <strong>Pro tip:</strong> The AI analyzes job market trends to suggest the best keywords and formatting for your industry.",
+        benefits: "💡 Pro tip: The AI analyzes job market trends to suggest the best keywords and formatting for your industry.",
         previewText: "Create a professional, ATS-optimized resume with AI assistance",
       };
 
@@ -330,14 +330,14 @@ function getFeatureInfo(featureName: string): {
         description: "Most companies use ATS (Applicant Tracking Systems) to filter resumes. Our scanner shows you exactly how your resume will perform.",
         instructions: `
           <ol style="margin: 0; padding-left: 20px; color: #334155;">
-            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → ATS Scanner</strong></li>
+            <li style="margin-bottom: 8px;">Go to Dashboard → ATS Scanner</li>
             <li style="margin-bottom: 8px;">Upload your resume (PDF or DOCX)</li>
             <li style="margin-bottom: 8px;">Get your ATS compatibility score</li>
             <li>Review detailed improvement suggestions</li>
           </ol>
         `,
         url: `${baseUrl}/dashboard/ats-scanner`,
-        benefits: "📊 <strong>Did you know?</strong> 75% of resumes are rejected by ATS before a human ever sees them. Don't let that happen to you!",
+        benefits: "📊 Did you know? 75% of resumes are rejected by ATS before a human ever sees them. Don't let that happen to you!",
         previewText: "See how your resume performs against ATS systems",
       };
 
@@ -349,7 +349,7 @@ function getFeatureInfo(featureName: string): {
         description: "Generate compelling, job-specific cover letters that complement your resume and highlight your relevant experience.",
         instructions: `
           <ol style="margin: 0; padding-left: 20px; color: #334155;">
-            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → Cover Letter Generator</strong></li>
+            <li style="margin-bottom: 8px;">Go to Dashboard → Cover Letter Generator</li>
             <li style="margin-bottom: 8px;">Select which resume to use</li>
             <li style="margin-bottom: 8px;">Paste the job description</li>
             <li style="margin-bottom: 8px;">Choose your tone (professional, enthusiastic, etc.)</li>
@@ -357,7 +357,7 @@ function getFeatureInfo(featureName: string): {
           </ol>
         `,
         url: `${baseUrl}/dashboard/cover-letter`,
-        benefits: "✍️ <strong>Save time:</strong> What takes hours to write manually takes seconds with our AI. Each letter is uniquely tailored to the specific job.",
+        benefits: "✍️ Save time: What takes hours to write manually takes seconds with our AI. Each letter is uniquely tailored to the specific job.",
         previewText: "Generate compelling, job-specific cover letters instantly",
       };
 
@@ -369,14 +369,14 @@ function getFeatureInfo(featureName: string): {
         description: "Our Job Match feature helps you track job applications and find opportunities that align with your skills and experience.",
         instructions: `
           <ol style="margin: 0; padding-left: 20px; color: #334155;">
-            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → Job Match</strong></li>
+            <li style="margin-bottom: 8px;">Go to Dashboard → Job Match</li>
             <li style="margin-bottom: 8px;">Add jobs you're interested in</li>
             <li style="margin-bottom: 8px;">Track your application status</li>
             <li>Get reminders for follow-ups</li>
           </ol>
         `,
         url: `${baseUrl}/dashboard/job-match`,
-        benefits: "🎯 <strong>Stay organized:</strong> Keep all your job applications in one place and never miss a follow-up opportunity.",
+        benefits: "🎯 Stay organized: Keep all your job applications in one place and never miss a follow-up opportunity.",
         previewText: "Track job applications and find opportunities that match your skills",
       };
 
@@ -388,14 +388,14 @@ function getFeatureInfo(featureName: string): {
         description: "Ultra subscribers can automatically tailor their resume and cover letter to match specific job requirements, increasing their chances of getting an interview.",
         instructions: `
           <ol style="margin: 0; padding-left: 20px; color: #334155;">
-            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → Tailor</strong></li>
+            <li style="margin-bottom: 8px;">Go to Dashboard → Tailor</li>
             <li style="margin-bottom: 8px;">Select a job from your tracker</li>
             <li style="margin-bottom: 8px;">Choose your resume and cover letter</li>
             <li>AI automatically optimizes them for that specific job</li>
           </ol>
         `,
         url: `${baseUrl}/dashboard/tailor`,
-        benefits: "🚀 <strong>Ultra feature:</strong> Tailored applications get 3x more interviews. Upgrade to Ultra to unlock this powerful feature.",
+        benefits: "🚀 Ultra feature: Tailored applications get 3x more interviews. Upgrade to Ultra to unlock this powerful feature.",
         previewText: "Automatically tailor your resume and cover letter for each job",
       };
 
@@ -411,7 +411,7 @@ function getFeatureInfo(featureName: string): {
           </p>
         `,
         url: `${baseUrl}/dashboard`,
-        benefits: "💼 <strong>Your success is our mission:</strong> We're constantly adding new features to help you stand out from the competition.",
+        benefits: "💼 Your success is our mission: We're constantly adding new features to help you stand out from the competition.",
         previewText: "Discover powerful features to accelerate your job search",
       };
   }
@@ -431,17 +431,17 @@ export async function sendContactFormEmail(options: {
       New Contact Form Submission
     </h1>
     <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0;">
-      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0;"><strong>From:</strong></p>
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0; font-weight: 600;">From:</p>
       <p style="font-size: 16px; color: #0f172a; margin: 0 0 12px 0;">${fromName} (${fromEmail})</p>
       
-      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0;"><strong>Message:</strong></p>
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0; font-weight: 600;">Message:</p>
       <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0; white-space: pre-wrap;">${message}</p>
     </div>
     ${
       aiResponse
         ? `
     <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
-      <p style="font-size: 14px; color: #92400e; margin: 0 0 8px 0;"><strong>⚠️ Note: AI Response Was Provided But Not Sufficient</strong></p>
+      <p style="font-size: 14px; color: #92400e; margin: 0 0 8px 0; font-weight: 600;">⚠️ Note: AI Response Was Provided But Not Sufficient</p>
       <p style="font-size: 14px; color: #78350f; margin: 0; white-space: pre-wrap;">${aiResponse}</p>
       <p style="font-size: 13px; color: #92400e; margin: 12px 0 0 0; font-style: italic;">The user reviewed this AI response but requested human support. Please prioritize this inquiry.</p>
     </div>
@@ -449,7 +449,7 @@ export async function sendContactFormEmail(options: {
         : ""
     }
     <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
-      Reply to this inquiry by emailing <a href="mailto:${fromEmail}" style="color: #16a34a;">${fromEmail}</a>
+      Reply to this inquiry by emailing <a href="mailto:${fromEmail}" style="color: #10b981;">${fromEmail}</a>
     </p>
   `;
 
@@ -482,7 +482,7 @@ export async function sendContactConfirmationEmail(options: {
       Thank you for contacting Joblify! We've received your message and our support team will review it shortly.
     </p>
     <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0;">
-      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0;"><strong>Your Message:</strong></p>
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 8px 0; font-weight: 600;">Your Message:</p>
       <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0; white-space: pre-wrap;">${message}</p>
     </div>
     <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
@@ -490,7 +490,7 @@ export async function sendContactConfirmationEmail(options: {
     </p>
     <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
       Best regards,<br>
-      <strong>The Joblify Team</strong>
+      <span style="font-weight: 600;">The Joblify Team</span>
     </p>
   `;
 
