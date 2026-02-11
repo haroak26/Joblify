@@ -14,7 +14,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
     <div className="p-8 print:p-8 text-black h-full">
       {/* Centered Header */}
       <div className="mb-6 text-center border-b-2 border-black pb-4">
-        <h1 className="text-4xl font-serif font-bold mb-3">{personalInfo.name || "Your Name"}</h1>
+        <h1 className="text-3xl font-serif font-semibold mb-3">{personalInfo.name || "Your Name"}</h1>
         <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-sm font-sans">
           {personalInfo.email && (
             <div className="flex items-center gap-1">
@@ -59,7 +59,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Summary */}
       {summary && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-2 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-2 uppercase tracking-wider border-b border-gray-400 pb-1">
             Professional Summary
           </h2>
           <p className="text-sm font-sans leading-relaxed text-gray-800">{summary}</p>
@@ -69,7 +69,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Experience */}
       {experience.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Professional Experience
           </h2>
           <div className="space-y-4">
@@ -102,7 +102,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Education */}
       {education.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Education
           </h2>
           <div className="space-y-3 font-sans">
@@ -127,7 +127,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Skills */}
       {skills.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-2 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-2 uppercase tracking-wider border-b border-gray-400 pb-1">
             Skills
           </h2>
           <p className="text-sm font-sans text-gray-800 leading-relaxed">
@@ -139,7 +139,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Certifications */}
       {certifications && certifications.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Certifications
           </h2>
           <div className="space-y-2 font-sans">
@@ -159,7 +159,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Projects */}
       {projects && projects.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Projects
           </h2>
           <div className="space-y-3 font-sans">
@@ -188,7 +188,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Awards */}
       {awards && awards.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Awards & Honors
           </h2>
           <div className="space-y-2 font-sans">
@@ -211,7 +211,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Leadership */}
       {leadership && leadership.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Leadership Experience
           </h2>
           <div className="space-y-3 font-sans">
@@ -236,7 +236,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Research */}
       {research && research.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Research Experience
           </h2>
           <div className="space-y-3 font-sans">
@@ -264,7 +264,7 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Publications */}
       {publications && publications.length > 0 && (
         <div className="mb-5">
-          <h2 className="text-base font-serif font-bold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
+          <h2 className="text-base font-serif font-semibold mb-3 uppercase tracking-wider border-b border-gray-400 pb-1">
             Publications
           </h2>
           <div className="space-y-2 font-sans">
