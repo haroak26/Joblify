@@ -25,10 +25,14 @@ const step1Schema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
 
-// Step 2: Password
+// Step 2: Password and Username
 const step2Schema = z.object({
   password: passwordSchema,
   confirmPassword: z.string(),
+  username: z.string()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username must be at most 20 characters")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, hyphens, and underscores"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -42,6 +46,7 @@ type RegistrationData = {
   email: string;
   password: string;
   confirmPassword: string;
+  username: string;
 };
 
 export default function Register() {
@@ -54,6 +59,7 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
+    username: "",
   });
 
   // Step 1 form
@@ -71,6 +77,7 @@ export default function Register() {
     defaultValues: {
       password: formData.password,
       confirmPassword: formData.confirmPassword,
+      username: formData.username,
     },
   });
 
@@ -108,13 +115,16 @@ export default function Register() {
       await register(
         formData.email,
         data.password,
-        formData.name
+        formData.name,
+        data.username
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Registration failed";
       if (message.toLowerCase().includes("email")) {
         setStep(1);
         step1Form.setError("email", { message });
+      } else if (message.toLowerCase().includes("username")) {
+        step2Form.setError("username", { message });
       } else {
         step2Form.setError("root", { message });
       }
@@ -282,6 +292,36 @@ export default function Register() {
                                   <Input 
                                     type="password" 
                                     placeholder="Confirm your password" 
+                                    className="pl-10"
+                                    {...field} 
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </motion.div>
+                    )}
+
+                    {showPasswordChecker && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        transition={{ duration: 0.2, delay: 0.2 }}
+                      >
+                        <FormField
+                          control={step2Form.control}
+                          name="username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Username</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                  <Input 
+                                    type="text" 
+                                    placeholder="Choose a unique username" 
                                     className="pl-10"
                                     {...field} 
                                   />
