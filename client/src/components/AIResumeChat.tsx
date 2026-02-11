@@ -45,15 +45,17 @@ export default function AIResumeChat({
   const [isComplete, setIsComplete] = useState(false);
   const [activeComponents, setActiveComponents] = useState<string[]>(selectedComponents);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevComponentsRef = useRef<string[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
   // Update activeComponents when selectedComponents prop changes
   useEffect(() => {
     // If components changed from empty to non-empty, reset messages to show new greeting
-    if (selectedComponents.length > 0 && activeComponents.length === 0 && messages.length > 0) {
+    if (selectedComponents.length > 0 && prevComponentsRef.current.length === 0) {
       setMessages([]);
     }
+    prevComponentsRef.current = selectedComponents;
     setActiveComponents(selectedComponents);
   }, [selectedComponents]);
 
