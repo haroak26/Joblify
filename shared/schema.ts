@@ -84,6 +84,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   coverLetters: many(coverLetters),
   featureUsage: many(userFeatureUsage),
   scheduledEmails: many(scheduledEmails),
+  interviewSessions: many(interviewSessions),
+  interviewResponses: many(interviewResponses),
+  userPerks: many(userPerks),
 }));
 
 export const profiles = pgTable("profiles", {
@@ -478,3 +481,175 @@ export type UserFeatureUsage = typeof userFeatureUsage.$inferSelect;
 export const insertScheduledEmailSchema = createInsertSchema(scheduledEmails).omit({ id: true, createdAt: true });
 export type InsertScheduledEmail = z.infer<typeof insertScheduledEmailSchema>;
 export type ScheduledEmail = typeof scheduledEmails.$inferSelect;
+
+// ============================================
+// AI Interviewer Tables
+// ============================================
+
+export const interviewSessions = pgTable("interview_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  jobDescription: text("job_description").notNull(),
+  skills: jsonb("skills").notNull().default([]).$type<string[]>(),
+  customQuestions: text("custom_questions"), // Optional custom questions provided by user
+  companyType: text("company_type"), // e.g., "startup", "enterprise", "agency"
+  industry: text("industry"), // e.g., "tech", "finance", "healthcare"
+  mode: text("mode").notNull().default("overall"), // 'overall' | 'question-by-question'
+  status: text("status").notNull().default("in_progress"), // 'in_progress' | 'completed'
+  overallFeedback: text("overall_feedback"), // AI feedback for the entire interview
+  overallScore: integer("overall_score"), // 0-100 score
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  completedAt: timestamp("completed_at"),
+}, (table) => ({
+  userIdIdx: index("interview_sessions_user_id_idx").on(table.userId),
+  statusIdx: index("interview_sessions_status_idx").on(table.status),
+}));
+
+export const interviewQuestions = pgTable("interview_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => interviewSessions.id, { onDelete: "cascade" }),
+  questionText: text("question_text").notNull(),
+  questionType: text("question_type").notNull(), // 'behavioral', 'technical', 'situational', 'custom'
+  order: integer("order").notNull(), // Question order in the interview
+  difficulty: text("difficulty"), // 'easy', 'medium', 'hard'
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  sessionIdIdx: index("interview_questions_session_id_idx").on(table.sessionId),
+}));
+
+export const interviewResponses = pgTable("interview_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: varchar("question_id").notNull().references(() => interviewQuestions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  answerText: text("answer_text").notNull(),
+  feedback: text("feedback"), // AI feedback for this specific answer (Pro/Ultra only)
+  score: integer("score"), // 0-100 score for this answer (Pro/Ultra only)
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  questionIdIdx: index("interview_responses_question_id_idx").on(table.questionId),
+  userIdIdx: index("interview_responses_user_id_idx").on(table.userId),
+}));
+
+// Relations for Interview tables
+export const interviewSessionsRelations = relations(interviewSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [interviewSessions.userId],
+    references: [users.id],
+  }),
+  questions: many(interviewQuestions),
+}));
+
+export const interviewQuestionsRelations = relations(interviewQuestions, ({ one, many }) => ({
+  session: one(interviewSessions, {
+    fields: [interviewQuestions.sessionId],
+    references: [interviewSessions.id],
+  }),
+  responses: many(interviewResponses),
+}));
+
+export const interviewResponsesRelations = relations(interviewResponses, ({ one }) => ({
+  question: one(interviewQuestions, {
+    fields: [interviewResponses.questionId],
+    references: [interviewQuestions.id],
+  }),
+  user: one(users, {
+    fields: [interviewResponses.userId],
+    references: [users.id],
+  }),
+}));
+
+// Type schemas for Interview system
+export const insertInterviewSessionSchema = createInsertSchema(interviewSessions).omit({ id: true, createdAt: true, completedAt: true });
+export type InsertInterviewSession = z.infer<typeof insertInterviewSessionSchema>;
+export type InterviewSession = typeof interviewSessions.$inferSelect;
+
+export const insertInterviewQuestionSchema = createInsertSchema(interviewQuestions).omit({ id: true, createdAt: true });
+export type InsertInterviewQuestion = z.infer<typeof insertInterviewQuestionSchema>;
+export type InterviewQuestion = typeof interviewQuestions.$inferSelect;
+
+export const insertInterviewResponseSchema = createInsertSchema(interviewResponses).omit({ id: true, createdAt: true });
+export type InsertInterviewResponse = z.infer<typeof insertInterviewResponseSchema>;
+export type InterviewResponse = typeof interviewResponses.$inferSelect;
+
+// ============================================
+// Redeemable Code System Tables
+// ============================================
+
+export const perks = pgTable("perks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g., "Free Practice Interview", "1 Month Pro Access"
+  perkType: text("perk_type").notNull(), // 'interview_credit', 'ats_scan_credit', 'temp_pro_access', 'temp_ultra_access'
+  value: integer("value"), // Numeric value (e.g., number of credits, days of access)
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const redeemableCodes = pgTable("redeemable_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(),
+  perkId: varchar("perk_id").notNull().references(() => perks.id),
+  isActive: boolean("is_active").notNull().default(true),
+  maxRedemptions: integer("max_redemptions").default(1), // null = unlimited
+  currentRedemptions: integer("current_redemptions").notNull().default(0),
+  expiresAt: timestamp("expires_at"), // Optional expiration date
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  createdBy: varchar("created_by"), // Admin user ID who created the code
+}, (table) => ({
+  codeIdx: uniqueIndex("redeemable_codes_code_idx").on(table.code),
+}));
+
+export const userPerks = pgTable("user_perks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  perkId: varchar("perk_id").notNull().references(() => perks.id),
+  codeId: varchar("code_id").notNull().references(() => redeemableCodes.id),
+  redeemedAt: timestamp("redeemed_at").notNull().default(sql`NOW()`),
+  expiresAt: timestamp("expires_at"), // For temporary perks
+  isActive: boolean("is_active").notNull().default(true),
+  remainingValue: integer("remaining_value"), // For credits that can be partially used
+}, (table) => ({
+  userIdIdx: index("user_perks_user_id_idx").on(table.userId),
+  isActiveIdx: index("user_perks_is_active_idx").on(table.isActive),
+}));
+
+// Relations for Redeemable Code system
+export const perksRelations = relations(perks, ({ many }) => ({
+  codes: many(redeemableCodes),
+  userPerks: many(userPerks),
+}));
+
+export const redeemableCodesRelations = relations(redeemableCodes, ({ one, many }) => ({
+  perk: one(perks, {
+    fields: [redeemableCodes.perkId],
+    references: [perks.id],
+  }),
+  userPerks: many(userPerks),
+}));
+
+export const userPerksRelations = relations(userPerks, ({ one }) => ({
+  user: one(users, {
+    fields: [userPerks.userId],
+    references: [users.id],
+  }),
+  perk: one(perks, {
+    fields: [userPerks.perkId],
+    references: [perks.id],
+  }),
+  code: one(redeemableCodes, {
+    fields: [userPerks.codeId],
+    references: [redeemableCodes.id],
+  }),
+}));
+
+// Type schemas for Redeemable Code system
+export const insertPerkSchema = createInsertSchema(perks).omit({ id: true, createdAt: true });
+export type InsertPerk = z.infer<typeof insertPerkSchema>;
+export type Perk = typeof perks.$inferSelect;
+
+export const insertRedeemableCodeSchema = createInsertSchema(redeemableCodes).omit({ id: true, createdAt: true });
+export type InsertRedeemableCode = z.infer<typeof insertRedeemableCodeSchema>;
+export type RedeemableCode = typeof redeemableCodes.$inferSelect;
+
+export const insertUserPerkSchema = createInsertSchema(userPerks).omit({ id: true, redeemedAt: true });
+export type InsertUserPerk = z.infer<typeof insertUserPerkSchema>;
+export type UserPerk = typeof userPerks.$inferSelect;
