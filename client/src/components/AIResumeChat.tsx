@@ -111,6 +111,13 @@ export default function AIResumeChat({
 
       if (!response.ok) {
         const error = await response.json();
+        // Handle authentication errors
+        if (response.status === 401) {
+          throw new Error("Session expired. Please log in again.");
+        }
+        if (response.status === 403) {
+          throw new Error("You don't have permission to perform this action.");
+        }
         throw new Error(error.error || "Failed to send message");
       }
 

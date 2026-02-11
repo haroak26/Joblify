@@ -6,6 +6,7 @@ import { ArrowRight, FileText, Plus, Sparkles, CheckCircle2, Circle, Target, Sea
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ResumePreview from "@/components/resume-preview/ResumePreview";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Resume {
   id: string;
@@ -93,60 +94,59 @@ export default function DashboardHome() {
 
       {/* Onboarding Checklist - Only show if not all tasks are completed */}
       {completedTasks < totalTasks && (
-        <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardHeader>
+        <Card className="mb-8 border">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-primary" />
-                  Get Started with Joblify
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  Complete these tasks to make the most of your account
-                </CardDescription>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Target className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Quick Start Guide</CardTitle>
+                  <CardDescription className="text-xs">
+                    {completedTasks} of {totalTasks} completed
+                  </CardDescription>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-primary">{progressPercentage}%</div>
-                <div className="text-xs text-muted-foreground">Complete</div>
+              <div className="flex items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-primary">{progressPercentage}%</span>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-3">
               {onboardingTasks.map((task) => {
                 const Icon = task.icon;
                 return (
-                  <div
+                  <button
                     key={task.id}
-                    className={`flex items-center gap-4 p-4 rounded-lg border transition-all ${
+                    className={`flex flex-col gap-2 p-3 rounded-lg border transition-all text-left ${
                       task.completed
-                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 cursor-default"
                         : "bg-background border-border hover:border-primary/50 cursor-pointer"
                     }`}
                     onClick={task.completed ? undefined : task.action}
+                    disabled={task.completed}
+                    aria-label={task.completed ? `${task.title} - Completed` : task.title}
                   >
-                    <div className="flex-shrink-0">
-                      {task.completed ? (
-                        <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-                      ) : (
-                        <Circle className="w-6 h-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Icon className="w-4 h-4 text-muted-foreground" />
-                        <h4 className={`font-medium ${task.completed ? "text-green-700 dark:text-green-300" : ""}`}>
-                          {task.title}
-                        </h4>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        task.completed ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"
+                      }`}>
+                        {task.completed ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <Icon className="w-4 h-4 text-muted-foreground" />
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-0.5">{task.description}</p>
+                      <h4 className={`text-sm font-medium flex-1 ${task.completed ? "text-green-700 dark:text-green-300" : ""}`}>
+                        {task.title}
+                      </h4>
                     </div>
-                    {!task.completed && (
-                      <Button size="sm" variant="ghost" className="flex-shrink-0">
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
+                  </button>
                 );
               })}
             </div>
@@ -181,9 +181,13 @@ export default function DashboardHome() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium">My Resumes</h3>
-              <p className="text-xs text-muted-foreground">
-                {resumesLoading ? "Loading..." : `${totalResumes} resume${totalResumes === 1 ? '' : 's'}`}
-              </p>
+              {resumesLoading ? (
+                <Skeleton className="h-4 w-20" />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {totalResumes} resume{totalResumes === 1 ? '' : 's'}
+                </p>
+              )}
             </div>
             <Button
               variant="outline"
