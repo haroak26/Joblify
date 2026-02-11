@@ -82,6 +82,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   resumes: many(resumes),
   chatConversations: many(chatConversations),
   coverLetters: many(coverLetters),
+  featureUsage: many(userFeatureUsage),
+  scheduledEmails: many(scheduledEmails),
 }));
 
 export const profiles = pgTable("profiles", {
@@ -413,3 +415,60 @@ export const supportInteractionsRelations = relations(supportInteractions, ({ on
 export const insertSupportInteractionSchema = createInsertSchema(supportInteractions).omit({ id: true, createdAt: true });
 export type InsertSupportInteraction = z.infer<typeof insertSupportInteractionSchema>;
 export type SupportInteraction = typeof supportInteractions.$inferSelect;
+
+// ============================================
+// Feature Tracking & Email Engagement System
+// ============================================
+
+// Track which features users have tried
+export const userFeatureUsage = pgTable("user_feature_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  featureName: text("feature_name").notNull(), // 'resume_builder', 'ats_scanner', 'cover_letter', 'job_match', 'tailor'
+  firstUsedAt: timestamp("first_used_at").notNull().default(sql`NOW()`),
+  lastUsedAt: timestamp("last_used_at").notNull().default(sql`NOW()`),
+  usageCount: integer("usage_count").notNull().default(1),
+}, (table) => ({
+  userIdIdx: index("user_feature_usage_user_id_idx").on(table.userId),
+  featureNameIdx: index("user_feature_usage_feature_name_idx").on(table.featureName),
+  uniqueUserFeature: uniqueIndex("unique_user_feature").on(table.userId, table.featureName),
+}));
+
+// Track scheduled emails for progressive engagement
+export const scheduledEmails = pgTable("scheduled_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  emailType: text("email_type").notNull(), // 'welcome', 'feature_engagement_24h', 'feature_engagement_48h', 'feature_engagement_72h'
+  featureName: text("feature_name"), // For feature engagement emails
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  sentAt: timestamp("sent_at"),
+  status: text("status").notNull().default("pending"), // 'pending', 'sent', 'failed', 'cancelled'
+  error: text("error"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("scheduled_emails_user_id_idx").on(table.userId),
+  statusIdx: index("scheduled_emails_status_idx").on(table.status),
+  scheduledForIdx: index("scheduled_emails_scheduled_for_idx").on(table.scheduledFor),
+}));
+
+export const userFeatureUsageRelations = relations(userFeatureUsage, ({ one }) => ({
+  user: one(users, {
+    fields: [userFeatureUsage.userId],
+    references: [users.id],
+  }),
+}));
+
+export const scheduledEmailsRelations = relations(scheduledEmails, ({ one }) => ({
+  user: one(users, {
+    fields: [scheduledEmails.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertUserFeatureUsageSchema = createInsertSchema(userFeatureUsage).omit({ id: true, firstUsedAt: true, lastUsedAt: true });
+export type InsertUserFeatureUsage = z.infer<typeof insertUserFeatureUsageSchema>;
+export type UserFeatureUsage = typeof userFeatureUsage.$inferSelect;
+
+export const insertScheduledEmailSchema = createInsertSchema(scheduledEmails).omit({ id: true, createdAt: true });
+export type InsertScheduledEmail = z.infer<typeof insertScheduledEmailSchema>;
+export type ScheduledEmail = typeof scheduledEmails.$inferSelect;

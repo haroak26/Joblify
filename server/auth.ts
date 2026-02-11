@@ -167,6 +167,12 @@ export function setupAuth(app: Express) {
       // Profile will be set up later in account settings, not during registration
       req.session.userId = user.id;
 
+      // Initialize email engagement system (welcome email + feature reminders)
+      const { initializeEmailEngagement } = await import("./email-engagement");
+      initializeEmailEngagement(user.id).catch(err => {
+        console.error("Failed to initialize email engagement:", err);
+      });
+
       // Send verification email
       const emailSent = await sendVerificationEmail(user.email, user.username, verificationToken);
       if (!emailSent) {

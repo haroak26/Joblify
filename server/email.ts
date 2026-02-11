@@ -229,3 +229,190 @@ export async function sendWelcomeEmail(email: string, username: string): Promise
     html: getEmailTemplate(content, "Your Joblify account is ready. Start building your professional resume."),
   });
 }
+
+/**
+ * Feature engagement email template
+ */
+export async function sendFeatureEngagementEmailTemplate(
+  email: string,
+  username: string,
+  featureName: string,
+  emailType: string
+): Promise<boolean> {
+  const dashboardUrl = `${getAppUrl()}/dashboard`;
+  const featureInfo = getFeatureInfo(featureName);
+  
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      ${featureInfo.title}
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${username},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      We noticed you haven't tried our <strong>${featureInfo.name}</strong> feature yet. ${featureInfo.description}
+    </p>
+    
+    <div style="background-color: #f8fafc; border-left: 4px solid #16a34a; padding: 16px 20px; margin: 24px 0; border-radius: 8px;">
+      <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0f172a;">
+        How to use ${featureInfo.name}:
+      </h3>
+      ${featureInfo.instructions}
+    </div>
+    
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
+      <tr>
+        <td style="background-color: #16a34a; border-radius: 10px;">
+          <a href="${featureInfo.url}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
+            Try ${featureInfo.name} now
+          </a>
+        </td>
+      </tr>
+    </table>
+    
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      ${featureInfo.benefits}
+    </p>
+    
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      Need help? Reply to this email and we'll take care of you.
+    </p>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Try Joblify's ${featureInfo.name} - ${featureInfo.tagline}`,
+    html: getEmailTemplate(content, featureInfo.previewText),
+  });
+}
+
+/**
+ * Get feature information for email templates
+ */
+function getFeatureInfo(featureName: string): {
+  name: string;
+  title: string;
+  tagline: string;
+  description: string;
+  instructions: string;
+  url: string;
+  benefits: string;
+  previewText: string;
+} {
+  const baseUrl = getAppUrl();
+  
+  switch (featureName) {
+    case "resume_builder":
+      return {
+        name: "AI Resume Builder",
+        title: "Build Your Professional Resume with AI",
+        tagline: "Create a standout resume in minutes",
+        description: "Our AI-powered resume builder helps you create a professional, ATS-optimized resume that gets noticed by employers.",
+        instructions: `
+          <ol style="margin: 0; padding-left: 20px; color: #334155;">
+            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → My Resumes</strong></li>
+            <li style="margin-bottom: 8px;">Click <strong>"Create New Resume"</strong></li>
+            <li style="margin-bottom: 8px;">Chat with our AI assistant to build your resume</li>
+            <li style="margin-bottom: 8px;">Review and customize your content</li>
+            <li>Download your resume as PDF or DOCX</li>
+          </ol>
+        `,
+        url: `${baseUrl}/dashboard/resumes/create`,
+        benefits: "💡 <strong>Pro tip:</strong> The AI analyzes job market trends to suggest the best keywords and formatting for your industry.",
+        previewText: "Create a professional, ATS-optimized resume with AI assistance",
+      };
+
+    case "ats_scanner":
+      return {
+        name: "ATS Scanner",
+        title: "Check How Your Resume Performs",
+        tagline: "See your ATS score instantly",
+        description: "Most companies use ATS (Applicant Tracking Systems) to filter resumes. Our scanner shows you exactly how your resume will perform.",
+        instructions: `
+          <ol style="margin: 0; padding-left: 20px; color: #334155;">
+            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → ATS Scanner</strong></li>
+            <li style="margin-bottom: 8px;">Upload your resume (PDF or DOCX)</li>
+            <li style="margin-bottom: 8px;">Get your ATS compatibility score</li>
+            <li>Review detailed improvement suggestions</li>
+          </ol>
+        `,
+        url: `${baseUrl}/dashboard/ats-scanner`,
+        benefits: "📊 <strong>Did you know?</strong> 75% of resumes are rejected by ATS before a human ever sees them. Don't let that happen to you!",
+        previewText: "See how your resume performs against ATS systems",
+      };
+
+    case "cover_letter":
+      return {
+        name: "Cover Letter Generator",
+        title: "Create Tailored Cover Letters Instantly",
+        tagline: "Personalized cover letters in seconds",
+        description: "Generate compelling, job-specific cover letters that complement your resume and highlight your relevant experience.",
+        instructions: `
+          <ol style="margin: 0; padding-left: 20px; color: #334155;">
+            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → Cover Letter Generator</strong></li>
+            <li style="margin-bottom: 8px;">Select which resume to use</li>
+            <li style="margin-bottom: 8px;">Paste the job description</li>
+            <li style="margin-bottom: 8px;">Choose your tone (professional, enthusiastic, etc.)</li>
+            <li>Get a customized cover letter instantly</li>
+          </ol>
+        `,
+        url: `${baseUrl}/dashboard/cover-letter`,
+        benefits: "✍️ <strong>Save time:</strong> What takes hours to write manually takes seconds with our AI. Each letter is uniquely tailored to the specific job.",
+        previewText: "Generate compelling, job-specific cover letters instantly",
+      };
+
+    case "job_match":
+      return {
+        name: "Job Match",
+        title: "Find Jobs That Match Your Skills",
+        tagline: "Discover your perfect job opportunities",
+        description: "Our Job Match feature helps you track job applications and find opportunities that align with your skills and experience.",
+        instructions: `
+          <ol style="margin: 0; padding-left: 20px; color: #334155;">
+            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → Job Match</strong></li>
+            <li style="margin-bottom: 8px;">Add jobs you're interested in</li>
+            <li style="margin-bottom: 8px;">Track your application status</li>
+            <li>Get reminders for follow-ups</li>
+          </ol>
+        `,
+        url: `${baseUrl}/dashboard/job-match`,
+        benefits: "🎯 <strong>Stay organized:</strong> Keep all your job applications in one place and never miss a follow-up opportunity.",
+        previewText: "Track job applications and find opportunities that match your skills",
+      };
+
+    case "tailor":
+      return {
+        name: "Job Tailor",
+        title: "Tailor Your Resume for Specific Jobs",
+        tagline: "Customize for each application",
+        description: "Ultra subscribers can automatically tailor their resume and cover letter to match specific job requirements, increasing their chances of getting an interview.",
+        instructions: `
+          <ol style="margin: 0; padding-left: 20px; color: #334155;">
+            <li style="margin-bottom: 8px;">Go to <strong>Dashboard → Tailor</strong></li>
+            <li style="margin-bottom: 8px;">Select a job from your tracker</li>
+            <li style="margin-bottom: 8px;">Choose your resume and cover letter</li>
+            <li>AI automatically optimizes them for that specific job</li>
+          </ol>
+        `,
+        url: `${baseUrl}/dashboard/tailor`,
+        benefits: "🚀 <strong>Ultra feature:</strong> Tailored applications get 3x more interviews. Upgrade to Ultra to unlock this powerful feature.",
+        previewText: "Automatically tailor your resume and cover letter for each job",
+      };
+
+    default:
+      return {
+        name: "Joblify Features",
+        title: "Discover More Joblify Features",
+        tagline: "Get the most out of Joblify",
+        description: "Joblify has many powerful features to help you land your dream job faster.",
+        instructions: `
+          <p style="margin: 0; color: #334155;">
+            Explore your dashboard to discover all the tools available to help you succeed in your job search.
+          </p>
+        `,
+        url: `${baseUrl}/dashboard`,
+        benefits: "💼 <strong>Your success is our mission:</strong> We're constantly adding new features to help you stand out from the competition.",
+        previewText: "Discover powerful features to accelerate your job search",
+      };
+  }
+}
