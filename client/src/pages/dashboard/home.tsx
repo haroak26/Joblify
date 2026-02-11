@@ -120,14 +120,16 @@ export default function DashboardHome() {
               {onboardingTasks.map((task) => {
                 const Icon = task.icon;
                 return (
-                  <div
+                  <button
                     key={task.id}
-                    className={`flex flex-col gap-2 p-3 rounded-lg border transition-all ${
+                    className={`flex flex-col gap-2 p-3 rounded-lg border transition-all text-left ${
                       task.completed
-                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                        ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 cursor-default"
                         : "bg-background border-border hover:border-primary/50 cursor-pointer"
                     }`}
                     onClick={task.completed ? undefined : task.action}
+                    disabled={task.completed}
+                    aria-label={task.completed ? `${task.title} - Completed` : task.title}
                   >
                     <div className="flex items-center gap-2">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -144,7 +146,7 @@ export default function DashboardHome() {
                       </h4>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
-                  </div>
+                  </button>
                 );
               })}
             </div>
