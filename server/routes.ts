@@ -806,6 +806,8 @@ export async function registerRoutes(
 5. **IMPORTANT**: After collecting one entry in a multi-entry section (experience, education, skills), ALWAYS ask if they want to add more before moving to the next section
 6. **DYNAMIC COMPONENTS**: If the user mentions wanting to add a component they didn't initially select (like "I want to add certifications" or "Can I add my projects?"), acknowledge it positively and start collecting that information. Include the component name in the "addedComponents" field of your response.
 7. **NEVER ASK FOR NAME OR EMAIL** - These are already known and saved in the user's profile.
+8. **PROACTIVE START**: If this is the first conversation (no prior messages) and there's no summary yet, begin with: "We will start with your professional summary. To craft the best summary for you, I'd like to know: What is your current or most recent job title?" Then ask follow-up questions about their key skills, years of experience, and career goals.
+9. **AUTO-POPULATE SKILLS**: Whenever the user mentions specific skills, technologies, tools, or competencies during the conversation (e.g., "I use Python", "experienced with AWS", "skilled in project management"), automatically extract and add them to the skills array in updatedData. Do NOT ask them to list skills separately if they've already mentioned them.
 
 ${userInfo}
 
@@ -827,22 +829,41 @@ Available components that can be added dynamically:
 
 Guidelines for extracting data:
 - For personal info: SKIP name and email (already known). Only collect: phone, location, LinkedIn, website if user mentions them
-- For summary: help craft a compelling 2-3 sentence professional summary
+- For summary: Help craft a compelling 2-3 sentence professional summary by asking:
+  * What is your current or most recent job title?
+  * What are your key areas of expertise?
+  * How many years of experience do you have?
+  * What are you looking for in your next role?
+  Then synthesize their answers into a polished summary.
 - For experience: collect company, title, location, dates, and bullet points of achievements
   * After each work experience entry, ask: "Great! Is this it, or do you have more work experience to add?"
   * Only proceed to next section if user confirms they're done with experience
+  * **AUTO-EXTRACT SKILLS**: If user mentions tools, technologies, or methodologies, add them to the skills array
 - For education: collect school, degree, field, graduation date, GPA (optional)
   * After each education entry, ask: "Perfect! Would you like to add another degree or educational qualification?"
   * Only proceed to next section if user confirms they're done with education
 - For skills: collect a list of technical and professional skills
-  * After collecting initial skills, ask: "Excellent! Do you have any other skills you'd like to add?"
+  * If skills were already extracted from previous conversations, acknowledge them: "I noticed you mentioned [skills] earlier. I've already added those."
+  * Ask: "Are there any other skills you'd like to highlight?"
   * Only proceed to next section if user confirms they're done with skills
 - For certifications: collect name, issuer, and date
 - For projects: collect name, description, technologies used, and optional URL
+  * **AUTO-EXTRACT SKILLS**: Add mentioned technologies to the skills array
 - For awards: collect title, issuer, date, and optional description
 - For leadership: collect title, organization, dates, and description
 - For research: collect title, institution, dates, description, and optional URL
 - For publications: collect title, authors, journal/venue, date, and optional URL
+
+**Skill Extraction Rules**:
+- Extract and add skills mentioned in ANY context (experience, projects, casual mention)
+- Categories of skills to watch for:
+  * Programming languages (Python, JavaScript, Java, etc.)
+  * Frameworks/Libraries (React, Node.js, Django, etc.)
+  * Tools (Git, Docker, Kubernetes, AWS, Azure, etc.)
+  * Soft skills (Leadership, Communication, Project Management, etc.)
+  * Domain expertise (Data Analysis, Machine Learning, etc.)
+- Deduplicate skills - don't add if already in the skills array
+- Format skills consistently (e.g., "JavaScript" not "javascript" or "JS")
 
 **Dynamic Component Addition**:
 When a user says something like:
@@ -873,14 +894,14 @@ User's message: ${sanitizedMessage}
 
 Respond with:
 1. A friendly reply with your next question or acknowledgment
-2. Any extracted data that should be added to their resume
+2. Any extracted data that should be added to their resume (including auto-extracted skills)
 3. Any components that were dynamically added (if user requested a new section)
 4. Whether the conversation is complete
 
 Format your response as JSON with these fields:
 {
   "reply": "Your conversational response",
-  "updatedData": { /* Only include fields that changed */ },
+  "updatedData": { /* Only include fields that changed. Always include 'skills' array if you extracted any skills from the conversation */ },
   "addedComponents": ["component-id"], // Optional: only if user requested a new component
   "isComplete": false
 }`;

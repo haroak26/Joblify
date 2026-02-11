@@ -28,6 +28,7 @@ interface ChatMessage {
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_MESSAGES = 10;
+const PROACTIVE_SUMMARY_START = "We will start with your professional summary. To craft the best summary for you, I'd like to know: What is your current or most recent job title?";
 
 export default function AIResumeChat({
   resumeId,
@@ -80,8 +81,8 @@ export default function AIResumeChat({
       const greeting = focusedComponent
         ? `Welcome ${firstName}! I'm here to help you improve your ${focusedComponent}. What would you like to work on?`
         : activeComponents.length > 0
-        ? `Welcome ${firstName}! I see you want to work on: ${activeComponents.join(', ')}. Let's start building your resume! First, let's confirm your professional summary. How would you describe your professional background in 2-3 sentences?`
-        : `Welcome ${firstName}! I'm your AI resume assistant. I'll help you build your resume step by step. Let's start with your professional summary. How would you describe your professional background in 2-3 sentences?`;
+        ? `Welcome ${firstName}! I see you want to work on: ${activeComponents.join(', ')}. Let's start building your resume! ${PROACTIVE_SUMMARY_START}`
+        : `Welcome ${firstName}! I'm your AI resume assistant. I'll help you build your resume step by step. ${PROACTIVE_SUMMARY_START}`;
       
       setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
     }
