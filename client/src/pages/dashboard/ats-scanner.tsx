@@ -11,8 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 
 export default function AtsScanner() {
+  // Track feature usage
+  useFeatureTracking(FEATURES.ATS_SCANNER);
+  
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState<string>("");
   const [result, setResult] = useState<any>(null);

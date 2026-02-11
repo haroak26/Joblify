@@ -3,12 +3,15 @@ import { sendOnboardingReminderEmail } from "./brevo";
 import { db } from "./db";
 import { users, resumes, usage } from "@shared/schema";
 import { eq, and, lt, sql } from "drizzle-orm";
+import { processPendingEmails } from "./email-engagement";
 
 // Track when we last ran tasks
 let lastCleanupTime = Date.now();
 let lastReminderCheckTime = Date.now();
+let lastEmailProcessingTime = Date.now();
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const REMINDER_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const EMAIL_PROCESSING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 
 export function startScheduleRunner(intervalMs = 60_000) {
@@ -110,6 +113,19 @@ export function startScheduleRunner(intervalMs = 60_000) {
         }
         
         lastReminderCheckTime = now;
+      }
+
+      // Process pending engagement emails (every 5 minutes)
+      if (now - lastEmailProcessingTime >= EMAIL_PROCESSING_INTERVAL_MS) {
+        console.log('[Scheduler] Processing pending engagement emails');
+        
+        try {
+          await processPendingEmails();
+        } catch (emailError) {
+          console.error('[Scheduler] Error processing pending emails:', emailError);
+        }
+        
+        lastEmailProcessingTime = now;
       }
     } catch (error) {
       console.error("Schedule runner error:", error);

@@ -8,10 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Copy, Download, Loader2, Sparkles, FileText, Wand2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Resume } from "@shared/schema";
+import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 
 const MIN_JOB_DESCRIPTION_LENGTH = 20;
 
 export default function CoverLetterGenerator() {
+  // Track feature usage
+  useFeatureTracking(FEATURES.COVER_LETTER);
+  
   const [resumeId, setResumeId] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [tone, setTone] = useState<"professional" | "enthusiastic" | "creative">("professional");

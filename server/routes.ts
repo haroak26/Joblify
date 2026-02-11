@@ -600,6 +600,14 @@ export async function registerRoutes(
         })
         .returning();
 
+      // Track feature usage
+      // Note: Tracking is non-critical and failures won't affect resume creation
+      // Errors are logged for monitoring but don't block the user's workflow
+      const { trackFeatureUsage, FEATURES } = await import("./email-engagement");
+      trackFeatureUsage(userId, FEATURES.RESUME_BUILDER).catch(err => {
+        console.error("Failed to track resume builder usage:", err);
+      });
+
       res.status(201).json(newResume);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1147,6 +1155,27 @@ Format your response as JSON with these fields:
       if (!res.headersSent) {
         res.status(500).json({ error: "Failed to generate PDF" });
       }
+    }
+  });
+
+  // Feature tracking endpoint
+  app.post("/api/track-feature", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({
+        featureName: z.string(),
+      });
+      
+      const { featureName } = schema.parse(req.body);
+      
+      const { trackFeatureUsage } = await import("./email-engagement");
+      await trackFeatureUsage(userId, featureName);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Error tracking feature usage:', error);
+      // Don't fail the request if tracking fails
+      res.json({ success: false });
     }
   });
 
