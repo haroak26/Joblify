@@ -25,7 +25,7 @@ export default function LeadershipSection({ data, onUpdate }: LeadershipSectionP
   const [isCurrent, setIsCurrent] = useState(false);
 
   const handleAddLeadership = () => {
-    if (!newLeadership.title.trim() || !newLeadership.organization.trim() || !newLeadership.startDate.trim()) return;
+    if (!newLeadership.title.trim() || !newLeadership.organization.trim() || !newLeadership.startDate.trim() || !newLeadership.description.trim()) return;
 
     onUpdate({
       leadership: [...(data.leadership || []), newLeadership],

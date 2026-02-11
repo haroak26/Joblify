@@ -26,7 +26,7 @@ export default function ResearchSection({ data, onUpdate }: ResearchSectionProps
   const [isCurrent, setIsCurrent] = useState(false);
 
   const handleAddResearch = () => {
-    if (!newResearch.title.trim() || !newResearch.institution.trim() || !newResearch.startDate.trim()) return;
+    if (!newResearch.title.trim() || !newResearch.institution.trim() || !newResearch.startDate.trim() || !newResearch.description.trim()) return;
 
     onUpdate({
       research: [...(data.research || []), newResearch],

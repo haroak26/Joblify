@@ -74,6 +74,8 @@ type ResumeSection = {
   component: React.ComponentType<any>;
 };
 
+const DEFAULT_SECTIONS = ["personal", "summary", "experience", "education", "skills"];
+
 const allSections: ResumeSection[] = [
   { id: "personal", name: "Personal Info", icon: User, component: PersonalInfoSection },
   { id: "summary", name: "Summary", icon: FileText, component: SummarySection },
@@ -137,13 +139,11 @@ export default function ResumeBuilder() {
 
   // Determine which sections to display in sidebar
   const getVisibleSections = () => {
-    const defaultSections = ["personal", "summary", "experience", "education", "skills"];
-    
     // In manual mode, show all sections that have data or are default sections or are selected
     if (!isAIMode) {
       return allSections.filter(section => {
         // Always show default sections
-        if (defaultSections.includes(section.id)) return true;
+        if (DEFAULT_SECTIONS.includes(section.id)) return true;
         
         // Show if selected via component selector
         if (selectedComponents.includes(section.id)) return true;
@@ -303,7 +303,7 @@ export default function ResumeBuilder() {
     setSelectedComponents(components);
     // In manual mode, when components are selected, navigate to the first one
     if (!isAIMode && components.length > 0) {
-      const firstNewComponent = components.find(c => !["personal", "summary", "experience", "education", "skills"].includes(c));
+      const firstNewComponent = components.find(c => !DEFAULT_SECTIONS.includes(c));
       if (firstNewComponent) {
         setActiveSection(firstNewComponent);
       }
@@ -382,7 +382,7 @@ export default function ResumeBuilder() {
                 onClick={() => {
                   // Pre-populate with currently visible optional sections
                   const currentOptionalSections = visibleSections
-                    .filter(s => !["personal", "summary", "experience", "education", "skills"].includes(s.id))
+                    .filter(s => !DEFAULT_SECTIONS.includes(s.id))
                     .map(s => s.id);
                   // Check if arrays have the same elements (order-independent)
                   const arraysEqual = currentOptionalSections.length === selectedComponents.length &&
