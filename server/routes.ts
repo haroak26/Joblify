@@ -1694,7 +1694,7 @@ Format your response as JSON with these fields:
         userId,
         perkId: perk.id,
         codeId: redeemableCode.id,
-        expiresAt: expiresAt || undefined,
+        expiresAt: expiresAt ?? undefined,
         isActive: true,
         remainingValue: perk.value,
       });

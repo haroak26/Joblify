@@ -1536,7 +1536,7 @@ function CodeRedemptionForm() {
           type="text"
           placeholder="Enter your code"
           value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          onChange={(e) => setCode(e.target.value.toUpperCase().trim())}
           className="flex-1 font-mono"
           maxLength={50}
         />
