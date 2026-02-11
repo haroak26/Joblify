@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Footer } from "@/components/footer";
 import { Briefcase, Mail, MessageSquare, Send, CheckCircle2, Sparkles, Loader2, AlertCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -204,113 +205,130 @@ export default function Contact() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {aiResponse ? (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                      <div className="flex items-start gap-2 mb-3">
-                        <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <h3 className="font-semibold text-primary">AI Assistant Response</h3>
+                <AnimatePresence mode="wait">
+                  {aiResponse ? (
+                    <motion.div
+                      key="ai-response"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4"
+                    >
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                        <div className="flex items-start gap-2 mb-3">
+                          <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <h3 className="font-semibold text-primary">AI Assistant Response</h3>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{aiResponse}</p>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{aiResponse}</p>
-                    </div>
-                    
-                    <div className="p-4 rounded-lg bg-muted/50 border">
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Did this answer your question?
+                      
+                      <div className="p-4 rounded-lg bg-muted/50 border">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Did this answer your question?
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleAcceptAiResponse}
+                            variant="default"
+                            className="flex-1"
+                            disabled={isSendingEmail}
+                          >
+                            <ThumbsUp className="w-4 h-4 mr-2" />
+                            Yes, I'm satisfied
+                          </Button>
+                          <Button
+                            onClick={handleRejectAiResponse}
+                            variant="outline"
+                            className="flex-1"
+                            disabled={isSendingEmail}
+                          >
+                            {isSendingEmail ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <ThumbsDown className="w-4 h-4 mr-2" />
+                                Contact Support
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground text-center">
+                        Choosing "Contact Support" will forward your message to our team
                       </p>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleAcceptAiResponse}
-                          variant="default"
-                          className="flex-1"
-                          disabled={isSendingEmail}
-                        >
-                          <ThumbsUp className="w-4 h-4 mr-2" />
-                          Yes, I'm satisfied
-                        </Button>
-                        <Button
-                          onClick={handleRejectAiResponse}
-                          variant="outline"
-                          className="flex-1"
-                          disabled={isSendingEmail}
-                        >
-                          {isSendingEmail ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <ThumbsDown className="w-4 h-4 mr-2" />
-                              Contact Support
-                            </>
-                          )}
-                        </Button>
+                    </motion.div>
+                  ) : (
+                    <motion.form
+                      key="contact-form"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      onSubmit={handleSubmit}
+                      className="space-y-4"
+                    >
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          placeholder="Your name"
+                          required
+                          disabled={isSubmitting}
+                        />
                       </div>
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground text-center">
-                      Choosing "Contact Support" will forward your message to our team
-                    </p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        placeholder="Your name"
-                        required
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="your.email@example.com"
-                        required
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="message">Message</Label>
-                      <Textarea
-                        id="message"
-                        name="message"
-                        value={formData.message}
-                        onChange={handleChange}
-                        placeholder="How can we help you? Our AI will try to answer your question first, or forward it to our support team."
-                        rows={6}
-                        required
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Getting AI Response...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4 mr-2" />
-                          Send Message
-                        </>
-                      )}
-                    </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Our AI will attempt to answer your question instantly. If needed, we'll forward it to our support team.
-                    </p>
-                  </form>
-                )}
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          placeholder="your.email@example.com"
+                          required
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="message">Message</Label>
+                        <Textarea
+                          id="message"
+                          name="message"
+                          value={formData.message}
+                          onChange={handleChange}
+                          placeholder="How can we help you? Our AI will try to answer your question first, or forward it to our support team."
+                          rows={6}
+                          required
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Getting AI Response...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            Send Message
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Our AI will attempt to answer your question instantly. If needed, we'll forward it to our support team.
+                      </p>
+                    </motion.form>
+                  )}
+                </AnimatePresence>
               </CardContent>
             </Card>
 

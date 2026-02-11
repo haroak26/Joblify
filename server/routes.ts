@@ -1218,10 +1218,10 @@ Guidelines:
 - Don't make up information not in the knowledge base
       `.trim();
 
-      // Call POE API with GPT-5-nano
+      // Call POE API with fast, efficient model for customer support
       const poe = getPoeClient();
       const completion = await poe.chat.completions.create({
-        model: "GPT-3.5-Turbo", // Using GPT-3.5-Turbo as fallback since GPT-5-nano may not be available
+        model: "Claude-3.5-Haiku", // Fast model optimized for customer support responses
         messages: [
           {
             role: "system",
