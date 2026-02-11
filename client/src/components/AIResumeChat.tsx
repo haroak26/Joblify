@@ -48,6 +48,15 @@ export default function AIResumeChat({
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Update activeComponents when selectedComponents prop changes
+  useEffect(() => {
+    // If components changed from empty to non-empty, reset messages to show new greeting
+    if (selectedComponents.length > 0 && activeComponents.length === 0 && messages.length > 0) {
+      setMessages([]);
+    }
+    setActiveComponents(selectedComponents);
+  }, [selectedComponents]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
@@ -84,7 +93,7 @@ export default function AIResumeChat({
       const greeting = focusedComponent
         ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
         : isGuidedBuilder
-        ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I'll guide you step-by-step through creating your professional resume, starting with ${activeComponents[0] || 'your personal information'}. Let's create something amazing together!`
+        ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I already have your name and email, so let's start with your professional summary. This is a brief overview of your career and key strengths - think of it as your elevator pitch. What would you like to highlight about your professional background?`
         : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
       
       setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
@@ -285,7 +294,7 @@ export default function AIResumeChat({
 
               {/* Message Content */}
               <div
-                className={`flex-1 rounded-lg p-3 ${
+                className={`flex-1 rounded-b-lg rounded-t-md p-3 ${
                   message.role === "user"
                     ? "bg-primary text-primary-foreground ml-12"
                     : "bg-muted mr-12"
@@ -302,7 +311,7 @@ export default function AIResumeChat({
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <div className="bg-muted rounded-lg p-3">
+              <div className="bg-muted rounded-b-lg rounded-t-md p-3">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-sm text-muted-foreground">AI is thinking...</span>
