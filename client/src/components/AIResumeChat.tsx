@@ -78,10 +78,13 @@ export default function AIResumeChat({
         onUpdate(updates);
       }
       
+      // Determine the mode: full builder or enhancement
+      const isFullBuilder = activeComponents.length > 0 && !focusedComponent;
+      
       const greeting = focusedComponent
         ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
-        : activeComponents.length > 0
-        ? `Welcome ${firstName}! I can help you enhance these sections: ${activeComponents.join(', ')}. What would you like to refine or improve?`
+        : isFullBuilder
+        ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I'll guide you step-by-step through creating your professional resume, starting with ${activeComponents[0] || 'your personal information'}. Let's create something amazing together!`
         : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
       
       setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
@@ -207,9 +210,17 @@ export default function AIResumeChat({
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold">AI Resume Enhancement</h3>
+              <h3 className="font-semibold">
+                {activeComponents.length > 0 && !focusedComponent
+                  ? "AI Resume Builder"
+                  : "AI Resume Enhancement"}
+              </h3>
               <p className="text-xs text-muted-foreground">
-                {focusedComponent ? `Enhancing ${focusedComponent}` : "Polish and improve your resume"}
+                {focusedComponent 
+                  ? `Enhancing ${focusedComponent}` 
+                  : activeComponents.length > 0
+                  ? "Building your resume step-by-step"
+                  : "Polish and improve your resume"}
               </p>
             </div>
           </div>

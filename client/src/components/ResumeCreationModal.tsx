@@ -103,13 +103,13 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                      AI-Powered Creation
+                      AI Resume Builder
                       <span className="text-[10px] uppercase tracking-wider bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full font-bold">
                         New
                       </span>
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Chat with our AI assistant to build your resume naturally through conversation.
+                      Our AI guides you step-by-step through creating each resume section naturally through conversation.
                     </p>
                     <Button 
                       onClick={handleAIBuilder}
