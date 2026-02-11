@@ -30,6 +30,12 @@ import {
   Palette,
   Home,
   X,
+  Award,
+  FolderGit2,
+  Trophy,
+  Users,
+  FlaskConical,
+  BookOpen,
 } from "lucide-react";
 import type { Resume, ResumeData } from "@shared/schema";
 
@@ -39,6 +45,12 @@ import ExperienceSection from "@/components/resume-sections/ExperienceSection";
 import EducationSection from "@/components/resume-sections/EducationSection";
 import SkillsSection from "@/components/resume-sections/SkillsSection";
 import SummarySection from "@/components/resume-sections/SummarySection";
+import AwardsSection from "@/components/resume-sections/AwardsSection";
+import CertificationsSection from "@/components/resume-sections/CertificationsSection";
+import ProjectsSection from "@/components/resume-sections/ProjectsSection";
+import LeadershipSection from "@/components/resume-sections/LeadershipSection";
+import ResearchSection from "@/components/resume-sections/ResearchSection";
+import PublicationsSection from "@/components/resume-sections/PublicationsSection";
 
 // Resume preview component
 import ResumePreview from "@/components/resume-preview/ResumePreview";
@@ -62,12 +74,20 @@ type ResumeSection = {
   component: React.ComponentType<any>;
 };
 
-const sections: ResumeSection[] = [
+const DEFAULT_SECTIONS = ["personal", "summary", "experience", "education", "skills"];
+
+const allSections: ResumeSection[] = [
   { id: "personal", name: "Personal Info", icon: User, component: PersonalInfoSection },
   { id: "summary", name: "Summary", icon: FileText, component: SummarySection },
   { id: "experience", name: "Experience", icon: Briefcase, component: ExperienceSection },
   { id: "education", name: "Education", icon: GraduationCap, component: EducationSection },
   { id: "skills", name: "Skills", icon: Sparkles, component: SkillsSection },
+  { id: "certifications", name: "Certifications", icon: Award, component: CertificationsSection },
+  { id: "projects", name: "Projects", icon: FolderGit2, component: ProjectsSection },
+  { id: "awards", name: "Awards", icon: Trophy, component: AwardsSection },
+  { id: "leadership", name: "Leadership", icon: Users, component: LeadershipSection },
+  { id: "research", name: "Research", icon: FlaskConical, component: ResearchSection },
+  { id: "publications", name: "Publications", icon: BookOpen, component: PublicationsSection },
 ];
 
 export default function ResumeBuilder() {
@@ -116,6 +136,35 @@ export default function ResumeBuilder() {
       setShowComponentSelector(true);
     }
   }, [isAIMode, resumeData, selectedComponents.length]);
+
+  // Determine which sections to display in sidebar
+  const getVisibleSections = () => {
+    // In manual mode, show all sections that have data or are default sections or are selected
+    if (!isAIMode) {
+      return allSections.filter(section => {
+        // Always show default sections
+        if (DEFAULT_SECTIONS.includes(section.id)) return true;
+        
+        // Show if selected via component selector
+        if (selectedComponents.includes(section.id)) return true;
+        
+        // Show optional sections if they have data
+        if (section.id === "certifications" && resumeData?.certifications && resumeData.certifications.length > 0) return true;
+        if (section.id === "projects" && resumeData?.projects && resumeData.projects.length > 0) return true;
+        if (section.id === "awards" && resumeData?.awards && resumeData.awards.length > 0) return true;
+        if (section.id === "leadership" && resumeData?.leadership && resumeData.leadership.length > 0) return true;
+        if (section.id === "research" && resumeData?.research && resumeData.research.length > 0) return true;
+        if (section.id === "publications" && resumeData?.publications && resumeData.publications.length > 0) return true;
+        
+        return false;
+      });
+    }
+    
+    // In AI mode, sidebar is hidden, so return empty array
+    return [];
+  };
+
+  const visibleSections = getVisibleSections();
 
   // Pre-fill user data in traditional mode
   useEffect(() => {
@@ -252,6 +301,13 @@ export default function ResumeBuilder() {
 
   const handleComponentsSelected = (components: string[]) => {
     setSelectedComponents(components);
+    // In manual mode, when components are selected, navigate to the first one
+    if (!isAIMode && components.length > 0) {
+      const firstNewComponent = components.find(c => !DEFAULT_SECTIONS.includes(c));
+      if (firstNewComponent) {
+        setActiveSection(firstNewComponent);
+      }
+    }
   };
 
   const handleEditComponents = () => {
@@ -263,7 +319,7 @@ export default function ResumeBuilder() {
     setLocation(`/dashboard/resume-builder/${resumeId}?compiling=true`);
   };
 
-  const ActiveSectionComponent = sections.find((s) => s.id === activeSection)?.component;
+  const ActiveSectionComponent = allSections.find((s) => s.id === activeSection)?.component;
 
   if (isLoading) {
     return <ResumeEditorSkeleton />;
@@ -292,7 +348,7 @@ export default function ResumeBuilder() {
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {sections.map((section) => {
+              {visibleSections.map((section) => {
                 const Icon = section.icon;
                 return (
                   <div key={section.id} className="relative group">
@@ -320,6 +376,28 @@ export default function ResumeBuilder() {
                   </div>
                 );
               })}
+              
+              {/* Add Component button */}
+              <button
+                onClick={() => {
+                  // Pre-populate with currently visible optional sections
+                  const currentOptionalSections = visibleSections
+                    .filter(s => !DEFAULT_SECTIONS.includes(s.id))
+                    .map(s => s.id);
+                  // Check if arrays have the same elements (order-independent)
+                  const arraysEqual = currentOptionalSections.length === selectedComponents.length &&
+                    currentOptionalSections.every(s => selectedComponents.includes(s)) &&
+                    selectedComponents.every(s => currentOptionalSections.includes(s));
+                  if (!arraysEqual) {
+                    setSelectedComponents(currentOptionalSections);
+                  }
+                  setShowComponentSelector(true);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="flex-1 text-left">Add Section</span>
+              </button>
               
               <div className="py-2">
                 <Separator />
