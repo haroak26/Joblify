@@ -378,7 +378,16 @@ export default function ResumeBuilder() {
               
               {/* Add Component button */}
               <button
-                onClick={() => setShowComponentSelector(true)}
+                onClick={() => {
+                  // Pre-populate with currently visible optional sections
+                  const currentOptionalSections = visibleSections
+                    .filter(s => !["personal", "summary", "experience", "education", "skills"].includes(s.id))
+                    .map(s => s.id);
+                  if (selectedComponents.length === 0 || JSON.stringify(selectedComponents) !== JSON.stringify(currentOptionalSections)) {
+                    setSelectedComponents(currentOptionalSections);
+                  }
+                  setShowComponentSelector(true);
+                }}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-small text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <Plus className="w-4 h-4" />
