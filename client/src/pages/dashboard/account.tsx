@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, Gift, Tag } from "lucide-react";
 import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -438,7 +438,7 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+          <CleanTabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
             <CleanTabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Settings</span>
@@ -450,6 +450,10 @@ export default function Account() {
             <CleanTabsTrigger value="subscription" className="flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
               <span className="hidden sm:inline">Subscription</span>
+            </CleanTabsTrigger>
+            <CleanTabsTrigger value="perks" className="flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              <span className="hidden sm:inline">Perks & Codes</span>
             </CleanTabsTrigger>
             <CleanTabsTrigger value="data" className="flex items-center gap-2">
               <Database className="w-4 h-4" />
@@ -956,6 +960,44 @@ export default function Account() {
               </AlertDialog>
             </div>
           </CleanTabsContent>
+
+          {/* Perks & Codes Tab */}
+          <CleanTabsContent value="perks" className="space-y-6">
+            <div>
+              <h2 className="text-subheader font-bold">Perks & Redeemable Codes</h2>
+              <p className="text-muted-foreground">Redeem codes to unlock special perks and features</p>
+            </div>
+
+            {/* Code Redemption Section */}
+            <div className="border rounded-lg p-6 space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-large font-semibold flex items-center gap-2">
+                  <Tag className="w-5 h-5" />
+                  Redeem a Code
+                </h3>
+                <p className="text-small text-muted-foreground">
+                  Enter a redeemable code to unlock special perks, features, or temporary plan upgrades.
+                </p>
+              </div>
+
+              <CodeRedemptionForm />
+            </div>
+
+            {/* Active Perks Section */}
+            <div className="border rounded-lg p-6 space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-large font-semibold flex items-center gap-2">
+                  <Gift className="w-5 h-5" />
+                  Your Perks
+                </h3>
+                <p className="text-small text-muted-foreground">
+                  View and manage your redeemed perks and their current status.
+                </p>
+              </div>
+
+              <UserPerksList />
+            </div>
+          </CleanTabsContent>
         </CleanTabs>
       </div>
     </div>
@@ -1444,6 +1486,160 @@ function NotificationSettingsSection() {
           <Switch disabled checked={false} />
         </div>
       </div>
+    </div>
+  );
+}
+
+// Code Redemption Form Component
+function CodeRedemptionForm() {
+  const [code, setCode] = useState("");
+  const { toast } = useToast();
+
+  const redeemMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const response = await apiRequest("POST", "/api/codes/redeem", { code });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to redeem code");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Success!",
+        description: data.message,
+      });
+      setCode("");
+      // Refresh the perks list
+      queryClient.invalidateQueries({ queryKey: ["/api/codes/user-perks"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim()) {
+      redeemMutation.mutate(code.trim().toUpperCase());
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex gap-2">
+        <Input
+          type="text"
+          placeholder="Enter your code"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          className="flex-1 font-mono"
+          maxLength={50}
+        />
+        <Button 
+          type="submit" 
+          disabled={!code.trim() || redeemMutation.isPending}
+        >
+          {redeemMutation.isPending ? "Redeeming..." : "Redeem"}
+        </Button>
+      </div>
+      <p className="text-small text-muted-foreground">
+        Codes are case-insensitive. Get codes from promotional emails, social media, or special events.
+      </p>
+    </form>
+  );
+}
+
+// User Perks List Component
+function UserPerksList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/codes/user-perks"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/codes/user-perks");
+      if (!response.ok) throw new Error("Failed to fetch perks");
+      return response.json();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const perks = data?.perks || [];
+
+  if (perks.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <Gift className="w-12 h-12 mx-auto mb-3 opacity-50" />
+        <p className="text-large font-semibold">No perks redeemed yet</p>
+        <p className="text-small mt-1">Redeem a code above to unlock special perks!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {perks.map((perk: any) => {
+        const isExpired = perk.expiresAt && new Date(perk.expiresAt) < new Date();
+        const isActive = perk.isActive && !isExpired;
+
+        return (
+          <div 
+            key={perk.id} 
+            className={`border rounded-lg p-4 ${isActive ? 'bg-green-50/50 border-green-200' : 'bg-muted/50'}`}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold">{perk.perkName}</h4>
+                  {isActive && (
+                    <Badge variant="default" className="bg-green-600">Active</Badge>
+                  )}
+                  {isExpired && (
+                    <Badge variant="secondary">Expired</Badge>
+                  )}
+                  {!perk.isActive && !isExpired && (
+                    <Badge variant="secondary">Used</Badge>
+                  )}
+                </div>
+                <p className="text-small text-muted-foreground">{perk.perkDescription}</p>
+                
+                {/* Show remaining value for credit-based perks */}
+                {perk.remainingValue !== null && perk.remainingValue !== undefined && (
+                  <p className="text-small font-medium text-primary">
+                    Remaining: {perk.remainingValue}
+                  </p>
+                )}
+                
+                <div className="flex gap-4 text-small text-muted-foreground mt-2">
+                  <span className="flex items-center gap-1">
+                    <Tag className="w-3 h-3" />
+                    Code: {perk.code}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Redeemed: {new Date(perk.redeemedAt).toLocaleDateString()}
+                  </span>
+                  {perk.expiresAt && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Expires: {new Date(perk.expiresAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
