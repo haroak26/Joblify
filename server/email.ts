@@ -441,9 +441,9 @@ export async function sendContactFormEmail(options: {
       aiResponse
         ? `
     <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
-      <p style="font-size: 14px; color: #92400e; margin: 0 0 8px 0;"><strong>⚠️ Note: AI Response Was Shown</strong></p>
+      <p style="font-size: 14px; color: #92400e; margin: 0 0 8px 0;"><strong>⚠️ Note: AI Response Was Provided But Not Sufficient</strong></p>
       <p style="font-size: 14px; color: #78350f; margin: 0; white-space: pre-wrap;">${aiResponse}</p>
-      <p style="font-size: 13px; color: #92400e; margin: 12px 0 0 0; font-style: italic;">The user was not satisfied with the AI response and chose to contact support.</p>
+      <p style="font-size: 13px; color: #92400e; margin: 12px 0 0 0; font-style: italic;">The user reviewed this AI response but requested human support. Please prioritize this inquiry.</p>
     </div>
     `
         : ""

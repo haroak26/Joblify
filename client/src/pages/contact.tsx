@@ -304,11 +304,14 @@ export default function Contact() {
                           name="message"
                           value={formData.message}
                           onChange={handleChange}
-                          placeholder="How can we help you? Our AI will try to answer your question first, or forward it to our support team."
+                          placeholder="Describe your question or issue..."
                           rows={6}
                           required
                           disabled={isSubmitting}
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Our AI will attempt to answer instantly, or we'll forward to our support team.
+                        </p>
                       </div>
                       <Button type="submit" className="w-full" disabled={isSubmitting}>
                         {isSubmitting ? (
@@ -323,9 +326,6 @@ export default function Contact() {
                           </>
                         )}
                       </Button>
-                      <p className="text-xs text-muted-foreground text-center">
-                        Our AI will attempt to answer your question instantly. If needed, we'll forward it to our support team.
-                      </p>
                     </motion.form>
                   )}
                 </AnimatePresence>
