@@ -262,19 +262,26 @@ export function setupAdminRoutes(app: Express) {
       
       const weeklyUsageByFeature = await db
         .select({
-          week: sql<number>`FLOOR(EXTRACT(DAY FROM NOW() - ${aiUsageLogs.createdAt}) / 7)`,
+          week: sql<number>`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)`,
           featureName: aiUsageLogs.featureName,
           count: count(),
         })
         .from(aiUsageLogs)
         .where(sql`${aiUsageLogs.userId} = ${userId} AND ${aiUsageLogs.createdAt} >= ${fourWeeksAgo}`)
-        .groupBy(sql`FLOOR(EXTRACT(DAY FROM NOW() - ${aiUsageLogs.createdAt}) / 7)`, aiUsageLogs.featureName)
-        .orderBy(sql`FLOOR(EXTRACT(DAY FROM NOW() - ${aiUsageLogs.createdAt}) / 7)`);
+        .groupBy(sql`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)`, aiUsageLogs.featureName)
+        .orderBy(sql`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)`);
       
       // Format data for charts - create weekly buckets
-      const weeklyData = [];
+      interface WeeklyUsageData {
+        name: string;
+        edits: number;
+        scans: number;
+        letters: number;
+      }
+      
+      const weeklyData: WeeklyUsageData[] = [];
       for (let i = 3; i >= 0; i--) {
-        const weekData: any = { 
+        const weekData: WeeklyUsageData = { 
           name: `Week ${4 - i}`,
           edits: 0,
           scans: 0,
@@ -293,7 +300,8 @@ export function setupAdminRoutes(app: Express) {
             } else if (feature.includes('cover') || feature.includes('letter')) {
               weekData.letters += item.count;
             } else {
-              // Default to edits for other AI features
+              // Log unrecognized features for monitoring
+              console.log(`[Admin API] Unrecognized AI feature type: ${item.featureName}, defaulting to edits category`);
               weekData.edits += item.count;
             }
           });

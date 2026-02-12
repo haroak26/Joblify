@@ -338,11 +338,29 @@ export default function ResumeBuilder() {
     return <ResumeCompiling resumeId={resumeId!} />;
   }
 
+  // Responsive class names for better maintainability
+  const sidebarClasses = [
+    "w-full md:w-48",                    // Width: full on mobile, fixed on desktop
+    "border-b md:border-b-0 md:border-r", // Border: bottom on mobile, right on desktop
+    "border-border bg-card",              // Theme colors
+    "flex flex-col",                      // Flexbox layout
+    "max-h-[40vh] md:max-h-none",        // Height: constrained on mobile, full on desktop
+    "overflow-y-auto md:overflow-visible" // Scroll behavior
+  ].join(" ");
+
+  const headerClasses = [
+    "min-h-[56px] md:h-16",              // Height: flexible on mobile, fixed on desktop
+    "border-b border-border bg-card",     // Border and theme
+    "flex items-center justify-between",  // Flexbox layout
+    "px-3 sm:px-6",                       // Horizontal padding
+    isAIMode ? 'hidden md:flex' : 'flex'  // Conditional visibility in AI mode
+  ].join(" ");
+
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-background">
       {/* Conditionally render sidebar only in manual mode */}
       {!isAIMode && (
-        <div className="w-full md:w-48 border-b md:border-b-0 md:border-r border-border bg-card flex flex-col max-h-[40vh] md:max-h-none overflow-y-auto md:overflow-visible">
+        <div className={sidebarClasses}>
           <div className="p-4 border-b border-border">
             <h2 className="text-small font-semibold text-foreground">Components</h2>
           </div>
@@ -437,7 +455,7 @@ export default function ResumeBuilder() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className={`min-h-[56px] md:h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 ${isAIMode ? 'hidden md:flex' : 'flex'}`}>
+        <div className={headerClasses}>
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             {isEditingTitle ? (
               <Input
