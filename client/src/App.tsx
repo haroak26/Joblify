@@ -32,6 +32,7 @@ import Home from "@/pages/dashboard/home";
 import JobMatch from "@/pages/dashboard/job-match";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetter from "@/pages/dashboard/cover-letter";
+import AdminDashboard from "@/pages/dashboard/admin";
 
 function Router() {
   return (
@@ -104,6 +105,13 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <CoverLetter />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/admin">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <AdminDashboard />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
