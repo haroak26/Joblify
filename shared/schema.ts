@@ -27,12 +27,15 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   onboardingReminderSent: boolean("onboarding_reminder_sent").notNull().default(false),
   // Admin features
+  isAdmin: boolean("is_admin").notNull().default(false),
   aiAccessBlocked: boolean("ai_access_blocked").notNull().default(false),
   aiAccessBlockedAt: timestamp("ai_access_blocked_at"),
-  aiAccessBlockedReason: text("ai_access_blocked_reason"),
+  aiAccessBlockedBy: varchar("ai_access_blocked_by").references(() => users.id),
+  aiAccessBlockedReason: text("ai_access_blocked_reason"), // Internal note, not shown to user
   accountBlocked: boolean("account_blocked").notNull().default(false),
   accountBlockedAt: timestamp("account_blocked_at"),
-  accountBlockedReason: text("account_blocked_reason"),
+  accountBlockedBy: varchar("account_blocked_by").references(() => users.id),
+  accountBlockedReason: text("account_blocked_reason"), // Internal note, not shown to user
   lastLoginAt: timestamp("last_login_at"),
   lastLoginIpHash: text("last_login_ip_hash"),
 });
@@ -611,14 +614,18 @@ export const userPerks = pgTable("user_perks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   perkId: varchar("perk_id").notNull().references(() => perks.id),
-  codeId: varchar("code_id").notNull().references(() => redeemableCodes.id),
-  redeemedAt: timestamp("redeemed_at").notNull().default(sql`NOW()`),
+  codeId: varchar("code_id").references(() => redeemableCodes.id), // Optional - null for admin-awarded perks that bypass the code system
+  awardedBy: varchar("awarded_by").references(() => users.id), // Admin who awarded this perk directly
+  awardedAt: timestamp("awarded_at").notNull().default(sql`NOW()`), // When awarded by admin
+  redeemedAt: timestamp("redeemed_at"), // When user actually used/redeemed the perk
   expiresAt: timestamp("expires_at"), // For temporary perks
   isActive: boolean("is_active").notNull().default(true),
+  status: text("status").notNull().default('pending'), // 'pending', 'redeemed', 'expired'
   remainingValue: integer("remaining_value"), // For credits that can be partially used
 }, (table) => ({
   userIdIdx: index("user_perks_user_id_idx").on(table.userId),
   isActiveIdx: index("user_perks_is_active_idx").on(table.isActive),
+  statusIdx: index("user_perks_status_idx").on(table.status),
 }));
 
 // Relations for Redeemable Code system
@@ -648,6 +655,10 @@ export const userPerksRelations = relations(userPerks, ({ one }) => ({
     fields: [userPerks.codeId],
     references: [redeemableCodes.id],
   }),
+  awardedByAdmin: one(users, {
+    fields: [userPerks.awardedBy],
+    references: [users.id],
+  }),
 }));
 
 // Type schemas for Redeemable Code system
@@ -659,7 +670,7 @@ export const insertRedeemableCodeSchema = createInsertSchema(redeemableCodes).om
 export type InsertRedeemableCode = z.infer<typeof insertRedeemableCodeSchema>;
 export type RedeemableCode = typeof redeemableCodes.$inferSelect;
 
-export const insertUserPerkSchema = createInsertSchema(userPerks).omit({ id: true, redeemedAt: true });
+export const insertUserPerkSchema = createInsertSchema(userPerks).omit({ id: true, awardedAt: true });
 export type InsertUserPerk = z.infer<typeof insertUserPerkSchema>;
 export type UserPerk = typeof userPerks.$inferSelect;
 
@@ -732,7 +743,8 @@ export const aiUsageLogsRelations = relations(aiUsageLogs, ({ one }) => ({
 }));
 
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
-export type InsertAiUsageLog = z.infer<typeof createInsertSchema(aiUsageLogs).omit({ id: true, createdAt: true })>;
+const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({ id: true, createdAt: true });
+export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 
 // ============================================
 // User Activity Logs (Admin Dashboard)
@@ -760,7 +772,8 @@ export const userActivityLogsRelations = relations(userActivityLogs, ({ one }) =
 }));
 
 export type UserActivityLog = typeof userActivityLogs.$inferSelect;
-export type InsertUserActivityLog = z.infer<typeof createInsertSchema(userActivityLogs).omit({ id: true, createdAt: true })>;
+const insertUserActivityLogSchema = createInsertSchema(userActivityLogs).omit({ id: true, createdAt: true });
+export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
 
 // ============================================
 // Trusted Devices (2FA)
@@ -790,7 +803,8 @@ export const trustedDevicesRelations = relations(trustedDevices, ({ one }) => ({
 }));
 
 export type TrustedDevice = typeof trustedDevices.$inferSelect;
-export type InsertTrustedDevice = z.infer<typeof createInsertSchema(trustedDevices).omit({ id: true, trustedAt: true, lastUsedAt: true })>;
+const insertTrustedDeviceSchema = createInsertSchema(trustedDevices).omit({ id: true, trustedAt: true, lastUsedAt: true });
+export type InsertTrustedDevice = z.infer<typeof insertTrustedDeviceSchema>;
 
 // ============================================
 // Verification Codes (2FA)
@@ -818,7 +832,8 @@ export const verificationCodesRelations = relations(verificationCodes, ({ one })
 }));
 
 export type VerificationCode = typeof verificationCodes.$inferSelect;
-export type InsertVerificationCode = z.infer<typeof createInsertSchema(verificationCodes).omit({ id: true, createdAt: true })>;
+const insertVerificationCodeSchema = createInsertSchema(verificationCodes).omit({ id: true, createdAt: true });
+export type InsertVerificationCode = z.infer<typeof insertVerificationCodeSchema>;
 
 // ============================================
 // System Admin Logs (Security Audit)
@@ -851,4 +866,5 @@ export const systemAdminLogsRelations = relations(systemAdminLogs, ({ one }) => 
 }));
 
 export type SystemAdminLog = typeof systemAdminLogs.$inferSelect;
-export type InsertSystemAdminLog = z.infer<typeof createInsertSchema(systemAdminLogs).omit({ id: true, createdAt: true })>;
+const insertSystemAdminLogSchema = createInsertSchema(systemAdminLogs).omit({ id: true, createdAt: true });
+export type InsertSystemAdminLog = z.infer<typeof insertSystemAdminLogSchema>;
