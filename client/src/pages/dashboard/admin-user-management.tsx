@@ -186,9 +186,9 @@ export function AdminUserManagement() {
                   usersData?.users?.map((user: any) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">{user.name || user.username}</div>
-                          <div className="text-sm text-muted-foreground">@{user.username}</div>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.name || user.username}</span>
+                          <span className="text-xs text-muted-foreground">@{user.username}</span>
                         </div>
                       </TableCell>
                       <TableCell>{user.email}</TableCell>

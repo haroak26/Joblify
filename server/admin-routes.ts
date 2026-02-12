@@ -1,6 +1,6 @@
-import type { Express, Response } from "express";
+import type { Express, Response, Request } from "express";
 import { storage } from "./storage";
-import { requireAuth, type AuthenticatedRequest } from "./auth";
+import { requireAuth } from "./auth";
 import { requireAdmin, logAdminAction } from "./middleware/admin";
 import { sendPerkAwardedEmail, sendAccountBlockedEmail } from "./email";
 import { perks, userPerks } from "@shared/schema";
@@ -22,16 +22,18 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/users
    * Get all users with pagination and search
    */
-  app.get("/api/admin/users", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/users", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const search = req.query.search as string;
       
+      console.log('[API] Admin fetching users:', { page, limit, search });
       const result = await storage.getAllUsers({ page, limit, search });
+      console.log('[API] Admin fetch result:', { count: result.users.length, total: result.total });
       
       // Remove sensitive data before sending
-      const sanitizedUsers = result.users.map(user => ({
+      const sanitizedUsers = result.users.map((user: any) => ({
         id: user.id,
         name: user.name,
         username: user.username,
@@ -62,7 +64,7 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/users/:userId
    * Get detailed user information (GDPR compliant - no resume content)
    */
-  app.get("/api/admin/users/:userId", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/users/:userId", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       
@@ -83,7 +85,7 @@ export function setupAdminRoutes(app: Express) {
    * POST /api/admin/users/:userId/block-account
    * Block a user's account
    */
-  app.post("/api/admin/users/:userId/block-account", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.post("/api/admin/users/:userId/block-account", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const { reason } = req.body;
@@ -125,7 +127,7 @@ export function setupAdminRoutes(app: Express) {
    * POST /api/admin/users/:userId/unblock-account
    * Unblock a user's account
    */
-  app.post("/api/admin/users/:userId/unblock-account", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.post("/api/admin/users/:userId/unblock-account", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const adminId = req.session.userId!;
@@ -157,7 +159,7 @@ export function setupAdminRoutes(app: Express) {
    * POST /api/admin/users/:userId/block-ai
    * Block a user's AI access
    */
-  app.post("/api/admin/users/:userId/block-ai", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.post("/api/admin/users/:userId/block-ai", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const { reason } = req.body;
@@ -195,7 +197,7 @@ export function setupAdminRoutes(app: Express) {
    * POST /api/admin/users/:userId/unblock-ai
    * Unblock a user's AI access
    */
-  app.post("/api/admin/users/:userId/unblock-ai", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.post("/api/admin/users/:userId/unblock-ai", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const adminId = req.session.userId!;
@@ -227,7 +229,7 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/users/:userId/activity
    * Get user activity logs
    */
-  app.get("/api/admin/users/:userId/activity", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/users/:userId/activity", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const limit = parseInt(req.query.limit as string) || 50;
@@ -245,7 +247,7 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/users/:userId/ai-usage
    * Get user AI usage logs
    */
-  app.get("/api/admin/users/:userId/ai-usage", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/users/:userId/ai-usage", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const limit = parseInt(req.query.limit as string) || 50;
@@ -267,7 +269,7 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/perks
    * Get all available perks
    */
-  app.get("/api/admin/perks", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/perks", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const allPerks = await storage.getAllPerks();
       res.json({ perks: allPerks });
@@ -281,7 +283,7 @@ export function setupAdminRoutes(app: Express) {
    * POST /api/admin/users/:userId/award-perk
    * Award a perk to a user
    */
-  app.post("/api/admin/users/:userId/award-perk", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.post("/api/admin/users/:userId/award-perk", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const { perkId } = req.body;
@@ -340,7 +342,7 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/users/:userId/perks
    * Get all perks awarded to a user
    */
-  app.get("/api/admin/users/:userId/perks", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/users/:userId/perks", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       
@@ -372,7 +374,7 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/logs
    * Get admin action logs
    */
-  app.get("/api/admin/logs", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/logs", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 100;
@@ -407,10 +409,11 @@ export function setupAdminRoutes(app: Express) {
    * GET /api/admin/dashboard/stats
    * Get overall platform statistics
    */
-  app.get("/api/admin/dashboard/stats", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.get("/api/admin/dashboard/stats", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       // Get total user count
-      const { total: totalUsers } = await storage.getAllUsers({ page: 1, limit: 1 });
+      const result = await storage.getAllUsers({ page: 1, limit: 1 });
+      const totalUsers = result.total;
       
       // These stats would need more sophisticated queries in production
       // For now, returning basic structure

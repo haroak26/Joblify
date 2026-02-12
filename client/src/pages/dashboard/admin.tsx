@@ -11,9 +11,13 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("users");
 
   // Fetch dashboard stats
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/admin/dashboard/stats"],
   });
+
+  if (isLoading) {
+    return <div className="container mx-auto p-6">Loading dashboard stats...</div>;
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
