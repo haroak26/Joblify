@@ -109,10 +109,9 @@ export default function CoverLetterGenerator() {
                   Select a resume, paste the job description, choose your tone, and we'll do the rest!
                 </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Input Section */}
