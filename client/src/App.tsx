@@ -109,7 +109,7 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/dashboard/admin">
-        <ProtectedRoute>
+        <ProtectedRoute requireAdmin={true}>
           <DashboardLayout>
             <AdminDashboard />
           </DashboardLayout>
