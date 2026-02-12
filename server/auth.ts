@@ -285,7 +285,7 @@ export function setupAuth(app: Express) {
   app.post("/api/auth/resend-verification", authRateLimit, async (req: Request, res: Response) => {
     try {
       if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return res.status(401).json({ error: "Session expired. Please log in again to resend verification email." });
       }
 
       const user = await storage.getUser(req.session.userId);

@@ -14,6 +14,7 @@ interface User {
   username: string;
   email: string;
   emailVerified: boolean;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
@@ -72,7 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       setStoredUser(data.user as StoredUser);
       queryClient.clear();
-      setLocation("/dashboard");
+      // Redirect to admin dashboard if user is admin, otherwise regular dashboard
+      setLocation(data.user.isAdmin ? "/dashboard/admin" : "/dashboard");
     } catch (error) {
       if (error instanceof Error) {
         throw error;
