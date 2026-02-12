@@ -161,7 +161,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
                       {exp.startDate} - {exp.endDate || "Present"}
                     </p>
                   </div>
-                  {exp.description.length > 0 && (
+                  {exp.description && exp.description.length > 0 && (
                     <ul className="list-disc list-outside ml-5 mt-2 space-y-1">
                       {exp.description.map((item, i) => (
                         <li key={i} className="text-sm text-gray-800 leading-relaxed">
