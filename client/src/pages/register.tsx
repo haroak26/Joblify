@@ -54,6 +54,8 @@ type RegistrationData = {
   username: string;
 };
 
+const TOTAL_STEPS = 3;
+
 export default function Register() {
   const { register, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -150,7 +152,7 @@ export default function Register() {
     }
   };
 
-  const progress = (step / 3) * 100;
+  const progress = (step / TOTAL_STEPS) * 100;
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
@@ -184,7 +186,7 @@ export default function Register() {
           </div>
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
-            <p className="text-xs text-muted-foreground">Step {step} of 3</p>
+            <p className="text-xs text-muted-foreground">Step {step} of {TOTAL_STEPS}</p>
           </div>
         </CardHeader>
         <CardContent>
