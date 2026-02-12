@@ -6,7 +6,7 @@ import {
   skillSchema, normalizePlan, resumes, users, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
   redeemableCodes, perks, userPerks, type PlanType
 } from "@shared/schema";
-import { requireAuth, requireVerifiedEmail, hashPassword, comparePasswords, isStrongPassword } from "./auth";
+import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
@@ -590,7 +590,7 @@ export async function registerRoutes(
       }
 
       // Verify current password
-      const isValid = await comparePasswords(currentPassword, user.password);
+      const isValid = await verifyPassword(user.password, currentPassword);
       if (!isValid) {
         return res.status(400).json({ error: "Current password is incorrect" });
       }
@@ -730,7 +730,7 @@ export async function registerRoutes(
       }
 
       // Verify password
-      const isValid = await comparePasswords(password, user.password);
+      const isValid = await verifyPassword(user.password, password);
       if (!isValid) {
         return res.status(400).json({ error: "Incorrect password" });
       }
