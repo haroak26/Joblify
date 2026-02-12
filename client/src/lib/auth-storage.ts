@@ -7,6 +7,7 @@ export interface StoredUser {
   username: string;
   email: string;
   emailVerified: boolean;
+  isAdmin?: boolean;
 }
 
 export interface Auth0Tokens {
