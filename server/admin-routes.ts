@@ -3,9 +3,9 @@ import { storage } from "./storage";
 import { requireAuth } from "./auth";
 import { requireAdmin, logAdminAction } from "./middleware/admin";
 import { sendPerkAwardedEmail, sendAccountBlockedEmail } from "./email";
-import { perks, userPerks, redeemableCodes } from "@shared/schema";
+import { perks, userPerks, redeemableCodes, users, aiUsageLogs } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, gte, desc, sql, count } from "drizzle-orm";
 import crypto from "crypto";
 
 /**
@@ -245,16 +245,66 @@ export function setupAdminRoutes(app: Express) {
   
   /**
    * GET /api/admin/users/:userId/ai-usage
-   * Get user AI usage logs
+   * Get user AI usage logs with aggregation for charts
    */
   app.get("/api/admin/users/:userId/ai-usage", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const limit = parseInt(req.query.limit as string) || 50;
       
+      // Get raw AI usage logs
       const aiUsage = await storage.getUserAiUsageLogs(userId, limit);
       
-      res.json({ aiUsage });
+      // Get aggregated usage for last 4 weeks by feature
+      const fourWeeksAgo = new Date();
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+      fourWeeksAgo.setHours(0, 0, 0, 0);
+      
+      const weeklyUsageByFeature = await db
+        .select({
+          week: sql<number>`FLOOR(EXTRACT(DAY FROM NOW() - ${aiUsageLogs.createdAt}) / 7)`,
+          featureName: aiUsageLogs.featureName,
+          count: count(),
+        })
+        .from(aiUsageLogs)
+        .where(sql`${aiUsageLogs.userId} = ${userId} AND ${aiUsageLogs.createdAt} >= ${fourWeeksAgo}`)
+        .groupBy(sql`FLOOR(EXTRACT(DAY FROM NOW() - ${aiUsageLogs.createdAt}) / 7)`, aiUsageLogs.featureName)
+        .orderBy(sql`FLOOR(EXTRACT(DAY FROM NOW() - ${aiUsageLogs.createdAt}) / 7)`);
+      
+      // Format data for charts - create weekly buckets
+      const weeklyData = [];
+      for (let i = 3; i >= 0; i--) {
+        const weekData: any = { 
+          name: `Week ${4 - i}`,
+          edits: 0,
+          scans: 0,
+          letters: 0,
+        };
+        
+        // Map features to categories
+        weeklyUsageByFeature
+          .filter((item) => item.week === i)
+          .forEach((item) => {
+            const feature = item.featureName.toLowerCase();
+            if (feature.includes('improve') || feature.includes('keyword') || feature.includes('grammar') || feature.includes('tone')) {
+              weekData.edits += item.count;
+            } else if (feature.includes('ats') || feature.includes('scan')) {
+              weekData.scans += item.count;
+            } else if (feature.includes('cover') || feature.includes('letter')) {
+              weekData.letters += item.count;
+            } else {
+              // Default to edits for other AI features
+              weekData.edits += item.count;
+            }
+          });
+        
+        weeklyData.push(weekData);
+      }
+      
+      res.json({ 
+        aiUsage,
+        weeklyData,
+      });
     } catch (error) {
       console.error("Error fetching AI usage:", error);
       res.status(500).json({ error: "Failed to fetch AI usage" });
@@ -517,16 +567,69 @@ export function setupAdminRoutes(app: Express) {
       const result = await storage.getAllUsers({ page: 1, limit: 1 });
       const totalUsers = result.total;
       
-      // These stats would need more sophisticated queries in production
-      // For now, returning basic structure
+      // Get users created today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const [usersToday] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(gte(users.createdAt, today));
+      
+      // Get users who logged in within last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const [activeUsers] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(gte(users.lastLoginAt, sevenDaysAgo));
+      
+      // Get blocked accounts count
+      const [blockedAccounts] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(eq(users.accountBlocked, true));
+      
+      // Get AI usage for the last 7 days (grouped by day)
+      const sevenDaysAgoStart = new Date();
+      sevenDaysAgoStart.setDate(sevenDaysAgoStart.getDate() - 6);
+      sevenDaysAgoStart.setHours(0, 0, 0, 0);
+      
+      const weeklyUsage = await db
+        .select({
+          date: sql<string>`DATE(${aiUsageLogs.createdAt})`,
+          count: count(),
+        })
+        .from(aiUsageLogs)
+        .where(gte(aiUsageLogs.createdAt, sevenDaysAgoStart))
+        .groupBy(sql`DATE(${aiUsageLogs.createdAt})`)
+        .orderBy(sql`DATE(${aiUsageLogs.createdAt})`);
+      
+      // Format weekly usage data for charting
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const aiUsageByDay = [];
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(sevenDaysAgoStart);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        const dayName = daysOfWeek[date.getDay()];
+        
+        const usage = weeklyUsage.find(u => u.date === dateStr);
+        aiUsageByDay.push({
+          name: dayName,
+          usage: usage ? usage.count : 0,
+          date: dateStr,
+        });
+      }
+      
       res.json({
         totalUsers,
         stats: {
-          // Add more stats as needed
-          usersToday: 0, // Would need to query users created today
-          activeUsers: 0, // Would need to query recent logins
-          blockedAccounts: 0, // Would need to count blocked users
+          usersToday: usersToday?.count || 0,
+          activeUsers: activeUsers?.count || 0,
+          blockedAccounts: blockedAccounts?.count || 0,
         },
+        aiUsageByDay,
       });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
