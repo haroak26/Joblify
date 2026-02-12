@@ -499,7 +499,7 @@ export async function registerRoutes(
       console.log('[API] Intro validated - length:', intro.length);
       
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-4.5-haiku",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
@@ -576,7 +576,7 @@ export async function registerRoutes(
       const prompt = `Generate a professional cover letter based on this resume and job description.\n\nResume:\n${JSON.stringify(resume.resumeData)}\n\nJob Description:\n${jobDescription}`;
       
       const response = await getPoeClient().chat.completions.create({
-        model: "claude-3-5-haiku",
+        model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: prompt }],
       });
 
