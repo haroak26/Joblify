@@ -1,12 +1,17 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
+import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "./email";
-
-const scryptAsync = promisify(scrypt);
+import { 
+  hashPassword, 
+  verifyPassword, 
+  isStrongPassword,
+  generateSecureToken,
+  isArgon2Hash
+} from "./lib/crypto";
+import { authRateLimit, registrationRateLimit, trackLoginAttempt, resetLoginAttempts, isAccountLocked } from "./middleware/security";
 
 declare module "express-session" {
   interface SessionData {
@@ -22,65 +27,26 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
-
-export async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
-  const [hashedPassword, salt] = stored.split(".");
-  const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-  const suppliedPasswordBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
-}
-
-export function isStrongPassword(password: string): { valid: boolean; message?: string } {
-  if (password.length < 8) {
-    return { valid: false, message: "Password must be at least 8 characters" };
-  }
-  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
-    return { valid: false, message: "Password must include uppercase and lowercase letters" };
-  }
-  if (!/\d/.test(password)) {
-    return { valid: false, message: "Password must include at least one number" };
-  }
-  return { valid: true };
-}
-
-function generateVerificationToken(): string {
-  return randomBytes(32).toString("hex");
-}
-
-function createRateLimiter(windowMs: number, maxRequests: number) {
-  const attempts = new Map<string, { count: number; resetAt: number }>();
-  return (req: Request, res: Response): boolean => {
-    const key = req.ip ?? "unknown";
-    const now = Date.now();
-    const entry = attempts.get(key);
-    if (entry && entry.resetAt > now) {
-      if (entry.count >= maxRequests) {
-        res.status(429).json({ error: "Too many requests. Please try again later." });
-        return false;
-      }
-      entry.count += 1;
-      attempts.set(key, entry);
-      return true;
-    }
-    attempts.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  };
-}
+// Export for use in other modules
+// Export for use in other modules
+export { hashPassword, verifyPassword, isStrongPassword };
 
 // Helper to generate username from email
 function generateUsername(email: string): string {
-  return email.split('@')[0] + randomBytes(3).toString('hex');
+  return email.split('@')[0] + generateSecureToken(3).substring(0, 6);
 }
+
+// Password reset rate limiter
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // 3 requests per 15 minutes
+  message: "Too many password reset requests. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export function setupAuth(app: Express) {
   const MemoryStoreSession = MemoryStore(session);
-  const authLimiter = createRateLimiter(15 * 60 * 1000, 20);
-  const passwordResetLimiter = createRateLimiter(15 * 60 * 1000, 10);
 
   // Session middleware (still needed for backwards compatibility and token storage)
   app.use(
@@ -100,10 +66,9 @@ export function setupAuth(app: Express) {
     })
   );
 
-  // Register endpoint - session-based authentication
-  app.post("/api/auth/register", async (req: Request, res: Response) => {
+  // Register endpoint - session-based authentication with rate limiting
+  app.post("/api/auth/register", registrationRateLimit, async (req: Request, res: Response) => {
     try {
-      if (!authLimiter(req, res)) return;
       const { name, username, email, password, intro, skills } = req.body;
 
       if (!email || !password) {
@@ -152,9 +117,9 @@ export function setupAuth(app: Express) {
 
       let user;
       
-      // Create user with legacy authentication
+      // Create user with Argon2 password hashing
       const hashedPassword = await hashPassword(password);
-      const verificationToken = generateVerificationToken();
+      const verificationToken = generateSecureToken(32);
       
       user = await storage.createUser({
         name,
@@ -197,24 +162,43 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  // Login endpoint with enhanced security
+  app.post("/api/auth/login", authRateLimit, async (req: Request, res: Response) => {
     try {
-      if (!authLimiter(req, res)) return;
       const { username, password } = req.body;
 
       if (!username || !password) {
         return res.status(400).json({ error: "Username and password are required" });
       }
 
+      // Check if account is locked due to failed attempts
+      if (isAccountLocked(username)) {
+        return res.status(429).json({ 
+          error: "Account temporarily locked due to multiple failed login attempts. Please try again in 15 minutes." 
+        });
+      }
+
       // Use session-based authentication
       const user = await storage.getUserByUsername(username);
       if (!user) {
+        trackLoginAttempt(username);
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const isValid = await comparePasswords(password, user.password);
+      const isValid = await verifyPassword(user.password, password);
       if (!isValid) {
+        trackLoginAttempt(username);
         return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Successful login - reset attempts
+      resetLoginAttempts(username);
+
+      // Auto-upgrade password hash if using legacy scrypt
+      if (!isArgon2Hash(user.password)) {
+        console.log(`[AUTH] Auto-upgrading password hash for user ${user.id}`);
+        const newHash = await hashPassword(password);
+        await storage.updateUser(user.id, { password: newHash });
       }
 
       req.session.userId = user.id;
@@ -296,9 +280,8 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/auth/resend-verification", async (req: Request, res: Response) => {
+  app.post("/api/auth/resend-verification", authRateLimit, async (req: Request, res: Response) => {
     try {
-      if (!authLimiter(req, res)) return;
       if (!req.session.userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
@@ -312,21 +295,20 @@ export function setupAuth(app: Express) {
         return res.json({ message: "Email already verified" });
       }
 
-      const verificationToken = generateVerificationToken();
+      const verificationToken = generateSecureToken(32);
       await storage.updateUser(user.id, { verificationToken });
 
       await sendVerificationEmail(user.email, user.username, verificationToken);
 
-      res.json({ message: "Verification email sent" });
+      res.json({ message: "Verification email" });
     } catch (error) {
       console.error("Resend verification error:", error);
       res.status(500).json({ error: "Failed to resend verification email" });
     }
   });
 
-  app.post("/api/auth/request-password-reset", async (req: Request, res: Response) => {
+  app.post("/api/auth/request-password-reset", passwordResetLimiter, async (req: Request, res: Response) => {
     try {
-      if (!passwordResetLimiter(req, res)) return;
       const { email } = req.body;
       if (!email || typeof email !== "string") {
         return res.status(400).json({ error: "Email is required" });
@@ -335,7 +317,7 @@ export function setupAuth(app: Express) {
       // Session-based password reset
       const user = await storage.getUserByEmail(email);
       if (user) {
-        const token = randomBytes(32).toString("hex");
+        const token = generateSecureToken(32);
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
         await storage.updateUser(user.id, {
           passwordResetToken: token,
@@ -351,9 +333,8 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+  app.post("/api/auth/reset-password", passwordResetLimiter, async (req: Request, res: Response) => {
     try {
-      if (!passwordResetLimiter(req, res)) return;
       const { token, password } = req.body;
 
       if (!token || typeof token !== "string") {
