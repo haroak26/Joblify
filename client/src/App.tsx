@@ -33,6 +33,7 @@ import JobMatch from "@/pages/dashboard/job-match";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetter from "@/pages/dashboard/cover-letter";
 import AdminDashboard from "@/pages/dashboard/admin";
+import AdminUserDetails from "@/pages/dashboard/admin-user-details";
 
 function DashboardRedirect() {
   const { user } = useAuth();
@@ -120,6 +121,13 @@ function Router() {
         <ProtectedRoute requireAdmin={true}>
           <DashboardLayout>
             <AdminDashboard />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/admin/users/:userId">
+        <ProtectedRoute requireAdmin={true}>
+          <DashboardLayout>
+            <AdminUserDetails />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
