@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, Briefcase, Moon, Sun, FileText, Target, Search, FileEdit } from "lucide-react";
+import { Home, User, Briefcase, Moon, Sun, FileText, Target, Search, FileEdit, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -59,6 +59,14 @@ export function AppSidebar() {
   const subscriptionQuery = useQuery<SubscriptionResponse>({
     queryKey: ["/api/subscription"],
   });
+  
+  // Check if user is admin
+  const { data: userDetailsData } = useQuery({
+    queryKey: ["/api/auth/me"],
+    enabled: !!user,
+  });
+  
+  const isAdmin = userDetailsData?.user?.isAdmin || false;
   
   const planValue = normalizePlan(subscriptionQuery.data?.subscription?.plan);
   const planLabel = planValue === "ultra"
@@ -133,6 +141,34 @@ export function AppSidebar() {
             ))}
           </SidebarMenu>
         </SidebarGroup>
+        
+        {/* Admin Section */}
+        {isAdmin && (
+          <>
+            <SidebarSeparator className="my-2" />
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-xs text-muted-foreground px-3">Admin</SidebarGroupLabel>
+              <SidebarMenu className="gap-1">
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={isActive("/dashboard/admin")}
+                    className={`h-9 px-3 rounded-md transition-colors ${
+                      isActive("/dashboard/admin") 
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                    }`}
+                  >
+                    <Link href="/dashboard/admin">
+                      <Shield className="w-4 h-4" />
+                      <span className="text-sm">Admin Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-2 mt-auto">

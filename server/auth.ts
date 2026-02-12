@@ -210,6 +210,7 @@ export function setupAuth(app: Express) {
           username: user.username,
           email: user.email,
           emailVerified: user.emailVerified,
+          isAdmin: user.isAdmin,
         },
       });
     } catch (error) {
@@ -245,6 +246,7 @@ export function setupAuth(app: Express) {
         username: user.username,
         email: user.email,
         emailVerified: user.emailVerified,
+        isAdmin: user.isAdmin,
       },
     });
   });
