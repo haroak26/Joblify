@@ -90,8 +90,8 @@ export default function CoverLetterGenerator() {
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-            <FileText className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-3xl font-bold">AI Cover Letter Generator</h1>

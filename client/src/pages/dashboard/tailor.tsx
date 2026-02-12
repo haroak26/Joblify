@@ -166,6 +166,19 @@ export default function TailorPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">AI Resume & Cover Letter Tailor</h1>
+            <p className="text-muted-foreground">Customize your application for specific job requirements</p>
+          </div>
+        </div>
+      </div>
+      
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>

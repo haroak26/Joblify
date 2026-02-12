@@ -113,14 +113,18 @@ export default function AtsScanner() {
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
-          <Search className="w-6 h-6 text-primary" />
-          ATS Resume Scanner
-        </h2>
-        <p className="text-muted-foreground">
-          Deep analysis of your resume's ATS compatibility with actionable insights
-        </p>
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <Search className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">ATS Resume Scanner</h1>
+            <p className="text-muted-foreground">
+              Deep analysis of your resume's ATS compatibility with actionable insights
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Scan Configuration */}
