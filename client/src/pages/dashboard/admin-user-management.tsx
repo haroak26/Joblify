@@ -21,7 +21,7 @@ export function AdminUserManagement() {
   const [blockDialog, setBlockDialog] = useState(false);
   const [blockType, setBlockType] = useState<"account" | "ai">("account");
   const [blockReason, setBlockReason] = useState("");
-  const [perkDialog, setPerkDialog] = useState(false);
+  const [codeDialog, setCodeDialog] = useState(false);
   const [selectedPerk, setSelectedPerk] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -126,24 +126,24 @@ export function AdminUserManagement() {
     },
   });
 
-  // Award perk mutation  
-  const awardPerkMutation = useMutation({
-    mutationFn: async ({ userId, perkId }: { userId: string; perkId: string }) => {
-      const res = await fetch(`/api/admin/users/${userId}/award-perk`, {
+  // Create perk code mutation  
+  const createCodeMutation = useMutation({
+    mutationFn: async ({ userEmail, perkId }: { userEmail: string; perkId: string }) => {
+      const res = await fetch(`/api/admin/codes/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ perkId }),
+        body: JSON.stringify({ userEmail, perkId }),
       });
-      if (!res.ok) throw new Error("Failed to award perk");
+      if (!res.ok) throw new Error("Failed to create perk code");
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Perk awarded and email sent to user" });
-      setPerkDialog(false);
+      toast({ title: "Success", description: "Perk code created and email sent to user" });
+      setCodeDialog(false);
       setSelectedPerk("");
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to award perk", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to create perk code", variant: "destructive" });
     },
   });
 
@@ -160,12 +160,12 @@ export function AdminUserManagement() {
     }
   };
 
-  const handleAwardPerk = () => {
+  const handleCreateCode = () => {
     if (!selectedUser || !selectedPerk) {
       toast({ title: "Error", description: "Please select a perk", variant: "destructive" });
       return;
     }
-    awardPerkMutation.mutate({ userId: selectedUser.id, perkId: selectedPerk });
+    createCodeMutation.mutate({ userEmail: selectedUser.email, perkId: selectedPerk });
   };
 
   return (
@@ -262,7 +262,7 @@ export function AdminUserManagement() {
                                 variant="outline"
                                 onClick={() => {
                                   setSelectedUser(user);
-                                  setPerkDialog(true);
+                                  setCodeDialog(true);
                                 }}
                               >
                                 <Gift className="h-4 w-4" />
@@ -348,18 +348,18 @@ export function AdminUserManagement() {
           )}
         </div>
 
-      {/* Award Perk Dialog */}
-      <Dialog open={perkDialog} onOpenChange={setPerkDialog}>
+      {/* Create Perk Code Dialog */}
+      <Dialog open={codeDialog} onOpenChange={setCodeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Award Perk to User</DialogTitle>
+            <DialogTitle>Create Perk Code for User</DialogTitle>
             <DialogDescription>
-              Select a perk to award. An email notification will be sent to the user.
+              Select a perk to create a redeemable code. An email with the code will be sent to the user.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>User</Label>
+              <Label>User Email</Label>
               <div className="p-2 bg-muted rounded text-sm">
                 {selectedUser?.email}
               </div>
@@ -381,11 +381,11 @@ export function AdminUserManagement() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPerkDialog(false)}>
+            <Button variant="outline" onClick={() => setCodeDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAwardPerk} disabled={!selectedPerk}>
-              Award Perk
+            <Button onClick={handleCreateCode} disabled={!selectedPerk}>
+              Create Code & Send Email
             </Button>
           </DialogFooter>
         </DialogContent>
