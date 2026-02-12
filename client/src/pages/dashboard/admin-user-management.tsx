@@ -327,26 +327,26 @@ export function AdminUserManagement() {
                 Page {page} of {usersData.totalPages}
               </div>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page >= usersData.totalPages}
-                  onClick={() => setPage((p) => Math.min(usersData.totalPages, p + 1))}
-                >
-                  Next
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= usersData.totalPages}
+                onClick={() => setPage((p) => Math.min(usersData.totalPages, p + 1))}
+              >
+                Next
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
       {/* Create Perk Code Dialog */}
       <Dialog open={codeDialog} onOpenChange={setCodeDialog}>
