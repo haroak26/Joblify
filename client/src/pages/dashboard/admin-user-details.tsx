@@ -24,13 +24,20 @@ export default function AdminUserDetails() {
     enabled: !!userId,
   });
 
-  // Mock data for graphs (replace with real API data)
-  const aiUsageData = [
-    { name: "Week 1", edits: 12, scans: 5, letters: 3 },
-    { name: "Week 2", edits: 15, scans: 8, letters: 4 },
-    { name: "Week 3", edits: 18, scans: 6, letters: 5 },
-    { name: "Week 4", edits: 22, scans: 10, letters: 7 },
-  ];
+  // Fetch AI usage data
+  const { data: aiUsageResponse, isLoading: isLoadingUsage } = useQuery({
+    queryKey: ["/api/admin/users/:userId/ai-usage", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const res = await fetch(`/api/admin/users/${userId}/ai-usage`);
+      if (!res.ok) throw new Error("Failed to fetch AI usage");
+      return res.json();
+    },
+    enabled: !!userId,
+  });
+
+  // Use real data from API, fallback to empty array if not available
+  const aiUsageData = aiUsageResponse?.weeklyData || [];
 
   const chartConfig = {
     edits: {
@@ -47,7 +54,7 @@ export default function AdminUserDetails() {
     },
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingUsage) {
     return (
       <div className="container mx-auto p-6">
         <div className="py-8 text-center">Loading user details...</div>

@@ -338,11 +338,29 @@ export default function ResumeBuilder() {
     return <ResumeCompiling resumeId={resumeId!} />;
   }
 
+  // Responsive class names for better maintainability
+  const sidebarClasses = [
+    "w-full md:w-48",                    // Width: full on mobile, fixed on desktop
+    "border-b md:border-b-0 md:border-r", // Border: bottom on mobile, right on desktop
+    "border-border bg-card",              // Theme colors
+    "flex flex-col",                      // Flexbox layout
+    "max-h-[40vh] md:max-h-none",        // Height: constrained on mobile, full on desktop
+    "overflow-y-auto md:overflow-visible" // Scroll behavior
+  ].join(" ");
+
+  const headerClasses = [
+    "min-h-[56px] md:h-16",              // Height: flexible on mobile, fixed on desktop
+    "border-b border-border bg-card",     // Border and theme
+    "flex items-center justify-between",  // Flexbox layout
+    "px-3 sm:px-6",                       // Horizontal padding
+    isAIMode ? 'hidden md:flex' : 'flex'  // Conditional visibility in AI mode
+  ].join(" ");
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-background">
       {/* Conditionally render sidebar only in manual mode */}
       {!isAIMode && (
-        <div className="w-48 border-r border-border bg-card flex flex-col">
+        <div className={sidebarClasses}>
           <div className="p-4 border-b border-border">
             <h2 className="text-small font-semibold text-foreground">Components</h2>
           </div>
@@ -419,7 +437,7 @@ export default function ResumeBuilder() {
           </ScrollArea>
           
           {/* Bottom section */}
-          <div className="border-t border-border">
+          <div className="border-t border-border hidden md:block">
             <div className="p-2">
               <Button
                 variant="outline"
@@ -436,8 +454,8 @@ export default function ResumeBuilder() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header - Hidden on mobile in AI mode */}
-        <div className={`h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 ${isAIMode ? 'hidden md:flex' : 'flex'}`}>
+        {/* Header */}
+        <div className={headerClasses}>
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             {isEditingTitle ? (
               <Input
@@ -447,7 +465,7 @@ export default function ResumeBuilder() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") setIsEditingTitle(false);
                 }}
-                className="max-w-[200px] sm:max-w-md h-8 text-sm"
+                className="max-w-[150px] sm:max-w-md h-8 text-sm"
                 autoFocus
               />
             ) : (
@@ -465,14 +483,14 @@ export default function ResumeBuilder() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving} className="text-xs sm:text-sm" aria-label="Save resume">
+            <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving} className="text-xs sm:text-sm h-8" aria-label="Save resume">
               <Save className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
               <span className="hidden sm:inline">Save</span>
             </Button>
             
             {/* Template Selector */}
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-              <SelectTrigger className="w-[100px] sm:w-[130px] h-8 sm:h-9 text-xs sm:text-sm">
+              <SelectTrigger className="w-[100px] sm:w-[130px] h-8 text-xs sm:text-sm">
                 <Palette className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <SelectValue placeholder="Template" />
               </SelectTrigger>
@@ -489,14 +507,14 @@ export default function ResumeBuilder() {
                 variant="outline"
                 size="sm"
                 onClick={() => setActiveSection("ai-chat")}
-                className="text-xs sm:text-sm"
+                className="text-xs sm:text-sm h-8 hidden sm:flex"
               >
                 <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                 <span className="hidden sm:inline">AI Enhancement</span>
               </Button>
             )}
             
-            <Button size="sm" onClick={handleDownloadPDF} className="hidden sm:flex">
+            <Button size="sm" onClick={handleDownloadPDF} className="h-8 hidden sm:flex">
               <Download className="w-4 h-4 mr-2" />
               Download
             </Button>
@@ -504,7 +522,7 @@ export default function ResumeBuilder() {
         </div>
 
         {/* Editor and Preview */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
           {/* Conditionally render AI Chat or Manual Editor */}
           {isAIMode ? (
             <>
@@ -519,8 +537,8 @@ export default function ResumeBuilder() {
                   onEditComponents={handleEditComponents}
                 />
               </div>
-              {/* Preview in AI mode - hidden on mobile, shown on desktop */}
-              <div className="hidden lg:block w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
+              {/* Preview in AI mode - hidden on mobile and tablet, shown on large desktop */}
+              <div className="hidden xl:block w-[600px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}
@@ -531,8 +549,8 @@ export default function ResumeBuilder() {
             </>
           ) : (
             <>
-              {/* Editor Section - hidden on mobile, shown on desktop */}
-              <div className="hidden md:block flex-1 overflow-auto p-6">
+              {/* Editor Section - now responsive */}
+              <div className="flex-1 overflow-auto p-4 sm:p-6">
                 {activeSection === "ai-chat" ? (
                   <AIResumeChat
                     resumeId={resumeId!}
@@ -549,26 +567,8 @@ export default function ResumeBuilder() {
                 ) : null}
               </div>
 
-              {/* Mobile view - show message to use desktop */}
-              <div className="md:hidden flex-1 overflow-auto p-6 flex items-center justify-center">
-                <div className="text-center space-y-4 max-w-md">
-                  <Settings className="w-16 h-16 mx-auto text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">Desktop Required for Editing</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Manual resume editing is optimized for desktop screens. Please use a desktop or laptop computer to edit your resume, or try our AI Chat mode for a mobile-friendly experience.
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => setLocation(`/dashboard/resume-builder/${resumeId}?mode=ai`)}
-                  >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Switch to AI Chat
-                  </Button>
-                </div>
-              </div>
-
-              {/* Live Preview Section - hidden on mobile */}
-              <div className="hidden md:block w-[600px] border-l border-border bg-muted/30 overflow-auto p-6">
+              {/* Live Preview Section - responsive: hidden on mobile, shown on large screens */}
+              <div className="hidden xl:block w-[600px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}

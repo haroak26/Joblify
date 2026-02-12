@@ -12,17 +12,6 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/dashboard/stats"],
   });
 
-  // Mock AI usage data for graphs (replace with real data from API)
-  const aiUsageData = [
-    { name: "Mon", usage: 45 },
-    { name: "Tue", usage: 52 },
-    { name: "Wed", usage: 61 },
-    { name: "Thu", usage: 58 },
-    { name: "Fri", usage: 70 },
-    { name: "Sat", usage: 38 },
-    { name: "Sun", usage: 42 },
-  ];
-
   const chartConfig = {
     usage: {
       label: "AI Usage",
@@ -33,6 +22,9 @@ export default function AdminDashboard() {
   if (isLoading) {
     return <div className="container mx-auto p-6">Loading dashboard stats...</div>;
   }
+
+  // Use real data from API, fallback to empty array if not available
+  const aiUsageData = stats?.aiUsageByDay || [];
 
   return (
     <div className="container mx-auto p-6 space-y-6">
