@@ -1632,9 +1632,10 @@ Format your response as JSON with these fields:
       const analysis = await performATSAnalysis(resumeText, jobDescription);
 
       // Update usage counter
+      const currentUsage = await storage.getUsage(userId);
       await db
         .update(usage)
-        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
+        .set({ atsScansThisMonth: currentUsage.atsScansThisMonth + 1 })
         .where(eq(usage.userId, userId));
 
       res.json(analysis);
@@ -1689,9 +1690,10 @@ Format your response as JSON with these fields:
       const analysis = await performATSAnalysis(resumeText, jobDescription);
 
       // Update usage counter
+      const currentUsage = await storage.getUsage(userId);
       await db
         .update(usage)
-        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
+        .set({ atsScansThisMonth: currentUsage.atsScansThisMonth + 1 })
         .where(eq(usage.userId, userId));
 
       res.json(analysis);
