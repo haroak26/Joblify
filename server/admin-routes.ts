@@ -409,9 +409,8 @@ export function setupAdminRoutes(app: Express) {
    */
   app.get("/api/admin/dashboard/stats", requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Get basic counts
-      const { users: allUsers } = await storage.getAllUsers({ page: 1, limit: 1 });
-      const totalUsers = (await storage.getAllUsers({ page: 1, limit: 1 })).total;
+      // Get total user count
+      const { total: totalUsers } = await storage.getAllUsers({ page: 1, limit: 1 });
       
       // These stats would need more sophisticated queries in production
       // For now, returning basic structure

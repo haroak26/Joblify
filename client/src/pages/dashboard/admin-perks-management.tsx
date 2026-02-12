@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 export function AdminPerksManagement() {
   const [awardDialog, setAwardDialog] = useState(false);
   const [selectedPerk, setSelectedPerk] = useState("");
-  const [userEmail, setUserEmail] = useState("");
   const [searchUserId, setSearchUserId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -43,7 +42,7 @@ export function AdminPerksManagement() {
       toast({ title: "Success", description: "Perk awarded and email sent to user" });
       setAwardDialog(false);
       setSelectedPerk("");
-      setUserEmail("");
+      setSearchUserId("");
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to award perk", variant: "destructive" });

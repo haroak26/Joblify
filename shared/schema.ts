@@ -614,8 +614,8 @@ export const userPerks = pgTable("user_perks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   perkId: varchar("perk_id").notNull().references(() => perks.id),
-  codeId: varchar("code_id").references(() => redeemableCodes.id), // Optional - null if awarded by admin
-  awardedBy: varchar("awarded_by").references(() => users.id), // Admin who awarded this perk
+  codeId: varchar("code_id").references(() => redeemableCodes.id), // Optional - null for admin-awarded perks that bypass the code system
+  awardedBy: varchar("awarded_by").references(() => users.id), // Admin who awarded this perk directly
   awardedAt: timestamp("awarded_at").notNull().default(sql`NOW()`), // When awarded by admin
   redeemedAt: timestamp("redeemed_at"), // When user actually used/redeemed the perk
   expiresAt: timestamp("expires_at"), // For temporary perks
