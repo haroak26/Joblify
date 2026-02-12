@@ -180,6 +180,7 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .insert(users)
       .values({
+        id: (insertUser as any).id || undefined,
         name: insertUser.name || null,
         username: insertUser.username,
         email: insertUser.email,
@@ -559,8 +560,8 @@ export class DatabaseStorage implements IStorage {
     const offset = (page - 1) * limit;
     const search = options?.search;
     
-    let query = db.select().from(users);
-    let countQuery = db.select({ count: count() }).from(users);
+    let query = db.select().from(users).$dynamic();
+    let countQuery = db.select({ count: count() }).from(users).$dynamic();
     
     if (search) {
       const searchCondition = or(

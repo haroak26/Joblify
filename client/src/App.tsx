@@ -34,6 +34,14 @@ import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetter from "@/pages/dashboard/cover-letter";
 import AdminDashboard from "@/pages/dashboard/admin";
 
+function DashboardRedirect() {
+  const { user } = useAuth();
+  if (user?.isAdmin) {
+    return <AdminDashboard />;
+  }
+  return <Home />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -59,7 +67,7 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedRoute>
           <DashboardLayout>
-            <Home />
+            <DashboardRedirect />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

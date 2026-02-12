@@ -560,7 +560,40 @@ export async function registerRoutes(
     }
   });
 
-  // LinkedIn Import Endpoint
+  app.post("/api/cover-letter/generate", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      const { resumeId, jobDescription } = req.body;
+      if (!resumeId || !jobDescription) {
+        return res.status(400).json({ error: "Resume ID and job description are required" });
+      }
+
+      const resume = await storage.getResume(resumeId);
+      if (!resume || resume.userId !== userId) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      const prompt = `Generate a professional cover letter based on this resume and job description.\n\nResume:\n${JSON.stringify(resume.resumeData)}\n\nJob Description:\n${jobDescription}`;
+      
+      const response = await getPoeClient().chat.completions.create({
+        model: "claude-3-5-haiku",
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const content = response.choices[0].message.content || "";
+      const coverLetter = await storage.createCoverLetter({
+        userId,
+        resumeId,
+        content,
+        jobDescription,
+      });
+
+      res.json(coverLetter);
+    } catch (error) {
+      console.error('[API] Error generating cover letter:', error);
+      res.status(500).json({ error: "Failed to generate cover letter" });
+    }
+  });
   // ============================================
   // Password Change Endpoint
   // ============================================
@@ -844,6 +877,49 @@ export async function registerRoutes(
   // ============================================
 
   // Get all resumes for the authenticated user
+  app.post("/api/resumes", requireAuth, async (req: Request, res) => {
+    const userId = req.session.userId!;
+    try {
+      console.log('[API] Creating resume for user:', userId);
+      
+      const insertSchema = z.object({
+        title: z.string().min(1),
+        template: z.string().default("modern"),
+        resumeData: resumeDataSchema.optional(),
+      });
+      
+      const data = insertSchema.parse(req.body);
+      
+      // Check resume limit
+      const resumeCheck = await storage.canAddResume(userId);
+      if (!resumeCheck.allowed) {
+        return res.status(403).json({ 
+          error: "Resume limit reached", 
+          code: "RESUME_LIMIT",
+          limit: resumeCheck.limit,
+          current: resumeCheck.current,
+          message: `Your plan allows up to ${resumeCheck.limit} resumes. Upgrade to Plus or Ultra for more.`
+        });
+      }
+
+      const resume = await storage.createResume({
+        userId,
+        title: data.title,
+        template: data.template,
+        resumeData: data.resumeData || createEmptyResumeData(),
+      });
+      
+      res.status(201).json(resume);
+    } catch (error) {
+      console.error('[API] Error creating resume:', error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid resume data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create resume" });
+      }
+    }
+  });
+
   app.get("/api/resumes", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
