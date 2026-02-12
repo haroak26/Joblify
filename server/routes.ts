@@ -1631,11 +1631,10 @@ Format your response as JSON with these fields:
       // Perform ATS analysis
       const analysis = await performATSAnalysis(resumeText, jobDescription);
 
-      // Update usage counter
-      const currentUsage = await storage.getUsage(userId);
+      // Update usage counter atomically
       await db
         .update(usage)
-        .set({ atsScansThisMonth: currentUsage.atsScansThisMonth + 1 })
+        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
         .where(eq(usage.userId, userId));
 
       res.json(analysis);
@@ -1689,11 +1688,10 @@ Format your response as JSON with these fields:
       // Perform ATS analysis
       const analysis = await performATSAnalysis(resumeText, jobDescription);
 
-      // Update usage counter
-      const currentUsage = await storage.getUsage(userId);
+      // Update usage counter atomically
       await db
         .update(usage)
-        .set({ atsScansThisMonth: currentUsage.atsScansThisMonth + 1 })
+        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
         .where(eq(usage.userId, userId));
 
       res.json(analysis);

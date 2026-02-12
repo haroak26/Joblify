@@ -396,8 +396,8 @@ export function setupAdminRoutes(app: Express) {
         return res.status(404).json({ error: "User not found with that email" });
       }
       
-      // Generate a unique code
-      const code = `PERK-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      // Generate a unique code with better entropy (8 bytes = 16 hex chars)
+      const code = `PERK-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
       
       // Create the redeemable code
       const [redeemableCode] = await db
