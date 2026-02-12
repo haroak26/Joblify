@@ -346,7 +346,6 @@ export function AdminUserManagement() {
             </div>
           </div>
         )}
-      </div>
 
       {/* Create Perk Code Dialog */}
       <Dialog open={codeDialog} onOpenChange={setCodeDialog}>
