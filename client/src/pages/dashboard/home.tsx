@@ -18,10 +18,6 @@ interface Resume {
   updatedAt: string;
 }
 
-interface ResumesResponse {
-  resumes: Resume[];
-}
-
 interface OnboardingStatus {
   hasCreatedResume: boolean;
   hasCreatedCoverLetter: boolean;
@@ -32,7 +28,7 @@ export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: resumesData, isLoading: resumesLoading } = useQuery<ResumesResponse>({
+  const { data: resumesData, isLoading: resumesLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
 
@@ -41,7 +37,7 @@ export default function DashboardHome() {
   });
 
   // Ensure resumes is always an array
-  const resumes = Array.isArray(resumesData?.resumes) ? resumesData.resumes : [];
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
   const totalResumes = resumes.length;
   const recentResumes = resumes.slice(0, 3);
 
@@ -87,9 +83,15 @@ export default function DashboardHome() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold mb-1">Welcome back, {user?.name || user?.username}!</h1>
-        <p className="text-sm text-muted-foreground">Create professional resumes with AI-powered tools</p>
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
+          <Sparkles className="w-6 h-6 text-primary" />
+          Dashboard
+        </h2>
+        <p className="text-muted-foreground">
+          Create professional resumes with AI-powered tools
+        </p>
       </div>
 
       {/* Onboarding Checklist - Only show if not all tasks are completed */}

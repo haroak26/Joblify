@@ -14,11 +14,11 @@ export default function JobMatch() {
   
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
 
-  const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({
+  const { data: resumesData } = useQuery<Array<{ id: number; title: string }>>({
     queryKey: ["/api/resumes"],
   });
 
-  const resumes = resumesData?.resumes || [];
+  const resumes = resumesData || [];
 
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-6">

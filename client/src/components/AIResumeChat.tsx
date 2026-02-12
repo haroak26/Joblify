@@ -214,14 +214,14 @@ export default function AIResumeChat({
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="flex flex-col p-4 border-b bg-muted/20">
+      <div className="flex flex-col p-4 border-b">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">
+              <h3 className="font-semibold text-foreground">
                 {activeComponents.length > 0 && !focusedComponent
                   ? "AI Resume Builder"
                   : "AI Resume Enhancement"}
