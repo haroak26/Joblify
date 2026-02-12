@@ -26,6 +26,15 @@ export const users = pgTable("users", {
   // Onboarding tracking
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   onboardingReminderSent: boolean("onboarding_reminder_sent").notNull().default(false),
+  // Admin features
+  aiAccessBlocked: boolean("ai_access_blocked").notNull().default(false),
+  aiAccessBlockedAt: timestamp("ai_access_blocked_at"),
+  aiAccessBlockedReason: text("ai_access_blocked_reason"),
+  accountBlocked: boolean("account_blocked").notNull().default(false),
+  accountBlockedAt: timestamp("account_blocked_at"),
+  accountBlockedReason: text("account_blocked_reason"),
+  lastLoginAt: timestamp("last_login_at"),
+  lastLoginIpHash: text("last_login_ip_hash"),
 });
 
 // Deleted accounts tracker for abuse prevention
@@ -653,3 +662,193 @@ export type RedeemableCode = typeof redeemableCodes.$inferSelect;
 export const insertUserPerkSchema = createInsertSchema(userPerks).omit({ id: true, redeemedAt: true });
 export type InsertUserPerk = z.infer<typeof insertUserPerkSchema>;
 export type UserPerk = typeof userPerks.$inferSelect;
+
+// ============================================
+// Mailing Lists System
+// ============================================
+
+export const mailingLists = pgTable("mailing_lists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description").notNull(),
+  defaultSubscribed: boolean("default_subscribed").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const userMailingLists = pgTable("user_mailing_lists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  listId: varchar("list_id").notNull().references(() => mailingLists.id, { onDelete: "cascade" }),
+  subscribed: boolean("subscribed").notNull().default(true),
+  subscribedAt: timestamp("subscribed_at").notNull().default(sql`NOW()`),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+}, (table) => ({
+  userIdIdx: index("user_mailing_lists_user_id_idx").on(table.userId),
+  listIdIdx: index("user_mailing_lists_list_id_idx").on(table.listId),
+  subscribedIdx: index("user_mailing_lists_subscribed_idx").on(table.subscribed),
+  uniqueUserList: uniqueIndex("user_mailing_lists_user_id_list_id_key").on(table.userId, table.listId),
+}));
+
+export const mailingListsRelations = relations(mailingLists, ({ many }) => ({
+  subscriptions: many(userMailingLists),
+}));
+
+export const userMailingListsRelations = relations(userMailingLists, ({ one }) => ({
+  user: one(users, {
+    fields: [userMailingLists.userId],
+    references: [users.id],
+  }),
+  list: one(mailingLists, {
+    fields: [userMailingLists.listId],
+    references: [mailingLists.id],
+  }),
+}));
+
+export type MailingList = typeof mailingLists.$inferSelect;
+export type UserMailingList = typeof userMailingLists.$inferSelect;
+
+// ============================================
+// AI Usage Logs (Admin Dashboard)
+// ============================================
+
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  featureName: text("feature_name").notNull(),
+  tokensUsed: integer("tokens_used"),
+  success: boolean("success").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("ai_usage_logs_user_id_idx").on(table.userId),
+  featureNameIdx: index("ai_usage_logs_feature_name_idx").on(table.featureName),
+  createdAtIdx: index("ai_usage_logs_created_at_idx").on(table.createdAt),
+}));
+
+export const aiUsageLogsRelations = relations(aiUsageLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [aiUsageLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+export type InsertAiUsageLog = z.infer<typeof createInsertSchema(aiUsageLogs).omit({ id: true, createdAt: true })>;
+
+// ============================================
+// User Activity Logs (Admin Dashboard)
+// ============================================
+
+export const userActivityLogs = pgTable("user_activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  activityType: text("activity_type").notNull(),
+  ipAddressHash: text("ip_address_hash"),
+  userAgent: text("user_agent"),
+  deviceInfo: text("device_info"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("user_activity_logs_user_id_idx").on(table.userId),
+  activityTypeIdx: index("user_activity_logs_activity_type_idx").on(table.activityType),
+  createdAtIdx: index("user_activity_logs_created_at_idx").on(table.createdAt),
+}));
+
+export const userActivityLogsRelations = relations(userActivityLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [userActivityLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export type UserActivityLog = typeof userActivityLogs.$inferSelect;
+export type InsertUserActivityLog = z.infer<typeof createInsertSchema(userActivityLogs).omit({ id: true, createdAt: true })>;
+
+// ============================================
+// Trusted Devices (2FA)
+// ============================================
+
+export const trustedDevices = pgTable("trusted_devices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  deviceFingerprint: text("device_fingerprint").notNull(),
+  deviceName: text("device_name"),
+  userAgent: text("user_agent"),
+  ipAddressHash: text("ip_address_hash"),
+  trustedAt: timestamp("trusted_at").notNull().default(sql`NOW()`),
+  lastUsedAt: timestamp("last_used_at").notNull().default(sql`NOW()`),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => ({
+  userIdIdx: index("trusted_devices_user_id_idx").on(table.userId),
+  expiresAtIdx: index("trusted_devices_expires_at_idx").on(table.expiresAt),
+  uniqueUserDevice: uniqueIndex("trusted_devices_user_id_device_fingerprint_key").on(table.userId, table.deviceFingerprint),
+}));
+
+export const trustedDevicesRelations = relations(trustedDevices, ({ one }) => ({
+  user: one(users, {
+    fields: [trustedDevices.userId],
+    references: [users.id],
+  }),
+}));
+
+export type TrustedDevice = typeof trustedDevices.$inferSelect;
+export type InsertTrustedDevice = z.infer<typeof createInsertSchema(trustedDevices).omit({ id: true, trustedAt: true, lastUsedAt: true })>;
+
+// ============================================
+// Verification Codes (2FA)
+// ============================================
+
+export const verificationCodes = pgTable("verification_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: text("code").notNull(),
+  codeType: text("code_type").notNull(), // 'email_2fa', 'system_2fa', etc.
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("verification_codes_user_id_idx").on(table.userId),
+  codeIdx: index("verification_codes_code_idx").on(table.code),
+  expiresAtIdx: index("verification_codes_expires_at_idx").on(table.expiresAt),
+}));
+
+export const verificationCodesRelations = relations(verificationCodes, ({ one }) => ({
+  user: one(users, {
+    fields: [verificationCodes.userId],
+    references: [users.id],
+  }),
+}));
+
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+export type InsertVerificationCode = z.infer<typeof createInsertSchema(verificationCodes).omit({ id: true, createdAt: true })>;
+
+// ============================================
+// System Admin Logs (Security Audit)
+// ============================================
+
+export const systemAdminLogs = pgTable("system_admin_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminUserId: varchar("admin_user_id").notNull().references(() => users.id),
+  action: text("action").notNull(),
+  targetUserId: varchar("target_user_id").references(() => users.id, { onDelete: "set null" }),
+  details: jsonb("details"),
+  ipAddressHash: text("ip_address_hash"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  adminUserIdIdx: index("system_admin_logs_admin_user_id_idx").on(table.adminUserId),
+  targetUserIdIdx: index("system_admin_logs_target_user_id_idx").on(table.targetUserId),
+  createdAtIdx: index("system_admin_logs_created_at_idx").on(table.createdAt),
+  actionIdx: index("system_admin_logs_action_idx").on(table.action),
+}));
+
+export const systemAdminLogsRelations = relations(systemAdminLogs, ({ one }) => ({
+  adminUser: one(users, {
+    fields: [systemAdminLogs.adminUserId],
+    references: [users.id],
+  }),
+  targetUser: one(users, {
+    fields: [systemAdminLogs.targetUserId],
+    references: [users.id],
+  }),
+}));
+
+export type SystemAdminLog = typeof systemAdminLogs.$inferSelect;
+export type InsertSystemAdminLog = z.infer<typeof createInsertSchema(systemAdminLogs).omit({ id: true, createdAt: true })>;
