@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
 import { 
-  skillSchema, normalizePlan, resumes, users, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
+  skillSchema, normalizePlan, resumes, users, usage, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
   redeemableCodes, perks, userPerks, type PlanType
 } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
@@ -11,7 +11,7 @@ import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import multer from "multer";
 import pdfParse from "pdf-parse";
@@ -568,7 +568,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Resume ID and job description are required" });
       }
 
-      const resume = await storage.getResume(resumeId);
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, resumeId));
+      
       if (!resume || resume.userId !== userId) {
         return res.status(404).json({ error: "Resume not found" });
       }
@@ -902,12 +906,15 @@ export async function registerRoutes(
         });
       }
 
-      const resume = await storage.createResume({
-        userId,
-        title: data.title,
-        template: data.template,
-        resumeData: data.resumeData || createEmptyResumeData(),
-      });
+      const [resume] = await db
+        .insert(resumes)
+        .values({
+          userId,
+          title: data.title,
+          template: data.template,
+          resumeData: data.resumeData || createEmptyResumeData(),
+        })
+        .returning();
       
       res.status(201).json(resume);
     } catch (error) {
@@ -1596,10 +1603,10 @@ Format your response as JSON with these fields:
       const plan = normalizePlan(subscription?.plan);
       const limits = PLAN_LIMITS[plan];
 
-      if (usage.atsScansThisMonth >= limits.atsScans) {
+      if (usage.atsScansThisMonth >= limits.maxATSScansPerMonth) {
         return res.status(403).json({ 
           error: "ATS scan limit reached for this month",
-          limit: limits.atsScans,
+          limit: limits.maxATSScansPerMonth,
           current: usage.atsScansThisMonth
         });
       }
@@ -1625,7 +1632,10 @@ Format your response as JSON with these fields:
       const analysis = await performATSAnalysis(resumeText, jobDescription);
 
       // Update usage counter
-      await storage.incrementUsage(userId, 'atsScansThisMonth');
+      await db
+        .update(usage)
+        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
+        .where(eq(usage.userId, userId));
 
       res.json(analysis);
     } catch (error) {
@@ -1650,10 +1660,10 @@ Format your response as JSON with these fields:
       const plan = normalizePlan(subscription?.plan);
       const limits = PLAN_LIMITS[plan];
 
-      if (usage.atsScansThisMonth >= limits.atsScans) {
+      if (usage.atsScansThisMonth >= limits.maxATSScansPerMonth) {
         return res.status(403).json({ 
           error: "ATS scan limit reached for this month",
-          limit: limits.atsScans,
+          limit: limits.maxATSScansPerMonth,
           current: usage.atsScansThisMonth
         });
       }
@@ -1679,7 +1689,10 @@ Format your response as JSON with these fields:
       const analysis = await performATSAnalysis(resumeText, jobDescription);
 
       // Update usage counter
-      await storage.incrementUsage(userId, 'atsScansThisMonth');
+      await db
+        .update(usage)
+        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
+        .where(eq(usage.userId, userId));
 
       res.json(analysis);
     } catch (error) {
