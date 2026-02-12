@@ -732,7 +732,8 @@ export const aiUsageLogsRelations = relations(aiUsageLogs, ({ one }) => ({
 }));
 
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
-export type InsertAiUsageLog = z.infer<typeof createInsertSchema(aiUsageLogs).omit({ id: true, createdAt: true })>;
+const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({ id: true, createdAt: true });
+export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 
 // ============================================
 // User Activity Logs (Admin Dashboard)
@@ -760,7 +761,8 @@ export const userActivityLogsRelations = relations(userActivityLogs, ({ one }) =
 }));
 
 export type UserActivityLog = typeof userActivityLogs.$inferSelect;
-export type InsertUserActivityLog = z.infer<typeof createInsertSchema(userActivityLogs).omit({ id: true, createdAt: true })>;
+const insertUserActivityLogSchema = createInsertSchema(userActivityLogs).omit({ id: true, createdAt: true });
+export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
 
 // ============================================
 // Trusted Devices (2FA)
@@ -790,7 +792,8 @@ export const trustedDevicesRelations = relations(trustedDevices, ({ one }) => ({
 }));
 
 export type TrustedDevice = typeof trustedDevices.$inferSelect;
-export type InsertTrustedDevice = z.infer<typeof createInsertSchema(trustedDevices).omit({ id: true, trustedAt: true, lastUsedAt: true })>;
+const insertTrustedDeviceSchema = createInsertSchema(trustedDevices).omit({ id: true, trustedAt: true, lastUsedAt: true });
+export type InsertTrustedDevice = z.infer<typeof insertTrustedDeviceSchema>;
 
 // ============================================
 // Verification Codes (2FA)
@@ -818,7 +821,8 @@ export const verificationCodesRelations = relations(verificationCodes, ({ one })
 }));
 
 export type VerificationCode = typeof verificationCodes.$inferSelect;
-export type InsertVerificationCode = z.infer<typeof createInsertSchema(verificationCodes).omit({ id: true, createdAt: true })>;
+const insertVerificationCodeSchema = createInsertSchema(verificationCodes).omit({ id: true, createdAt: true });
+export type InsertVerificationCode = z.infer<typeof insertVerificationCodeSchema>;
 
 // ============================================
 // System Admin Logs (Security Audit)
@@ -851,4 +855,5 @@ export const systemAdminLogsRelations = relations(systemAdminLogs, ({ one }) => 
 }));
 
 export type SystemAdminLog = typeof systemAdminLogs.$inferSelect;
-export type InsertSystemAdminLog = z.infer<typeof createInsertSchema(systemAdminLogs).omit({ id: true, createdAt: true })>;
+const insertSystemAdminLogSchema = createInsertSchema(systemAdminLogs).omit({ id: true, createdAt: true });
+export type InsertSystemAdminLog = z.infer<typeof insertSystemAdminLogSchema>;
