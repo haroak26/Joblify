@@ -348,6 +348,52 @@ export function setupAdminRoutes(app: Express) {
   });
   
   /**
+   * POST /api/admin/perks
+   * Create a new perk
+   */
+  app.post("/api/admin/perks", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { name, perkType, value, description } = req.body;
+      
+      if (!name || !perkType || !description) {
+        return res.status(400).json({ error: "Name, perk type, and description are required" });
+      }
+      
+      const adminId = req.session.userId!;
+      
+      // Create the perk
+      const [perk] = await db
+        .insert(perks)
+        .values({
+          name,
+          perkType,
+          value: value || null,
+          description,
+        })
+        .returning();
+      
+      // Log admin action
+      const ipHash = crypto.createHash('sha256').update(req.ip || 'unknown').digest('hex');
+      await logAdminAction(
+        adminId,
+        'CREATE_PERK',
+        null,
+        { perkId: perk.id, name, perkType },
+        ipHash
+      );
+      
+      res.json({ 
+        success: true, 
+        message: "Perk created successfully",
+        perk
+      });
+    } catch (error) {
+      console.error("Error creating perk:", error);
+      res.status(500).json({ error: "Failed to create perk" });
+    }
+  });
+  
+  /**
    * POST /api/admin/users/:userId/award-perk
    * Award a perk to a user
    */
