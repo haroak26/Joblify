@@ -18,11 +18,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, Gift, Tag } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, Gift, Tag, LogOut } from "lucide-react";
 import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { clearStoredUser } from "@/lib/auth-storage";
 
@@ -149,6 +150,7 @@ const plans = [
 export default function Account() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { logout } = useAuth();
   const [showDataSummary, setShowDataSummary] = useState(false);
 
   const userQuery = useQuery<UserResponse>({
@@ -999,6 +1001,41 @@ export default function Account() {
             </div>
           </CleanTabsContent>
         </CleanTabs>
+
+        {/* Sign Out Section */}
+        <div className="rounded-lg border bg-background p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-subheader font-bold">Sign Out</h2>
+              <p className="text-muted-foreground">Sign out of your account on this device</p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Sign Out</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to sign out? You'll need to log in again to access your account.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={async () => {
+                    await logout();
+                    navigate("/login");
+                  }}>
+                    Sign Out
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
       </div>
     </div>
   );

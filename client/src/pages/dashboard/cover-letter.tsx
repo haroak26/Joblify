@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Copy, Download, Loader2, Sparkles, FileText, Wand2, CheckCircle2 } from "lucide-react";
+import { Copy, Download, Loader2, Sparkles, FileText, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Resume } from "@shared/schema";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
@@ -95,33 +95,16 @@ export default function CoverLetterGenerator() {
         </h2>
         <p className="text-muted-foreground">Create tailored cover letters in seconds</p>
       </div>
-      
-      {/* Info Banner */}
-      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Wand2 className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-            <div className="text-sm">
-              <p className="font-medium text-blue-900 dark:text-blue-100">
-                Our AI analyzes your resume and the job description to create a personalized cover letter
-              </p>
-                <p className="text-blue-700 dark:text-blue-300 mt-1">
-                  Select a resume, paste the job description, choose your tone, and we'll do the rest!
-                </p>
-              </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Input Section */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="border-2">
+            <CardHeader className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20">
               <CardTitle className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-bold shadow-md">
                   1
-                </span>
+                </div>
                 Select Your Resume
               </CardTitle>
               <CardDescription>
@@ -153,12 +136,12 @@ export default function CoverLetterGenerator() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="border-2">
+            <CardHeader className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
               <CardTitle className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-bold shadow-md">
                   2
-                </span>
+                </div>
                 Job Description
               </CardTitle>
               <CardDescription>
@@ -187,12 +170,12 @@ export default function CoverLetterGenerator() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="border-2">
+            <CardHeader className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
               <CardTitle className="flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 text-white text-sm font-bold shadow-md">
                   3
-                </span>
+                </div>
                 Writing Tone
               </CardTitle>
               <CardDescription>
