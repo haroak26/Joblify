@@ -262,16 +262,16 @@ export function setupAdminRoutes(app: Express) {
       
       const weeklyUsageByFeature = await db
         .select({
-          week: sql<number>`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)`,
+          week: sql<number>`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)::integer`,
           featureName: aiUsageLogs.featureName,
           count: count(),
         })
         .from(aiUsageLogs)
         .where(sql`${aiUsageLogs.userId} = ${userId} AND ${aiUsageLogs.createdAt} >= ${fourWeeksAgo}`)
-        .groupBy(sql`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)`, aiUsageLogs.featureName)
-        .orderBy(sql`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)`);
+        .groupBy(sql`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)::integer`, aiUsageLogs.featureName)
+        .orderBy(sql`FLOOR(EXTRACT(EPOCH FROM NOW() - ${aiUsageLogs.createdAt}) / 86400 / 7)::integer`);
       
-      // Format data for charts - create weekly buckets
+      // Interface for weekly usage data
       interface WeeklyUsageData {
         name: string;
         edits: number;
@@ -279,6 +279,23 @@ export function setupAdminRoutes(app: Express) {
         letters: number;
       }
       
+      // Feature to category mapping for better maintainability
+      const categorizeFeature = (featureName: string): keyof Omit<WeeklyUsageData, 'name'> => {
+        const feature = featureName.toLowerCase();
+        if (feature.includes('improve') || feature.includes('keyword') || feature.includes('grammar') || feature.includes('tone')) {
+          return 'edits';
+        } else if (feature.includes('ats') || feature.includes('scan')) {
+          return 'scans';
+        } else if (feature.includes('cover') || feature.includes('letter')) {
+          return 'letters';
+        } else {
+          // Log unrecognized features for monitoring
+          console.log(`[Admin API] Unrecognized AI feature type: ${featureName}, defaulting to edits category`);
+          return 'edits';
+        }
+      };
+      
+      // Format data for charts - create weekly buckets
       const weeklyData: WeeklyUsageData[] = [];
       for (let i = 3; i >= 0; i--) {
         const weekData: WeeklyUsageData = { 
@@ -292,18 +309,8 @@ export function setupAdminRoutes(app: Express) {
         weeklyUsageByFeature
           .filter((item) => item.week === i)
           .forEach((item) => {
-            const feature = item.featureName.toLowerCase();
-            if (feature.includes('improve') || feature.includes('keyword') || feature.includes('grammar') || feature.includes('tone')) {
-              weekData.edits += item.count;
-            } else if (feature.includes('ats') || feature.includes('scan')) {
-              weekData.scans += item.count;
-            } else if (feature.includes('cover') || feature.includes('letter')) {
-              weekData.letters += item.count;
-            } else {
-              // Log unrecognized features for monitoring
-              console.log(`[Admin API] Unrecognized AI feature type: ${item.featureName}, defaulting to edits category`);
-              weekData.edits += item.count;
-            }
+            const category = categorizeFeature(item.featureName);
+            weekData[category] += item.count;
           });
         
         weeklyData.push(weekData);

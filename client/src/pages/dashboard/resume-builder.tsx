@@ -538,7 +538,7 @@ export default function ResumeBuilder() {
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile and tablet, shown on large desktop */}
-              <div className="hidden xl:block w-full xl:w-[600px] border-t lg:border-t-0 lg:border-l border-border bg-muted/30 overflow-auto p-6">
+              <div className="hidden xl:block w-[600px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}
@@ -568,7 +568,7 @@ export default function ResumeBuilder() {
               </div>
 
               {/* Live Preview Section - responsive: hidden on mobile, shown on large screens */}
-              <div className="hidden xl:block w-full xl:w-[600px] border-t xl:border-t-0 xl:border-l border-border bg-muted/30 overflow-auto p-6">
+              <div className="hidden xl:block w-[600px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}
