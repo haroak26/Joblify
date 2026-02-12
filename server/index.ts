@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { setupAdminRoutes } from "./admin-routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
@@ -136,6 +137,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await setupStripeRoutes(app);
+  setupAdminRoutes(app);
   await registerRoutes(httpServer, app);
   if (process.env.SCHEDULE_RUNNER_ENABLED === "true") {
     startScheduleRunner();

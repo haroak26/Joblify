@@ -4,12 +4,16 @@ import {
   type CoverLetter, type InsertCoverLetter,
   type SecurityEvent, type InsertSecurityEvent,
   type SupportInteraction, type InsertSupportInteraction,
+  type SystemAdminLog, type InsertSystemAdminLog,
+  type UserPerk, type InsertUserPerk, type Perk,
+  type AiUsageLog, type UserActivityLog,
   users, profiles, subscriptions, usage,
   coverLetters, securityEvents, supportInteractions,
-  deletedAccountsTracker, resumes
+  deletedAccountsTracker, resumes, systemAdminLogs,
+  userPerks, perks, aiUsageLogs, userActivityLogs
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc } from "drizzle-orm";
+import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc, like, ilike } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 // Plan limits configuration
@@ -122,6 +126,28 @@ export interface IStorage {
   checkDeletedAccount(email: string): Promise<{ isBlocked: boolean; expiresAt?: Date }>;
   addDeletedAccount(email: string, reason?: string): Promise<void>;
   cleanupExpiredDeletedAccounts(): Promise<number>;
+  
+  // Admin methods
+  getAllUsers(options?: { page?: number; limit?: number; search?: string }): Promise<{ users: User[]; total: number }>;
+  getUserStatistics(userId: string): Promise<any>;
+  blockUserAccount(userId: string, blockedBy: string, reason: string): Promise<User | undefined>;
+  unblockUserAccount(userId: string): Promise<User | undefined>;
+  blockUserAIAccess(userId: string, blockedBy: string, reason: string): Promise<User | undefined>;
+  unblockUserAIAccess(userId: string): Promise<User | undefined>;
+  
+  // Admin logs
+  createAdminLog(data: InsertSystemAdminLog): Promise<SystemAdminLog>;
+  getAdminLogs(options?: { page?: number; limit?: number; adminUserId?: string; action?: string }): Promise<{ logs: SystemAdminLog[]; total: number }>;
+  
+  // Perks management
+  getAllPerks(): Promise<Perk[]>;
+  awardPerkToUser(userId: string, perkId: string, awardedBy: string): Promise<UserPerk>;
+  getUserPerks(userId: string): Promise<UserPerk[]>;
+  redeemPerk(userPerkId: string): Promise<UserPerk | undefined>;
+  
+  // User analytics for admin dashboard
+  getUserAiUsageLogs(userId: string, limit?: number): Promise<AiUsageLog[]>;
+  getUserActivityLogs(userId: string, limit?: number): Promise<UserActivityLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -521,6 +547,257 @@ export class DatabaseStorage implements IStorage {
       .where(lte(deletedAccountsTracker.expiresAt, new Date()));
     
     return result.rowCount || 0;
+  }
+  
+  // ============================================
+  // Admin Methods
+  // ============================================
+  
+  async getAllUsers(options?: { page?: number; limit?: number; search?: string }): Promise<{ users: User[]; total: number }> {
+    const page = options?.page || 1;
+    const limit = options?.limit || 50;
+    const offset = (page - 1) * limit;
+    const search = options?.search;
+    
+    let query = db.select().from(users);
+    let countQuery = db.select({ count: count() }).from(users);
+    
+    if (search) {
+      const searchCondition = or(
+        ilike(users.email, `%${search}%`),
+        ilike(users.username, `%${search}%`),
+        ilike(users.name, `%${search}%`)
+      );
+      query = query.where(searchCondition);
+      countQuery = countQuery.where(searchCondition);
+    }
+    
+    const usersList = await query
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count: total }] = await countQuery;
+    
+    return { users: usersList, total: Number(total) };
+  }
+  
+  async getUserStatistics(userId: string): Promise<any> {
+    // Get user basic info
+    const user = await this.getUser(userId);
+    if (!user) return null;
+    
+    // Get subscription info
+    const subscription = await this.getSubscription(userId);
+    
+    // Get usage stats
+    const usageStats = await this.getUsage(userId);
+    
+    // Get resume count
+    const resumeCount = await db
+      .select({ count: count() })
+      .from(resumes)
+      .where(eq(resumes.userId, userId));
+    
+    // Get AI usage logs count
+    const aiUsageCount = await db
+      .select({ count: count() })
+      .from(aiUsageLogs)
+      .where(eq(aiUsageLogs.userId, userId));
+    
+    // Get security events count
+    const securityEventsCount = await db
+      .select({ count: count() })
+      .from(securityEvents)
+      .where(eq(securityEvents.userId, userId));
+    
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        emailVerified: user.emailVerified,
+        twoFactorEnabled: user.twoFactorEnabled,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+        aiAccessBlocked: user.aiAccessBlocked,
+        accountBlocked: user.accountBlocked,
+        isAdmin: user.isAdmin,
+      },
+      subscription: {
+        plan: subscription?.plan,
+        status: subscription?.status,
+        currentPeriodEnd: subscription?.currentPeriodEnd,
+      },
+      usage: usageStats,
+      statistics: {
+        resumeCount: Number(resumeCount[0]?.count || 0),
+        aiUsageCount: Number(aiUsageCount[0]?.count || 0),
+        securityEventsCount: Number(securityEventsCount[0]?.count || 0),
+      },
+    };
+  }
+  
+  async blockUserAccount(userId: string, blockedBy: string, reason: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        accountBlocked: true,
+        accountBlockedAt: new Date(),
+        accountBlockedBy: blockedBy,
+        accountBlockedReason: reason,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return user;
+  }
+  
+  async unblockUserAccount(userId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        accountBlocked: false,
+        accountBlockedAt: null,
+        accountBlockedBy: null,
+        accountBlockedReason: null,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return user;
+  }
+  
+  async blockUserAIAccess(userId: string, blockedBy: string, reason: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        aiAccessBlocked: true,
+        aiAccessBlockedAt: new Date(),
+        aiAccessBlockedBy: blockedBy,
+        aiAccessBlockedReason: reason,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return user;
+  }
+  
+  async unblockUserAIAccess(userId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        aiAccessBlocked: false,
+        aiAccessBlockedAt: null,
+        aiAccessBlockedBy: null,
+        aiAccessBlockedReason: null,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return user;
+  }
+  
+  // Admin logs
+  async createAdminLog(data: InsertSystemAdminLog): Promise<SystemAdminLog> {
+    const [log] = await db
+      .insert(systemAdminLogs)
+      .values(data)
+      .returning();
+    return log;
+  }
+  
+  async getAdminLogs(options?: { page?: number; limit?: number; adminUserId?: string; action?: string }): Promise<{ logs: SystemAdminLog[]; total: number }> {
+    const page = options?.page || 1;
+    const limit = options?.limit || 100;
+    const offset = (page - 1) * limit;
+    
+    let query = db.select().from(systemAdminLogs);
+    let countQuery = db.select({ count: count() }).from(systemAdminLogs);
+    
+    const conditions = [];
+    if (options?.adminUserId) {
+      conditions.push(eq(systemAdminLogs.adminUserId, options.adminUserId));
+    }
+    if (options?.action) {
+      conditions.push(eq(systemAdminLogs.action, options.action));
+    }
+    
+    if (conditions.length > 0) {
+      const whereCondition = and(...conditions);
+      query = query.where(whereCondition);
+      countQuery = countQuery.where(whereCondition);
+    }
+    
+    const logs = await query
+      .orderBy(desc(systemAdminLogs.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count: total }] = await countQuery;
+    
+    return { logs, total: Number(total) };
+  }
+  
+  // Perks management
+  async getAllPerks(): Promise<Perk[]> {
+    return db.select().from(perks).orderBy(perks.name);
+  }
+  
+  async awardPerkToUser(userId: string, perkId: string, awardedBy: string): Promise<UserPerk> {
+    const [userPerk] = await db
+      .insert(userPerks)
+      .values({
+        userId,
+        perkId,
+        awardedBy,
+        status: 'pending',
+        isActive: true,
+      })
+      .returning();
+    
+    return userPerk;
+  }
+  
+  async getUserPerks(userId: string): Promise<UserPerk[]> {
+    return db
+      .select()
+      .from(userPerks)
+      .where(eq(userPerks.userId, userId))
+      .orderBy(desc(userPerks.awardedAt));
+  }
+  
+  async redeemPerk(userPerkId: string): Promise<UserPerk | undefined> {
+    const [perk] = await db
+      .update(userPerks)
+      .set({
+        status: 'redeemed',
+        redeemedAt: new Date(),
+      })
+      .where(eq(userPerks.id, userPerkId))
+      .returning();
+    
+    return perk;
+  }
+  
+  // User analytics for admin dashboard
+  async getUserAiUsageLogs(userId: string, limit?: number): Promise<AiUsageLog[]> {
+    return db
+      .select()
+      .from(aiUsageLogs)
+      .where(eq(aiUsageLogs.userId, userId))
+      .orderBy(desc(aiUsageLogs.createdAt))
+      .limit(limit || 100);
+  }
+  
+  async getUserActivityLogs(userId: string, limit?: number): Promise<UserActivityLog[]> {
+    return db
+      .select()
+      .from(userActivityLogs)
+      .where(eq(userActivityLogs.userId, userId))
+      .orderBy(desc(userActivityLogs.createdAt))
+      .limit(limit || 100);
   }
 }
 

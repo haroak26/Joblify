@@ -503,3 +503,95 @@ export async function sendContactConfirmationEmail(options: {
     ),
   });
 }
+
+// Email when admin awards a perk to a user
+export async function sendPerkAwardedEmail(
+  email: string,
+  username: string,
+  perkName: string,
+  perkDescription: string
+): Promise<boolean> {
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      🎉 You've Received a Perk!
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${username},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Great news! You've been awarded a special perk on Joblify.
+    </p>
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 24px; margin: 24px 0; color: white;">
+      <h2 style="font-size: 20px; font-weight: 700; margin: 0 0 12px 0; color: white;">
+        ${perkName}
+      </h2>
+      <p style="font-size: 15px; line-height: 1.6; margin: 0; color: rgba(255,255,255,0.95);">
+        ${perkDescription}
+      </p>
+    </div>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      To use your perk, simply log in to your Joblify account and navigate to your dashboard. Your new perk will be available and ready to use.
+    </p>
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${process.env.APP_URL || 'https://joblifyai.com'}/dashboard" 
+         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+        View My Perks
+      </a>
+    </div>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      Happy job hunting!<br>
+      <span style="font-weight: 600;">The Joblify Team</span>
+    </p>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `🎉 You've received a perk: ${perkName}`,
+    html: getEmailTemplate(content, "You've been awarded a special perk!"),
+  });
+}
+
+// Email when admin blocks a user's account
+export async function sendAccountBlockedEmail(
+  email: string,
+  username: string
+): Promise<boolean> {
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      Account Access Update
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${username},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      We're writing to inform you that your Joblify account has been temporarily blocked.
+    </p>
+    <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="font-size: 15px; line-height: 1.6; color: #991b1b; margin: 0;">
+        <strong>What this means:</strong><br>
+        You will not be able to access your account or use Joblify services during this time.
+      </p>
+    </div>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      If you believe this is a mistake or would like to discuss this decision, please contact our appeals team:
+    </p>
+    <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+      <p style="font-size: 16px; font-weight: 600; color: #0f172a; margin: 0 0 8px 0;">
+        📧 Email: <a href="mailto:appeals@joblifyai.com" style="color: #667eea; text-decoration: none;">appeals@joblifyai.com</a>
+      </p>
+      <p style="font-size: 14px; color: #64748b; margin: 0;">
+        We review all appeals within 2-3 business days
+      </p>
+    </div>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      Best regards,<br>
+      <span style="font-weight: 600;">The Joblify Team</span>
+    </p>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: "Important: Account Access Update - Joblify",
+    html: getEmailTemplate(content, "Account access update notification"),
+  });
+}
