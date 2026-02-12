@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Shield, ShieldOff, Ban, CheckCircle, Eye, UserX } from "lucide-react";
+import { Search, Shield, ShieldOff, Ban, CheckCircle, Eye, UserX, Gift } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { User } from "@shared/schema";
 
@@ -16,12 +18,14 @@ export function AdminUserManagement() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [viewUserDialog, setViewUserDialog] = useState(false);
   const [blockDialog, setBlockDialog] = useState(false);
   const [blockType, setBlockType] = useState<"account" | "ai">("account");
   const [blockReason, setBlockReason] = useState("");
+  const [codeDialog, setCodeDialog] = useState(false);
+  const [selectedPerk, setSelectedPerk] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Fetch users
   const { data: usersData, isLoading } = useQuery({
@@ -38,16 +42,14 @@ export function AdminUserManagement() {
     },
   });
 
-  // Fetch user details
-  const { data: userDetails, isLoading: loadingDetails } = useQuery({
-    queryKey: ["/api/admin/users/:userId", selectedUser?.id],
+  // Fetch perks for awarding
+  const { data: perksData } = useQuery({
+    queryKey: ["/api/admin/perks"],
     queryFn: async () => {
-      if (!selectedUser?.id) return null;
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`);
-      if (!res.ok) throw new Error("Failed to fetch user details");
+      const res = await fetch("/api/admin/perks");
+      if (!res.ok) throw new Error("Failed to fetch perks");
       return res.json();
     },
-    enabled: !!selectedUser?.id && viewUserDialog,
   });
 
   // Block account mutation
@@ -124,6 +126,27 @@ export function AdminUserManagement() {
     },
   });
 
+  // Create perk code mutation  
+  const createCodeMutation = useMutation({
+    mutationFn: async ({ userEmail, perkId }: { userEmail: string; perkId: string }) => {
+      const res = await fetch(`/api/admin/codes/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userEmail, perkId }),
+      });
+      if (!res.ok) throw new Error("Failed to create perk code");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Perk code created and email sent to user" });
+      setCodeDialog(false);
+      setSelectedPerk("");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create perk code", variant: "destructive" });
+    },
+  });
+
   const handleBlockUser = () => {
     if (!selectedUser || !blockReason.trim()) {
       toast({ title: "Error", description: "Please provide a reason", variant: "destructive" });
@@ -137,20 +160,20 @@ export function AdminUserManagement() {
     }
   };
 
+  const handleCreateCode = () => {
+    if (!selectedUser || !selectedPerk) {
+      toast({ title: "Error", description: "Please select a perk", variant: "destructive" });
+      return;
+    }
+    createCodeMutation.mutate({ userEmail: selectedUser.email, perkId: selectedPerk });
+  };
+
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>
-            Search, view, and manage user accounts
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Search */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* Search */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, email, or username..."
                 value={search}
@@ -228,15 +251,22 @@ export function AdminUserManagement() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setViewUserDialog(true);
-                            }}
+                            onClick={() => setLocation(`/dashboard/admin/users/${user.id}`)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
                           {!user.isAdmin && (
                             <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setCodeDialog(true);
+                                }}
+                              >
+                                <Gift className="h-4 w-4" />
+                              </Button>
                               {user.accountBlocked ? (
                                 <Button
                                   size="sm"
@@ -316,96 +346,48 @@ export function AdminUserManagement() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* User Details Dialog */}
-      <Dialog open={viewUserDialog} onOpenChange={setViewUserDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Create Perk Code Dialog */}
+      <Dialog open={codeDialog} onOpenChange={setCodeDialog}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
+            <DialogTitle>Create Perk Code for User</DialogTitle>
             <DialogDescription>
-              GDPR-compliant user information and platform usage
+              Select a perk to create a redeemable code. An email with the code will be sent to the user.
             </DialogDescription>
           </DialogHeader>
-          {loadingDetails ? (
-            <div className="py-8 text-center">Loading...</div>
-          ) : userDetails ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Name</Label>
-                  <div className="font-medium">{userDetails.user.name || "N/A"}</div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Email</Label>
-                  <div className="font-medium">{userDetails.user.email}</div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Username</Label>
-                  <div className="font-medium">@{userDetails.user.username}</div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Subscription</Label>
-                  <div className="font-medium capitalize">{userDetails.subscription.plan}</div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Created</Label>
-                  <div className="font-medium">
-                    {new Date(userDetails.user.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Last Login</Label>
-                  <div className="font-medium">
-                    {userDetails.user.lastLoginAt
-                      ? new Date(userDetails.user.lastLoginAt).toLocaleDateString()
-                      : "Never"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Label className="text-lg font-semibold">Platform Usage</Label>
-                <div className="grid grid-cols-3 gap-4 mt-2">
-                  <div>
-                    <Label className="text-muted-foreground">Resumes</Label>
-                    <div className="text-2xl font-bold">{userDetails.statistics.resumeCount}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">AI Usage</Label>
-                    <div className="text-2xl font-bold">{userDetails.statistics.aiUsageCount}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Security Events</Label>
-                    <div className="text-2xl font-bold">{userDetails.statistics.securityEventsCount}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Label className="text-lg font-semibold">Monthly Usage</Label>
-                <div className="grid grid-cols-2 gap-4 mt-2">
-                  <div>
-                    <Label className="text-muted-foreground">AI Edits</Label>
-                    <div className="font-medium">{userDetails.usage.aiEditsUsed}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Cover Letters</Label>
-                    <div className="font-medium">{userDetails.usage.coverLettersUsed}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Job Analyses</Label>
-                    <div className="font-medium">{userDetails.usage.jobAnalysesUsed}</div>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">ATS Scans</Label>
-                    <div className="font-medium">{userDetails.usage.atsScansUsed}</div>
-                  </div>
-                </div>
+          <div className="space-y-4">
+            <div>
+              <Label>User Email</Label>
+              <div className="p-2 bg-muted rounded text-sm">
+                {selectedUser?.email}
               </div>
             </div>
-          ) : null}
+            <div>
+              <Label>Select Perk</Label>
+              <Select value={selectedPerk} onValueChange={setSelectedPerk}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a perk" />
+                </SelectTrigger>
+                <SelectContent>
+                  {perksData?.perks?.map((perk: any) => (
+                    <SelectItem key={perk.id} value={perk.id}>
+                      {perk.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCodeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateCode} disabled={!selectedPerk}>
+              Create Code & Send Email
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

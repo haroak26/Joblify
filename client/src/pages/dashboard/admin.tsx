@@ -1,19 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Shield, Gift, Activity } from "lucide-react";
+import { Users, Shield, TrendingUp, BarChart3 } from "lucide-react";
 import { AdminUserManagement } from "./admin-user-management";
-import { AdminPerksManagement } from "./admin-perks-management";
-import { AdminAuditLogs } from "./admin-audit-logs";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from "recharts";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("users");
-
   // Fetch dashboard stats
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/admin/dashboard/stats"],
   });
+
+  // Mock AI usage data for graphs (replace with real data from API)
+  const aiUsageData = [
+    { name: "Mon", usage: 45 },
+    { name: "Tue", usage: 52 },
+    { name: "Wed", usage: 61 },
+    { name: "Thu", usage: 58 },
+    { name: "Fri", usage: 70 },
+    { name: "Sat", usage: 38 },
+    { name: "Sun", usage: 42 },
+  ];
+
+  const chartConfig = {
+    usage: {
+      label: "AI Usage",
+      color: "hsl(var(--primary))",
+    },
+  };
 
   if (isLoading) {
     return <div className="container mx-auto p-6">Loading dashboard stats...</div>;
@@ -21,100 +36,76 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage users, perks, and monitor platform activity
-          </p>
-        </div>
-        <Shield className="h-12 w-12 text-primary" />
+      <div>
+        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
+          <Shield className="w-6 h-6 text-primary" />
+          Admin Dashboard
+        </h2>
+        <p className="text-muted-foreground">
+          Manage users and monitor AI platform activity
+        </p>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* AI Usage Graphs */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              AI Usage This Week
+            </CardTitle>
+            <CardDescription>Daily AI feature interactions</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Registered on platform
-            </p>
+            <ChartContainer config={chartConfig} className="h-[200px]">
+              <BarChart data={aiUsageData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="usage" fill="var(--color-usage)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              AI Usage Trend
+            </CardTitle>
+            <CardDescription>Weekly AI engagement pattern</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.stats?.activeUsers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Active in last 7 days
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Blocked Accounts</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.stats?.blockedAccounts || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently blocked
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Users Today</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.stats?.usersToday || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              New registrations today
-            </p>
+            <ChartContainer config={chartConfig} className="h-[200px]">
+              <LineChart data={aiUsageData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Line type="monotone" dataKey="usage" stroke="var(--color-usage)" strokeWidth={2} />
+              </LineChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="users">
-            <Users className="h-4 w-4 mr-2" />
+      {/* User Management Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
             User Management
-          </TabsTrigger>
-          <TabsTrigger value="perks">
-            <Gift className="h-4 w-4 mr-2" />
-            Perks Management
-          </TabsTrigger>
-          <TabsTrigger value="logs">
-            <Activity className="h-4 w-4 mr-2" />
-            Audit Logs
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="users" className="space-y-4">
+          </CardTitle>
+          <CardDescription>
+            Manage users, view details, and award perks
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <AdminUserManagement />
-        </TabsContent>
-
-        <TabsContent value="perks" className="space-y-4">
-          <AdminPerksManagement />
-        </TabsContent>
-
-        <TabsContent value="logs" className="space-y-4">
-          <AdminAuditLogs />
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

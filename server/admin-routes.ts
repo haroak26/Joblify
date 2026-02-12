@@ -3,7 +3,7 @@ import { storage } from "./storage";
 import { requireAuth } from "./auth";
 import { requireAdmin, logAdminAction } from "./middleware/admin";
 import { sendPerkAwardedEmail, sendAccountBlockedEmail } from "./email";
-import { perks, userPerks } from "@shared/schema";
+import { perks, userPerks, redeemableCodes } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
@@ -363,6 +363,108 @@ export function setupAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching user perks:", error);
       res.status(500).json({ error: "Failed to fetch user perks" });
+    }
+  });
+  
+  // ============================================
+  // Redeemable Codes Management
+  // ============================================
+  
+  /**
+   * POST /api/admin/codes/create
+   * Create a new redeemable code
+   */
+  app.post("/api/admin/codes/create", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { perkId, userEmail, maxRedemptions, expiresAt } = req.body;
+      
+      if (!perkId || !userEmail) {
+        return res.status(400).json({ error: "Perk ID and user email are required" });
+      }
+      
+      const adminId = req.session.userId!;
+      
+      // Check if perk exists
+      const [perk] = await db.select().from(perks).where(eq(perks.id, perkId));
+      if (!perk) {
+        return res.status(404).json({ error: "Perk not found" });
+      }
+      
+      // Check if user exists by email
+      const user = await storage.getUserByEmail(userEmail);
+      if (!user) {
+        return res.status(404).json({ error: "User not found with that email" });
+      }
+      
+      // Generate a unique code with better entropy (8 bytes = 16 hex chars)
+      const code = `PERK-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
+      
+      // Create the redeemable code
+      const [redeemableCode] = await db
+        .insert(redeemableCodes)
+        .values({
+          code,
+          perkId,
+          maxRedemptions: maxRedemptions || 1,
+          currentRedemptions: 0,
+          isActive: true,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          createdBy: adminId,
+        })
+        .returning();
+      
+      // Log admin action
+      const ipHash = crypto.createHash('sha256').update(req.ip || 'unknown').digest('hex');
+      await logAdminAction(
+        adminId,
+        'CREATE_PERK_CODE',
+        user.id,
+        { perkId, perkName: perk.name, code },
+        ipHash
+      );
+      
+      // Send email notification to user with the code
+      await sendPerkAwardedEmail(
+        user.email,
+        user.name || user.username,
+        perk.name,
+        `${perk.description}\n\nYour redemption code: ${code}\n\nRedeem it in your account settings.`
+      );
+      
+      res.json({ 
+        success: true, 
+        message: "Redeemable code created and email sent to user",
+        code: redeemableCode
+      });
+    } catch (error) {
+      console.error("Error creating redeemable code:", error);
+      res.status(500).json({ error: "Failed to create redeemable code" });
+    }
+  });
+  
+  /**
+   * GET /api/admin/codes
+   * Get all redeemable codes
+   */
+  app.get("/api/admin/codes", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const codes = await db.select().from(redeemableCodes);
+      
+      // Get perk details for each code
+      const codesWithDetails = await Promise.all(
+        codes.map(async (code) => {
+          const [perk] = await db.select().from(perks).where(eq(perks.id, code.perkId));
+          return {
+            ...code,
+            perk,
+          };
+        })
+      );
+      
+      res.json({ codes: codesWithDetails });
+    } catch (error) {
+      console.error("Error fetching codes:", error);
+      res.status(500).json({ error: "Failed to fetch codes" });
     }
   });
   

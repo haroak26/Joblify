@@ -88,26 +88,23 @@ export default function CoverLetterGenerator() {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">AI Cover Letter Generator</h1>
-            <p className="text-muted-foreground">Create tailored cover letters in seconds</p>
-          </div>
-        </div>
-        
-        {/* Info Banner */}
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <Wand2 className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-blue-900 dark:text-blue-100">
-                  Our AI analyzes your resume and the job description to create a personalized cover letter
-                </p>
+      <div>
+        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
+          <Sparkles className="w-6 h-6 text-primary" />
+          AI Cover Letter Generator
+        </h2>
+        <p className="text-muted-foreground">Create tailored cover letters in seconds</p>
+      </div>
+      
+      {/* Info Banner */}
+      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Wand2 className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-900 dark:text-blue-100">
+                Our AI analyzes your resume and the job description to create a personalized cover letter
+              </p>
                 <p className="text-blue-700 dark:text-blue-300 mt-1">
                   Select a resume, paste the job description, choose your tone, and we'll do the rest!
                 </p>
