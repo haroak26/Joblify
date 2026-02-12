@@ -90,55 +90,65 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-background to-pink-50 dark:from-gray-950 dark:via-background dark:to-gray-900 p-4">
+      <Card className="w-full max-w-md shadow-xl border-2">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-            <Briefcase className="w-6 h-6 text-primary-foreground" />
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+            <Briefcase className="w-8 h-8 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               {status === "loading" && "Verifying..."}
               {status === "success" && "Email Verified!"}
               {status === "error" && "Verification Failed"}
               {status === "waiting" && "Verify Your Email"}
             </CardTitle>
             {status === "waiting" && (
-              <CardDescription className="mt-2">
-                Check your email to verify your account and access the dashboard
+              <CardDescription className="mt-2 text-base">
+                Check your email to verify your account and unlock all features
               </CardDescription>
             )}
           </div>
         </CardHeader>
         <CardContent className="text-center space-y-6">
           {status === "loading" && (
-            <div className="py-8">
-              <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-              <p className="text-muted-foreground mt-4">Verifying your email...</p>
+            <div className="py-12">
+              <div className="relative">
+                <div className="w-20 h-20 mx-auto">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"></div>
+                  <Loader2 className="w-20 h-20 animate-spin text-primary relative z-10" />
+                </div>
+              </div>
+              <p className="text-muted-foreground mt-6 text-lg">Verifying your email...</p>
             </div>
           )}
           
           {status === "success" && (
-            <div className="py-4">
-              <CheckCircle className="w-16 h-16 text-primary mx-auto mb-4" />
-              <p className="text-muted-foreground mb-2">{message}</p>
-              <p className="text-sm text-muted-foreground mb-6">Redirecting to dashboard...</p>
-              <Button asChild className="w-full">
+            <div className="py-8">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-24 h-24 bg-green-500/20 rounded-full animate-ping"></div>
+                </div>
+                <CheckCircle className="w-20 h-20 text-green-500 mx-auto relative z-10" />
+              </div>
+              <p className="text-lg font-medium text-foreground mb-2">{message}</p>
+              <p className="text-sm text-muted-foreground mb-8">Redirecting to dashboard...</p>
+              <Button asChild className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
                 <Link href="/dashboard">Go to Dashboard</Link>
               </Button>
             </div>
           )}
           
           {status === "error" && (
-            <div className="py-4">
-              <XCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-              <p className="text-muted-foreground mb-6">{message}</p>
+            <div className="py-8">
+              <XCircle className="w-20 h-20 text-destructive mx-auto mb-6" />
+              <p className="text-lg text-foreground mb-8">{message}</p>
               <div className="space-y-3">
                 {user && !user.emailVerified && (
                   <Button 
                     onClick={handleResend}
                     disabled={isResending || resendCooldown > 0}
-                    className="w-full"
+                    className="w-full h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                     variant="default"
                   >
                     {isResending ? (
@@ -156,7 +166,7 @@ export default function VerifyEmail() {
                     )}
                   </Button>
                 )}
-                <Button asChild variant="outline" className="w-full">
+                <Button asChild variant="outline" className="w-full h-12">
                   <Link href="/login">Go to Login</Link>
                 </Button>
               </div>
@@ -164,21 +174,22 @@ export default function VerifyEmail() {
           )}
 
           {status === "waiting" && (
-            <div className="py-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-8 h-8 text-primary" />
+            <div className="py-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse opacity-20"></div>
+                <Mail className="w-10 h-10 text-purple-600 dark:text-purple-400 relative z-10" />
               </div>
-              <p className="text-muted-foreground mb-2">
+              <p className="text-lg font-medium text-foreground mb-2">
                 {message}
               </p>
-              <p className="text-sm text-muted-foreground mb-6">
+              <p className="text-sm text-muted-foreground mb-8">
                 Click the link in the email to verify your account and access the dashboard.
               </p>
               <div className="space-y-3">
                 <Button 
                   onClick={handleResend}
                   disabled={isResending || resendCooldown > 0}
-                  className="w-full"
+                  className="w-full h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                   variant="default"
                 >
                   {isResending ? (
@@ -198,7 +209,7 @@ export default function VerifyEmail() {
                 <Button 
                   onClick={handleLogout}
                   variant="outline"
-                  className="w-full"
+                  className="w-full h-12"
                 >
                   Logout
                 </Button>
