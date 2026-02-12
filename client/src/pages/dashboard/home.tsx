@@ -86,7 +86,7 @@ export default function DashboardHome() {
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-primary" />
+          <Sparkles className="w-6 h-6 text-primary" aria-hidden="true" />
           Dashboard
         </h2>
         <p className="text-muted-foreground">
