@@ -21,14 +21,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage users, perks, and monitor platform activity
-          </p>
-        </div>
-        <Shield className="h-12 w-12 text-primary" />
+      <div>
+        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
+          <Shield className="w-6 h-6 text-primary" />
+          Admin Dashboard
+        </h2>
+        <p className="text-muted-foreground">
+          Manage users, perks, and monitor platform activity
+        </p>
       </div>
 
       {/* Stats Overview */}

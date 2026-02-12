@@ -113,18 +113,14 @@ export default function AtsScanner() {
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <Search className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">ATS Resume Scanner</h1>
-            <p className="text-muted-foreground">
-              Deep analysis of your resume's ATS compatibility with actionable insights
-            </p>
-          </div>
-        </div>
+      <div>
+        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
+          <Search className="w-6 h-6 text-primary" />
+          ATS Resume Scanner
+        </h2>
+        <p className="text-muted-foreground">
+          Deep analysis of your resume's ATS compatibility with actionable insights
+        </p>
       </div>
 
       {/* Scan Configuration */}
@@ -259,19 +255,19 @@ export default function AtsScanner() {
                   <p className="text-small text-muted-foreground mt-1">out of 100</p>
                 </div>
                 <div className="flex-1 space-y-3">
-                  <h3 className="text-large font-semibold">{getScoreLabel(result.score)}</h3>
+                  <h3 className="text-large font-medium">{getScoreLabel(result.score)}</h3>
                   <Progress value={result.score} className="h-3" />
                   <div className="grid grid-cols-3 gap-4 text-center text-small">
                     <div>
-                      <div className="font-semibold text-green-600">{result.keywords?.length || 0}</div>
+                      <div className="font-medium text-green-600">{result.keywords?.length || 0}</div>
                       <div className="text-muted-foreground">Keywords Found</div>
                     </div>
                     <div>
-                      <div className="font-semibold text-red-600">{result.missingKeywords?.length || 0}</div>
+                      <div className="font-medium text-red-600">{result.missingKeywords?.length || 0}</div>
                       <div className="text-muted-foreground">Missing Keywords</div>
                     </div>
                     <div>
-                      <div className="font-semibold text-yellow-600">{result.suggestions?.length || 0}</div>
+                      <div className="font-medium text-yellow-600">{result.suggestions?.length || 0}</div>
                       <div className="text-muted-foreground">Improvements</div>
                     </div>
                   </div>
@@ -303,7 +299,7 @@ export default function AtsScanner() {
                           <Icon className={`w-4 h-4 ${style.color}`} />
                           <span className="font-medium text-small">{cat.name}</span>
                         </div>
-                        <span className={`font-semibold text-small ${style.color}`}>{cat.score}/100</span>
+                        <span className={`font-medium text-small ${style.color}`}>{cat.score}/100</span>
                       </div>
                       <Progress value={cat.score} className="h-2" />
                       {cat.feedback && (
@@ -382,7 +378,7 @@ export default function AtsScanner() {
                 <div className="space-y-3">
                   {result.suggestions.map((suggestion: string, i: number) => (
                     <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mt-0.5 text-small font-semibold">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mt-0.5 text-small font-medium">
                         {i + 1}
                       </div>
                       <p className="flex-1 text-small">{suggestion}</p>
