@@ -147,7 +147,10 @@ export function setupAdminRoutes(app: Express) {
    */
   app.post("/api/admin/users/:userId/unblock-account", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const userId = validateUserId(req.params); if (!userId) { return res.status(400).json({ error: "Invalid user ID" }); }
+      const userId = validateUserId(req.params);
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
       const adminId = req.session.userId!;
       
       const user = await storage.unblockUserAccount(userId);
@@ -179,7 +182,10 @@ export function setupAdminRoutes(app: Express) {
    */
   app.post("/api/admin/users/:userId/block-ai", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const userId = validateUserId(req.params); if (!userId) { return res.status(400).json({ error: "Invalid user ID" }); }
+      const userId = validateUserId(req.params);
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
       const { reason } = req.body;
       
       if (!reason || reason.trim().length === 0) {
@@ -220,7 +226,10 @@ export function setupAdminRoutes(app: Express) {
    */
   app.post("/api/admin/users/:userId/unblock-ai", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const userId = validateUserId(req.params); if (!userId) { return res.status(400).json({ error: "Invalid user ID" }); }
+      const userId = validateUserId(req.params);
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
       const adminId = req.session.userId!;
       
       const user = await storage.unblockUserAIAccess(userId);
@@ -252,7 +261,10 @@ export function setupAdminRoutes(app: Express) {
    */
   app.get("/api/admin/users/:userId/activity", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const userId = validateUserId(req.params); if (!userId) { return res.status(400).json({ error: "Invalid user ID" }); }
+      const userId = validateUserId(req.params);
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
       const limit = parseInt(req.query.limit as string) || 50;
       
       const activities = await storage.getUserActivityLogs(userId, limit);
@@ -270,7 +282,10 @@ export function setupAdminRoutes(app: Express) {
    */
   app.get("/api/admin/users/:userId/ai-usage", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const userId = validateUserId(req.params); if (!userId) { return res.status(400).json({ error: "Invalid user ID" }); }
+      const userId = validateUserId(req.params);
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
       const limit = parseInt(req.query.limit as string) || 50;
       
       // Get raw AI usage logs
@@ -417,7 +432,10 @@ export function setupAdminRoutes(app: Express) {
    */
   app.post("/api/admin/users/:userId/award-perk", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const userId = validateUserId(req.params); if (!userId) { return res.status(400).json({ error: "Invalid user ID" }); }
+      const userId = validateUserId(req.params);
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
       const { perkId } = req.body;
       
       if (!perkId) {
@@ -476,7 +494,10 @@ export function setupAdminRoutes(app: Express) {
    */
   app.get("/api/admin/users/:userId/perks", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const userId = validateUserId(req.params); if (!userId) { return res.status(400).json({ error: "Invalid user ID" }); }
+      const userId = validateUserId(req.params);
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
       
       const userPerksData = await storage.getUserPerks(userId);
       
