@@ -1582,10 +1582,11 @@ Format your response as JSON with these fields:
   // ============================================
 
   // Configure multer for file uploads
+  const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB max file size
+      fileSize: MAX_FILE_SIZE_BYTES,
     },
     fileFilter: (req, file, cb) => {
       // Only accept PDF and DOCX files

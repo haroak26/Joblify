@@ -33,7 +33,7 @@ export function setupAdminRoutes(app: Express) {
       console.log('[API] Admin fetch result:', { count: result.users.length, total: result.total });
       
       // Remove sensitive data before sending
-      const sanitizedUsers = result.users.map((user: any) => ({
+      const sanitizedUsers = result.users.map((user) => ({
         id: user.id,
         name: user.name,
         username: user.username,

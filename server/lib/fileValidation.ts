@@ -4,6 +4,9 @@
  * malicious files from being accepted based on MIME type spoofing
  */
 
+// File size limits
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
 /**
  * File magic bytes (file signatures) for supported file types
  */
@@ -56,9 +59,8 @@ export function validateFile(
     return { valid: false, error: 'Empty file' };
   }
 
-  // Check file size (max 10MB)
-  const MAX_FILE_SIZE = 10 * 1024 * 1024;
-  if (buffer.length > MAX_FILE_SIZE) {
+  // Check file size
+  if (buffer.length > MAX_FILE_SIZE_BYTES) {
     return { valid: false, error: 'File too large (max 10MB)' };
   }
 
