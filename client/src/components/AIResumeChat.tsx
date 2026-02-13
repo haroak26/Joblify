@@ -66,8 +66,8 @@ export default function AIResumeChat({
           const data = await response.json();
           if (data.messages && data.messages.length > 0) {
             // Convert saved messages to ChatMessage format with IDs
-            const loadedMessages = data.messages.map((msg: any, index: number) => ({
-              role: msg.role,
+            const loadedMessages = data.messages.map((msg: { role: string; content: string }, index: number) => ({
+              role: msg.role as "user" | "ai",
               content: msg.content,
               id: `${msg.role}-${Date.now()}-${index}`,
             }));
@@ -88,16 +88,11 @@ export default function AIResumeChat({
 
   // Update activeComponents when selectedComponents prop changes
   useEffect(() => {
-    // If components changed from empty to non-empty, reset messages to show new greeting
-    if (selectedComponents.length > 0 && prevComponentsRef.current.length === 0) {
-      // Only reset if we don't have loaded messages
-      if (!isLoadingConversation && messages.length === 0) {
-        setMessages([]);
-      }
-    }
+    // If components changed from empty to non-empty and we have no loaded messages,
+    // the greeting will be shown by the next effect
     prevComponentsRef.current = selectedComponents;
     setActiveComponents(selectedComponents);
-  }, [selectedComponents, isLoadingConversation, messages.length]);
+  }, [selectedComponents]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

@@ -33,20 +33,8 @@ export default function Resumes() {
   const search = useSearch();
   const { toast } = useToast();
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
+  const [hasTriggeredAICreate, setHasTriggeredAICreate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Check if we need to trigger AI builder automatically
-  useEffect(() => {
-    if (search.includes("create=ai")) {
-      // Navigate to create page in AI mode by creating a resume directly
-      createAIResume();
-    }
-  }, [search]);
-
-  const createAIResume = () => {
-    // Create a resume and navigate to AI mode
-    createResumeMutation.mutate("ai");
-  };
 
   // Create resume mutation
   const createResumeMutation = useMutation({
@@ -73,6 +61,14 @@ export default function Resumes() {
       });
     },
   });
+
+  // Check if we need to trigger AI builder automatically
+  useEffect(() => {
+    if (search.includes("create=ai") && !hasTriggeredAICreate && !createResumeMutation.isPending) {
+      setHasTriggeredAICreate(true);
+      createResumeMutation.mutate("ai");
+    }
+  }, [search, hasTriggeredAICreate, createResumeMutation]);
 
   // Fetch all resumes
   const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({
