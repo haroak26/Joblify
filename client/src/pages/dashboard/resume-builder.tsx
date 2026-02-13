@@ -535,6 +535,7 @@ export default function ResumeBuilder() {
                   onComplete={handleAIComplete}
                   selectedComponents={selectedComponents}
                   onEditComponents={handleEditComponents}
+                  onAutoSave={handleSave}
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile and tablet, shown on large desktop */}
@@ -558,6 +559,7 @@ export default function ResumeBuilder() {
                     onUpdate={updateResumeData}
                     onSwitchToManual={() => setActiveSection("personal")}
                     focusedComponent={aiEditingComponent}
+                    onAutoSave={handleSave}
                   />
                 ) : ActiveSectionComponent ? (
                   <ActiveSectionComponent
