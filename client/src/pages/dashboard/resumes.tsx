@@ -68,7 +68,7 @@ export default function Resumes() {
       setHasTriggeredAICreate(true);
       createResumeMutation.mutate("ai");
     }
-  }, [search, hasTriggeredAICreate, createResumeMutation]);
+  }, [search, hasTriggeredAICreate, createResumeMutation.isPending, createResumeMutation.mutate]);
 
   // Fetch all resumes
   const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({

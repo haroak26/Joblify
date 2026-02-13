@@ -66,11 +66,15 @@ export default function AIResumeChat({
           const data = await response.json();
           if (data.messages && data.messages.length > 0) {
             // Convert saved messages to ChatMessage format with IDs
-            const loadedMessages = data.messages.map((msg: { role: string; content: string }, index: number) => ({
-              role: msg.role as "user" | "ai",
-              content: msg.content,
-              id: `${msg.role}-${Date.now()}-${index}`,
-            }));
+            const loadedMessages = data.messages.map((msg: { role: string; content: string }, index: number) => {
+              // Validate role to ensure type safety
+              const role = msg.role === "user" || msg.role === "ai" ? msg.role : "ai";
+              return {
+                role,
+                content: msg.content,
+                id: `${role}-${Date.now()}-${index}`,
+              };
+            });
             setMessages(loadedMessages);
             setHasInteracted(true); // User has previous interaction
           }
