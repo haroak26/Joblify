@@ -296,8 +296,12 @@ export default function AIResumeChat({
                 throw new Error(eventData.message);
               }
             } catch (parseError) {
-              // Skip malformed SSE events
-              if (parseError instanceof SyntaxError) continue;
+              if (parseError instanceof SyntaxError) {
+                if (import.meta.env.DEV) {
+                  console.warn("Skipping malformed SSE event:", line.slice(6));
+                }
+                continue;
+              }
               throw parseError;
             }
           }

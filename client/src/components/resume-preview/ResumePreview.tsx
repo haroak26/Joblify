@@ -45,7 +45,7 @@ export default function ResumePreview({ data, template, onSectionClick }: Resume
   return (
     <div className="w-full max-w-full">
       <div 
-        className={`mx-auto bg-white print:shadow-none ${onSectionClick ? '[&_[data-section]]:cursor-pointer [&_[data-section]:hover]:outline [&_[data-section]:hover]:outline-2 [&_[data-section]:hover]:outline-primary/40 [&_[data-section]:hover]:outline-offset-2 [&_[data-section]:hover]:rounded-sm' : ''}`}
+        className={`mx-auto bg-white print:shadow-none ${onSectionClick ? 'resume-preview-clickable' : ''}`}
         style={{
           width: '8.5in',
           minHeight: '11in',
@@ -53,6 +53,10 @@ export default function ResumePreview({ data, template, onSectionClick }: Resume
         }}
         onClick={handleSectionClick}
       >
+        <style>{`
+          .resume-preview-clickable [data-section] { cursor: pointer; }
+          .resume-preview-clickable [data-section]:hover { outline: 2px solid hsl(var(--primary) / 0.4); outline-offset: 2px; border-radius: 2px; }
+        `}</style>
         {renderTemplate()}
       </div>
     </div>
