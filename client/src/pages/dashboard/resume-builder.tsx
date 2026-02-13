@@ -186,21 +186,6 @@ export default function ResumeBuilder() {
       })
     : [];
 
-  // Auto-mark builder as completed when all selected sections have data
-  useEffect(() => {
-    if (
-      builderAIAvailable &&
-      incompleteBuilderSections.length === 0 &&
-      resume &&
-      !resume.aiBuilderCompleted &&
-      resumeData
-    ) {
-      saveResumeMutation.mutate({
-        aiBuilderCompleted: true,
-      });
-    }
-  }, [incompleteBuilderSections.length, builderAIAvailable, resume?.aiBuilderCompleted, resumeData]);
-
   // Show component selector when entering AI mode for the first time
   useEffect(() => {
     if (isAIMode && resumeData && !hasShownAISelector) {
@@ -314,6 +299,22 @@ export default function ResumeBuilder() {
       setHasUnsavedChanges(true);
     }
   }, [resumeData, resumeTitle, selectedTemplate, resume]);
+
+  // Auto-mark builder as completed when all selected sections have data
+  const incompleteCount = incompleteBuilderSections.length;
+  useEffect(() => {
+    if (
+      builderAIAvailable &&
+      incompleteCount === 0 &&
+      resume &&
+      !resume.aiBuilderCompleted &&
+      resumeData
+    ) {
+      saveResumeMutation.mutate({
+        aiBuilderCompleted: true,
+      });
+    }
+  }, [incompleteCount, builderAIAvailable, resume?.aiBuilderCompleted, resumeData]);
 
   const handleSave = () => {
     if (!resumeData) return;

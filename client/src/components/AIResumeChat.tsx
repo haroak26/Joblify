@@ -205,7 +205,7 @@ export default function AIResumeChat({
     setMessages([greetingMsg]);
     // Save greeting to DB
     saveMessageToDb("ai", greeting);
-  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, isGuidedBuilder, onUpdate, saveMessageToDb]);
+  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, saveMessageToDb]);
 
   // Streaming send message
   const handleSendMessage = useCallback(async () => {
