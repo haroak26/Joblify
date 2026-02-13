@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Send, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getCsrfToken } from "@/lib/queryClient";
 
 interface AiAssistantDialogProps {
   open: boolean;
@@ -32,9 +33,14 @@ export function AiAssistantDialog({
 
   const improveMutation = useMutation({
     mutationFn: async (prompt?: string) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/ai/improve-content", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           content: currentContent,
           section: section,

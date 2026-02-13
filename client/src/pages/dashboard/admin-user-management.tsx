@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Shield, ShieldOff, Ban, CheckCircle, Eye, UserX, Gift } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { getCsrfToken } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
 
 export function AdminUserManagement() {
@@ -55,9 +56,14 @@ export function AdminUserManagement() {
   // Block account mutation
   const blockAccountMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/admin/users/${userId}/block-account`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ reason }),
       });
       if (!res.ok) throw new Error("Failed to block account");
@@ -77,9 +83,14 @@ export function AdminUserManagement() {
   // Block AI mutation
   const blockAIMutation = useMutation({
     mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/admin/users/${userId}/block-ai`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ reason }),
       });
       if (!res.ok) throw new Error("Failed to block AI access");
@@ -99,8 +110,14 @@ export function AdminUserManagement() {
   // Unblock account mutation
   const unblockAccountMutation = useMutation({
     mutationFn: async (userId: string) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = {};
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/admin/users/${userId}/unblock-account`, {
         method: "POST",
+        headers,
       });
       if (!res.ok) throw new Error("Failed to unblock account");
       return res.json();
@@ -114,8 +131,14 @@ export function AdminUserManagement() {
   // Unblock AI mutation
   const unblockAIMutation = useMutation({
     mutationFn: async (userId: string) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = {};
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/admin/users/${userId}/unblock-ai`, {
         method: "POST",
+        headers,
       });
       if (!res.ok) throw new Error("Failed to unblock AI access");
       return res.json();
@@ -129,9 +152,14 @@ export function AdminUserManagement() {
   // Create perk code mutation  
   const createCodeMutation = useMutation({
     mutationFn: async ({ userEmail, perkId }: { userEmail: string; perkId: string }) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/admin/codes/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ userEmail, perkId }),
       });
       if (!res.ok) throw new Error("Failed to create perk code");

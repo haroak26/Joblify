@@ -4,7 +4,7 @@ import { getStoredTokens } from "./auth-storage";
 /**
  * Get CSRF token from cookie
  */
-function getCsrfToken(): string | null {
+export function getCsrfToken(): string | null {
   const match = document.cookie.match(new RegExp('(^| )_csrf=([^;]+)'));
   return match ? match[2] : null;
 }

@@ -9,6 +9,7 @@ import { Footer } from "@/components/footer";
 import { Briefcase, Mail, MessageSquare, Send, CheckCircle2, Sparkles, Loader2, AlertCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { getCsrfToken } from "@/lib/queryClient";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,9 +40,14 @@ export default function Contact() {
 
     try {
       // First, try to get AI response
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/contact/ai-response", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(formData),
       });
 
@@ -73,9 +79,14 @@ export default function Contact() {
   const sendEmailToSupport = async () => {
     setIsSendingEmail(true);
     try {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/contact/send-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           ...formData,
           aiResponse: aiResponse || undefined,

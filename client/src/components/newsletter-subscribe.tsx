@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail } from "lucide-react";
+import { getCsrfToken } from "@/lib/queryClient";
 
 export function NewsletterSubscribe() {
   const [email, setEmail] = useState("");
@@ -20,9 +21,14 @@ export function NewsletterSubscribe() {
 
     setStatus("loading");
     try {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const response = await fetch("/api/newsletter/subscribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ email }),
         credentials: "include",
       });

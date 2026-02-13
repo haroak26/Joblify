@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, FileText, Briefcase, Loader2, Download, Copy, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getCsrfToken } from "@/lib/queryClient";
 import type { Resume } from "@shared/schema";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 
@@ -42,9 +43,14 @@ export default function TailorPage() {
   // Tailor resume mutation
   const tailorResumeMutation = useMutation({
     mutationFn: async () => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/resumes/${selectedResumeId}/tailor`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ jobId: selectedJobId }),
       });
       if (!res.ok) {
@@ -72,9 +78,14 @@ export default function TailorPage() {
   // Tailor cover letter mutation
   const tailorCoverLetterMutation = useMutation({
     mutationFn: async () => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/cover-letter/tailor", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           resumeId: selectedResumeId,
           jobId: selectedJobId,

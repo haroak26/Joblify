@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
+import { getCsrfToken } from "@/lib/queryClient";
 
 export default function AtsScanner() {
   // Track feature usage
@@ -37,9 +38,15 @@ export default function AtsScanner() {
       if (jobDescription.trim()) {
         formData.append("jobDescription", jobDescription.trim());
       }
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = {};
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/ats/scan", {
         method: "POST",
         body: formData,
+        headers,
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -58,9 +65,14 @@ export default function AtsScanner() {
 
   const scanJoblifyResumeMutation = useMutation({
     mutationFn: async (resumeId: string) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/ats/scan-resume/${resumeId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ jobDescription: jobDescription.trim() || undefined }),
       });
       if (!res.ok) {
