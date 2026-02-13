@@ -47,6 +47,45 @@ export async function sendEmail({ to, subject, htmlContent }: SendEmailParams): 
   }
 }
 
+/**
+ * Add a contact to a Brevo list
+ */
+export async function addContactToBrevoList(email: string, listId: number, attributes?: Record<string, string>): Promise<boolean> {
+  if (!BREVO_API_KEY) {
+    console.log("Brevo API key not configured, skipping contact add");
+    return false;
+  }
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/contacts", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        listIds: [listId],
+        attributes: attributes || {},
+        updateEnabled: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Brevo add contact error:", errorText);
+      return false;
+    }
+
+    console.log(`Contact ${email} added to Brevo list ${listId}`);
+    return true;
+  } catch (error) {
+    console.error("Brevo add contact error:", error);
+    return false;
+  }
+}
+
 export async function sendOnboardingReminderEmail(to: string, name: string): Promise<boolean> {
   const subject = "Complete Your Joblify Profile - Get Started Today!";
   

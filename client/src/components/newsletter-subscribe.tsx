@@ -5,19 +5,41 @@ import { Mail } from "lucide-react";
 
 export function NewsletterSubscribe() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // For now, just simulate a subscription
-    // In production, this would call an API endpoint
-    if (email && email.includes("@")) {
-      setStatus("success");
-      setEmail("");
-      setTimeout(() => setStatus("idle"), 5000);
-    } else {
+    if (!email || !email.includes("@")) {
       setStatus("error");
+      setErrorMessage("Please enter a valid email address.");
+      setTimeout(() => setStatus("idle"), 3000);
+      return;
+    }
+
+    setStatus("loading");
+    try {
+      const response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setStatus("success");
+        setEmail("");
+        setTimeout(() => setStatus("idle"), 5000);
+      } else {
+        setStatus("error");
+        setErrorMessage(data.error || "Failed to subscribe. Please try again.");
+        setTimeout(() => setStatus("idle"), 3000);
+      }
+    } catch {
+      setStatus("error");
+      setErrorMessage("Failed to subscribe. Please try again.");
       setTimeout(() => setStatus("idle"), 3000);
     }
   };
@@ -48,15 +70,15 @@ export function NewsletterSubscribe() {
                 className="flex-1"
                 required
               />
-              <Button type="submit" size="sm">
-                Subscribe
+              <Button type="submit" size="sm" disabled={status === "loading"}>
+                {status === "loading" ? "Subscribing..." : "Subscribe"}
               </Button>
             </form>
           )}
           
           {status === "error" && (
             <div className="text-sm text-red-600 dark:text-red-500 mt-2">
-              Please enter a valid email address.
+              {errorMessage}
             </div>
           )}
           
