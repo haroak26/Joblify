@@ -90,14 +90,14 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-background to-pink-50 dark:from-gray-950 dark:via-background dark:to-gray-900 p-4">
-      <Card className="w-full max-w-md shadow-xl border-2">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
-            <Briefcase className="w-8 h-8 text-white" />
+          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-md">
+            <Briefcase className="w-8 h-8 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <CardTitle className="text-3xl font-bold text-foreground">
               {status === "loading" && "Verifying..."}
               {status === "success" && "Email Verified!"}
               {status === "error" && "Verification Failed"}
@@ -115,8 +115,7 @@ export default function VerifyEmail() {
             <div className="py-12">
               <div className="relative">
                 <div className="w-20 h-20 mx-auto">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse"></div>
-                  <Loader2 className="w-20 h-20 animate-spin text-primary relative z-10" />
+                  <Loader2 className="w-20 h-20 animate-spin text-primary" />
                 </div>
               </div>
               <p className="text-muted-foreground mt-6 text-lg">Verifying your email...</p>
@@ -133,7 +132,7 @@ export default function VerifyEmail() {
               </div>
               <p className="text-lg font-medium text-foreground mb-2">{message}</p>
               <p className="text-sm text-muted-foreground mb-8">Redirecting to dashboard...</p>
-              <Button asChild className="w-full h-12 text-base bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+              <Button asChild className="w-full h-12 text-base">
                 <Link href="/dashboard">Go to Dashboard</Link>
               </Button>
             </div>
@@ -148,7 +147,7 @@ export default function VerifyEmail() {
                   <Button 
                     onClick={handleResend}
                     disabled={isResending || resendCooldown > 0}
-                    className="w-full h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                    className="w-full h-12"
                     variant="default"
                   >
                     {isResending ? (
@@ -175,9 +174,8 @@ export default function VerifyEmail() {
 
           {status === "waiting" && (
             <div className="py-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse opacity-20"></div>
-                <Mail className="w-10 h-10 text-purple-600 dark:text-purple-400 relative z-10" />
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Mail className="w-10 h-10 text-primary" />
               </div>
               <p className="text-lg font-medium text-foreground mb-2">
                 {message}
@@ -189,7 +187,7 @@ export default function VerifyEmail() {
                 <Button 
                   onClick={handleResend}
                   disabled={isResending || resendCooldown > 0}
-                  className="w-full h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  className="w-full h-12"
                   variant="default"
                 >
                   {isResending ? (
