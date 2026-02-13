@@ -192,7 +192,7 @@ export default function AIResumeChat({
     const greeting = focusedComponent
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
       : mode === "builder"
-      ? `Welcome back ${firstName}! I'm your **AI Resume Builder** assistant, ready to help you complete your resume.\n\nI'll help you finish the sections you started. Let's continue building your resume together!\n\n**Let's pick up where you left off.** What would you like to work on next?`
+      ? `Welcome back ${firstName}! I'm your **AI Resume Builder** assistant. Let's continue building the sections you started.\n\nWhat would you like to work on next?`
       : isGuidedBuilder
       ? `Welcome ${firstName}! I'm your **AI Resume Builder** assistant, and I'm excited to help you create a professional resume from scratch.\n\nI already have your name and email. Let's start building your resume together!\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, Data Analyst, etc.)`
       : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;

@@ -605,6 +605,7 @@ export default function ResumeBuilder() {
                 size="sm"
                 onClick={() => {
                   setAiEditingComponent(undefined);
+                  setAiMode("enhancement");
                   setActiveSection("ai-chat");
                 }}
                 className="text-xs sm:text-sm h-8 hidden sm:flex"
