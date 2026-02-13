@@ -154,7 +154,7 @@ export default function AIResumeChat({
         fetch('/api/track-feature', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ featureName: 'ai-resume-builder' }),
+          body: JSON.stringify({ featureName: 'resume_builder' }),
           credentials: 'include',
         }).catch(() => {
           // Silently fail - tracking is non-critical
