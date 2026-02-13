@@ -32,20 +32,26 @@ const CleanTabsList = React.forwardRef<
     updateIndicator()
 
     // Update on mutations (when active state changes)
-    const observer = new MutationObserver(updateIndicator)
     if (listRef.current) {
+      const observer = new MutationObserver(updateIndicator)
       observer.observe(listRef.current, {
         attributes: true,
         subtree: true,
         attributeFilter: ['data-state'],
       })
+
+      // Update on resize
+      window.addEventListener('resize', updateIndicator)
+
+      return () => {
+        observer.disconnect()
+        window.removeEventListener('resize', updateIndicator)
+      }
     }
 
-    // Update on resize
+    // Cleanup for resize listener if no list ref
     window.addEventListener('resize', updateIndicator)
-
     return () => {
-      observer.disconnect()
       window.removeEventListener('resize', updateIndicator)
     }
   }, [])
