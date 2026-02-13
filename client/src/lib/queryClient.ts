@@ -9,6 +9,38 @@ export function getCsrfToken(): string | null {
   return match ? match[2] : null;
 }
 
+/**
+ * Ensure CSRF token is available by fetching from server if needed
+ * This should be called before any state-changing operations
+ */
+export async function ensureCsrfToken(): Promise<string | null> {
+  // First check if we have a token in cookies
+  let token = getCsrfToken();
+  
+  if (token) {
+    return token;
+  }
+  
+  // If no token, fetch one from the server
+  try {
+    const response = await fetch('/api/csrf-token', {
+      credentials: 'include',
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      // Token should now be set in cookie by server
+      // Re-read from cookie to get the actual value
+      token = getCsrfToken();
+      return token;
+    }
+  } catch (error) {
+    console.error('Failed to fetch CSRF token:', error);
+  }
+  
+  return null;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = await res.text();
@@ -57,6 +89,11 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // Ensure CSRF token is available for state-changing requests
+  if (["POST", "PUT", "DELETE", "PATCH"].includes(method.toUpperCase())) {
+    await ensureCsrfToken();
+  }
+  
   const authHeaders = getAuthHeaders();
   const res = await fetch(url, {
     method,

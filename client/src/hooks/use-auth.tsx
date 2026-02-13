@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useLocation } from "wouter";
-import { apiRequest, queryClient, getCsrfToken } from "@/lib/queryClient";
+import { apiRequest, queryClient, getCsrfToken, ensureCsrfToken } from "@/lib/queryClient";
 import { 
   clearStoredUser, 
   getStoredUser, 
@@ -60,11 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
-      const csrfToken = getCsrfToken();
+      // Ensure CSRF token is available before login
+      const csrfToken = await ensureCsrfToken();
+      
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (csrfToken) {
         headers["x-csrf-token"] = csrfToken;
       }
+      
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers,
@@ -90,11 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, name?: string, username?: string) => {
     try {
-      const csrfToken = getCsrfToken();
+      // Ensure CSRF token is available before registration
+      const csrfToken = await ensureCsrfToken();
+      
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (csrfToken) {
         headers["x-csrf-token"] = csrfToken;
       }
+      
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers,
