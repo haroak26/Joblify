@@ -110,15 +110,18 @@ async function deriveKey(secret: string, salt: Buffer): Promise<Buffer> {
 }
 
 /**
- * Get encryption key from environment or generate a random one
+ * Get encryption key from environment or fail in production
  * WARNING: In production, ALWAYS set ENCRYPTION_KEY env variable
  */
 function getEncryptionSecret(): string {
   const secret = process.env.ENCRYPTION_KEY || process.env.SESSION_SECRET;
   if (!secret) {
-    console.error("[SECURITY] CRITICAL: No ENCRYPTION_KEY or SESSION_SECRET found in environment!");
-    console.error("[SECURITY] Encryption will use a temporary key that changes on restart!");
-    // In development, generate a temporary key (NOT FOR PRODUCTION!)
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[SECURITY] CRITICAL: ENCRYPTION_KEY or SESSION_SECRET must be set in production environment!');
+    }
+    console.error("[SECURITY] WARNING: No ENCRYPTION_KEY or SESSION_SECRET found in environment!");
+    console.error("[SECURITY] Using temporary key for development only - encrypted data will be lost on restart!");
+    // In development only, generate a temporary key
     return randomBytes(32).toString("hex");
   }
   return secret;

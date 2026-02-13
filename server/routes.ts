@@ -12,6 +12,8 @@ import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { addContactToBrevoList } from './brevo';
+import { validateFile, getFileTypeName } from './lib/fileValidation';
+import { aiRateLimit } from './middleware/security';
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -516,7 +518,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/suggest-skills", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/suggest-skills", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       console.log('[API] Suggesting skills for user:', userId);
@@ -589,7 +591,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/cover-letter/generate", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/cover-letter/generate", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       const { resumeId, jobDescription } = req.body;
@@ -1147,7 +1149,7 @@ export async function registerRoutes(
   });
 
   // AI Chat endpoint for resume building
-  app.post("/api/resumes/:id/ai-chat", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/resumes/:id/ai-chat", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const { id } = req.params;
@@ -1605,6 +1607,15 @@ Format your response as JSON with these fields:
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      // Validate file using magic bytes
+      const validation = validateFile(req.file.buffer, req.file.mimetype);
+      if (!validation.valid) {
+        return res.status(400).json({ 
+          error: validation.error || "Invalid file format",
+          message: `Please upload a valid ${getFileTypeName(req.file.mimetype)} file`
+        });
+      }
+
       // Check usage limits
       const usage = await storage.getUsage(userId);
       const subscription = await storage.getSubscription(userId);
@@ -1802,7 +1813,7 @@ Return ONLY the cover letter text, no additional commentary.`;
   });
 
   // Tailor cover letter for specific job
-  app.post("/api/cover-letter/tailor", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/cover-letter/tailor", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({

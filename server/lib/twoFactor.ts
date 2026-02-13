@@ -11,7 +11,14 @@ if (!ENCRYPTION_KEY) {
   console.warn('[2FA] WARNING: TWO_FACTOR_ENCRYPTION_KEY not set. Using temporary key for development only.');
 }
 
-const ENCRYPTION_KEY_BUFFER = Buffer.from((ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex')).slice(0, 32));
+// Derive a proper 32-byte key using SHA-256 instead of slicing
+function getEncryptionKeyBuffer(): Buffer {
+  const key = ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+  // Use SHA-256 to derive a proper 32-byte key from any length input
+  return crypto.createHash('sha256').update(key).digest();
+}
+
+const ENCRYPTION_KEY_BUFFER = getEncryptionKeyBuffer();
 const ALGORITHM = 'aes-256-cbc';
 
 /**
