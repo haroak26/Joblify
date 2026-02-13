@@ -159,11 +159,17 @@ export default function AtsScanner() {
                     <SelectValue placeholder="Choose a resume to scan" />
                   </SelectTrigger>
                   <SelectContent>
-                    {resumes.map((resume: any) => (
-                      <SelectItem key={resume.id} value={resume.id.toString()}>
-                        {resume.title}
-                      </SelectItem>
-                    ))}
+                    {resumes.length === 0 ? (
+                      <div className="p-2 text-small text-muted-foreground">
+                        No resumes found. Create one first.
+                      </div>
+                    ) : (
+                      resumes.map((resume: any) => (
+                        <SelectItem key={resume.id} value={resume.id.toString()}>
+                          {resume.title}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </CleanTabsContent>

@@ -20,6 +20,7 @@ interface AIResumeChatProps {
   selectedComponents?: string[];
   onEditComponents?: () => void;
   onAutoSave?: () => void;
+  mode?: "builder" | "enhancement"; // New prop to distinguish between modes
 }
 
 interface ChatMessage {
@@ -59,6 +60,7 @@ export default function AIResumeChat({
   selectedComponents = [],
   onEditComponents,
   onAutoSave,
+  mode = "enhancement", // Default to enhancement mode
 }: AIResumeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -83,7 +85,7 @@ export default function AIResumeChat({
   });
   const userPlan = subscriptionData?.subscription?.plan || "free";
   const isFreePlan = userPlan === "free";
-  const isGuidedBuilder = activeComponents.length > 0 && !focusedComponent;
+  const isGuidedBuilder = mode === "builder" || (activeComponents.length > 0 && !focusedComponent);
 
   // Save a single message to the database live
   const saveMessageToDb = useCallback(async (role: "user" | "ai", content: string) => {
@@ -189,6 +191,8 @@ export default function AIResumeChat({
     
     const greeting = focusedComponent
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
+      : mode === "builder"
+      ? `Welcome back ${firstName}! I'm your **AI Resume Builder** assistant. Let's continue building the sections you started.\n\nWhat would you like to work on next?`
       : isGuidedBuilder
       ? `Welcome ${firstName}! I'm your **AI Resume Builder** assistant, and I'm excited to help you create a professional resume from scratch.\n\nI already have your name and email. Let's start building your resume together!\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, Data Analyst, etc.)`
       : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;
