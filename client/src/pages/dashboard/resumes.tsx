@@ -68,6 +68,8 @@ export default function Resumes() {
       setHasTriggeredAICreate(true);
       createResumeMutation.mutate("ai");
     }
+    // Note: createResumeMutation.mutate is intentionally NOT in dependencies
+    // as it's a stable function from React Query useMutation
   }, [search, hasTriggeredAICreate, createResumeMutation.isPending]);
 
   // Fetch all resumes
