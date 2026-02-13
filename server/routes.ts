@@ -1511,7 +1511,11 @@ Format your response as JSON:
       const doc = pdfGenerator.getDocument();
 
       // Set response headers for PDF download
-      const sanitizedTitle = resume.title.replace(/[^a-z0-9]/gi, '_');
+      // Sanitize filename and provide fallback
+      let sanitizedTitle = resume.title.replace(/[^a-z0-9\s-]/gi, '_').trim();
+      if (!sanitizedTitle || sanitizedTitle.length === 0) {
+        sanitizedTitle = 'resume';
+      }
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.pdf"`);
 
