@@ -1,24 +1,74 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Target, Briefcase, MapPin, DollarSign, Clock, TrendingUp, CheckCircle2, Search, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Target, Briefcase, MapPin, DollarSign, Clock, TrendingUp, CheckCircle2, Search, FileText, Loader2, Upload, AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface MatchResult {
+  matchScore: number;
+  summary: string;
+  matchedSkills: string[];
+  missingSkills: string[];
+  strengths: string[];
+  improvements: string[];
+  keywordMatches: string[];
+  experienceMatch: string;
+  educationMatch: string;
+}
 
 export default function JobMatch() {
   // Track feature usage
   useFeatureTracking(FEATURES.JOB_MATCH);
   
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
+  const [jobDescription, setJobDescription] = useState<string>("");
+  const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
+  const { toast } = useToast();
 
   const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({
     queryKey: ["/api/resumes"],
   });
 
-  const resumes = resumesData?.resumes || [];
+  const resumes = resumesData?.resumes || (Array.isArray(resumesData) ? resumesData : []);
+
+  const analyzeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/job-match/analyze", {
+        resumeId: selectedResumeId,
+        jobDescription,
+      });
+      return response.json();
+    },
+    onSuccess: (data: MatchResult) => {
+      setMatchResult(data);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Failed to analyze job match. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getScoreBadgeVariant = (score: number) => {
+    if (score >= 80) return "default";
+    if (score >= 60) return "secondary";
+    return "destructive";
+  };
 
   return (
     <div className="container mx-auto p-6 max-w-6xl space-y-6">
@@ -29,16 +79,16 @@ export default function JobMatch() {
           Job Match
         </h2>
         <p className="text-muted-foreground">
-          Find jobs that match your skills and experience
+          Analyze how well your resume matches a job description
         </p>
       </div>
 
-      {/* Resume Selection */}
+      {/* Resume Selection & Job Description */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-body">Select Your Resume</CardTitle>
+          <CardTitle className="text-body">Match Your Resume</CardTitle>
           <CardDescription>
-            Choose a resume to match against available jobs
+            Select a resume and paste a job description to see how well you match
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -64,95 +114,175 @@ export default function JobMatch() {
                 )}
               </SelectContent>
             </Select>
-            <Button disabled={!selectedResumeId} size="lg">
-              <Search className="w-4 h-4 mr-2" />
-              Find Matches
-            </Button>
           </div>
+
+          <Textarea
+            placeholder="Paste the job description here..."
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            className="min-h-[150px]"
+          />
+
+          <Button
+            disabled={!selectedResumeId || jobDescription.length < 20 || analyzeMutation.isPending}
+            size="lg"
+            onClick={() => analyzeMutation.mutate()}
+            className="w-full"
+          >
+            {analyzeMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4 mr-2" />
+                Analyze Match
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Coming Soon Section */}
-      <Card className="bg-muted/30 border-dashed">
-        <CardContent className="p-12">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-              <Target className="w-8 h-8 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-large font-semibold mb-2">Job Matching Coming Soon</h3>
-              <p className="text-small text-muted-foreground max-w-md mx-auto">
-                We're building an intelligent job matching system that will analyze your resume and
-                find the best job opportunities based on your skills, experience, and preferences.
-              </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4 pt-4 max-w-2xl mx-auto">
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-background">
-                <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="text-left">
-                  <div className="font-medium text-small">Smart Matching</div>
-                  <div className="text-small text-muted-foreground">AI-powered job recommendations</div>
+      {/* Match Results */}
+      {matchResult && (
+        <>
+          {/* Overall Score */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Match Score</h3>
+                  <p className="text-sm text-muted-foreground">{matchResult.summary}</p>
+                </div>
+                <div className="text-center">
+                  <div className={`text-4xl font-bold ${getScoreColor(matchResult.matchScore)}`}>
+                    {matchResult.matchScore}%
+                  </div>
+                  <Badge variant={getScoreBadgeVariant(matchResult.matchScore) as any}>
+                    {matchResult.matchScore >= 80 ? "Strong Match" : matchResult.matchScore >= 60 ? "Moderate Match" : "Weak Match"}
+                  </Badge>
                 </div>
               </div>
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-background">
-                <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="text-left">
-                  <div className="font-medium text-small">Skill Analysis</div>
-                  <div className="text-small text-muted-foreground">Match based on your expertise</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-background">
-                <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="text-left">
-                  <div className="font-medium text-small">Real-time Updates</div>
-                  <div className="text-small text-muted-foreground">Latest job opportunities</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Example Job Card (Preview) */}
-      <Card className="opacity-50">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-semibold text-body">Senior Software Engineer</h3>
-                <Badge variant="secondary" className="text-small">92% Match</Badge>
-              </div>
-              <p className="text-small text-muted-foreground mb-3">
-                Tech Company Inc. · Remote
-              </p>
-              <div className="flex flex-wrap gap-3 text-small text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  Remote, USA
+          {/* Skills Analysis */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-body flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  Matched Skills
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {matchResult.matchedSkills.length > 0 ? (
+                    matchResult.matchedSkills.map((skill, i) => (
+                      <Badge key={i} variant="outline" className="border-green-300 text-green-700">
+                        {skill}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No matched skills identified</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-1">
-                  <DollarSign className="w-4 h-4" />
-                  $120k - $180k
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-body flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                  Missing Skills
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {matchResult.missingSkills.length > 0 ? (
+                    matchResult.missingSkills.map((skill, i) => (
+                      <Badge key={i} variant="outline" className="border-orange-300 text-orange-700">
+                        {skill}
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No missing skills — great coverage!</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  Full-time
-                </div>
-              </div>
-            </div>
-            <Button variant="outline" disabled>
-              View Details
-            </Button>
+              </CardContent>
+            </Card>
           </div>
-          <Separator className="my-4" />
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">React</Badge>
-            <Badge variant="outline">TypeScript</Badge>
-            <Badge variant="outline">Node.js</Badge>
-            <Badge variant="outline">AWS</Badge>
+
+          {/* Strengths & Improvements */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-body flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  Strengths
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {matchResult.strengths.map((strength, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      {strength}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-body flex items-center gap-2">
+                  <Target className="w-5 h-5 text-blue-600" />
+                  Improvements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {matchResult.improvements.map((improvement, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      {improvement}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Experience & Education Match */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-body flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-primary" />
+                  Experience Match
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{matchResult.experienceMatch}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-body flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Education Match
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{matchResult.educationMatch}</p>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }

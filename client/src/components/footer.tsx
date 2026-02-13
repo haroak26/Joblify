@@ -1,9 +1,37 @@
 import { Link } from "wouter";
+import { useState } from "react";
 import { Briefcase, Mail, Github, Twitter, Linkedin, Facebook } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export function Footer() {
+  const [footerEmail, setFooterEmail] = useState("");
+  const [footerStatus, setFooterStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  const handleFooterSubscribe = async () => {
+    if (!footerEmail || !footerEmail.includes("@")) return;
+    setFooterStatus("loading");
+    try {
+      const response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: footerEmail }),
+        credentials: "include",
+      });
+      if (response.ok) {
+        setFooterStatus("success");
+        setFooterEmail("");
+        setTimeout(() => setFooterStatus("idle"), 5000);
+      } else {
+        setFooterStatus("error");
+        setTimeout(() => setFooterStatus("idle"), 3000);
+      }
+    } catch {
+      setFooterStatus("error");
+      setTimeout(() => setFooterStatus("idle"), 3000);
+    }
+  };
+
   return (
     <footer className="border-t bg-muted/30">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
@@ -146,17 +174,29 @@ export function Footer() {
             <p className="text-sm text-muted-foreground mb-4">
               Get career tips, resume advice, and updates on new features delivered to your inbox.
             </p>
-            <div className="flex gap-2">
-              <Input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="flex-1"
-              />
-              <Button>
-                <Mail className="w-4 h-4 mr-2" />
-                Subscribe
-              </Button>
-            </div>
+            {footerStatus === "success" ? (
+              <div className="text-sm font-medium text-green-600 dark:text-green-500">
+                ✓ Thanks for subscribing!
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input 
+                  type="email" 
+                  placeholder="Enter your email" 
+                  className="flex-1"
+                  value={footerEmail}
+                  onChange={(e) => setFooterEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleFooterSubscribe()}
+                />
+                <Button onClick={handleFooterSubscribe} disabled={footerStatus === "loading"}>
+                  <Mail className="w-4 h-4 mr-2" />
+                  {footerStatus === "loading" ? "..." : "Subscribe"}
+                </Button>
+              </div>
+            )}
+            {footerStatus === "error" && (
+              <p className="text-sm text-red-600 mt-2">Failed to subscribe. Please try again.</p>
+            )}
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   Edit,
   Copy,
   Trash2,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -30,6 +32,59 @@ export default function Resumes() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch all resumes
+  const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({
+    queryKey: ["/api/resumes"],
+  });
+
+  // Upload resume mutation
+  const uploadResumeMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/resumes/upload", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to upload resume");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+      toast({
+        title: "Resume Uploaded",
+        description: "Your resume has been parsed and imported successfully.",
+      });
+      // Navigate to the resume builder to edit the parsed resume
+      if (data.resume?.id) {
+        setLocation(`/dashboard/resume-builder/${data.resume.id}`);
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload resume. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      uploadResumeMutation.mutate(file);
+    }
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Fetch all resumes
   const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({
@@ -123,10 +178,32 @@ export default function Resumes() {
           Create and manage your professional resumes
         </p>
       </div>
-      <Button onClick={handleCreateResume} size="sm">
-        <Plus className="w-4 h-4 mr-2" />
-        Create New Resume
-      </Button>
+      <div className="flex gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadResumeMutation.isPending}
+        >
+          {uploadResumeMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Upload className="w-4 h-4 mr-2" />
+          )}
+          {uploadResumeMutation.isPending ? "Parsing..." : "Upload Resume"}
+        </Button>
+        <Button onClick={handleCreateResume} size="sm">
+          <Plus className="w-4 h-4 mr-2" />
+          Create New Resume
+        </Button>
+      </div>
     </div>
   );
 

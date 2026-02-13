@@ -4,12 +4,14 @@ import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
 import { 
   skillSchema, normalizePlan, resumes, users, usage, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
-  redeemableCodes, perks, userPerks, type PlanType
+  redeemableCodes, perks, userPerks, type PlanType,
+  mailingLists, userMailingLists
 } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
+import { addContactToBrevoList } from './brevo';
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -630,10 +632,7 @@ export async function registerRoutes(
   // ============================================
   app.post("/api/user/change-password", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const { currentPassword, newPassword } = req.body;
 
@@ -677,10 +676,7 @@ export async function registerRoutes(
   // Get 2FA status
   app.get("/api/user/2fa/status", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const user = await storage.getUser(userId);
       if (!user) {
@@ -700,10 +696,7 @@ export async function registerRoutes(
   // Setup 2FA - generate secret and QR code
   app.post("/api/user/2fa/setup", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const user = await storage.getUser(userId);
       if (!user) {
@@ -734,10 +727,7 @@ export async function registerRoutes(
   // Verify and enable 2FA
   app.post("/api/user/2fa/verify", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const { token } = req.body;
       if (!token) {
@@ -778,10 +768,7 @@ export async function registerRoutes(
   // Disable 2FA
   app.post("/api/user/2fa/disable", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const { password } = req.body;
       if (!password) {
@@ -820,10 +807,7 @@ export async function registerRoutes(
   // Get user preferences
   app.get("/api/user/preferences", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const user = await storage.getUser(userId);
       if (!user) {
@@ -845,10 +829,7 @@ export async function registerRoutes(
   // Save user preferences
   app.post("/api/user/preferences", requireAuth, async (req: Request, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = req.session.userId!;
 
       const {
         emailNotifications,
@@ -2144,6 +2125,434 @@ Guidelines:
         success: false,
         error: "Failed to send message. Please try emailing us directly at support@joblifyai.com",
       });
+    }
+  });
+
+  // ============================================
+  // Newsletter Subscribe Endpoint
+  // ============================================
+
+  app.post("/api/newsletter/subscribe", async (req: Request, res) => {
+    try {
+      const schema = z.object({
+        email: z.string().email("Valid email is required"),
+      });
+
+      const { email } = schema.parse(req.body);
+
+      // Get or create the newsletter mailing list
+      let [newsletterList] = await db
+        .select()
+        .from(mailingLists)
+        .where(eq(mailingLists.name, "newsletter"))
+        .limit(1);
+
+      if (!newsletterList) {
+        [newsletterList] = await db
+          .insert(mailingLists)
+          .values({
+            name: "newsletter",
+            description: "General newsletter with career tips and updates",
+            defaultSubscribed: true,
+          })
+          .returning();
+      }
+
+      // Check if user is logged in and link to their account
+      const userId = req.session.userId;
+
+      if (userId) {
+        // Check if already subscribed
+        const [existing] = await db
+          .select()
+          .from(userMailingLists)
+          .where(
+            and(
+              eq(userMailingLists.userId, userId),
+              eq(userMailingLists.listId, newsletterList.id)
+            )
+          )
+          .limit(1);
+
+        if (existing) {
+          if (existing.subscribed) {
+            return res.json({ success: true, message: "You're already subscribed!" });
+          }
+          // Re-subscribe
+          await db
+            .update(userMailingLists)
+            .set({ subscribed: true, subscribedAt: new Date(), unsubscribedAt: null })
+            .where(eq(userMailingLists.id, existing.id));
+        } else {
+          await db.insert(userMailingLists).values({
+            userId,
+            listId: newsletterList.id,
+            subscribed: true,
+          });
+        }
+      }
+
+      // Add to Brevo list if configured
+      const brevoListId = process.env.BREVO_NEWSLETTER_LIST_ID;
+      if (brevoListId) {
+        await addContactToBrevoList(email, parseInt(brevoListId, 10));
+      }
+
+      res.json({ success: true, message: "Successfully subscribed to newsletter!" });
+    } catch (error) {
+      console.error('[API] Error subscribing to newsletter:', error);
+      res.status(500).json({ error: "Failed to subscribe. Please try again." });
+    }
+  });
+
+  // ============================================
+  // Job Match Endpoint
+  // ============================================
+
+  app.post("/api/job-match/analyze", requireAuth, requireAIAccess, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      const schema = z.object({
+        resumeId: z.string().min(1, "Resume ID is required"),
+        jobDescription: z.string().min(20, "Job description must be at least 20 characters"),
+      });
+
+      const { resumeId, jobDescription } = schema.parse(req.body);
+
+      // Get resume from database
+      const [resume] = await db
+        .select()
+        .from(resumes)
+        .where(eq(resumes.id, resumeId))
+        .limit(1);
+
+      if (!resume || resume.userId !== userId) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Check usage limits
+      const userUsage = await storage.getUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+
+      if (userUsage.jobAnalysesThisMonth >= limits.maxJobAnalysesPerMonth) {
+        return res.status(403).json({
+          error: "Job analysis limit reached for this month",
+          limit: limits.maxJobAnalysesPerMonth,
+          current: userUsage.jobAnalysesThisMonth,
+        });
+      }
+
+      // Convert resume data to text
+      const resumeData = resumeDataSchema.parse(resume.resumeData);
+      const resumeText = convertResumeDataToText(resumeData);
+
+      // Send to AI for analysis
+      const poe = getPoeClient();
+      const aiResponse = await poe.chat.completions.create({
+        model: "GPT-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert career advisor and recruiter. Analyze the match between a resume and a job description. 
+Provide your response in this exact JSON format:
+{
+  "matchScore": <number 0-100>,
+  "summary": "<brief overall assessment>",
+  "matchedSkills": ["<skill1>", "<skill2>"],
+  "missingSkills": ["<skill1>", "<skill2>"],
+  "strengths": ["<strength1>", "<strength2>"],
+  "improvements": ["<suggestion1>", "<suggestion2>"],
+  "keywordMatches": ["<keyword1>", "<keyword2>"],
+  "experienceMatch": "<assessment of experience alignment>",
+  "educationMatch": "<assessment of education alignment>"
+}
+Respond ONLY with valid JSON, no additional text.`
+          },
+          {
+            role: "user",
+            content: `RESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescription}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 2000,
+      });
+
+      const aiContent = aiResponse.choices[0]?.message?.content || "{}";
+
+      let matchResult;
+      try {
+        matchResult = JSON.parse(aiContent);
+      } catch {
+        // If AI didn't return valid JSON, create a basic response
+        matchResult = {
+          matchScore: 50,
+          summary: aiContent,
+          matchedSkills: [],
+          missingSkills: [],
+          strengths: [],
+          improvements: [],
+          keywordMatches: [],
+          experienceMatch: "Unable to determine",
+          educationMatch: "Unable to determine",
+        };
+      }
+
+      // Increment usage counter
+      await db
+        .update(usage)
+        .set({ jobAnalysesThisMonth: sql`${usage.jobAnalysesThisMonth} + 1` })
+        .where(eq(usage.userId, userId));
+
+      res.json(matchResult);
+    } catch (error) {
+      console.error('[API] Error analyzing job match:', error);
+      res.status(500).json({ error: "Failed to analyze job match" });
+    }
+  });
+
+  // ============================================
+  // Resume Upload & Parse Endpoint
+  // ============================================
+
+  app.post("/api/resumes/upload", requireAuth, requireAIAccess, upload.single('file'), async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Check usage limits
+      const userUsage = await storage.getUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+
+      if (userUsage.importedResumesThisMonth >= limits.maxImportedResumesPerMonth) {
+        return res.status(403).json({
+          error: "Resume import limit reached for this month",
+          limit: limits.maxImportedResumesPerMonth,
+          current: userUsage.importedResumesThisMonth,
+        });
+      }
+
+      // Extract text from uploaded file
+      let extractedText = "";
+      if (req.file.mimetype === 'application/pdf') {
+        const pdfData = await pdfParse(req.file.buffer);
+        extractedText = pdfData.text;
+      } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+        extractedText = result.value;
+      }
+
+      if (!extractedText || extractedText.trim().length === 0) {
+        return res.status(400).json({ error: "Could not extract text from file. Please ensure the file is not empty or image-based." });
+      }
+
+      // Send to AI for structured parsing
+      const poe = getPoeClient();
+      const aiResponse = await poe.chat.completions.create({
+        model: "GPT-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a resume parser. Extract structured data from the raw resume text and return it in this exact JSON format:
+{
+  "personalInfo": {
+    "name": "",
+    "email": "",
+    "phone": "",
+    "location": "",
+    "linkedin": "",
+    "website": ""
+  },
+  "summary": "",
+  "experience": [
+    {
+      "company": "",
+      "title": "",
+      "location": "",
+      "startDate": "",
+      "endDate": null,
+      "description": ["bullet point 1", "bullet point 2"]
+    }
+  ],
+  "education": [
+    {
+      "school": "",
+      "degree": "",
+      "field": "",
+      "graduationDate": "",
+      "gpa": ""
+    }
+  ],
+  "skills": ["skill1", "skill2"],
+  "certifications": [
+    {
+      "name": "",
+      "issuer": "",
+      "date": ""
+    }
+  ],
+  "projects": [
+    {
+      "name": "",
+      "description": "",
+      "technologies": [],
+      "url": ""
+    }
+  ],
+  "awards": [
+    {
+      "title": "",
+      "issuer": "",
+      "date": "",
+      "description": ""
+    }
+  ],
+  "leadership": [],
+  "research": [],
+  "publications": []
+}
+Extract ALL information you can find. For dates, use formats like "Jan 2023" or "2023". If a section has no data, use an empty array. Respond ONLY with valid JSON, no additional text.`
+          },
+          {
+            role: "user",
+            content: `Parse this resume text:\n\n${extractedText}`
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 4000,
+      });
+
+      const aiContent = aiResponse.choices[0]?.message?.content || "{}";
+
+      let parsedData;
+      try {
+        parsedData = JSON.parse(aiContent);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse resume content. Please try again." });
+      }
+
+      // Validate and merge with empty resume data structure
+      const emptyData = createEmptyResumeData();
+      const resumeData: ResumeData = {
+        personalInfo: {
+          name: parsedData.personalInfo?.name || emptyData.personalInfo.name,
+          email: parsedData.personalInfo?.email || emptyData.personalInfo.email,
+          phone: parsedData.personalInfo?.phone || emptyData.personalInfo.phone,
+          location: parsedData.personalInfo?.location || emptyData.personalInfo.location,
+          linkedin: parsedData.personalInfo?.linkedin || emptyData.personalInfo.linkedin,
+          website: parsedData.personalInfo?.website || emptyData.personalInfo.website,
+        },
+        summary: parsedData.summary || emptyData.summary,
+        experience: Array.isArray(parsedData.experience)
+          ? parsedData.experience.map((exp: any) => ({
+              company: exp.company || "",
+              title: exp.title || "",
+              location: exp.location || "",
+              startDate: exp.startDate || "",
+              endDate: exp.endDate || null,
+              description: Array.isArray(exp.description) ? exp.description : [],
+            }))
+          : emptyData.experience,
+        education: Array.isArray(parsedData.education)
+          ? parsedData.education.map((edu: any) => ({
+              school: edu.school || "",
+              degree: edu.degree || "",
+              field: edu.field || "",
+              graduationDate: edu.graduationDate || "",
+              gpa: edu.gpa || "",
+            }))
+          : emptyData.education,
+        skills: Array.isArray(parsedData.skills) ? parsedData.skills : emptyData.skills,
+        certifications: Array.isArray(parsedData.certifications)
+          ? parsedData.certifications.map((cert: any) => ({
+              name: cert.name || "",
+              issuer: cert.issuer || "",
+              date: cert.date || "",
+            }))
+          : emptyData.certifications,
+        projects: Array.isArray(parsedData.projects)
+          ? parsedData.projects.map((proj: any) => ({
+              name: proj.name || "",
+              description: proj.description || "",
+              technologies: Array.isArray(proj.technologies) ? proj.technologies : [],
+              url: proj.url || "",
+            }))
+          : emptyData.projects,
+        awards: Array.isArray(parsedData.awards)
+          ? parsedData.awards.map((award: any) => ({
+              title: award.title || "",
+              issuer: award.issuer || "",
+              date: award.date || "",
+              description: award.description || "",
+            }))
+          : emptyData.awards,
+        leadership: Array.isArray(parsedData.leadership)
+          ? parsedData.leadership.map((lead: any) => ({
+              title: lead.title || "",
+              organization: lead.organization || "",
+              startDate: lead.startDate || "",
+              endDate: lead.endDate || null,
+              description: lead.description || "",
+            }))
+          : emptyData.leadership,
+        research: Array.isArray(parsedData.research)
+          ? parsedData.research.map((res: any) => ({
+              title: res.title || "",
+              institution: res.institution || "",
+              startDate: res.startDate || "",
+              endDate: res.endDate || null,
+              description: res.description || "",
+              url: res.url || "",
+            }))
+          : emptyData.research,
+        publications: Array.isArray(parsedData.publications)
+          ? parsedData.publications.map((pub: any) => ({
+              title: pub.title || "",
+              authors: pub.authors || "",
+              journal: pub.journal || "",
+              date: pub.date || "",
+              url: pub.url || "",
+            }))
+          : emptyData.publications,
+      };
+
+      // Determine title from parsed data
+      const title = resumeData.personalInfo.name
+        ? `${resumeData.personalInfo.name}'s Resume`
+        : req.file.originalname?.replace(/\.(pdf|docx)$/i, '') || "Imported Resume";
+
+      // Create the resume in database
+      const [newResume] = await db
+        .insert(resumes)
+        .values({
+          userId,
+          title,
+          template: "modern",
+          resumeData,
+        })
+        .returning();
+
+      // Increment imported resumes usage counter
+      await db
+        .update(usage)
+        .set({ importedResumesThisMonth: sql`${usage.importedResumesThisMonth} + 1` })
+        .where(eq(usage.userId, userId));
+
+      res.json({
+        success: true,
+        resume: newResume,
+        message: "Resume uploaded and parsed successfully!",
+      });
+    } catch (error) {
+      console.error('[API] Error uploading resume:', error);
+      res.status(500).json({ error: "Failed to upload and parse resume" });
     }
   });
 
