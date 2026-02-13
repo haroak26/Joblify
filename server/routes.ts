@@ -1088,6 +1088,8 @@ export async function registerRoutes(
         title: z.string().min(1).optional(),
         template: z.enum(['modern', 'professional', 'academic', 'minimal']).optional(),
         resumeData: resumeDataSchema.optional(),
+        aiBuilderComponents: z.array(z.string()).optional(),
+        aiBuilderCompleted: z.boolean().optional(),
       });
 
       const updates = updateSchema.parse(req.body);

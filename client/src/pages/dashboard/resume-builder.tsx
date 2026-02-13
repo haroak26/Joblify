@@ -113,6 +113,7 @@ export default function ResumeBuilder() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [userDataPrefilled, setUserDataPrefilled] = useState(false);
   const [aiEditingComponent, setAiEditingComponent] = useState<string | undefined>(undefined);
+  const [aiMode, setAiMode] = useState<"enhancement" | "builder">("enhancement"); // Track which AI mode is active
   const [showComponentSelector, setShowComponentSelector] = useState(false);
   const [hasShownAISelector, setHasShownAISelector] = useState(false);
   const [selectedComponents, setSelectedComponents] = useState<string[]>(
@@ -131,8 +132,53 @@ export default function ResumeBuilder() {
       setResumeData(resume.resumeData);
       setResumeTitle(resume.title);
       setSelectedTemplate(resume.template || "modern");
+      
+      // Load AI Builder components if they exist
+      if (resume.aiBuilderComponents && Array.isArray(resume.aiBuilderComponents)) {
+        setSelectedComponents(resume.aiBuilderComponents);
+      }
     }
   }, [resume]);
+  
+  // Calculate if Builder AI is available and which sections are incomplete
+  const builderAIAvailable = resume && 
+    resume.aiBuilderComponents && 
+    Array.isArray(resume.aiBuilderComponents) &&
+    resume.aiBuilderComponents.length > 0 &&
+    !resume.aiBuilderCompleted;
+    
+  const incompleteBuilderSections = builderAIAvailable
+    ? (resume?.aiBuilderComponents || []).filter((componentId: string) => {
+        const data = resumeData;
+        if (!data) return true;
+        
+        // Check if section has content
+        switch (componentId) {
+          case "summary":
+            return !data.summary || data.summary.trim() === "";
+          case "experience":
+            return !data.experience || data.experience.length === 0;
+          case "education":
+            return !data.education || data.education.length === 0;
+          case "skills":
+            return !data.skills || data.skills.length === 0;
+          case "certifications":
+            return !data.certifications || data.certifications.length === 0;
+          case "projects":
+            return !data.projects || data.projects.length === 0;
+          case "awards":
+            return !data.awards || data.awards.length === 0;
+          case "leadership":
+            return !data.leadership || data.leadership.length === 0;
+          case "research":
+            return !data.research || data.research.length === 0;
+          case "publications":
+            return !data.publications || data.publications.length === 0;
+          default:
+            return false;
+        }
+      })
+    : [];
 
   // Show component selector when entering AI mode for the first time
   useEffect(() => {
@@ -313,6 +359,14 @@ export default function ResumeBuilder() {
         setActiveSection(firstNewComponent);
       }
     }
+    
+    // If in AI mode, save the selected components to the database as AI Builder metadata
+    if (isAIMode && resumeId) {
+      saveResumeMutation.mutate({
+        aiBuilderComponents: components,
+        aiBuilderCompleted: false,
+      });
+    }
   };
 
   const handleEditComponents = () => {
@@ -320,6 +374,12 @@ export default function ResumeBuilder() {
   };
 
   const handleAIComplete = () => {
+    // Mark AI Builder as completed
+    if (isAIMode && resumeId) {
+      saveResumeMutation.mutate({
+        aiBuilderCompleted: true,
+      });
+    }
     // Navigate to compiling screen
     setLocation(`/dashboard/resume-builder/${resumeId}?compiling=true`);
   };
@@ -439,10 +499,11 @@ export default function ResumeBuilder() {
               <button
                 onClick={() => {
                   setAiEditingComponent(undefined);
+                  setAiMode("enhancement");
                   setActiveSection("ai-chat");
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
-                  activeSection === "ai-chat"
+                  activeSection === "ai-chat" && aiMode === "enhancement"
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
@@ -450,6 +511,25 @@ export default function ResumeBuilder() {
                 <MessageSquare className="w-4 h-4" />
                 <span className="flex-1 text-left">AI Enhancement</span>
               </button>
+              
+              {/* Builder AI button - only show if available */}
+              {builderAIAvailable && incompleteBuilderSections.length > 0 && (
+                <button
+                  onClick={() => {
+                    setAiEditingComponent(undefined);
+                    setAiMode("builder");
+                    setActiveSection("ai-chat");
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
+                    activeSection === "ai-chat" && aiMode === "builder"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span className="flex-1 text-left">Builder AI</span>
+                </button>
+              )}
             </div>
           </ScrollArea>
           
@@ -580,6 +660,8 @@ export default function ResumeBuilder() {
                     onUpdate={updateResumeData}
                     onSwitchToManual={() => setActiveSection("personal")}
                     focusedComponent={aiEditingComponent}
+                    selectedComponents={aiMode === "builder" ? incompleteBuilderSections : []}
+                    mode={aiMode}
                     onAutoSave={handleSave}
                   />
                 ) : ActiveSectionComponent ? (
