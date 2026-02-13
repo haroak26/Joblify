@@ -437,7 +437,10 @@ export default function ResumeBuilder() {
               
               {/* AI Enhancement button - moved below components */}
               <button
-                onClick={() => setActiveSection("ai-chat")}
+                onClick={() => {
+                  setAiEditingComponent(undefined);
+                  setActiveSection("ai-chat");
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
                   activeSection === "ai-chat"
                     ? "bg-primary/10 text-primary font-medium"
@@ -520,7 +523,10 @@ export default function ResumeBuilder() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setActiveSection("ai-chat")}
+                onClick={() => {
+                  setAiEditingComponent(undefined);
+                  setActiveSection("ai-chat");
+                }}
                 className="text-xs sm:text-sm h-8 hidden sm:flex"
               >
                 <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
