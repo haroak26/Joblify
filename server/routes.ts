@@ -14,6 +14,7 @@ import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes 
 import { addContactToBrevoList } from './brevo';
 import { validateFile, getFileTypeName } from './lib/fileValidation';
 import { aiRateLimit } from './middleware/security';
+import { csrfTokenEndpoint } from './middleware/csrf';
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -374,6 +375,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // CSRF token endpoint - allows client to get/refresh token
+  app.get("/api/csrf-token", csrfTokenEndpoint);
   
   app.get("/api/profile", requireAuth, async (req: Request, res) => {
     const userId = req.session.userId!;

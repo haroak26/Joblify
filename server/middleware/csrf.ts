@@ -118,3 +118,19 @@ export function getCsrfTokenName(): string {
 export function getCsrfHeaderName(): string {
   return CSRF_HEADER_NAME;
 }
+
+/**
+ * Endpoint handler to explicitly get/refresh CSRF token
+ * This ensures token is always available when needed
+ */
+export function csrfTokenEndpoint(req: Request, res: Response) {
+  // Get existing token or generate new one
+  let token = req.cookies[CSRF_COOKIE_NAME];
+  
+  if (!token) {
+    token = generateToken();
+    res.cookie(CSRF_COOKIE_NAME, token, CSRF_COOKIE_OPTIONS);
+  }
+  
+  res.json({ csrfToken: token });
+}
