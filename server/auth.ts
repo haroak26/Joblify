@@ -290,7 +290,7 @@ export function setupAuth(app: Express) {
 
       await sendWelcomeEmail(user.email, user.username);
 
-      res.json({ message: "Email verified successfully", alreadyVerified: false });
+      return res.json({ message: "Email verified successfully", alreadyVerified: false });
     } catch (error) {
       console.error("Verification error:", error);
       res.status(500).json({ error: "Verification failed" });
