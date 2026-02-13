@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
 import { 
-  skillSchema, normalizePlan, resumes, users, usage, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
+  skillSchema, normalizePlan, resumes, users, usage as usageTable, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
   redeemableCodes, perks, userPerks, type PlanType,
   mailingLists, userMailingLists
 } from "@shared/schema";
@@ -1653,9 +1653,9 @@ Format your response as JSON with these fields:
 
       // Update usage counter atomically
       await db
-        .update(usage)
-        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ atsScansThisMonth: sql`${usageTable.atsScansThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json(analysis);
     } catch (error) {
@@ -1710,9 +1710,9 @@ Format your response as JSON with these fields:
 
       // Update usage counter atomically
       await db
-        .update(usage)
-        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ atsScansThisMonth: sql`${usageTable.atsScansThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json(analysis);
     } catch (error) {
@@ -2321,9 +2321,9 @@ Respond ONLY with valid JSON, no additional text.`
 
       // Increment usage counter
       await db
-        .update(usage)
-        .set({ jobAnalysesThisMonth: sql`${usage.jobAnalysesThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ jobAnalysesThisMonth: sql`${usageTable.jobAnalysesThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json(matchResult);
     } catch (error) {
@@ -2565,9 +2565,9 @@ Extract ALL information you can find. For dates, use formats like "Jan 2023" or 
 
       // Increment imported resumes usage counter
       await db
-        .update(usage)
-        .set({ importedResumesThisMonth: sql`${usage.importedResumesThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ importedResumesThisMonth: sql`${usageTable.importedResumesThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json({
         success: true,
