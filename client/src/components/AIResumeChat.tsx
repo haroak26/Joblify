@@ -156,8 +156,11 @@ export default function AIResumeChat({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ featureName: 'resume_builder' }),
           credentials: 'include',
-        }).catch(() => {
-          // Silently fail - tracking is non-critical
+        }).catch((error) => {
+          // Silently fail in production - tracking is non-critical
+          if (import.meta.env.DEV) {
+            console.warn('Feature tracking failed:', error);
+          }
         });
       }
 
@@ -169,10 +172,11 @@ export default function AIResumeChat({
         onUpdate(data.updatedData);
         
         // Auto-save after updating data
+        // Note: Small delay ensures parent component state update completes before save
         if (onAutoSave) {
           setTimeout(() => {
             onAutoSave();
-          }, 500); // Small delay to ensure state is updated
+          }, 500);
         }
       }
 

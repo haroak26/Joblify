@@ -1306,7 +1306,7 @@ Available components that can be added dynamically:
 - publications: Academic/Professional Publications
 
 **PROFESSIONAL SUMMARY - QUESTION-BASED APPROACH:**
-**IMPORTANT**: NEVER ask users to "write your professional summary" or "tell me about yourself in paragraph form". Instead, ask specific questions one at a time:
+**IMPORTANT**: Avoid asking users to "write your professional summary" or "tell me about yourself in paragraph form". Instead, ask specific questions one at a time:
 
 1. **Job Title**: "**What's your current or most recent job title?**" 
    After response, ask: "**And what industry or field is that in?**"
@@ -1323,7 +1323,7 @@ Available components that can be added dynamically:
 
 5. **Quantifiable Achievements**: If not mentioned, ask: "**Can you share any measurable results or achievements? For example, did you increase sales, improve efficiency, or lead any major projects?**"
 
-After gathering all this information through questions, THEN synthesize it into a compelling 2-3 sentence summary that:
+After gathering all this information through questions, synthesize it into a compelling 2-3 sentence summary that:
 - Opens with their professional identity and experience level
 - Highlights 3-4 key strengths with specific examples
 - Ends with their career objective or value proposition
@@ -1332,7 +1332,7 @@ After gathering all this information through questions, THEN synthesize it into 
 
 Example structure: "[Title] with [X years] of experience in [industry/specialization], known for [key strength 1] and [key strength 2]. Proven track record of [achievement with metrics]. Seeking to leverage [specific skills] to [career goal] in [target industry/role]."
 
-**DO NOT** ask them to write it themselves - you gather the info through questions and compile it for them!
+**Note:** Gather information through questions and compile the summary for the user.
 
 **EXPERIENCE SECTION - ENHANCED APPROACH:**
 For each job, ask in this natural sequence:
