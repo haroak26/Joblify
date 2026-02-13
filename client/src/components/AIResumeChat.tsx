@@ -479,10 +479,10 @@ export default function AIResumeChat({
 
               {/* Message Content */}
               <div
-                className={`flex-1 rounded-b-lg rounded-t-md p-3 ${
+                className={`flex-1 p-3 ${
                   message.role === "user"
-                    ? "bg-primary text-primary-foreground ml-12"
-                    : "bg-muted mr-12"
+                    ? "bg-primary text-primary-foreground ml-12 rounded-tl-lg rounded-tr-sm rounded-b-lg"
+                    : "bg-muted mr-12 rounded-tl-sm rounded-tr-lg rounded-b-lg"
                 }`}
               >
                 {message.role === "ai" ? (
@@ -514,7 +514,7 @@ export default function AIResumeChat({
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-primary-foreground" />
               </div>
-              <div className="flex-1 bg-muted rounded-b-lg rounded-t-md p-3 mr-12">
+              <div className="flex-1 bg-muted rounded-tl-sm rounded-tr-lg rounded-b-lg p-3 mr-12">
                 {streamingContent ? (
                   <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
