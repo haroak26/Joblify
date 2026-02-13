@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Sparkles, MessageSquare } from 'lucide-react';
 import { analytics } from '@/lib/analytics';
+import { getCsrfToken } from '@/lib/queryClient';
 
 interface AISupportDialogProps {
   open: boolean;
@@ -30,9 +31,14 @@ export function AISupportDialog({ open, onOpenChange }: AISupportDialogProps) {
     analytics.trackSupportQuestionAsked(question);
 
     try {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
       const response = await fetch('/api/support/ai-assist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ question }),
       });
 

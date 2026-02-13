@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getCsrfToken } from "@/lib/queryClient";
 import ResumePreview from "@/components/resume-preview/ResumePreview";
 import { ResumeListSkeleton } from "@/components/loading-skeleton";
 import {
@@ -44,10 +44,16 @@ export default function Resumes() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = {};
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const response = await fetch("/api/resumes/upload", {
         method: "POST",
         body: formData,
         credentials: "include",
+        headers,
       });
       if (!response.ok) {
         const errorData = await response.json();

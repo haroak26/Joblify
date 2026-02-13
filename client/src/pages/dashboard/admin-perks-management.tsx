@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Search, Plus, Ticket, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getCsrfToken } from "@/lib/queryClient";
 
 export function AdminPerksManagement() {
   const [awardDialog, setAwardDialog] = useState(false);
@@ -46,9 +47,14 @@ export function AdminPerksManagement() {
   // Award perk mutation
   const awardPerkMutation = useMutation({
     mutationFn: async ({ userId, perkId }: { userId: string; perkId: string }) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch(`/api/admin/users/${userId}/award-perk`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ perkId }),
       });
       if (!res.ok) throw new Error("Failed to award perk");
@@ -68,9 +74,14 @@ export function AdminPerksManagement() {
   // Create perk mutation
   const createPerkMutation = useMutation({
     mutationFn: async (perkData: any) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/admin/perks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(perkData),
       });
       if (!res.ok) throw new Error("Failed to create perk");
@@ -93,9 +104,14 @@ export function AdminPerksManagement() {
   // Create code mutation
   const createCodeMutation = useMutation({
     mutationFn: async (codeData: any) => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/admin/codes/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(codeData),
       });
       if (!res.ok) throw new Error("Failed to create code");

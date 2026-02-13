@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Briefcase, Mail, Github, Twitter, Linkedin, Facebook } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { getCsrfToken } from "@/lib/queryClient";
 
 export function Footer() {
   const [footerEmail, setFooterEmail] = useState("");
@@ -12,9 +13,14 @@ export function Footer() {
     if (!footerEmail || !footerEmail.includes("@")) return;
     setFooterStatus("loading");
     try {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const response = await fetch("/api/newsletter/subscribe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ email: footerEmail }),
         credentials: "include",
       });

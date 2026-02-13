@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Copy, Download, Loader2, Sparkles, FileText, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getCsrfToken } from "@/lib/queryClient";
 import type { Resume } from "@shared/schema";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 
@@ -31,9 +32,14 @@ export default function CoverLetterGenerator() {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
       const res = await fetch("/api/cover-letter/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ resumeId, jobDescription, tone }),
       });
       if (!res.ok) throw new Error("Failed to generate");

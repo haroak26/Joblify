@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Send, Loader2, User as UserIcon, Edit3, Settings2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { getCsrfToken } from "@/lib/queryClient";
 import type { ResumeData } from "@shared/schema";
 
 interface AIResumeChatProps {
@@ -107,9 +108,15 @@ export default function AIResumeChat({
       // Sanitize input
       const sanitizedMessage = message.trim().slice(0, MAX_MESSAGE_LENGTH);
       
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
+      
       const response = await fetch(`/api/resumes/${resumeId}/ai-chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           message: sanitizedMessage,
           focusedComponent,
