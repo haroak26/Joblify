@@ -2,7 +2,7 @@ import type { Express, Response, Request } from "express";
 import { storage } from "./storage";
 import { requireAuth } from "./auth";
 import { requireAdmin, logAdminAction } from "./middleware/admin";
-import { sendPerkAwardedEmail, sendAccountBlockedEmail } from "./email";
+import { sendPerkAwardedEmail, sendAccountBlockedEmail, sendAiAccessBlockedEmail } from "./email";
 import { perks, userPerks, redeemableCodes, users, aiUsageLogs } from "@shared/schema";
 import { db } from "./db";
 import { eq, gte, desc, sql, count } from "drizzle-orm";
@@ -176,6 +176,9 @@ export function setupAdminRoutes(app: Express) {
         return res.status(404).json({ error: "User not found" });
       }
       
+      // Send email notification to the user
+      await sendAiAccessBlockedEmail(user.email, user.username);
+      
       // Log admin action
       const ipHash = crypto.createHash('sha256').update(req.ip || 'unknown').digest('hex');
       await logAdminAction(
@@ -341,6 +344,52 @@ export function setupAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching perks:", error);
       res.status(500).json({ error: "Failed to fetch perks" });
+    }
+  });
+  
+  /**
+   * POST /api/admin/perks
+   * Create a new perk
+   */
+  app.post("/api/admin/perks", requireAuth, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { name, perkType, value, description } = req.body;
+      
+      if (!name || !perkType || !description) {
+        return res.status(400).json({ error: "Name, perk type, and description are required" });
+      }
+      
+      const adminId = req.session.userId!;
+      
+      // Create the perk
+      const [perk] = await db
+        .insert(perks)
+        .values({
+          name,
+          perkType,
+          value: value || null,
+          description,
+        })
+        .returning();
+      
+      // Log admin action
+      const ipHash = crypto.createHash('sha256').update(req.ip || 'unknown').digest('hex');
+      await logAdminAction(
+        adminId,
+        'CREATE_PERK',
+        null,
+        { perkId: perk.id, name, perkType },
+        ipHash
+      );
+      
+      res.json({ 
+        success: true, 
+        message: "Perk created successfully",
+        perk
+      });
+    } catch (error) {
+      console.error("Error creating perk:", error);
+      res.status(500).json({ error: "Failed to create perk" });
     }
   });
   

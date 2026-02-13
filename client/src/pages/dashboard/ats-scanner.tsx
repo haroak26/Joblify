@@ -25,12 +25,10 @@ export default function AtsScanner() {
   const { toast } = useToast();
 
   // Query to fetch user's Joblify resumes
-  const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({
+  const { data: resumes = [] } = useQuery<Array<{ id: string; title: string }>>({
     queryKey: ["/api/resumes"],
     enabled: scanMode === "joblify",
   });
-
-  const resumes = resumesData?.resumes || [];
 
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {

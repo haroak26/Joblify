@@ -121,7 +121,8 @@ export function AppSidebar() {
       <SidebarContent className="px-2">
         <SidebarGroup>
           <SidebarMenu className="gap-1">
-            {mainMenuItems.map((item) => (
+            {/* Show regular menu items only for non-admin users */}
+            {!isAdmin && mainMenuItems.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton 
                   asChild 

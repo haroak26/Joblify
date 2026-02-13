@@ -214,7 +214,7 @@ export default function AIResumeChat({
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="flex flex-col p-4 border-b bg-muted/20">
+      <div className="flex flex-col p-4 border-b bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -334,7 +334,7 @@ export default function AIResumeChat({
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-muted/20">
+      <div className="p-4 border-t bg-gradient-to-r from-purple-500/5 via-pink-500/5 to-purple-500/5">
         <div className="max-w-3xl mx-auto relative flex items-center">
           <Input
             value={inputMessage}

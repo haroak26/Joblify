@@ -595,3 +595,55 @@ export async function sendAccountBlockedEmail(
     html: getEmailTemplate(content, "Account access update notification"),
   });
 }
+
+// Email when admin blocks a user's AI access
+export async function sendAiAccessBlockedEmail(
+  email: string,
+  username: string
+): Promise<boolean> {
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      AI Features Access Update
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${username},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      We're writing to inform you that your access to AI-powered features on Joblify has been temporarily restricted.
+    </p>
+    <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; border-radius: 8px; padding: 16px; margin: 20px 0;">
+      <p style="font-size: 15px; line-height: 1.6; color: #991b1b; margin: 0;">
+        <strong>Affected features:</strong><br>
+        • AI Resume Builder and Enhancement<br>
+        • AI Cover Letter Generator<br>
+        • ATS Scanner with AI Suggestions<br>
+        • Job Matching with AI Analysis<br>
+        • Resume Tailoring
+      </p>
+    </div>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      You can still access your account and use non-AI features like viewing your resumes, managing your profile, and tracking job applications.
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      If you believe this is a mistake or would like to discuss this decision, please contact our support team:
+    </p>
+    <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+      <p style="font-size: 16px; font-weight: 600; color: #0f172a; margin: 0 0 8px 0;">
+        📧 Email: <a href="mailto:support@joblifyai.com" style="color: #667eea; text-decoration: none;">support@joblifyai.com</a>
+      </p>
+      <p style="font-size: 14px; color: #64748b; margin: 0;">
+        We review all inquiries within 2-3 business days
+      </p>
+    </div>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      Best regards,<br>
+      <span style="font-weight: 600;">The Joblify Team</span>
+    </p>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: "AI Features Access Update - Joblify",
+    html: getEmailTemplate(content, "AI features access update notification"),
+  });
+}

@@ -39,6 +39,33 @@ function getPoeClient(): OpenAI {
   return poeClient;
 }
 
+// Middleware to check if user has AI access
+async function requireAIAccess(req: Request, res: any, next: any) {
+  const userId = req.session.userId;
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  try {
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    
+    if (user.aiAccessBlocked) {
+      return res.status(403).json({ 
+        error: "AI access has been restricted on your account. Please contact support for more information." 
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error checking AI access:", error);
+    return res.status(500).json({ error: "Failed to verify AI access" });
+  }
+}
+
 // ============================================
 // ATS Scanner Helper Functions
 // ============================================
@@ -487,7 +514,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/suggest-skills", requireAuth, async (req: Request, res) => {
+  app.post("/api/suggest-skills", requireAuth, requireAIAccess, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       console.log('[API] Suggesting skills for user:', userId);
@@ -560,7 +587,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/cover-letter/generate", requireAuth, async (req: Request, res) => {
+  app.post("/api/cover-letter/generate", requireAuth, requireAIAccess, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       const { resumeId, jobDescription } = req.body;
@@ -1139,7 +1166,7 @@ export async function registerRoutes(
   });
 
   // AI Chat endpoint for resume building
-  app.post("/api/resumes/:id/ai-chat", requireAuth, async (req: Request, res) => {
+  app.post("/api/resumes/:id/ai-chat", requireAuth, requireAIAccess, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const { id } = req.params;
@@ -1589,7 +1616,7 @@ Format your response as JSON with these fields:
   });
 
   // ATS Scanner - Upload file and scan
-  app.post("/api/ats/scan", requireAuth, upload.single('file'), async (req: Request, res) => {
+  app.post("/api/ats/scan", requireAuth, requireAIAccess, upload.single('file'), async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       
@@ -1645,7 +1672,7 @@ Format your response as JSON with these fields:
   });
 
   // ATS Scanner - Scan existing Joblify resume
-  app.post("/api/ats/scan-resume/:id", requireAuth, async (req: Request, res) => {
+  app.post("/api/ats/scan-resume/:id", requireAuth, requireAIAccess, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const { id } = req.params;
@@ -1794,7 +1821,7 @@ Return ONLY the cover letter text, no additional commentary.`;
   });
 
   // Tailor cover letter for specific job
-  app.post("/api/cover-letter/tailor", requireAuth, async (req: Request, res) => {
+  app.post("/api/cover-letter/tailor", requireAuth, requireAIAccess, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({

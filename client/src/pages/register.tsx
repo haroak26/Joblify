@@ -25,21 +25,26 @@ const step1Schema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
 
-// Step 2: Password and Username
+// Step 2: Password
 const step2Schema = z.object({
   password: passwordSchema,
   confirmPassword: z.string(),
-  username: z.string()
-    .min(3, "Username must be at least 3 characters")
-    .max(20, "Username must be at most 20 characters")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, hyphens, and underscores"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
+// Step 3: Username
+const step3Schema = z.object({
+  username: z.string()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username must be at most 20 characters")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, hyphens, and underscores"),
+});
+
 type Step1Data = z.infer<typeof step1Schema>;
 type Step2Data = z.infer<typeof step2Schema>;
+type Step3Data = z.infer<typeof step3Schema>;
 
 type RegistrationData = {
   name: string;
@@ -48,6 +53,8 @@ type RegistrationData = {
   confirmPassword: string;
   username: string;
 };
+
+const TOTAL_STEPS = 3;
 
 export default function Register() {
   const { register, user, isLoading } = useAuth();
@@ -77,6 +84,13 @@ export default function Register() {
     defaultValues: {
       password: formData.password,
       confirmPassword: formData.confirmPassword,
+    },
+  });
+
+  // Step 3 form
+  const step3Form = useForm<Step3Data>({
+    resolver: zodResolver(step3Schema),
+    defaultValues: {
       username: formData.username,
     },
   });
@@ -107,14 +121,19 @@ export default function Register() {
     setStep(2);
   };
 
-  const handleStep2Submit = async (data: Step2Data) => {
+  const handleStep2Next = async (data: Step2Data) => {
+    setFormData({ ...formData, ...data });
+    setStep(3);
+  };
+
+  const handleStep3Submit = async (data: Step3Data) => {
     setFormData({ ...formData, ...data });
     
     setIsSubmitting(true);
     try {
       await register(
         formData.email,
-        data.password,
+        formData.password,
         formData.name,
         data.username
       );
@@ -124,16 +143,16 @@ export default function Register() {
         setStep(1);
         step1Form.setError("email", { message });
       } else if (message.toLowerCase().includes("username")) {
-        step2Form.setError("username", { message });
+        step3Form.setError("username", { message });
       } else {
-        step2Form.setError("root", { message });
+        step3Form.setError("root", { message });
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const progress = (step / 2) * 100;
+  const progress = (step / TOTAL_STEPS) * 100;
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
@@ -157,15 +176,17 @@ export default function Register() {
             <CardTitle className="text-2xl mt-2">
               {step === 1 && "Create your account"}
               {step === 2 && "Choose a password"}
+              {step === 3 && "Choose a username"}
             </CardTitle>
             <CardDescription className="mt-1">
               {step === 1 && "Let's get started with the basics"}
               {step === 2 && "Keep your account secure"}
+              {step === 3 && "Pick a unique username"}
             </CardDescription>
           </div>
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
-            <p className="text-xs text-muted-foreground">Step {step} of 2</p>
+            <p className="text-xs text-muted-foreground">Step {step} of {TOTAL_STEPS}</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -241,7 +262,7 @@ export default function Register() {
                 transition={{ duration: 0.3 }}
               >
                 <Form {...step2Form}>
-                  <form onSubmit={step2Form.handleSubmit(handleStep2Submit)} className="space-y-4">
+                  <form onSubmit={step2Form.handleSubmit(handleStep2Next)} className="space-y-4">
                     <FormField
                       control={step2Form.control}
                       name="password"
@@ -304,38 +325,56 @@ export default function Register() {
                       </motion.div>
                     )}
 
-                    {showPasswordChecker && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        transition={{ duration: 0.2, delay: 0.2 }}
-                      >
-                        <FormField
-                          control={step2Form.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                  <Input 
-                                    type="text" 
-                                    placeholder="Choose a unique username" 
-                                    className="pl-10"
-                                    {...field} 
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </motion.div>
-                    )}
-
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back
+                      </Button>
+                      <Button type="submit" className="flex-1">
+                        Next
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </motion.div>
+            )}
+
+            {step === 3 && (
+              <motion.div
+                key="step3"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={{ duration: 0.3 }}
+              >
+                <Form {...step3Form}>
+                  <form onSubmit={step3Form.handleSubmit(handleStep3Submit)} className="space-y-4">
+                    <FormField
+                      control={step3Form.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                              <Input 
+                                type="text" 
+                                placeholder="Choose a unique username" 
+                                className="pl-10"
+                                {...field} 
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={() => setStep(2)} className="flex-1">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back
                       </Button>
