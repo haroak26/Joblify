@@ -141,12 +141,15 @@ export function setupAuth(app: Express) {
       // Add user to Brevo contact list on signup
       const brevoListId = process.env.BREVO_SIGNUP_LIST_ID;
       if (brevoListId) {
-        const { addContactToBrevoList } = await import("./brevo");
-        addContactToBrevoList(user.email, parseInt(brevoListId, 10), {
-          FIRSTNAME: user.name || user.username,
-        }).catch(err => {
-          console.error("Failed to add contact to Brevo list:", err);
-        });
+        const parsedListId = parseInt(brevoListId, 10);
+        if (!isNaN(parsedListId)) {
+          const { addContactToBrevoList } = await import("./brevo");
+          addContactToBrevoList(user.email, parsedListId, {
+            FIRSTNAME: user.name || user.username,
+          }).catch(err => {
+            console.error("Failed to add contact to Brevo list:", err);
+          });
+        }
       }
 
       // Send verification email

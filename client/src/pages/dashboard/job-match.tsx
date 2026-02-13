@@ -64,7 +64,7 @@ export default function JobMatch() {
     return "text-red-600";
   };
 
-  const getScoreBadgeVariant = (score: number) => {
+  const getScoreBadgeVariant = (score: number): "default" | "secondary" | "destructive" => {
     if (score >= 80) return "default";
     if (score >= 60) return "secondary";
     return "destructive";
@@ -159,7 +159,7 @@ export default function JobMatch() {
                   <div className={`text-4xl font-bold ${getScoreColor(matchResult.matchScore)}`}>
                     {matchResult.matchScore}%
                   </div>
-                  <Badge variant={getScoreBadgeVariant(matchResult.matchScore) as any}>
+                  <Badge variant={getScoreBadgeVariant(matchResult.matchScore)}>
                     {matchResult.matchScore >= 80 ? "Strong Match" : matchResult.matchScore >= 60 ? "Moderate Match" : "Weak Match"}
                   </Badge>
                 </div>

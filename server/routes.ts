@@ -2132,6 +2132,7 @@ Guidelines:
   // Newsletter Subscribe Endpoint
   // ============================================
 
+  // Newsletter endpoint - intentionally not protected by requireAuth to allow anonymous subscriptions
   app.post("/api/newsletter/subscribe", async (req: Request, res) => {
     try {
       const schema = z.object({
@@ -2195,7 +2196,12 @@ Guidelines:
       // Add to Brevo list if configured
       const brevoListId = process.env.BREVO_NEWSLETTER_LIST_ID;
       if (brevoListId) {
-        await addContactToBrevoList(email, parseInt(brevoListId, 10));
+        const parsedListId = parseInt(brevoListId, 10);
+        if (!isNaN(parsedListId)) {
+          await addContactToBrevoList(email, parsedListId);
+        } else {
+          console.error('[API] Invalid BREVO_NEWSLETTER_LIST_ID:', brevoListId);
+        }
       }
 
       res.json({ success: true, message: "Successfully subscribed to newsletter!" });
@@ -2285,7 +2291,8 @@ Respond ONLY with valid JSON, no additional text.`
       let matchResult;
       try {
         matchResult = JSON.parse(aiContent);
-      } catch {
+      } catch (parseError) {
+        console.error('[API] Failed to parse AI job match response:', parseError, 'Raw content:', aiContent.slice(0, 500));
         // If AI didn't return valid JSON, create a basic response
         matchResult = {
           matchScore: 50,
@@ -2434,8 +2441,9 @@ Extract ALL information you can find. For dates, use formats like "Jan 2023" or 
       let parsedData;
       try {
         parsedData = JSON.parse(aiContent);
-      } catch {
-        return res.status(500).json({ error: "Failed to parse resume content. Please try again." });
+      } catch (parseError) {
+        console.error('[API] Failed to parse AI resume response:', parseError, 'Raw content:', aiContent.slice(0, 500));
+        return res.status(500).json({ error: "Failed to parse resume content. The AI returned an invalid response. Please try again." });
       }
 
       // Validate and merge with empty resume data structure
@@ -2523,10 +2531,14 @@ Extract ALL information you can find. For dates, use formats like "Jan 2023" or 
           : emptyData.publications,
       };
 
-      // Determine title from parsed data
+      // Determine title from parsed data - sanitize filename for safety
+      const sanitizedFilename = req.file.originalname
+        ?.replace(/\.(pdf|docx)$/i, '')
+        .replace(/[<>"'`;\\]/g, '')
+        .slice(0, 100) || "Imported Resume";
       const title = resumeData.personalInfo.name
-        ? `${resumeData.personalInfo.name}'s Resume`
-        : req.file.originalname?.replace(/\.(pdf|docx)$/i, '') || "Imported Resume";
+        ? `${resumeData.personalInfo.name.replace(/[<>"'`;\\]/g, '').slice(0, 100)}'s Resume`
+        : sanitizedFilename;
 
       // Create the resume in database
       const [newResume] = await db

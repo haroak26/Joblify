@@ -86,11 +86,6 @@ export default function Resumes() {
     }
   };
 
-  // Fetch all resumes
-  const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({
-    queryKey: ["/api/resumes"],
-  });
-
   // Duplicate resume mutation
   const duplicateResumeMutation = useMutation({
     mutationFn: async (resume: Resume) => {
