@@ -49,6 +49,7 @@ export default function AIResumeChat({
   const [activeComponents, setActiveComponents] = useState<string[]>(selectedComponents);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(true);
+  const hasShownGreetingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevComponentsRef = useRef<string[]>([]);
   const { toast } = useToast();
@@ -69,6 +70,12 @@ export default function AIResumeChat({
             const loadedMessages = data.messages.map((msg: { role: string; content: string }, index: number) => {
               // Validate role to ensure type safety
               const role = msg.role === "user" || msg.role === "ai" ? msg.role : "ai";
+              
+              // Log warning if role is invalid
+              if (msg.role !== "user" && msg.role !== "ai") {
+                console.warn(`Invalid message role detected: "${msg.role}". Defaulting to "ai".`);
+              }
+              
               return {
                 role,
                 content: msg.content,
@@ -110,9 +117,13 @@ export default function AIResumeChat({
     // Don't show greeting if:
     // 1. Still loading conversation
     // 2. Messages already exist (from loaded conversation or previous greeting)
-    if (isLoadingConversation || messages.length > 0 || !resumeData || !user) {
+    // 3. Already shown greeting once
+    if (isLoadingConversation || messages.length > 0 || !resumeData || !user || hasShownGreetingRef.current) {
       return;
     }
+    
+    // Mark that we're showing the greeting
+    hasShownGreetingRef.current = true;
     
     // Extract first name from user.name, fallback to username
     const firstName = user.name?.split(" ")[0] || user.username || "there";
@@ -144,7 +155,7 @@ export default function AIResumeChat({
       : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
     
     setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
-  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, activeComponents]);
+  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, activeComponents, onUpdate]);
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
