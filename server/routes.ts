@@ -15,6 +15,7 @@ import { addContactToBrevoList } from './brevo';
 import { validateFile, getFileTypeName } from './lib/fileValidation';
 import { aiRateLimit } from './middleware/security';
 import { csrfTokenEndpoint } from './middleware/csrf';
+import { ResumePDFGenerator } from './lib/resumePDFGenerator';
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -1497,134 +1498,29 @@ Format your response as JSON:
         return res.status(403).json({ error: "You do not have permission to access this resume" });
       }
 
-      // Create PDF document
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      // Parse resume data
       const resumeData = resumeDataSchema.parse(resume.resumeData);
 
+      // Create professional PDF generator with selected template
+      const pdfGenerator = new ResumePDFGenerator({
+        template: resume.template as 'modern' | 'professional' | 'academic' | 'minimal',
+        pageSize: 'A4',
+      });
+
+      // Get the PDF document
+      const doc = pdfGenerator.getDocument();
+
       // Set response headers for PDF download
+      const sanitizedTitle = resume.title.replace(/[^a-z0-9]/gi, '_');
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${resume.title}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.pdf"`);
 
       // Pipe the PDF to response
       doc.pipe(res);
 
-      // Add content to PDF
-      // Header with name and contact info
-      if (resumeData.personalInfo?.name) {
-        doc.fontSize(24).font('Helvetica-Bold').text(resumeData.personalInfo.name, { align: 'center' });
-        doc.moveDown(0.5);
-      }
+      // Generate the PDF content
+      pdfGenerator.generate(resumeData, resume.title);
 
-      // Contact information
-      const contactInfo = resumeData.personalInfo ? [
-        resumeData.personalInfo.email,
-        resumeData.personalInfo.phone,
-        resumeData.personalInfo.location,
-        resumeData.personalInfo.linkedin,
-        resumeData.personalInfo.website,
-      ].filter(Boolean).join(' | ') : '';
-
-      if (contactInfo) {
-        doc.fontSize(10).font('Helvetica').text(contactInfo, { align: 'center' });
-        doc.moveDown(1);
-      }
-
-      // Summary
-      if (resumeData.summary) {
-        doc.fontSize(14).font('Helvetica-Bold').text('Professional Summary');
-        doc.moveDown(0.3);
-        doc.fontSize(10).font('Helvetica').text(resumeData.summary);
-        doc.moveDown(1);
-      }
-
-      // Experience
-      if (resumeData.experience && resumeData.experience.length > 0) {
-        doc.fontSize(14).font('Helvetica-Bold').text('Experience');
-        doc.moveDown(0.5);
-        
-        resumeData.experience.forEach((exp, index) => {
-          doc.fontSize(12).font('Helvetica-Bold').text(exp.title);
-          doc.fontSize(10).font('Helvetica-Oblique').text(`${exp.company} | ${exp.location}`);
-          const endDateDisplay = exp.endDate || 'Present';
-          doc.text(`${exp.startDate} - ${endDateDisplay}`);
-          doc.moveDown(0.3);
-          
-          if (exp.description && exp.description.length > 0) {
-            exp.description.forEach((bullet) => {
-              doc.font('Helvetica').text(`• ${bullet}`, { indent: 20 });
-            });
-          }
-          
-          if (index < resumeData.experience.length - 1) {
-            doc.moveDown(0.7);
-          }
-        });
-        doc.moveDown(1);
-      }
-
-      // Education
-      if (resumeData.education && resumeData.education.length > 0) {
-        doc.fontSize(14).font('Helvetica-Bold').text('Education');
-        doc.moveDown(0.5);
-        
-        resumeData.education.forEach((edu, index) => {
-          doc.fontSize(12).font('Helvetica-Bold').text(edu.degree);
-          doc.fontSize(10).font('Helvetica').text(`${edu.school} | ${edu.field}`);
-          if (edu.graduationDate) {
-            doc.text(edu.graduationDate);
-          }
-          if (edu.gpa) {
-            doc.text(`GPA: ${edu.gpa}`);
-          }
-          
-          if (index < resumeData.education.length - 1) {
-            doc.moveDown(0.7);
-          }
-        });
-        doc.moveDown(1);
-      }
-
-      // Skills
-      if (resumeData.skills && resumeData.skills.length > 0) {
-        doc.fontSize(14).font('Helvetica-Bold').text('Skills');
-        doc.moveDown(0.3);
-        doc.fontSize(10).font('Helvetica').text(resumeData.skills.join(', '));
-        doc.moveDown(1);
-      }
-
-      // Certifications
-      if (resumeData.certifications && resumeData.certifications.length > 0) {
-        doc.fontSize(14).font('Helvetica-Bold').text('Certifications');
-        doc.moveDown(0.5);
-        
-        resumeData.certifications.forEach((cert) => {
-          doc.fontSize(10).font('Helvetica-Bold').text(cert.name);
-          doc.font('Helvetica').text(`${cert.issuer} | ${cert.date}`);
-          doc.moveDown(0.5);
-        });
-        doc.moveDown(0.5);
-      }
-
-      // Projects
-      if (resumeData.projects && resumeData.projects.length > 0) {
-        doc.fontSize(14).font('Helvetica-Bold').text('Projects');
-        doc.moveDown(0.5);
-        
-        resumeData.projects.forEach((project) => {
-          doc.fontSize(11).font('Helvetica-Bold').text(project.name);
-          doc.fontSize(10).font('Helvetica').text(project.description);
-          if (project.technologies && project.technologies.length > 0) {
-            doc.text(`Technologies: ${project.technologies.join(', ')}`);
-          }
-          if (project.url) {
-            doc.text(`URL: ${project.url}`);
-          }
-          doc.moveDown(0.5);
-        });
-      }
-
-      // Finalize PDF
-      doc.end();
     } catch (error) {
       console.error('[API] Error generating PDF:', error);
       // If headers haven't been sent yet, send error response
