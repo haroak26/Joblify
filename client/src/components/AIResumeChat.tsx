@@ -30,7 +30,7 @@ interface ChatMessage {
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_MESSAGES = 10;
-const PROACTIVE_ENHANCEMENT_START = "I'm your AI assistant ready to help improve and polish your existing resume. You can ask me to refine any section, suggest improvements, or enhance specific parts of your content. What would you like to work on?";
+const ENHANCEMENT_WELCOME_MESSAGE = "I'm your AI assistant ready to help improve and polish your existing resume. You can ask me to refine any section, suggest improvements, or enhance specific parts of your content. What would you like to work on?";
 
 const COMPONENT_LABELS: Record<string, string> = {
   personal: "Personal Info",
@@ -191,7 +191,7 @@ export default function AIResumeChat({
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
       : isGuidedBuilder
       ? `Welcome ${firstName}! I'm your **AI Resume Builder** assistant, and I'm excited to help you create a professional resume from scratch.\n\nI already have your name and email. Let's start building your resume together!\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, Data Analyst, etc.)`
-      : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${PROACTIVE_ENHANCEMENT_START}`;
+      : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;
     
     const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: Date.now().toString() };
     setMessages([greetingMsg]);
