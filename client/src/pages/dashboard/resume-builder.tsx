@@ -140,6 +140,12 @@ export default function ResumeBuilder() {
     }
   }, [resume]);
   
+  // Fetch user subscription for plan-based restrictions
+  const { data: subscriptionData } = useQuery<{ subscription: { plan: string } }>({
+    queryKey: ["/api/subscription"],
+  });
+  const userPlan = subscriptionData?.subscription?.plan || "free";
+  
   // Calculate if Builder AI is available and which sections are incomplete
   const builderAIAvailable = resume && 
     resume.aiBuilderComponents && 
@@ -179,6 +185,21 @@ export default function ResumeBuilder() {
         }
       })
     : [];
+
+  // Auto-mark builder as completed when all selected sections have data
+  useEffect(() => {
+    if (
+      builderAIAvailable &&
+      incompleteBuilderSections.length === 0 &&
+      resume &&
+      !resume.aiBuilderCompleted &&
+      resumeData
+    ) {
+      saveResumeMutation.mutate({
+        aiBuilderCompleted: true,
+      });
+    }
+  }, [incompleteBuilderSections.length, builderAIAvailable, resume?.aiBuilderCompleted, resumeData]);
 
   // Show component selector when entering AI mode for the first time
   useEffect(() => {
@@ -512,23 +533,44 @@ export default function ResumeBuilder() {
                 <span className="flex-1 text-left">AI Enhancement</span>
               </button>
               
-              {/* Builder AI button - only show if available */}
-              {builderAIAvailable && incompleteBuilderSections.length > 0 && (
-                <button
-                  onClick={() => {
-                    setAiEditingComponent(undefined);
-                    setAiMode("builder");
-                    setActiveSection("ai-chat");
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
-                    activeSection === "ai-chat" && aiMode === "builder"
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span className="flex-1 text-left">Builder AI</span>
-                </button>
+              {/* Builder AI button - show if sections exist, with completed state */}
+              {resume && resume.aiBuilderComponents && Array.isArray(resume.aiBuilderComponents) && resume.aiBuilderComponents.length > 0 && (
+                (() => {
+                  const isCompleted = resume.aiBuilderCompleted || incompleteBuilderSections.length === 0;
+                  const canUseBuilder = !isCompleted || (userPlan === "plus" || userPlan === "ultra");
+                  
+                  return (
+                    <button
+                      onClick={() => {
+                        if (!canUseBuilder) {
+                          toast({
+                            title: "Builder Complete",
+                            description: userPlan === "free" 
+                              ? "AI Builder has completed all sections. Upgrade to Plus or Ultra for additional builder sessions."
+                              : "All selected sections have been filled.",
+                          });
+                          return;
+                        }
+                        setAiEditingComponent(undefined);
+                        setAiMode("builder");
+                        setActiveSection("ai-chat");
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-small transition-colors ${
+                        !canUseBuilder
+                          ? "text-muted-foreground/50 cursor-not-allowed"
+                          : activeSection === "ai-chat" && aiMode === "builder"
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                      disabled={!canUseBuilder}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span className="flex-1 text-left">
+                        Builder AI {isCompleted ? "(Complete)" : ""}
+                      </span>
+                    </button>
+                  );
+                })()
               )}
             </div>
           </ScrollArea>
@@ -628,7 +670,7 @@ export default function ResumeBuilder() {
           {isAIMode ? (
             <>
               <div className="flex-1 overflow-hidden">
-                <AIResumeChat
+              <AIResumeChat
                   resumeId={resumeId!}
                   resumeData={resumeData}
                   onUpdate={updateResumeData}
@@ -637,6 +679,7 @@ export default function ResumeBuilder() {
                   selectedComponents={selectedComponents}
                   onEditComponents={handleEditComponents}
                   onAutoSave={handleSave}
+                  mode="builder"
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile and tablet, shown on large desktop */}

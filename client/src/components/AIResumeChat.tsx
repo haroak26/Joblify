@@ -87,7 +87,7 @@ export default function AIResumeChat({
   const isFreePlan = userPlan === "free";
   const isGuidedBuilder = mode === "builder" || (activeComponents.length > 0 && !focusedComponent);
 
-  // Save a single message to the database live
+  // Save a single message to the database live (mode-specific)
   const saveMessageToDb = useCallback(async (role: "user" | "ai", content: string) => {
     try {
       const csrfToken = getCsrfToken();
@@ -98,19 +98,25 @@ export default function AIResumeChat({
       await fetch(`/api/resumes/${resumeId}/conversation/message`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ role, content }),
+        body: JSON.stringify({ role, content, mode }),
         credentials: "include",
       });
     } catch (error) {
       console.error("Failed to save message to DB:", error);
     }
-  }, [resumeId]);
+  }, [resumeId, mode]);
 
-  // Load saved conversation on mount
+  // Load saved conversation on mount (mode-specific)
   useEffect(() => {
+    // Reset state when mode changes to load the correct conversation
+    setMessages([]);
+    setIsLoadingConversation(true);
+    setHasInteracted(false);
+    hasShownGreetingRef.current = false;
+
     const loadConversation = async () => {
       try {
-        const response = await fetch(`/api/resumes/${resumeId}/conversation`, {
+        const response = await fetch(`/api/resumes/${resumeId}/conversation?mode=${mode}`, {
           credentials: "include",
         });
         
@@ -140,7 +146,7 @@ export default function AIResumeChat({
     };
 
     loadConversation();
-  }, [resumeId]);
+  }, [resumeId, mode]);
 
   // Update activeComponents when selectedComponents prop changes
   useEffect(() => {
@@ -192,9 +198,7 @@ export default function AIResumeChat({
     const greeting = focusedComponent
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
       : mode === "builder"
-      ? `Welcome back ${firstName}! I'm your **AI Resume Builder** assistant. Let's continue building the sections you started.\n\nWhat would you like to work on next?`
-      : isGuidedBuilder
-      ? `Welcome ${firstName}! I'm your **AI Resume Builder** assistant, and I'm excited to help you create a professional resume from scratch.\n\nI already have your name and email. Let's start building your resume together!\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, Data Analyst, etc.)`
+      ? `Welcome ${firstName}! I'm your **AI Resume Builder** assistant, and I'm here to help you create an amazing resume.\n\nI already have your name and email saved. Let's start by building your **Professional Summary** - I'll ask you a few quick questions to craft it.\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, Data Analyst)`
       : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;
     
     const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: Date.now().toString() };
@@ -253,6 +257,7 @@ export default function AIResumeChat({
           focusedComponent: editingSection,
           selectedComponents: activeComponents,
           currentData: resumeData,
+          mode,
           conversationHistory: messages.slice(-MAX_MESSAGES).map(m => ({
             role: m.role,
             content: m.content,

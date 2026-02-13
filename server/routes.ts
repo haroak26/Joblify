@@ -1200,9 +1200,10 @@ export async function registerRoutes(
         })).optional(),
         selectedComponents: z.array(z.string()).optional(),
         focusedComponent: z.string().optional(),
+        mode: z.enum(["builder", "enhancement"]).optional().default("builder"),
       });
 
-      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent } = chatSchema.parse(req.body);
+      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent, mode: chatMode } = chatSchema.parse(req.body);
 
       // Sanitize inputs by limiting size and truncating if needed
       const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
@@ -1254,40 +1255,48 @@ export async function registerRoutes(
 7. **NEVER ASK FOR NAME OR EMAIL** - These are already known and saved
 8. **USE MARKDOWN FORMATTING** in your responses for better readability (bold, lists, etc.)
 
+**MANDATORY SECTION ORDER - FOLLOW THIS STRICTLY:**
+You MUST work through sections in this exact order. Do NOT skip ahead or jump to experience first.
+${selectedComponents.includes('summary') || selectedComponents.length === 0 ? '1. **Professional Summary** (ask questions to formulate it - ALWAYS START HERE)' : ''}
+${selectedComponents.includes('experience') || selectedComponents.length === 0 ? '2. **Work Experience**' : ''}
+${selectedComponents.includes('education') || selectedComponents.length === 0 ? '3. **Education**' : ''}
+${selectedComponents.includes('skills') || selectedComponents.length === 0 ? '4. **Skills**' : ''}
+${selectedComponents.filter(c => !['summary', 'experience', 'education', 'skills'].includes(c)).map((c, i) => `${i + 5}. **${COMPONENT_LABELS[c] || c}**`).join('\n')}
+
+**CRITICAL ANTI-LOOPING RULES - READ CAREFULLY:**
+- **NEVER ask the user to confirm information they already provided.** Once they give you data, immediately add it to updatedData and move on to the next question.
+- **NEVER re-ask a question the user already answered.** Check the conversation history and current resume data before asking anything.
+- **When the user provides details for an entry (job, degree, etc.), immediately save it** in updatedData and ask if they have another entry OR move to the next section.
+- **Do NOT keep asking follow-up questions about the same entry** once you have: company/school name, title/degree, dates, and at least 2-3 bullet points/descriptions. That is ENOUGH. Save it and move on.
+- **Maximum 3-4 questions per individual entry** (per job, per school). After that, compile what you have, save it, and ask if there's another entry or move to the next section.
+- **If the user says "that's it", "no more", "let's move on", "next" or similar**, IMMEDIATELY move to the next section. Do not ask any more questions about the current section.
+
+**ALWAYS UPDATE RESUME DATA - THIS IS CRITICAL:**
+Every single response MUST include an "updatedData" object with ALL the resume data you have collected so far. This includes data from previous messages in the conversation. The user can switch to manual editing at any time, so the resume must always reflect everything discussed.
+- When the user tells you about a job, IMMEDIATELY add it to the experience array in updatedData
+- When the user tells you about education, IMMEDIATELY add it to the education array in updatedData
+- When the user mentions skills, IMMEDIATELY add them to the skills array in updatedData
+- When you have enough info to draft a summary, IMMEDIATELY include it in updatedData
+- Include ALL previously collected data plus any new data in every response's updatedData
+- The updatedData should be CUMULATIVE - always include everything collected so far, not just new data
+
 **MARKDOWN FORMATTING GUIDELINES:**
 - Use **bold** for emphasis on key points or questions
 - Use bullet points (- or *) for lists when showing examples or options
 - Use numbered lists (1., 2., etc.) when showing sequential steps
 - Keep formatting simple and readable - don't overdo it
-- Example: "**What's your current job title?** I'll use this to craft your professional summary."
 
 **WRITING STYLE ANALYSIS:**
-- Pay close attention to how the user communicates:
-  * Formal vs. casual language preferences
-  * Action verbs they naturally use
-  * Technical terminology vs. plain language
-  * First-person ("I managed") vs. third-person ("managed") tendencies
-  * Sentence structure and complexity
+- Pay close attention to how the user communicates
 - Mirror their style in generated content while maintaining professionalism
 - If user is conversational/casual, keep resume professional but approachable
 - If user is formal/technical, match that sophistication level
 
 **ATS OPTIMIZATION RULES:**
 - Use strong action verbs (Led, Managed, Developed, Implemented, Achieved)
-- Include quantifiable metrics (increased by 40%, managed $2M budget, led team of 15)
+- Include quantifiable metrics when provided
 - Incorporate industry-specific keywords naturally
-- Use standard section headings that ATS systems recognize
-- Avoid graphics, tables, or columns that confuse ATS parsers
 - Keep bullet points concise (1-2 lines) but impactful
-- Front-load important keywords in each bullet point
-
-**NATURAL CONVERSATION FLOW:**
-- Start with warm, personalized greetings using their first name
-- Break down complex questions into digestible parts
-- Use transitional phrases: "Great! Now let's talk about...", "I love that!", "That's impressive!"
-- Acknowledge their responses before asking the next question
-- If they seem unsure, offer examples or suggestions
-- Celebrate milestones: "Your experience section is looking great!"
 
 ${userInfo}
 
@@ -1296,152 +1305,51 @@ ${focusedMode}
 
 Current resume data: ${JSON.stringify(currentData, null, 2)}
 
-Available components that can be added dynamically:
-- experience: Work Experience
-- education: Education
-- skills: Skills
-- certifications: Professional Certifications
-- projects: Personal/Professional Projects
-- awards: Awards & Honors
-- leadership: Leadership Roles
-- research: Research Work
-- publications: Academic/Professional Publications
+**PROFESSIONAL SUMMARY - QUESTION-BASED APPROACH (START HERE FIRST):**
+Ask these specific questions ONE at a time (not all at once):
+1. "**What's your current or most recent job title?**"
+2. "**How many years of experience do you have in this field?**"
+3. "**What are your key strengths or what are you known for?**"
+4. "**What kind of role are you targeting next?**"
 
-**PROFESSIONAL SUMMARY - QUESTION-BASED APPROACH:**
-**IMPORTANT**: Avoid asking users to "write your professional summary" or "tell me about yourself in paragraph form". Instead, ask specific questions one at a time:
+After gathering 3-4 answers, IMMEDIATELY synthesize a 2-3 sentence professional summary and include it in updatedData. Then move to the next section.
 
-1. **Job Title**: "**What's your current or most recent job title?**" 
-   After response, ask: "**And what industry or field is that in?**"
+**EXPERIENCE SECTION:**
+For each job, gather these essentials (ask 2-3 questions max, combine related ones):
+1. Company name, job title, dates, and location (can ask in one question)
+2. Main responsibilities and achievements (ask once, then compile)
 
-2. **Experience Level**: "**How long have you been working in this field?**" (natural phrasing)
-   OR "**How many years of experience do you have in [their field]?**"
-
-3. **Key Strengths** (ask ONE at a time):
-   - "**What do you think you're really good at in your role?**"
-   - "**What skills do people come to you for help with?**"
-   - "**What are you most proud of accomplishing in your career?**"
-
-4. **Career Goals**: "**What kind of role are you hoping to land next?**"
-
-5. **Quantifiable Achievements**: If not mentioned, ask: "**Can you share any measurable results or achievements? For example, did you increase sales, improve efficiency, or lead any major projects?**"
-
-After gathering all this information through questions, synthesize it into a compelling 2-3 sentence summary that:
-- Opens with their professional identity and experience level
-- Highlights 3-4 key strengths with specific examples
-- Ends with their career objective or value proposition
-- Uses power words and industry keywords
-- Sounds like THEM, not generic AI text
-
-Example structure: "[Title] with [X years] of experience in [industry/specialization], known for [key strength 1] and [key strength 2]. Proven track record of [achievement with metrics]. Seeking to leverage [specific skills] to [career goal] in [target industry/role]."
-
-**Note:** Gather information through questions and compile the summary for the user.
-
-**EXPERIENCE SECTION - ENHANCED APPROACH:**
-For each job, ask in this natural sequence:
-
-1. "Let's start with your most recent job. Where did you work?"
-2. "What was your job title there?"
-3. "When did you start and when did you leave? (or are you still there?)"
-4. "Where was this position located? (city, state or 'Remote')"
-
-Then for accomplishments (THIS IS KEY):
-5. "Tell me about your biggest accomplishment in this role - what are you most proud of?"
-   - Listen for metrics, follow up if missing: "About how much/many?" or "Can you estimate the impact?"
-6. "What were your main day-to-day responsibilities?"
-7. "Did you manage any people, budgets, or projects? Tell me about that."
-8. "Any other major wins or achievements you'd like to include?"
-
-Transform their casual responses into professional, ATS-friendly bullet points:
-- Start each with a strong action verb
-- Include specific metrics (percentages, numbers, dollar amounts)
-- Highlight impact and results, not just duties
-- Use their terminology but polish it professionally
-- Keep each bullet to 1-2 lines maximum
-
-User says: "I managed a team and we increased sales a lot"
-You write: "Led cross-functional team of 8 to achieve 45% increase in quarterly sales, exceeding targets by $280K"
-
-User says: "I was responsible for the company's social media"  
-You write: "Developed and executed social media strategy across 4 platforms, growing follower base by 150% and engagement by 200% in 6 months"
-
-**AUTO-EXTRACT SKILLS** from experience descriptions - watch for:
-- Programming languages (Python, JavaScript, Java, SQL, C++, etc.)
-- Frameworks/Libraries (React, Node.js, Django, Angular, etc.)
-- Cloud/DevOps tools (AWS, Azure, Docker, Kubernetes, Jenkins, etc.)
-- Business tools (Salesforce, HubSpot, Tableau, Excel, PowerBI, etc.)
-- Soft skills mentioned (Leadership, Project Management, Communication, etc.)
-- Methodologies (Agile, Scrum, Six Sigma, Lean, etc.)
-
-After documenting one job: "Great! Is this it, or do you have more work experience to add?"
+IMMEDIATELY save the entry to updatedData after getting basic info. Transform casual language into professional ATS-friendly bullet points. Then ask: "Do you have another role to add, or shall we move on?"
 
 **EDUCATION SECTION:**
-Keep this simple and conversational:
-1. "Where did you go to school?"
-2. "What degree did you earn?" (Bachelor's, Master's, etc.)
-3. "What was your major or field of study?"
-4. "What year did you graduate?"
-5. "Any honors, awards, or impressive GPA you'd like to mention?" (optional)
-
-After one entry: "Perfect! Would you like to add another degree or certification?"
+Gather in 1-2 questions: school, degree, field, graduation date.
+Save IMMEDIATELY. Ask if they have another degree or move on.
 
 **SKILLS SECTION:**
-If skills were auto-extracted: "I've already added [list of skills] that you mentioned. Are there any other important skills you want to highlight?"
-
-If starting fresh: "What technical skills or tools are you proficient with? Think about software, languages, or specialized knowledge."
-
-Group skills logically:
-- Technical Skills: Programming languages, frameworks, databases
-- Tools & Platforms: Software, cloud services, development tools
-- Business Skills: Domain expertise, methodologies, soft skills
-
-**DYNAMIC COMPONENT ADDITION:**
-If user mentions wanting to add something: "Absolutely! Let's add that. [Start asking relevant questions]"
-Include in response: "addedComponents": ["component-id"]
-
-**QUESTION LIMITS PER SECTION:**
-- For single-entry sections (summary, skills): Maximum 5 questions before moving on
-- For multi-entry sections (experience, education, projects, awards, certifications, leadership, research, publications): Up to 5 questions per individual entry (per job, per degree, etc.), but unlimited entries. After each entry, ask if they want to add another.
-- Keep the conversation flowing naturally - don't bombard the user with too many questions
-- If you have enough information to compile a section, do so and move on
-- Be mindful that the user might get bored - gauge their engagement level
+Auto-extract skills from experience already discussed. Ask once for additional skills. Save and move on.
 
 **COMPLETION CRITERIA:**
-Set isComplete to true when:
-- User has provided summary + experience + education + skills
-- OR user explicitly says they're done ("that's everything", "I'm finished", etc.)
-- Celebrate: "Amazing! Your resume is really coming together. You can now review and edit any section, or download your polished, ATS-optimized resume!"
-
-**TONE & STYLE:**
-- Warm and encouraging, not robotic or formal
-- Professional but approachable
-- Use their name occasionally
-- Celebrate their achievements genuinely
-- If they're stuck, offer examples or suggestions
-- Keep responses concise - one main question/thought at a time
+Set isComplete to true when ALL selected components have been covered (have data in updatedData).
+- Check each selected component: does it have meaningful data? If yes for all, set isComplete to true.
+- OR if user explicitly says they're done.
 
 Conversation so far:
 ${conversationContext}
 
 User's message: ${sanitizedMessage}
 
-Respond with:
-1. A warm, natural reply with your next question or acknowledgment
-2. Extract data in structured format, transforming casual language into professional, ATS-optimized resume content
-3. Auto-extract skills from any mentions
-4. Note any dynamically added components
-5. Set completion status
-
-Format your response as JSON:
+Respond ONLY with valid JSON (no text before or after):
 {
-  "reply": "Your warm, conversational response with next question",
-  "updatedData": { 
-    /* Structured resume data - transform user's casual language into professional, ATS-optimized content that sounds like THEM */
-    /* Include 'skills' array if you extracted any skills */
-    /* For summary: create compelling 2-3 sentence professional summary using their words */
-    /* For experience: transform into powerful bullet points with metrics and action verbs */
+  "reply": "Your conversational response with next question or acknowledgment",
+  "updatedData": {
+    "summary": "...",
+    "experience": [...],
+    "education": [...],
+    "skills": [...],
+    ...ALL data collected so far, not just new data...
   },
-  "addedComponents": ["component-id"], // Optional: if user requested new section
-  "isComplete": false // true only when resume is complete or user says they're done
+  "addedComponents": [],
+  "isComplete": false
 }`;
 
       try {
@@ -1479,7 +1387,12 @@ Format your response as JSON:
         // Try to parse the full response as JSON
         let parsedResponse;
         try {
-          parsedResponse = JSON.parse(fullResponse);
+          // Strip markdown code fences if present (e.g., ```json ... ```)
+          let cleanedResponse = fullResponse.trim();
+          if (cleanedResponse.startsWith('```')) {
+            cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+          }
+          parsedResponse = JSON.parse(cleanedResponse);
         } catch {
           parsedResponse = {
             reply: fullResponse || "I understand. Could you tell me more?",
@@ -1488,23 +1401,45 @@ Format your response as JSON:
           };
         }
 
+        // Merge AI-returned updatedData with existing resume data to ensure cumulative updates
+        const mergedUpdatedData = parsedResponse.updatedData && Object.keys(parsedResponse.updatedData).length > 0
+          ? { ...currentData, ...parsedResponse.updatedData }
+          : {};
+
         // Send the final structured data
         res.write(`data: ${JSON.stringify({ 
           type: "done", 
           reply: parsedResponse.reply,
-          updatedData: parsedResponse.updatedData || {},
+          updatedData: mergedUpdatedData,
           isComplete: parsedResponse.isComplete || false,
           addedComponents: parsedResponse.addedComponents || []
         })}\n\n`);
 
-        // Save conversation to database
+        // Auto-save resume data to database when AI extracts information
+        if (mergedUpdatedData && Object.keys(mergedUpdatedData).length > 0) {
+          try {
+            const newResumeData = { ...currentData, ...mergedUpdatedData };
+            await db
+              .update(resumes)
+              .set({
+                resumeData: newResumeData,
+                updatedAt: new Date(),
+              })
+              .where(eq(resumes.id, id));
+          } catch (saveError) {
+            console.error('[API] Failed to auto-save resume data:', saveError);
+          }
+        }
+
+        // Save conversation to database (mode-specific)
         try {
           const [existingConversation] = await db
             .select()
             .from(chatConversations)
             .where(and(
               eq(chatConversations.userId, userId),
-              eq(chatConversations.resumeId, id)
+              eq(chatConversations.resumeId, id),
+              eq(chatConversations.mode, chatMode)
             ))
             .limit(1);
 
@@ -1526,6 +1461,7 @@ Format your response as JSON:
             await db.insert(chatConversations).values({
               userId,
               resumeId: id,
+              mode: chatMode,
               messages: newMessages,
             });
           }
@@ -1564,23 +1500,25 @@ Format your response as JSON:
     }
   });
 
-  // Get saved conversation for a resume
+  // Get saved conversation for a resume (supports mode query param: "builder" or "enhancement")
   app.get("/api/resumes/:id/conversation", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const { id } = req.params;
+      const chatMode = (req.query.mode as string) || "builder";
 
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
       }
 
-      // Get conversation from database
+      // Get conversation from database filtered by mode
       const [conversation] = await db
         .select()
         .from(chatConversations)
         .where(and(
           eq(chatConversations.userId, userId),
-          eq(chatConversations.resumeId, id)
+          eq(chatConversations.resumeId, id),
+          eq(chatConversations.mode, chatMode)
         ))
         .limit(1);
 
@@ -1608,17 +1546,19 @@ Format your response as JSON:
       const messageSchema = z.object({
         role: z.enum(["user", "ai"]),
         content: z.string().min(1),
+        mode: z.enum(["builder", "enhancement"]).optional().default("builder"),
       });
 
-      const { role, content } = messageSchema.parse(req.body);
+      const { role, content, mode: chatMode } = messageSchema.parse(req.body);
 
-      // Get or create conversation
+      // Get or create conversation filtered by mode
       const [existingConversation] = await db
         .select()
         .from(chatConversations)
         .where(and(
           eq(chatConversations.userId, userId),
-          eq(chatConversations.resumeId, id)
+          eq(chatConversations.resumeId, id),
+          eq(chatConversations.mode, chatMode)
         ))
         .limit(1);
 
@@ -1635,6 +1575,7 @@ Format your response as JSON:
         await db.insert(chatConversations).values({
           userId,
           resumeId: id,
+          mode: chatMode,
           messages: [{ role, content }],
         });
       }
