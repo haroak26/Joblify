@@ -91,9 +91,9 @@ export default function VerifyEmail() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-lg">
+      <Card className="w-full max-w-md border">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-md">
+          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
             <Briefcase className="w-8 h-8 text-primary-foreground" />
           </div>
           <div>

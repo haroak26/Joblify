@@ -278,8 +278,9 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Invalid or expired verification token" });
       }
 
+      // If already verified, return success to avoid confusion
       if (user.emailVerified) {
-        return res.json({ message: "Email already verified" });
+        return res.json({ message: "Email verified successfully", alreadyVerified: true });
       }
 
       await storage.updateUser(user.id, {
@@ -289,7 +290,7 @@ export function setupAuth(app: Express) {
 
       await sendWelcomeEmail(user.email, user.username);
 
-      res.json({ message: "Email verified successfully" });
+      res.json({ message: "Email verified successfully", alreadyVerified: false });
     } catch (error) {
       console.error("Verification error:", error);
       res.status(500).json({ error: "Verification failed" });
