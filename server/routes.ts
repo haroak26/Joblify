@@ -1437,34 +1437,59 @@ Format your response as JSON:
 
       try {
         const poeClient = getPoeClient();
-        const completion = await poeClient.chat.completions.create({
-          model: "gpt-5-nano", // Using GPT-5-nano for AI resume building
+        
+        // Set SSE headers for streaming
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        const stream = await poeClient.chat.completions.create({
+          model: "gpt-5-nano",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: sanitizedMessage }
           ],
-          max_tokens: 1500, // Increased for more detailed, natural responses
-          temperature: 0.8, // Slightly higher for more creative, personalized output
+          max_tokens: 1500,
+          temperature: 0.8,
+          stream: true,
         });
 
-        const aiResponse = completion.choices[0]?.message?.content || '';
+        let fullResponse = '';
         
-        // Try to parse as JSON, fallback to text-only response
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content || '';
+          if (content) {
+            fullResponse += content;
+            // Stream each token to client
+            res.write(`data: ${JSON.stringify({ type: "token", content })}\n\n`);
+          }
+        }
+
+        // Try to parse the full response as JSON
         let parsedResponse;
         try {
-          parsedResponse = JSON.parse(aiResponse);
+          parsedResponse = JSON.parse(fullResponse);
         } catch {
-          // If not valid JSON, create a simple response
           parsedResponse = {
-            reply: aiResponse || "I understand. Could you tell me more?",
+            reply: fullResponse || "I understand. Could you tell me more?",
             updatedData: {},
             isComplete: false,
           };
         }
 
+        // Send the final structured data
+        res.write(`data: ${JSON.stringify({ 
+          type: "done", 
+          reply: parsedResponse.reply,
+          updatedData: parsedResponse.updatedData || {},
+          isComplete: parsedResponse.isComplete || false,
+          addedComponents: parsedResponse.addedComponents || []
+        })}\n\n`);
+
         // Save conversation to database
         try {
-          // Get or create conversation record for this resume
           const [existingConversation] = await db
             .select()
             .from(chatConversations)
@@ -1481,7 +1506,6 @@ Format your response as JSON:
           ];
 
           if (existingConversation) {
-            // Update existing conversation
             await db
               .update(chatConversations)
               .set({
@@ -1490,7 +1514,6 @@ Format your response as JSON:
               })
               .where(eq(chatConversations.id, existingConversation.id));
           } else {
-            // Create new conversation
             await db.insert(chatConversations).values({
               userId,
               resumeId: id,
@@ -1498,19 +1521,25 @@ Format your response as JSON:
             });
           }
         } catch (dbError) {
-          // Log but don't fail the request if DB save fails
           console.error('[API] Failed to save conversation:', dbError);
         }
 
-        res.json(parsedResponse);
+        res.write(`data: ${JSON.stringify({ type: "end" })}\n\n`);
+        res.end();
       } catch (aiError) {
         console.error('[API] AI chat error:', aiError);
-        // Fallback response if AI fails
-        res.json({
-          reply: "I'm having trouble processing that. Could you please rephrase?",
-          updatedData: {},
-          isComplete: false,
-        });
+        // If headers haven't been sent yet, send JSON error
+        if (!res.headersSent) {
+          res.json({
+            reply: "I'm having trouble processing that. Could you please rephrase?",
+            updatedData: {},
+            isComplete: false,
+          });
+        } else {
+          // If streaming already started, send error event
+          res.write(`data: ${JSON.stringify({ type: "error", message: "An error occurred while processing your request." })}\n\n`);
+          res.end();
+        }
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1554,6 +1583,57 @@ Format your response as JSON:
     } catch (error) {
       console.error('[API] Error loading conversation:', error);
       res.status(500).json({ error: "Failed to load conversation" });
+    }
+  });
+
+  // Save a single message live to conversation
+  app.post("/api/resumes/:id/conversation/message", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { id } = req.params;
+
+      if (!id || Array.isArray(id)) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      const messageSchema = z.object({
+        role: z.enum(["user", "ai"]),
+        content: z.string().min(1),
+      });
+
+      const { role, content } = messageSchema.parse(req.body);
+
+      // Get or create conversation
+      const [existingConversation] = await db
+        .select()
+        .from(chatConversations)
+        .where(and(
+          eq(chatConversations.userId, userId),
+          eq(chatConversations.resumeId, id)
+        ))
+        .limit(1);
+
+      if (existingConversation) {
+        const currentMessages = (existingConversation.messages as any[]) || [];
+        await db
+          .update(chatConversations)
+          .set({
+            messages: [...currentMessages, { role, content }],
+            updatedAt: new Date(),
+          })
+          .where(eq(chatConversations.id, existingConversation.id));
+      } else {
+        await db.insert(chatConversations).values({
+          userId,
+          resumeId: id,
+          messages: [{ role, content }],
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[API] Error saving message:', error);
+      res.status(500).json({ error: "Failed to save message" });
     }
   });
 
