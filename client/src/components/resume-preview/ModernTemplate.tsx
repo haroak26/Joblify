@@ -13,7 +13,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
   return (
     <div className="p-8 print:p-8 font-sans text-black h-full">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6" data-section="personal">
         <h1 className="text-3xl font-semibold mb-3 tracking-tight">
           {personalInfo.name || "Your Name"}
         </h1>
@@ -57,7 +57,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
         <div className="flex-[65]">
           {/* Summary */}
           {summary && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="summary">
               <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Professional Summary
               </h2>
@@ -67,7 +67,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Experience */}
           {experience.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="experience">
               <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Experience
               </h2>
@@ -103,7 +103,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Projects */}
           {projects && projects.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="projects">
               <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Projects
               </h2>
@@ -135,7 +135,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
         <div className="flex-[35]">
           {/* Education */}
           {education.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="education">
               <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Education
               </h2>
@@ -159,7 +159,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Skills */}
           {skills.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="skills">
               <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Skills
               </h2>
@@ -178,7 +178,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Certifications */}
           {certifications && certifications.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="certifications">
               <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Certifications
               </h2>
@@ -196,7 +196,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Awards */}
           {awards && awards.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="awards">
               <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Awards & Honors
               </h2>
@@ -219,7 +219,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
       {/* Leadership */}
       {leadership && leadership.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" data-section="leadership">
           <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
             Leadership Experience
           </h2>
@@ -244,7 +244,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
       {/* Research */}
       {research && research.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" data-section="research">
           <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
             Research Experience
           </h2>
@@ -272,7 +272,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
       {/* Publications */}
       {publications && publications.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" data-section="publications">
           <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
             Publications
           </h2>

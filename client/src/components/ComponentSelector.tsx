@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Lock } from "lucide-react";
 import { 
   Briefcase, 
   GraduationCap, 
@@ -97,17 +99,29 @@ interface ComponentSelectorProps {
   onOpenChange: (open: boolean) => void;
   onSelect: (components: string[]) => void;
   initialComponents?: string[];
+  isAIMode?: boolean;
 }
+
+// Sections restricted on free plan in AI builder
+const FREE_PLAN_RESTRICTED_SECTIONS = ["awards", "certifications", "leadership", "research", "publications"];
 
 export default function ComponentSelector({
   open,
   onOpenChange,
   onSelect,
   initialComponents,
+  isAIMode = false,
 }: ComponentSelectorProps) {
   const [selectedComponents, setSelectedComponents] = useState<string[]>(
     initialComponents || DEFAULT_COMPONENTS
   );
+
+  // Fetch user subscription for free plan restrictions
+  const { data: subscriptionData } = useQuery<{ subscription: { plan: string } }>({
+    queryKey: ["/api/subscription"],
+  });
+  const userPlan = subscriptionData?.subscription?.plan || "free";
+  const isFreePlan = userPlan === "free";
 
   // Update selection when dialog opens with initial components
   useEffect(() => {
@@ -117,6 +131,10 @@ export default function ComponentSelector({
   }, [open, initialComponents]);
 
   const handleToggle = (componentId: string) => {
+    // Prevent free plan users from selecting restricted sections in AI mode
+    if (isAIMode && isFreePlan && FREE_PLAN_RESTRICTED_SECTIONS.includes(componentId)) {
+      return;
+    }
     setSelectedComponents((prev) =>
       prev.includes(componentId)
         ? prev.filter((id) => id !== componentId)
@@ -125,7 +143,11 @@ export default function ComponentSelector({
   };
 
   const handleSelectAll = () => {
-    setSelectedComponents(COMPONENT_OPTIONS.map((opt) => opt.id));
+    if (isAIMode && isFreePlan) {
+      setSelectedComponents(COMPONENT_OPTIONS.filter((opt) => !FREE_PLAN_RESTRICTED_SECTIONS.includes(opt.id)).map((opt) => opt.id));
+    } else {
+      setSelectedComponents(COMPONENT_OPTIONS.map((opt) => opt.id));
+    }
   };
 
   const handleSelectRecommended = () => {
@@ -155,14 +177,17 @@ export default function ComponentSelector({
             {COMPONENT_OPTIONS.map((option) => {
               const Icon = option.icon;
               const isSelected = selectedComponents.includes(option.id);
+              const isRestricted = isAIMode && isFreePlan && FREE_PLAN_RESTRICTED_SECTIONS.includes(option.id);
 
               return (
                 <div
                   key={option.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
-                    isSelected
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                    isRestricted
+                      ? "border-border opacity-60 cursor-not-allowed"
+                      : isSelected
+                      ? "border-primary bg-primary/5 cursor-pointer"
+                      : "border-border hover:border-primary/50 hover:bg-muted/50 cursor-pointer"
                   }`}
                   onClick={() => handleToggle(option.id)}
                 >
@@ -171,6 +196,7 @@ export default function ComponentSelector({
                     checked={isSelected}
                     onCheckedChange={() => handleToggle(option.id)}
                     className="mt-1"
+                    disabled={isRestricted}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -184,6 +210,12 @@ export default function ComponentSelector({
                       {option.recommended && (
                         <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                           Recommended
+                        </span>
+                      )}
+                      {isRestricted && (
+                        <span className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                          <Lock className="w-3 h-3" />
+                          Upgrade
                         </span>
                       )}
                     </div>

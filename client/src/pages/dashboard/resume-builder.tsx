@@ -319,6 +319,15 @@ export default function ResumeBuilder() {
     setLocation(`/dashboard/resume-builder/${resumeId}?compiling=true`);
   };
 
+  // Handle clicking a section in the preview to set AI editing context
+  const handlePreviewSectionClick = (sectionId: string) => {
+    setAiEditingComponent(sectionId);
+    // In manual mode, switch to AI chat when clicking a section in preview
+    if (!isAIMode) {
+      setActiveSection("ai-chat");
+    }
+  };
+
   const ActiveSectionComponent = allSections.find((s) => s.id === activeSection)?.component;
 
   if (isLoading) {
@@ -544,6 +553,7 @@ export default function ResumeBuilder() {
                   <ResumePreview
                     data={resumeData}
                     template={selectedTemplate}
+                    onSectionClick={handlePreviewSectionClick}
                   />
                 </div>
               </div>
@@ -575,6 +585,7 @@ export default function ResumeBuilder() {
                   <ResumePreview
                     data={resumeData}
                     template={selectedTemplate}
+                    onSectionClick={handlePreviewSectionClick}
                   />
                 </div>
               </div>
@@ -589,6 +600,7 @@ export default function ResumeBuilder() {
         onOpenChange={setShowComponentSelector}
         onSelect={handleComponentsSelected}
         initialComponents={selectedComponents}
+        isAIMode={isAIMode}
       />
     </div>
   );
