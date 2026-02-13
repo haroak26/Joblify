@@ -64,9 +64,9 @@ function getEmailTemplate(content: string, previewText: string): string {
                 <tr>
                   <td style="padding-right: 12px;">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="7" width="18" height="13" rx="2" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <path d="M8 7V5C8 3.89543 8.89543 3 10 3H14C15.1046 3 16 3.89543 16 5V7" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      <line x1="3" y1="11" x2="21" y2="11" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+                      <rect x="3" y="7" width="18" height="13" rx="2" stroke="#22C35D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M8 7V5C8 3.89543 8.89543 3 10 3H14C15.1046 3 16 3.89543 16 5V7" stroke="#22C35D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="3" y1="11" x2="21" y2="11" stroke="#22C35D" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                   </td>
                   <td style="font-size: 18px; font-weight: 700; color: #0f172a;">
@@ -118,7 +118,7 @@ export async function sendVerificationEmail(email: string, username: string, tok
     </p>
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
       <tr>
-        <td style="background-color: #10b981; border-radius: 10px;">
+        <td style="background-color: #22C35D; border-radius: 10px;">
           <a href="${verifyUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Verify email
           </a>
@@ -127,7 +127,7 @@ export async function sendVerificationEmail(email: string, username: string, tok
     </table>
     <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
       Or paste this link in your browser:<br>
-      <a href="${verifyUrl}" style="color: #10b981; word-break: break-all;">${verifyUrl}</a>
+      <a href="${verifyUrl}" style="color: #22C35D; word-break: break-all;">${verifyUrl}</a>
     </p>
   `;
 
@@ -153,7 +153,7 @@ export async function sendPasswordResetEmail(email: string, username: string, to
     </p>
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
       <tr>
-        <td style="background-color: #10b981; border-radius: 10px;">
+        <td style="background-color: #22C35D; border-radius: 10px;">
           <a href="${resetUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Reset password
           </a>
@@ -162,7 +162,7 @@ export async function sendPasswordResetEmail(email: string, username: string, to
     </table>
     <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 0 0 16px 0;">
       Or paste this link in your browser:<br>
-      <a href="${resetUrl}" style="color: #10b981; word-break: break-all;">${resetUrl}</a>
+      <a href="${resetUrl}" style="color: #22C35D; word-break: break-all;">${resetUrl}</a>
     </p>
     <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
       If you didn’t request this, you can safely ignore this email.
@@ -211,7 +211,7 @@ export async function sendWelcomeEmail(email: string, username: string): Promise
     </table>
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 20px 0;">
       <tr>
-        <td style="background-color: #10b981; border-radius: 10px;">
+        <td style="background-color: #22C35D; border-radius: 10px;">
           <a href="${dashboardUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Open your dashboard
           </a>
@@ -253,7 +253,7 @@ export async function sendFeatureEngagementEmailTemplate(
       We noticed you haven't tried our ${featureInfo.name} feature yet. ${featureInfo.description}
     </p>
     
-    <div style="background-color: #f8fafc; border-left: 4px solid #10b981; padding: 16px 20px; margin: 24px 0; border-radius: 8px;">
+    <div style="background-color: #f8fafc; border-left: 4px solid #22C35D; padding: 16px 20px; margin: 24px 0; border-radius: 8px;">
       <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #0f172a;">
         How to use ${featureInfo.name}:
       </h3>
@@ -262,7 +262,7 @@ export async function sendFeatureEngagementEmailTemplate(
     
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
       <tr>
-        <td style="background-color: #10b981; border-radius: 10px;">
+        <td style="background-color: #22C35D; border-radius: 10px;">
           <a href="${featureInfo.url}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
             Try ${featureInfo.name} now
           </a>
@@ -449,7 +449,7 @@ export async function sendContactFormEmail(options: {
         : ""
     }
     <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
-      Reply to this inquiry by emailing <a href="mailto:${fromEmail}" style="color: #10b981;">${fromEmail}</a>
+      Reply to this inquiry by emailing <a href="mailto:${fromEmail}" style="color: #22C35D;">${fromEmail}</a>
     </p>
   `;
 
