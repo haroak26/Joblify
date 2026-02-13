@@ -18,9 +18,9 @@ const CSRF_TOKEN_LENGTH = 32;
 const CSRF_COOKIE_NAME = "_csrf";
 const CSRF_HEADER_NAME = "x-csrf-token";
 const CSRF_COOKIE_OPTIONS = {
-  httpOnly: true,
+  httpOnly: false,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
+  sameSite: "lax" as const,
   maxAge: 24 * 60 * 60 * 1000, // 24 hours
 };
 
