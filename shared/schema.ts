@@ -268,7 +268,10 @@ export const resumes = pgTable("resumes", {
   resumeData: jsonb("resume_data").notNull().$type<ResumeData>(),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
-});
+}, (table) => ({
+  userIdIdx: index("resumes_user_id_idx").on(table.userId),
+  createdAtIdx: index("resumes_created_at_idx").on(table.createdAt),
+}));
 
 export const resumesRelations = relations(resumes, ({ one, many }) => ({
   user: one(users, {
@@ -286,7 +289,10 @@ export const chatConversations = pgTable("chat_conversations", {
   messages: jsonb("messages").notNull().default([]),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
-});
+}, (table) => ({
+  userIdIdx: index("chat_conversations_user_id_idx").on(table.userId),
+  resumeIdIdx: index("chat_conversations_resume_id_idx").on(table.resumeId),
+}));
 
 export const chatConversationsRelations = relations(chatConversations, ({ one }) => ({
   user: one(users, {
@@ -307,7 +313,11 @@ export const coverLetters = pgTable("cover_letters", {
   jobDescription: text("job_description"),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
-});
+}, (table) => ({
+  userIdIdx: index("cover_letters_user_id_idx").on(table.userId),
+  resumeIdIdx: index("cover_letters_resume_id_idx").on(table.resumeId),
+  createdAtIdx: index("cover_letters_created_at_idx").on(table.createdAt),
+}));
 
 export const coverLettersRelations = relations(coverLetters, ({ one }) => ({
   user: one(users, {

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
 import { 
-  skillSchema, normalizePlan, resumes, users, usage, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
+  skillSchema, normalizePlan, resumes, users, usage as usageTable, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
   redeemableCodes, perks, userPerks, type PlanType,
   mailingLists, userMailingLists
 } from "@shared/schema";
@@ -12,6 +12,8 @@ import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
 import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { addContactToBrevoList } from './brevo';
+import { validateFile, getFileTypeName } from './lib/fileValidation';
+import { aiRateLimit } from './middleware/security';
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -516,7 +518,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/suggest-skills", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/suggest-skills", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       console.log('[API] Suggesting skills for user:', userId);
@@ -589,7 +591,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/cover-letter/generate", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/cover-letter/generate", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
       const { resumeId, jobDescription } = req.body;
@@ -1147,7 +1149,7 @@ export async function registerRoutes(
   });
 
   // AI Chat endpoint for resume building
-  app.post("/api/resumes/:id/ai-chat", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/resumes/:id/ai-chat", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const { id } = req.params;
@@ -1580,10 +1582,11 @@ Format your response as JSON with these fields:
   // ============================================
 
   // Configure multer for file uploads
+  const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB max file size
+      fileSize: MAX_FILE_SIZE_BYTES,
     },
     fileFilter: (req, file, cb) => {
       // Only accept PDF and DOCX files
@@ -1603,6 +1606,15 @@ Format your response as JSON with these fields:
       
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Validate file using magic bytes
+      const validation = validateFile(req.file.buffer, req.file.mimetype);
+      if (!validation.valid) {
+        return res.status(400).json({ 
+          error: validation.error || "Invalid file format",
+          message: `Please upload a valid ${getFileTypeName(req.file.mimetype)} file`
+        });
       }
 
       // Check usage limits
@@ -1641,9 +1653,9 @@ Format your response as JSON with these fields:
 
       // Update usage counter atomically
       await db
-        .update(usage)
-        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ atsScansThisMonth: sql`${usageTable.atsScansThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json(analysis);
     } catch (error) {
@@ -1698,9 +1710,9 @@ Format your response as JSON with these fields:
 
       // Update usage counter atomically
       await db
-        .update(usage)
-        .set({ atsScansThisMonth: sql`${usage.atsScansThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ atsScansThisMonth: sql`${usageTable.atsScansThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json(analysis);
     } catch (error) {
@@ -1802,7 +1814,7 @@ Return ONLY the cover letter text, no additional commentary.`;
   });
 
   // Tailor cover letter for specific job
-  app.post("/api/cover-letter/tailor", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/cover-letter/tailor", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({
@@ -2309,9 +2321,9 @@ Respond ONLY with valid JSON, no additional text.`
 
       // Increment usage counter
       await db
-        .update(usage)
-        .set({ jobAnalysesThisMonth: sql`${usage.jobAnalysesThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ jobAnalysesThisMonth: sql`${usageTable.jobAnalysesThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json(matchResult);
     } catch (error) {
@@ -2553,9 +2565,9 @@ Extract ALL information you can find. For dates, use formats like "Jan 2023" or 
 
       // Increment imported resumes usage counter
       await db
-        .update(usage)
-        .set({ importedResumesThisMonth: sql`${usage.importedResumesThisMonth} + 1` })
-        .where(eq(usage.userId, userId));
+        .update(usageTable)
+        .set({ importedResumesThisMonth: sql`${usageTable.importedResumesThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json({
         success: true,

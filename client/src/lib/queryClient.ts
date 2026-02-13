@@ -1,6 +1,14 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getStoredTokens } from "./auth-storage";
 
+/**
+ * Get CSRF token from cookie
+ */
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(new RegExp('(^| )_csrf=([^;]+)'));
+  return match ? match[2] : null;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = await res.text();
@@ -29,12 +37,19 @@ async function throwIfResNotOk(res: Response) {
 
 function getAuthHeaders(): HeadersInit {
   const tokens = getStoredTokens();
+  const headers: HeadersInit = {};
+  
   if (tokens?.accessToken) {
-    return {
-      "Authorization": `Bearer ${tokens.accessToken}`
-    };
+    headers["Authorization"] = `Bearer ${tokens.accessToken}`;
   }
-  return {};
+  
+  // Add CSRF token for state-changing requests
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    headers["x-csrf-token"] = csrfToken;
+  }
+  
+  return headers;
 }
 
 export async function apiRequest(

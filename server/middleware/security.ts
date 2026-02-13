@@ -3,6 +3,20 @@ import rateLimit from "express-rate-limit";
 import type { Request, Response, NextFunction } from "express";
 import { normalizePlan } from "@shared/schema";
 
+// Time constants (in milliseconds)
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+// Rate limiting windows
+const AUTH_WINDOW_MS = 15 * MINUTE_MS;
+const REGISTRATION_WINDOW_MS = 1 * HOUR_MS;
+const SESSION_MAX_AGE_MS = 30 * DAY_MS;
+
+// Account lockout settings
+const MAX_LOGIN_ATTEMPTS = 5;
+const ACCOUNT_LOCKOUT_DURATION_MS = 15 * MINUTE_MS;
+
 /**
  * Security headers middleware using helmet
  */
@@ -121,7 +135,7 @@ export const generalApiRateLimit = createTieredRateLimit({
  * Authentication endpoints rate limiter (prevents brute force)
  */
 export const authRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: AUTH_WINDOW_MS,
   max: 5, // 5 attempts per 15 minutes
   skipSuccessfulRequests: true, // Don't count successful logins
   message: "Too many login attempts. Please try again after 15 minutes.",
@@ -133,7 +147,7 @@ export const authRateLimit = rateLimit({
  * Registration rate limiter (prevents spam)
  */
 export const registrationRateLimit = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
+  windowMs: REGISTRATION_WINDOW_MS,
   max: 3, // 3 registrations per hour per IP
   message: "Too many accounts created. Please try again later.",
   standardHeaders: true,
@@ -217,7 +231,7 @@ export const sessionConfig = {
     httpOnly: true, // Prevents client-side JS from reading the cookie
     secure: process.env.NODE_ENV === "production", // HTTPS only in production
     sameSite: "lax" as const, // CSRF protection
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    maxAge: SESSION_MAX_AGE_MS,
   },
   rolling: true, // Reset maxAge on every request
   resave: false,
@@ -256,11 +270,11 @@ export function trackLoginAttempt(identifier: string): boolean {
   // Increment attempts
   const newCount = (attempt?.count || 0) + 1;
   
-  // Lock after 5 failed attempts
-  if (newCount >= 5) {
+  // Lock after max failed attempts
+  if (newCount >= MAX_LOGIN_ATTEMPTS) {
     loginAttempts.set(identifier, {
       count: newCount,
-      lockUntil: now + 15 * 60 * 1000, // Lock for 15 minutes
+      lockUntil: now + ACCOUNT_LOCKOUT_DURATION_MS,
     });
     return false;
   }

@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupAdminRoutes } from "./admin-routes";
 import { serveStatic } from "./static";
@@ -7,6 +8,7 @@ import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
 import { startScheduleRunner } from "./scheduler";
 import { securityHeaders, sanitizeInput, generalApiRateLimit } from "./middleware/security";
+import { csrfSetToken, csrfVerifyToken } from "./middleware/csrf";
 
 // Validate critical environment variables
 function validateEnvVars() {
@@ -14,6 +16,14 @@ function validateEnvVars() {
     DATABASE_URL: process.env.DATABASE_URL,
     SESSION_SECRET: process.env.SESSION_SECRET,
   };
+
+  // Add encryption keys to required list in production
+  if (process.env.NODE_ENV === 'production') {
+    Object.assign(required, {
+      ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+      TWO_FACTOR_ENCRYPTION_KEY: process.env.TWO_FACTOR_ENCRYPTION_KEY,
+    });
+  }
 
   const optional = {
     POE_API_KEY: process.env.POE_API_KEY,
@@ -32,7 +42,18 @@ function validateEnvVars() {
   if (missing.length > 0) {
     console.error('[Startup] CRITICAL: Missing required environment variables:', missing.join(', '));
     console.error('[Startup] Application cannot start without these variables.');
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Startup] In production, ENCRYPTION_KEY and TWO_FACTOR_ENCRYPTION_KEY are required for data security.');
+    }
     process.exit(1);
+  }
+
+  // Warn about encryption keys in development
+  if (process.env.NODE_ENV !== 'production') {
+    if (!process.env.ENCRYPTION_KEY || !process.env.TWO_FACTOR_ENCRYPTION_KEY) {
+      console.warn('[Startup] WARNING: Encryption keys not set in development mode.');
+      console.warn('[Startup] Encrypted data (2FA secrets, backup codes) will be lost on server restart!');
+    }
   }
 
   const warnings: string[] = [];
@@ -101,6 +122,15 @@ app.use((req, res, next) => {
 });
 
 app.use(express.urlencoded({ extended: false }));
+
+// Parse cookies for CSRF protection
+app.use(cookieParser());
+
+// Apply CSRF protection
+// Set CSRF token for GET requests
+app.use(csrfSetToken);
+// Verify CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
+app.use(csrfVerifyToken);
 
 // Apply input sanitization and rate limiting
 app.use(sanitizeInput);
