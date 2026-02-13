@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupAdminRoutes } from "./admin-routes";
 import { serveStatic } from "./static";
@@ -7,6 +8,7 @@ import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
 import { startScheduleRunner } from "./scheduler";
 import { securityHeaders, sanitizeInput, generalApiRateLimit } from "./middleware/security";
+import { csrfSetToken, csrfVerifyToken } from "./middleware/csrf";
 
 // Validate critical environment variables
 function validateEnvVars() {
@@ -120,6 +122,15 @@ app.use((req, res, next) => {
 });
 
 app.use(express.urlencoded({ extended: false }));
+
+// Parse cookies for CSRF protection
+app.use(cookieParser());
+
+// Apply CSRF protection
+// Set CSRF token for GET requests
+app.use(csrfSetToken);
+// Verify CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
+app.use(csrfVerifyToken);
 
 // Apply input sanitization and rate limiting
 app.use(sanitizeInput);
