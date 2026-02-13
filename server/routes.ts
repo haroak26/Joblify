@@ -1396,6 +1396,13 @@ Group skills logically:
 If user mentions wanting to add something: "Absolutely! Let's add that. [Start asking relevant questions]"
 Include in response: "addedComponents": ["component-id"]
 
+**QUESTION LIMITS PER SECTION:**
+- For single-entry sections (summary, skills): Maximum 5 questions before moving on
+- For multi-entry sections (experience, education, projects, awards, certifications, leadership, research, publications): Up to 5 questions per individual entry (per job, per degree, etc.), but unlimited entries. After each entry, ask if they want to add another.
+- Keep the conversation flowing naturally - don't bombard the user with too many questions
+- If you have enough information to compile a section, do so and move on
+- Be mindful that the user might get bored - gauge their engagement level
+
 **COMPLETION CRITERIA:**
 Set isComplete to true when:
 - User has provided summary + experience + education + skills
