@@ -75,6 +75,7 @@ type ResumeSection = {
 };
 
 const DEFAULT_SECTIONS = ["personal", "summary", "experience", "education", "skills"];
+const DEFAULT_AI_COMPONENTS = ["experience", "education", "skills"];
 
 const allSections: ResumeSection[] = [
   { id: "personal", name: "Personal Info", icon: User, component: PersonalInfoSection },
@@ -113,7 +114,10 @@ export default function ResumeBuilder() {
   const [userDataPrefilled, setUserDataPrefilled] = useState(false);
   const [aiEditingComponent, setAiEditingComponent] = useState<string | undefined>(undefined);
   const [showComponentSelector, setShowComponentSelector] = useState(false);
-  const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  const [hasShownAISelector, setHasShownAISelector] = useState(false);
+  const [selectedComponents, setSelectedComponents] = useState<string[]>(
+    isAIMode ? DEFAULT_AI_COMPONENTS : []
+  );
 
   // Fetch resume data
   const { data: resume, isLoading } = useQuery<Resume>({
@@ -132,10 +136,11 @@ export default function ResumeBuilder() {
 
   // Show component selector when entering AI mode for the first time
   useEffect(() => {
-    if (isAIMode && resumeData && selectedComponents.length === 0) {
+    if (isAIMode && resumeData && !hasShownAISelector) {
+      setHasShownAISelector(true);
       setShowComponentSelector(true);
     }
-  }, [isAIMode, resumeData, selectedComponents.length]);
+  }, [isAIMode, resumeData, hasShownAISelector]);
 
   // Determine which sections to display in sidebar
   const getVisibleSections = () => {
