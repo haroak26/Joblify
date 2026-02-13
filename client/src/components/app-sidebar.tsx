@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, Briefcase, Moon, Sun, FileText, Target, Search, FileEdit, Shield } from "lucide-react";
+import { Home, User, Briefcase, Moon, Sun, FileText, Target, Search, FileEdit, Shield, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -33,6 +33,11 @@ const mainMenuItems = [
     title: "My Resumes",
     url: "/dashboard/resumes",
     icon: FileText,
+  },
+  {
+    title: "AI Resume Builder",
+    url: "/dashboard/resumes?create=ai",
+    icon: Sparkles,
   },
   {
     title: "Job Match",

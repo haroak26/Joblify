@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useLocation } from "wouter";
+import { useState, useRef, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,9 +30,49 @@ import type { Resume } from "@shared/schema";
 
 export default function Resumes() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if we need to trigger AI builder automatically
+  useEffect(() => {
+    if (search.includes("create=ai")) {
+      // Navigate to create page in AI mode by creating a resume directly
+      createAIResume();
+    }
+  }, [search]);
+
+  const createAIResume = () => {
+    // Create a resume and navigate to AI mode
+    createResumeMutation.mutate("ai");
+  };
+
+  // Create resume mutation
+  const createResumeMutation = useMutation({
+    mutationFn: async (mode: "traditional" | "ai") => {
+      const response = await apiRequest("POST", "/api/resumes", {
+        title: "Untitled Resume",
+      });
+      return { resume: await response.json(), mode };
+    },
+    onSuccess: ({ resume, mode }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+      
+      if (mode === "ai") {
+        setLocation(`/dashboard/resume-builder/${resume.id}?mode=ai`);
+      } else {
+        setLocation(`/dashboard/resume-builder/${resume.id}`);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create resume. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch all resumes
   const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({

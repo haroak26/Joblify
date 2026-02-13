@@ -5,7 +5,7 @@ import { z } from "zod";
 import { 
   skillSchema, normalizePlan, resumes, users, usage as usageTable, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
   redeemableCodes, perks, userPerks, type PlanType,
-  mailingLists, userMailingLists
+  mailingLists, userMailingLists, chatConversations
 } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
 import OpenAI from "openai";
@@ -1438,7 +1438,7 @@ Format your response as JSON:
       try {
         const poeClient = getPoeClient();
         const completion = await poeClient.chat.completions.create({
-          model: "gpt-4o-mini", // Using GPT-4o-mini for better natural language and context understanding
+          model: "gpt-5-nano", // Using GPT-5-nano for AI resume building
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: sanitizedMessage }
@@ -1462,6 +1462,46 @@ Format your response as JSON:
           };
         }
 
+        // Save conversation to database
+        try {
+          // Get or create conversation record for this resume
+          const [existingConversation] = await db
+            .select()
+            .from(chatConversations)
+            .where(and(
+              eq(chatConversations.userId, userId),
+              eq(chatConversations.resumeId, id)
+            ))
+            .limit(1);
+
+          const newMessages = [
+            ...sanitizedHistory,
+            { role: "user" as const, content: sanitizedMessage },
+            { role: "ai" as const, content: parsedResponse.reply }
+          ];
+
+          if (existingConversation) {
+            // Update existing conversation
+            await db
+              .update(chatConversations)
+              .set({
+                messages: newMessages,
+                updatedAt: new Date(),
+              })
+              .where(eq(chatConversations.id, existingConversation.id));
+          } else {
+            // Create new conversation
+            await db.insert(chatConversations).values({
+              userId,
+              resumeId: id,
+              messages: newMessages,
+            });
+          }
+        } catch (dbError) {
+          // Log but don't fail the request if DB save fails
+          console.error('[API] Failed to save conversation:', dbError);
+        }
+
         res.json(parsedResponse);
       } catch (aiError) {
         console.error('[API] AI chat error:', aiError);
@@ -1483,6 +1523,37 @@ Format your response as JSON:
       }
       console.error('[API] Error in AI chat:', error);
       res.status(500).json({ error: "Failed to process chat message" });
+    }
+  });
+
+  // Get saved conversation for a resume
+  app.get("/api/resumes/:id/conversation", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { id } = req.params;
+
+      if (!id || Array.isArray(id)) {
+        return res.status(400).json({ error: "Resume ID is required" });
+      }
+
+      // Get conversation from database
+      const [conversation] = await db
+        .select()
+        .from(chatConversations)
+        .where(and(
+          eq(chatConversations.userId, userId),
+          eq(chatConversations.resumeId, id)
+        ))
+        .limit(1);
+
+      if (!conversation) {
+        return res.json({ messages: [] });
+      }
+
+      res.json({ messages: conversation.messages || [] });
+    } catch (error) {
+      console.error('[API] Error loading conversation:', error);
+      res.status(500).json({ error: "Failed to load conversation" });
     }
   });
 
