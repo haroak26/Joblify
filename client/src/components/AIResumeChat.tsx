@@ -113,7 +113,6 @@ export default function AIResumeChat({
       if (csrfToken) {
         headers["x-csrf-token"] = csrfToken;
       }
-      
       const response = await fetch(`/api/resumes/${resumeId}/ai-chat`, {
         method: "POST",
         headers,

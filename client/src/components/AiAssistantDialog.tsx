@@ -38,7 +38,6 @@ export function AiAssistantDialog({
       if (csrfToken) {
         headers["x-csrf-token"] = csrfToken;
       }
-      
       const res = await fetch("/api/ai/improve-content", {
         method: "POST",
         headers,
