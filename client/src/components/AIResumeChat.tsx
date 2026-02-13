@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Loader2, User as UserIcon, Edit3 } from "lucide-react";
+import { Sparkles, Send, Loader2, User as UserIcon, Edit3, X, Settings2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { getCsrfToken } from "@/lib/queryClient";
@@ -25,12 +25,29 @@ interface AIResumeChatProps {
 interface ChatMessage {
   role: "user" | "ai";
   content: string;
-  id: string; // Add unique ID for proper key usage
+  id: string;
 }
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_MESSAGES = 10;
 const PROACTIVE_ENHANCEMENT_START = "I can help you polish and enhance any section of your resume. What would you like to improve today?";
+
+const COMPONENT_LABELS: Record<string, string> = {
+  personal: "Personal Info",
+  summary: "Professional Summary",
+  experience: "Work Experience",
+  education: "Education",
+  skills: "Skills",
+  certifications: "Certifications",
+  projects: "Projects",
+  awards: "Awards & Honors",
+  leadership: "Leadership",
+  research: "Research",
+  publications: "Publications",
+};
+
+// Sections restricted on free plan in AI builder
+const FREE_PLAN_RESTRICTED_SECTIONS = ["awards", "certifications", "leadership", "research", "publications"];
 
 export default function AIResumeChat({
   resumeId,
@@ -49,11 +66,43 @@ export default function AIResumeChat({
   const [activeComponents, setActiveComponents] = useState<string[]>(selectedComponents);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(true);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
+  const [editingSection, setEditingSection] = useState<string | undefined>(focusedComponent);
   const hasShownGreetingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevComponentsRef = useRef<string[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Fetch user subscription for free plan restrictions
+  const { data: subscriptionData } = useQuery<{ subscription: { plan: string } }>({
+    queryKey: ["/api/subscription"],
+  });
+  const userPlan = subscriptionData?.subscription?.plan || "free";
+  const isFreePlan = userPlan === "free";
+  const isGuidedBuilder = activeComponents.length > 0 && !focusedComponent;
+
+  // Save a single message to the database live
+  const saveMessageToDb = useCallback(async (role: "user" | "ai", content: string) => {
+    try {
+      const csrfToken = getCsrfToken();
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken;
+      }
+      await fetch(`/api/resumes/${resumeId}/conversation/message`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ role, content }),
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Failed to save message to DB:", error);
+    }
+  }, [resumeId]);
 
   // Load saved conversation on mount
   useEffect(() => {
@@ -66,16 +115,11 @@ export default function AIResumeChat({
         if (response.ok) {
           const data = await response.json();
           if (data.messages && data.messages.length > 0) {
-            // Convert saved messages to ChatMessage format with IDs
             const loadedMessages = data.messages.map((msg: { role: string; content: string }, index: number) => {
-              // Validate role to ensure type safety
               const role = msg.role === "user" || msg.role === "ai" ? msg.role : "ai";
-              
-              // Log warning if role is invalid
               if (msg.role !== "user" && msg.role !== "ai") {
                 console.warn(`Invalid message role detected: "${msg.role}". Defaulting to "ai".`);
               }
-              
               return {
                 role,
                 content: msg.content,
@@ -83,12 +127,11 @@ export default function AIResumeChat({
               };
             });
             setMessages(loadedMessages);
-            setHasInteracted(true); // User has previous interaction
+            setHasInteracted(true);
           }
         }
       } catch (error) {
         console.error("Failed to load conversation:", error);
-        // Don't show error to user - just start fresh
       } finally {
         setIsLoadingConversation(false);
       }
@@ -99,80 +142,111 @@ export default function AIResumeChat({
 
   // Update activeComponents when selectedComponents prop changes
   useEffect(() => {
-    // If components changed from empty to non-empty and we have no loaded messages,
-    // the greeting will be shown by the next effect
     prevComponentsRef.current = selectedComponents;
     setActiveComponents(selectedComponents);
   }, [selectedComponents]);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollRef.current) {
+  // Auto-scroll during streaming and when new messages arrive
+  const scrollToBottom = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      container.scrollTop = container.scrollHeight;
+    } else if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, streamingContent, scrollToBottom]);
+
+  // Update editingSection when focusedComponent changes
+  useEffect(() => {
+    if (focusedComponent) {
+      setEditingSection(focusedComponent);
+    }
+  }, [focusedComponent]);
 
   // Initial greeting and user data prefill
   useEffect(() => {
-    // Don't show greeting if:
-    // 1. Still loading conversation
-    // 2. Messages already exist (from loaded conversation or previous greeting)
-    // 3. Already shown greeting once
     if (isLoadingConversation || messages.length > 0 || !resumeData || !user || hasShownGreetingRef.current) {
       return;
     }
     
-    // Mark that we're showing the greeting
     hasShownGreetingRef.current = true;
     
-    // Extract first name from user.name, fallback to username
     const firstName = user.name?.split(" ")[0] || user.username || "there";
     
-    // Pre-fill user data if individual fields are missing
     const shouldPrefillName = !resumeData.personalInfo?.name && user.name;
     const shouldPrefillEmail = !resumeData.personalInfo?.email && user.email;
     
     if (shouldPrefillName || shouldPrefillEmail) {
       const updates: any = { personalInfo: { ...resumeData.personalInfo } };
-      
-      if (shouldPrefillName) {
-        updates.personalInfo.name = user.name;
-      }
-      if (shouldPrefillEmail) {
-        updates.personalInfo.email = user.email;
-      }
-      
+      if (shouldPrefillName) updates.personalInfo.name = user.name;
+      if (shouldPrefillEmail) updates.personalInfo.email = user.email;
       onUpdate(updates);
     }
     
-    // Determine the mode: guided builder or enhancement
-    const isGuidedBuilder = activeComponents.length > 0 && !focusedComponent;
-    
     const greeting = focusedComponent
-      ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
+      ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
       : isGuidedBuilder
       ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I already have your name and email, so let's build your professional summary together.\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, etc.)`
       : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
     
-    setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
-  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, activeComponents, onUpdate]);
+    const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: Date.now().toString() };
+    setMessages([greetingMsg]);
+    // Save greeting to DB
+    saveMessageToDb("ai", greeting);
+  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, isGuidedBuilder, onUpdate, saveMessageToDb]);
 
-  const chatMutation = useMutation({
-    mutationFn: async (message: string) => {
-      // Sanitize input
-      const sanitizedMessage = message.trim().slice(0, MAX_MESSAGE_LENGTH);
-      
+  // Streaming send message
+  const handleSendMessage = useCallback(async () => {
+    if (!inputMessage.trim() || isStreaming) return;
+
+    const messageText = inputMessage.trim().slice(0, MAX_MESSAGE_LENGTH);
+    setInputMessage("");
+
+    // Add user message
+    const userMessage: ChatMessage = { 
+      role: "user", 
+      content: messageText,
+      id: `user-${Date.now()}`
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to DB immediately
+    saveMessageToDb("user", messageText);
+
+    // Track usage on first interaction
+    if (!hasInteracted) {
+      setHasInteracted(true);
+      fetch('/api/track-feature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ featureName: 'resume_builder' }),
+        credentials: 'include',
+      }).catch(() => {});
+    }
+
+    setIsStreaming(true);
+    setStreamingContent("");
+
+    try {
       const csrfToken = getCsrfToken();
       const headers: HeadersInit = { "Content-Type": "application/json" };
       if (csrfToken) {
         headers["x-csrf-token"] = csrfToken;
       }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const response = await fetch(`/api/resumes/${resumeId}/ai-chat`, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          message: sanitizedMessage,
-          focusedComponent,
+          message: messageText,
+          focusedComponent: editingSection,
           selectedComponents: activeComponents,
           currentData: resumeData,
           conversationHistory: messages.slice(-MAX_MESSAGES).map(m => ({
@@ -181,113 +255,107 @@ export default function AIResumeChat({
           })),
         }),
         credentials: "include",
+        signal: controller.signal,
       });
 
       if (!response.ok) {
+        if (response.status === 401) throw new Error("Session expired. Please log in again.");
+        if (response.status === 403) throw new Error("You don't have permission to perform this action.");
         const error = await response.json();
-        // Handle authentication errors
-        if (response.status === 401) {
-          throw new Error("Session expired. Please log in again.");
-        }
-        if (response.status === 403) {
-          throw new Error("You don't have permission to perform this action.");
-        }
         throw new Error(error.error || "Failed to send message");
       }
 
-      return response.json();
-    },
-    onSuccess: (data: { reply: string; updatedData?: Partial<ResumeData>; isComplete?: boolean; addedComponents?: string[] }) => {
-      // Track usage on first interaction (when user sends their first message)
-      if (!hasInteracted) {
-        setHasInteracted(true);
-        // Track feature usage asynchronously
-        fetch('/api/track-feature', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ featureName: 'resume_builder' }),
-          credentials: 'include',
-        }).catch((error) => {
-          // Silently fail in production - tracking is non-critical
-          if (import.meta.env.DEV) {
-            console.warn('Feature tracking failed:', error);
-          }
-        });
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error("No response stream available");
       }
 
-      // Add AI response to messages with unique ID
-      setMessages((prev) => [...prev, { role: "ai", content: data.reply, id: `ai-${Date.now()}` }]);
+      let fullStreamedText = "";
+      let doneData: any = null;
 
-      // Update resume data if AI extracted new information
-      if (data.updatedData && Object.keys(data.updatedData).length > 0) {
-        onUpdate(data.updatedData);
-        
-        // Auto-save after updating data
-        // Note: Small delay ensures parent component state update completes before save
-        if (onAutoSave) {
-          setTimeout(() => {
-            onAutoSave();
-          }, 500);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const eventData = JSON.parse(line.slice(6));
+              
+              if (eventData.type === "token") {
+                fullStreamedText += eventData.content;
+                setStreamingContent(fullStreamedText);
+              } else if (eventData.type === "done") {
+                doneData = eventData;
+              } else if (eventData.type === "error") {
+                throw new Error(eventData.message);
+              }
+            } catch (parseError) {
+              // Skip malformed SSE events
+              if (parseError instanceof SyntaxError) continue;
+              throw parseError;
+            }
+          }
         }
       }
 
-      // Handle dynamically added components
-      if (data.addedComponents && data.addedComponents.length > 0) {
-        setActiveComponents((prev) => {
-          const newComponents = data.addedComponents!.filter(c => !prev.includes(c));
-          if (newComponents.length > 0) {
-            toast({
-              title: "Components Added",
-              description: `Added: ${newComponents.join(', ')}`,
-            });
-            return [...prev, ...newComponents];
-          }
-          return prev;
-        });
-      }
+      // Use the reply from done event, or the streamed text
+      const aiReply = doneData?.reply || fullStreamedText || "I understand. Could you tell me more?";
 
-      // Check if resume is complete
-      if (data.isComplete) {
-        setIsComplete(true);
-        setTimeout(() => {
-          toast({
-            title: "Resume Complete!",
-            description: "Your resume is ready. Redirecting to compilation...",
-          });
-          if (onComplete) {
-            onComplete();
+      // Add AI response as a proper message
+      setMessages((prev) => [...prev, { role: "ai", content: aiReply, id: `ai-${Date.now()}` }]);
+      setStreamingContent("");
+
+      // Save AI response to DB
+      saveMessageToDb("ai", aiReply);
+
+      // Apply structured updates from the done event
+      if (doneData) {
+        if (doneData.updatedData && Object.keys(doneData.updatedData).length > 0) {
+          onUpdate(doneData.updatedData);
+          if (onAutoSave) {
+            setTimeout(() => onAutoSave(), 500);
           }
-        }, 2000);
+        }
+
+        if (doneData.addedComponents && doneData.addedComponents.length > 0) {
+          setActiveComponents((prev) => {
+            const newComponents = doneData.addedComponents.filter((c: string) => !prev.includes(c));
+            if (newComponents.length > 0) {
+              toast({ title: "Components Added", description: `Added: ${newComponents.join(', ')}` });
+              return [...prev, ...newComponents];
+            }
+            return prev;
+          });
+        }
+
+        if (doneData.isComplete) {
+          setIsComplete(true);
+          setTimeout(() => {
+            toast({ title: "Resume Complete!", description: "Your resume is ready. Redirecting to compilation..." });
+            if (onComplete) onComplete();
+          }, 2000);
+        }
       }
-    },
-    onError: (error: Error) => {
+    } catch (error: any) {
+      if (error.name === 'AbortError') return;
       toast({
         title: "Message Failed",
-        description: error.message,
+        description: error.message || "Failed to send message",
         variant: "destructive",
       });
-      // Remove the user message if the request failed
       setMessages((prev) => prev.slice(0, -1));
-    },
-  });
-
-  const handleSendMessage = () => {
-    if (!inputMessage.trim() || chatMutation.isPending) return;
-
-    // Add user message to chat with unique ID
-    const userMessage: ChatMessage = { 
-      role: "user", 
-      content: inputMessage.trim(),
-      id: `user-${Date.now()}`
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    
-    // Send to backend
-    chatMutation.mutate(inputMessage.trim());
-    
-    // Clear input
-    setInputMessage("");
-  };
+      setStreamingContent("");
+    } finally {
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
+  }, [inputMessage, isStreaming, resumeId, editingSection, activeComponents, resumeData, messages, hasInteracted, onUpdate, onAutoSave, onComplete, toast, saveMessageToDb]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -295,6 +363,26 @@ export default function AIResumeChat({
       handleSendMessage();
     }
   };
+
+  // Handle clicking a section from the preview to set editing context
+  const handleSetEditingSection = useCallback((sectionId: string) => {
+    setEditingSection(sectionId);
+  }, []);
+
+  const handleClearEditingSection = useCallback(() => {
+    setEditingSection(undefined);
+  }, []);
+
+  // Filter restricted sections for free plan in AI builder mode
+  const getFilteredComponents = () => {
+    if (!isFreePlan || !isGuidedBuilder) return activeComponents;
+    return activeComponents.filter(c => !FREE_PLAN_RESTRICTED_SECTIONS.includes(c));
+  };
+
+  const filteredComponents = getFilteredComponents();
+  const restrictedSections = isFreePlan && isGuidedBuilder 
+    ? activeComponents.filter(c => FREE_PLAN_RESTRICTED_SECTIONS.includes(c))
+    : [];
 
   return (
     <div className="flex flex-col h-full">
@@ -307,35 +395,66 @@ export default function AIResumeChat({
             </div>
             <div>
               <h3 className="font-semibold">
-                {activeComponents.length > 0 && !focusedComponent
-                  ? "AI Resume Builder"
-                  : "AI Resume Enhancement"}
+                {isGuidedBuilder ? "AI Resume Builder" : "AI Resume Enhancement"}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {focusedComponent 
-                  ? `Enhancing ${focusedComponent}` 
-                  : activeComponents.length > 0
+                {editingSection 
+                  ? `Editing: ${COMPONENT_LABELS[editingSection] || editingSection}` 
+                  : isGuidedBuilder
                   ? "Building your resume step-by-step"
                   : "Polish and improve your resume"}
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onSwitchToManual}
-            className="flex items-center gap-2"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Switch to Manual Editor</span>
-            <span className="sm:hidden">Manual</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {isGuidedBuilder && onEditComponents && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEditComponents}
+                className="flex items-center gap-1"
+                title="Edit selected sections"
+              >
+                <Settings2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Sections</span>
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSwitchToManual}
+              className="flex items-center gap-2"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Switch to Manual Editor</span>
+              <span className="sm:hidden">Manual</span>
+            </Button>
+          </div>
         </div>
+
+        {/* Active sections chips in AI builder mode */}
+        {isGuidedBuilder && filteredComponents.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {filteredComponents.map((comp) => (
+              <span
+                key={comp}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium"
+              >
+                {COMPONENT_LABELS[comp] || comp}
+              </span>
+            ))}
+            {restrictedSections.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground" title="Upgrade to Plus or Ultra to access these sections via AI">
+                +{restrictedSections.length} (upgrade required)
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="space-y-4 max-w-3xl mx-auto">
+      <div className="flex-1 overflow-auto p-4" ref={scrollContainerRef}>
+        <div className="space-y-4 max-w-3xl mx-auto" ref={scrollRef}>
           {messages.map((message) => (
             <div
               key={message.id}
@@ -344,9 +463,7 @@ export default function AIResumeChat({
               {/* Avatar */}
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.role === "ai"
-                    ? "bg-primary"
-                    : "bg-primary"
+                  message.role === "ai" ? "bg-primary" : "bg-primary"
                 }`}
               >
                 {message.role === "ai" ? (
@@ -387,17 +504,40 @@ export default function AIResumeChat({
             </div>
           ))}
 
-          {/* Loading Indicator */}
-          {chatMutation.isPending && (
+          {/* Streaming AI Response */}
+          {isStreaming && (
             <div className="flex gap-3">
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-primary-foreground" />
               </div>
-              <div className="bg-muted rounded-b-lg rounded-t-md p-3">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">AI is thinking...</span>
-                </div>
+              <div className="flex-1 bg-muted rounded-b-lg rounded-t-md p-3 mr-12">
+                {streamingContent ? (
+                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                        li: ({ children }) => <li className="mb-1">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>,
+                      }}
+                    >
+                      {streamingContent}
+                    </ReactMarkdown>
+                    <span className="inline-block w-1.5 h-4 bg-primary/70 animate-pulse ml-0.5 align-text-bottom" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Generating response...</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -411,38 +551,64 @@ export default function AIResumeChat({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input Area */}
       <div className="p-4 border-t bg-background">
-        <div className="max-w-3xl mx-auto relative flex items-center">
-          <Input
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={isComplete ? "Resume complete!" : "Type your message..."}
-            disabled={chatMutation.isPending || isComplete}
-            maxLength={MAX_MESSAGE_LENGTH}
-            className="flex-1 pr-12 h-11"
-          />
-          <div className="absolute right-1.5 flex items-center">
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || chatMutation.isPending || isComplete}
-              size="icon"
-              className="h-8 w-8"
-            >
-              {chatMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </Button>
+        <div className="max-w-3xl mx-auto">
+          {/* Editing section tag */}
+          {editingSection && !isGuidedBuilder && (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
+                <Sparkles className="w-3 h-3" />
+                Editing: {COMPONENT_LABELS[editingSection] || editingSection}
+                <button
+                  onClick={handleClearEditingSection}
+                  className="ml-0.5 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
+                  title="Clear editing focus"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            </div>
+          )}
+
+          {/* Free plan restriction notice */}
+          {isFreePlan && isGuidedBuilder && restrictedSections.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-2">
+              Upgrade to Plus or Ultra to use AI for {restrictedSections.map(s => COMPONENT_LABELS[s] || s).join(', ')} sections.
+            </p>
+          )}
+
+          <div className="relative flex items-center">
+            <Input
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder={isComplete ? "Resume complete!" : editingSection && !isGuidedBuilder ? `Ask about ${COMPONENT_LABELS[editingSection] || editingSection}...` : "Type your message..."}
+              disabled={isStreaming || isComplete}
+              maxLength={MAX_MESSAGE_LENGTH}
+              className="flex-1 pr-12 h-11"
+            />
+            <div className="absolute right-1.5 flex items-center">
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputMessage.trim() || isStreaming || isComplete}
+                size="icon"
+                className="h-8 w-8"
+              >
+                {isStreaming ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            {inputMessage.length}/{MAX_MESSAGE_LENGTH} characters
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          {inputMessage.length}/{MAX_MESSAGE_LENGTH} characters
-        </p>
       </div>
     </div>
   );

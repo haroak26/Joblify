@@ -13,7 +13,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
   return (
     <div className="p-8 print:p-8 h-full">
       {/* Header with Name and Contact */}
-      <div className="flex justify-between items-start mb-8 pb-4 border-b-2 border-black">
+      <div className="flex justify-between items-start mb-8 pb-4 border-b-2 border-black" data-section="personal">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight">{personalInfo.name || "Your Name"}</h1>
         </div>
@@ -56,7 +56,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
         <div className="w-[30%]">
           {/* Education */}
           {education.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="education">
               <h2 className="text-base font-semibold mb-3 uppercase tracking-widest">
                 Education
               </h2>
@@ -76,7 +76,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Skills */}
           {skills.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="skills">
               <h2 className="text-base font-semibold mb-3 uppercase tracking-widest">
                 Skills
               </h2>
@@ -90,7 +90,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Certifications */}
           {certifications && certifications.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="certifications">
               <h2 className="text-base font-semibold mb-3 uppercase tracking-widest">
                 Certifications
               </h2>
@@ -108,7 +108,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Awards */}
           {awards && awards.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="awards">
               <h2 className="text-base font-semibold mb-3 uppercase tracking-widest">
                 Awards & Honors
               </h2>
@@ -132,7 +132,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
         <div className="flex-1">
           {/* Summary */}
           {summary && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="summary">
               <h2 className="text-base font-semibold mb-3 uppercase tracking-widest">
                 Professional Summary
               </h2>
@@ -142,7 +142,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Experience */}
           {experience.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="experience">
               <h2 className="text-base font-semibold mb-4 uppercase tracking-widest">
                 Experience
               </h2>
@@ -175,7 +175,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Projects */}
           {projects && projects.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="projects">
               <h2 className="text-base font-semibold mb-4 uppercase tracking-widest">
                 Projects
               </h2>
@@ -204,7 +204,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Leadership */}
           {leadership && leadership.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="leadership">
               <h2 className="text-base font-semibold mb-4 uppercase tracking-widest">
                 Leadership Experience
               </h2>
@@ -229,7 +229,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Research */}
           {research && research.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="research">
               <h2 className="text-base font-semibold mb-4 uppercase tracking-widest">
                 Research Experience
               </h2>
@@ -257,7 +257,7 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
 
           {/* Publications */}
           {publications && publications.length > 0 && (
-            <div className="mb-6">
+            <div className="mb-6" data-section="publications">
               <h2 className="text-base font-semibold mb-4 uppercase tracking-widest">
                 Publications
               </h2>

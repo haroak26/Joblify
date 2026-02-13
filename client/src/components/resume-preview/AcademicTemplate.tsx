@@ -14,7 +14,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
     <div className="flex h-full">
       {/* Left Sidebar - Gray background */}
       <div className="w-[35%] bg-gray-100 p-6 print:p-6">
-        <div className="mb-6">
+        <div className="mb-6" data-section="personal">
           <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
             Contact
           </h2>
@@ -54,7 +54,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Education */}
         {education.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="education">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
               Education
             </h2>
@@ -74,7 +74,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Skills */}
         {skills.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="skills">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
               Skills
             </h2>
@@ -88,7 +88,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Certifications */}
         {certifications && certifications.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="certifications">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
               Certifications
             </h2>
@@ -106,7 +106,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Awards */}
         {awards && awards.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="awards">
             <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
               Awards & Honors
             </h2>
@@ -135,7 +135,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Summary */}
         {summary && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="summary">
             <h2 className="text-base font-semibold mb-2 uppercase tracking-wide text-gray-800">
               Professional Summary
             </h2>
@@ -145,7 +145,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Experience */}
         {experience.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="experience">
             <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Experience
             </h2>
@@ -178,7 +178,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Projects */}
         {projects && projects.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="projects">
             <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Projects
             </h2>
@@ -207,7 +207,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Leadership */}
         {leadership && leadership.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="leadership">
             <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Leadership Experience
             </h2>
@@ -232,7 +232,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Research */}
         {research && research.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="research">
             <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Research Experience
             </h2>
@@ -260,7 +260,7 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
 
         {/* Publications */}
         {publications && publications.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6" data-section="publications">
             <h2 className="text-base font-semibold mb-3 uppercase tracking-wide text-gray-800">
               Publications
             </h2>
