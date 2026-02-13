@@ -3,8 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Loader2, User as UserIcon, Edit3, Settings2 } from "lucide-react";
+import { Sparkles, Send, Loader2, User as UserIcon, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { getCsrfToken } from "@/lib/queryClient";
@@ -220,11 +219,11 @@ export default function AIResumeChat({
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="flex flex-col p-4 border-b bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10">
-        <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-col p-4 border-b bg-background">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
               <h3 className="font-semibold">
@@ -252,29 +251,6 @@ export default function AIResumeChat({
             <span className="sm:hidden">Manual</span>
           </Button>
         </div>
-        
-        {/* Active Components Badges */}
-        {activeComponents.length > 0 && !focusedComponent && (
-          <div className="flex flex-wrap gap-1.5 items-center">
-            <span className="text-xs text-muted-foreground">Active sections:</span>
-            {activeComponents.map((component) => (
-              <Badge key={component} variant="secondary" className="text-xs">
-                {component}
-              </Badge>
-            ))}
-            {onEditComponents && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onEditComponents}
-                className="h-6 text-xs"
-              >
-                <Settings2 className="w-3 h-3 mr-1" />
-                Edit
-              </Button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Chat Messages */}
@@ -289,14 +265,14 @@ export default function AIResumeChat({
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                   message.role === "ai"
-                    ? "bg-gradient-to-br from-purple-500 to-pink-500"
+                    ? "bg-primary"
                     : "bg-primary"
                 }`}
               >
                 {message.role === "ai" ? (
-                  <Sparkles className="w-4 h-4 text-white" />
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
                 ) : (
-                  <UserIcon className="w-4 h-4 text-white" />
+                  <UserIcon className="w-4 h-4 text-primary-foreground" />
                 )}
               </div>
 
@@ -316,8 +292,8 @@ export default function AIResumeChat({
           {/* Loading Indicator */}
           {chatMutation.isPending && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
               </div>
               <div className="bg-muted rounded-b-lg rounded-t-md p-3">
                 <div className="flex items-center gap-2">
@@ -340,7 +316,7 @@ export default function AIResumeChat({
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-gradient-to-r from-purple-500/5 via-pink-500/5 to-purple-500/5">
+      <div className="p-4 border-t bg-background">
         <div className="max-w-3xl mx-auto relative flex items-center">
           <Input
             value={inputMessage}
