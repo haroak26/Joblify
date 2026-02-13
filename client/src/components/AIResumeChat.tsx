@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { getCsrfToken } from "@/lib/queryClient";
 import type { ResumeData } from "@shared/schema";
+import ReactMarkdown from "react-markdown";
 
 interface AIResumeChatProps {
   resumeId: string;
@@ -18,6 +19,7 @@ interface AIResumeChatProps {
   focusedComponent?: string;
   selectedComponents?: string[];
   onEditComponents?: () => void;
+  onAutoSave?: () => void;
 }
 
 interface ChatMessage {
@@ -39,11 +41,13 @@ export default function AIResumeChat({
   focusedComponent,
   selectedComponents = [],
   onEditComponents,
+  onAutoSave,
 }: AIResumeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isComplete, setIsComplete] = useState(false);
   const [activeComponents, setActiveComponents] = useState<string[]>(selectedComponents);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevComponentsRef = useRef<string[]>([]);
   const { toast } = useToast();
@@ -95,7 +99,7 @@ export default function AIResumeChat({
       const greeting = focusedComponent
         ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
         : isGuidedBuilder
-        ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I already have your name and email, so let's start with your professional summary. This is a brief overview of your career and key strengths - think of it as your elevator pitch. What would you like to highlight about your professional background?`
+        ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I already have your name and email, so let's build your professional summary together.\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, etc.)`
         : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
       
       setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
@@ -143,12 +147,33 @@ export default function AIResumeChat({
       return response.json();
     },
     onSuccess: (data: { reply: string; updatedData?: Partial<ResumeData>; isComplete?: boolean; addedComponents?: string[] }) => {
+      // Track usage on first interaction (when user sends their first message)
+      if (!hasInteracted) {
+        setHasInteracted(true);
+        // Track feature usage asynchronously
+        fetch('/api/track-feature', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ featureName: 'ai-resume-builder' }),
+          credentials: 'include',
+        }).catch(() => {
+          // Silently fail - tracking is non-critical
+        });
+      }
+
       // Add AI response to messages with unique ID
       setMessages((prev) => [...prev, { role: "ai", content: data.reply, id: `ai-${Date.now()}` }]);
 
       // Update resume data if AI extracted new information
       if (data.updatedData && Object.keys(data.updatedData).length > 0) {
         onUpdate(data.updatedData);
+        
+        // Auto-save after updating data
+        if (onAutoSave) {
+          setTimeout(() => {
+            onAutoSave();
+          }, 500); // Small delay to ensure state is updated
+        }
       }
 
       // Handle dynamically added components
@@ -284,7 +309,25 @@ export default function AIResumeChat({
                     : "bg-muted mr-12"
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                {message.role === "ai" ? (
+                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                        li: ({ children }) => <li className="mb-1">{children}</li>,
+                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                )}
               </div>
             </div>
           ))}
