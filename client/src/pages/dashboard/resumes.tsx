@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useLocation } from "wouter";
+import { useState, useRef, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,9 +30,47 @@ import type { Resume } from "@shared/schema";
 
 export default function Resumes() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
+  const [hasTriggeredAICreate, setHasTriggeredAICreate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Create resume mutation
+  const createResumeMutation = useMutation({
+    mutationFn: async (mode: "traditional" | "ai") => {
+      const response = await apiRequest("POST", "/api/resumes", {
+        title: "Untitled Resume",
+      });
+      return { resume: await response.json(), mode };
+    },
+    onSuccess: ({ resume, mode }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+      
+      if (mode === "ai") {
+        setLocation(`/dashboard/resume-builder/${resume.id}?mode=ai`);
+      } else {
+        setLocation(`/dashboard/resume-builder/${resume.id}`);
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create resume. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Check if we need to trigger AI builder automatically
+  useEffect(() => {
+    if (search.includes("create=ai") && !hasTriggeredAICreate && !createResumeMutation.isPending) {
+      setHasTriggeredAICreate(true);
+      createResumeMutation.mutate("ai");
+    }
+    // Note: createResumeMutation.mutate is intentionally NOT in dependencies
+    // as it's a stable function from React Query useMutation
+  }, [search, hasTriggeredAICreate, createResumeMutation.isPending]);
 
   // Fetch all resumes
   const { data: resumes, isLoading, isError, error } = useQuery<Resume[]>({

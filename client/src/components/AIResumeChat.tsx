@@ -48,17 +48,59 @@ export default function AIResumeChat({
   const [isComplete, setIsComplete] = useState(false);
   const [activeComponents, setActiveComponents] = useState<string[]>(selectedComponents);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(true);
+  const hasShownGreetingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevComponentsRef = useRef<string[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Load saved conversation on mount
+  useEffect(() => {
+    const loadConversation = async () => {
+      try {
+        const response = await fetch(`/api/resumes/${resumeId}/conversation`, {
+          credentials: "include",
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.messages && data.messages.length > 0) {
+            // Convert saved messages to ChatMessage format with IDs
+            const loadedMessages = data.messages.map((msg: { role: string; content: string }, index: number) => {
+              // Validate role to ensure type safety
+              const role = msg.role === "user" || msg.role === "ai" ? msg.role : "ai";
+              
+              // Log warning if role is invalid
+              if (msg.role !== "user" && msg.role !== "ai") {
+                console.warn(`Invalid message role detected: "${msg.role}". Defaulting to "ai".`);
+              }
+              
+              return {
+                role,
+                content: msg.content,
+                id: `${role}-${Date.now()}-${index}`,
+              };
+            });
+            setMessages(loadedMessages);
+            setHasInteracted(true); // User has previous interaction
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load conversation:", error);
+        // Don't show error to user - just start fresh
+      } finally {
+        setIsLoadingConversation(false);
+      }
+    };
+
+    loadConversation();
+  }, [resumeId]);
+
   // Update activeComponents when selectedComponents prop changes
   useEffect(() => {
-    // If components changed from empty to non-empty, reset messages to show new greeting
-    if (selectedComponents.length > 0 && prevComponentsRef.current.length === 0) {
-      setMessages([]);
-    }
+    // If components changed from empty to non-empty and we have no loaded messages,
+    // the greeting will be shown by the next effect
     prevComponentsRef.current = selectedComponents;
     setActiveComponents(selectedComponents);
   }, [selectedComponents]);
@@ -72,39 +114,48 @@ export default function AIResumeChat({
 
   // Initial greeting and user data prefill
   useEffect(() => {
-    if (messages.length === 0 && resumeData && user) {
-      // Extract first name from user.name, fallback to username
-      const firstName = user.name?.split(" ")[0] || user.username || "there";
+    // Don't show greeting if:
+    // 1. Still loading conversation
+    // 2. Messages already exist (from loaded conversation or previous greeting)
+    // 3. Already shown greeting once
+    if (isLoadingConversation || messages.length > 0 || !resumeData || !user || hasShownGreetingRef.current) {
+      return;
+    }
+    
+    // Mark that we're showing the greeting
+    hasShownGreetingRef.current = true;
+    
+    // Extract first name from user.name, fallback to username
+    const firstName = user.name?.split(" ")[0] || user.username || "there";
+    
+    // Pre-fill user data if individual fields are missing
+    const shouldPrefillName = !resumeData.personalInfo?.name && user.name;
+    const shouldPrefillEmail = !resumeData.personalInfo?.email && user.email;
+    
+    if (shouldPrefillName || shouldPrefillEmail) {
+      const updates: any = { personalInfo: { ...resumeData.personalInfo } };
       
-      // Pre-fill user data if individual fields are missing
-      const shouldPrefillName = !resumeData.personalInfo?.name && user.name;
-      const shouldPrefillEmail = !resumeData.personalInfo?.email && user.email;
-      
-      if (shouldPrefillName || shouldPrefillEmail) {
-        const updates: any = { personalInfo: { ...resumeData.personalInfo } };
-        
-        if (shouldPrefillName) {
-          updates.personalInfo.name = user.name;
-        }
-        if (shouldPrefillEmail) {
-          updates.personalInfo.email = user.email;
-        }
-        
-        onUpdate(updates);
+      if (shouldPrefillName) {
+        updates.personalInfo.name = user.name;
+      }
+      if (shouldPrefillEmail) {
+        updates.personalInfo.email = user.email;
       }
       
-      // Determine the mode: guided builder or enhancement
-      const isGuidedBuilder = activeComponents.length > 0 && !focusedComponent;
-      
-      const greeting = focusedComponent
-        ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
-        : isGuidedBuilder
-        ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I already have your name and email, so let's build your professional summary together.\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, etc.)`
-        : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
-      
-      setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
+      onUpdate(updates);
     }
-  }, [messages.length, resumeData, user, focusedComponent, activeComponents]);
+    
+    // Determine the mode: guided builder or enhancement
+    const isGuidedBuilder = activeComponents.length > 0 && !focusedComponent;
+    
+    const greeting = focusedComponent
+      ? `Welcome ${firstName}! I'm here to help you polish and improve your ${focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
+      : isGuidedBuilder
+      ? `Welcome ${firstName}! I'm your AI Resume Builder assistant. I already have your name and email, so let's build your professional summary together.\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, etc.)`
+      : `Welcome ${firstName}! I'm your AI resume enhancement assistant. ${PROACTIVE_ENHANCEMENT_START}`;
+    
+    setMessages([{ role: "ai", content: greeting, id: Date.now().toString() }]);
+  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, activeComponents, onUpdate]);
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
