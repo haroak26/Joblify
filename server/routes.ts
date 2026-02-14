@@ -647,11 +647,11 @@ export async function registerRoutes(
 
       // Increment cover letter usage count
       await db
-        .update(usage)
+        .update(usageTable)
         .set({ 
-          coverLettersThisMonth: sql`${usage.coverLettersThisMonth} + 1` 
+          coverLettersThisMonth: sql`${usageTable.coverLettersThisMonth} + 1` 
         })
-        .where(eq(usage.userId, userId));
+        .where(eq(usageTable.userId, userId));
 
       res.json(coverLetter);
     } catch (error) {
