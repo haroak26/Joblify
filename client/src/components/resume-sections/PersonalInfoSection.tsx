@@ -17,6 +17,23 @@ export default function PersonalInfoSection({ data, onUpdate }: PersonalInfoSect
     });
   };
 
+  const handleLinkedInChange = (value: string) => {
+    // Always ensure @ prefix exists and cannot be removed
+    let linkedInValue = value;
+    
+    // If the value doesn't start with @, add it
+    if (linkedInValue && !linkedInValue.startsWith('@')) {
+      linkedInValue = '@' + linkedInValue;
+    }
+    
+    // If user tries to remove @, keep it
+    if (!linkedInValue || linkedInValue === '') {
+      linkedInValue = '@';
+    }
+    
+    handleChange("linkedin", linkedInValue);
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -69,9 +86,9 @@ export default function PersonalInfoSection({ data, onUpdate }: PersonalInfoSect
           <Input
             id="linkedin"
             type="text"
-            value={data.personalInfo.linkedin || ""}
-            onChange={(e) => handleChange("linkedin", e.target.value)}
-            placeholder="johndoe"
+            value={data.personalInfo.linkedin || "@"}
+            onChange={(e) => handleLinkedInChange(e.target.value)}
+            placeholder="@johndoe"
           />
         </div>
         <div className="space-y-2">
