@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Rounded green background -->
+  <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="#1B9C5D"/>
+  
+  <!-- Briefcase icon in white -->
+  <g transform="translate(256, 270)" fill="none">
+    <!-- Handle -->
+    <rect x="-48" y="-130" width="96" height="50" rx="14" ry="14" 
+          stroke="white" stroke-width="18" fill="none"/>
+    
+    <!-- Main body -->
+    <rect x="-155" y="-80" width="310" height="200" rx="24" ry="24" 
+          fill="white"/>
+    
+    <!-- Middle strap (horizontal) -->
+    <rect x="-155" y="-10" width="310" height="24" fill="#1B9C5D"/>
+    
+    <!-- Left clasp -->
+    <rect x="-95" y="-26" width="30" height="56" rx="6" ry="6" fill="#1B9C5D" 
+          stroke="white" stroke-width="4"/>
+    
+    <!-- Right clasp -->
+    <rect x="65" y="-26" width="30" height="56" rx="6" ry="6" fill="#1B9C5D" 
+          stroke="white" stroke-width="4"/>
+  </g>
+</svg>
