@@ -35,8 +35,8 @@ export function setupAdminRoutes(app: Express) {
    */
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
       const search = req.query.search as string;
       
       const result = await storage.getAllUsers({ page, limit, search });
@@ -108,6 +108,10 @@ export function setupAdminRoutes(app: Express) {
       
       if (!reason || reason.trim().length === 0) {
         return res.status(400).json({ error: "Internal note/reason is required" });
+      }
+
+      if (reason.length > 1000) {
+        return res.status(400).json({ error: "Reason must be 1000 characters or fewer" });
       }
       
       const adminId = req.session.userId!;
@@ -189,6 +193,10 @@ export function setupAdminRoutes(app: Express) {
       if (!reason || reason.trim().length === 0) {
         return res.status(400).json({ error: "Internal note/reason is required" });
       }
+
+      if (reason.length > 1000) {
+        return res.status(400).json({ error: "Reason must be 1000 characters or fewer" });
+      }
       
       const adminId = req.session.userId!;
       
@@ -263,7 +271,7 @@ export function setupAdminRoutes(app: Express) {
       if (!userId) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      const limit = parseInt(req.query.limit as string) || 50;
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
       
       const activities = await storage.getUserActivityLogs(userId, limit);
       
@@ -284,7 +292,7 @@ export function setupAdminRoutes(app: Express) {
       if (!userId) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      const limit = parseInt(req.query.limit as string) || 50;
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
       
       // Get raw AI usage logs
       const aiUsage = await storage.getUserAiUsageLogs(userId, limit);
@@ -388,6 +396,19 @@ export function setupAdminRoutes(app: Express) {
       
       if (!name || !perkType || !description) {
         return res.status(400).json({ error: "Name, perk type, and description are required" });
+      }
+
+      const validPerkTypes = ['interview_credit', 'ats_scan_credit', 'temp_pro_access', 'temp_ultra_access'];
+      if (!validPerkTypes.includes(perkType)) {
+        return res.status(400).json({ error: `Invalid perk type. Must be one of: ${validPerkTypes.join(', ')}` });
+      }
+
+      if (name.length > 200) {
+        return res.status(400).json({ error: "Perk name must be 200 characters or fewer" });
+      }
+
+      if (description.length > 1000) {
+        return res.status(400).json({ error: "Perk description must be 1000 characters or fewer" });
       }
       
       const adminId = req.session.userId!;
@@ -629,8 +650,8 @@ export function setupAdminRoutes(app: Express) {
    */
   app.get("/api/admin/logs", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 100;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 100));
       const adminUserId = req.query.adminUserId as string;
       const action = req.query.action as string;
       

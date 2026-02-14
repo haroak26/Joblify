@@ -131,20 +131,34 @@ export default function TailorPage() {
   const copyResumeToClipboard = () => {
     if (tailoredResume?.resumeData) {
       const text = formatResumeAsText(tailoredResume.resumeData);
-      navigator.clipboard.writeText(text);
-      toast({
-        title: "Copied!",
-        description: "Tailored resume copied to clipboard",
+      navigator.clipboard.writeText(text).then(() => {
+        toast({
+          title: "Copied!",
+          description: "Tailored resume copied to clipboard",
+        });
+      }).catch(() => {
+        toast({
+          title: "Copy failed",
+          description: "Unable to copy to clipboard. Please select and copy manually.",
+          variant: "destructive",
+        });
       });
     }
   };
 
   const copyCoverLetterToClipboard = () => {
     if (tailoredCoverLetter?.content) {
-      navigator.clipboard.writeText(tailoredCoverLetter.content);
-      toast({
-        title: "Copied!",
-        description: "Cover letter copied to clipboard",
+      navigator.clipboard.writeText(tailoredCoverLetter.content).then(() => {
+        toast({
+          title: "Copied!",
+          description: "Cover letter copied to clipboard",
+        });
+      }).catch(() => {
+        toast({
+          title: "Copy failed",
+          description: "Unable to copy to clipboard. Please select and copy manually.",
+          variant: "destructive",
+        });
       });
     }
   };
@@ -334,7 +348,7 @@ export default function TailorPage() {
                         Copy
                       </Button>
                       <Button variant="outline" size="sm" asChild>
-                        <a href={`/dashboard/resumes/${tailoredResume.id}/edit`}>
+                        <a href={`/dashboard/resume-builder/${tailoredResume.id}`}>
                           <FileText className="w-4 h-4 mr-2" />
                           View Full Resume
                         </a>

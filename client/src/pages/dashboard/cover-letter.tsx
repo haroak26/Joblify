@@ -85,10 +85,17 @@ export default function CoverLetterGenerator() {
 
   const copyToClipboard = () => {
     if (result?.content) {
-      navigator.clipboard.writeText(result.content);
-      toast({
-        title: "Copied!",
-        description: "Cover letter copied to clipboard",
+      navigator.clipboard.writeText(result.content).then(() => {
+        toast({
+          title: "Copied!",
+          description: "Cover letter copied to clipboard",
+        });
+      }).catch(() => {
+        toast({
+          title: "Copy failed",
+          description: "Unable to copy to clipboard. Please select and copy manually.",
+          variant: "destructive",
+        });
       });
     }
   };
