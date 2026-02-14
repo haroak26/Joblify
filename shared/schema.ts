@@ -288,6 +288,7 @@ export const chatConversations = pgTable("chat_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   resumeId: varchar("resume_id").references(() => resumes.id, { onDelete: "cascade" }),
+  mode: varchar("mode").notNull().default("builder"), // "builder" or "enhancement"
   messages: jsonb("messages").notNull().default([]),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
