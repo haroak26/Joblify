@@ -1406,14 +1406,16 @@ Respond ONLY with valid JSON (no text before or after):
         res.setHeader('X-Accel-Buffering', 'no');
         res.flushHeaders();
 
+        // Collect the full AI response first without streaming raw JSON tokens to client
+        // The AI returns structured JSON, which should not be shown directly to the user
         const stream = await poeClient.chat.completions.create({
           model: "gpt-5-nano",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: sanitizedMessage }
           ],
-          max_tokens: 1500,
-          temperature: 0.8,
+          max_tokens: 3000,
+          temperature: 0.4,
           stream: true,
         });
 
@@ -1423,8 +1425,6 @@ Respond ONLY with valid JSON (no text before or after):
           const content = chunk.choices[0]?.delta?.content || '';
           if (content) {
             fullResponse += content;
-            // Stream each token to client
-            res.write(`data: ${JSON.stringify({ type: "token", content })}\n\n`);
           }
         }
 
@@ -1436,13 +1436,42 @@ Respond ONLY with valid JSON (no text before or after):
           if (cleanedResponse.startsWith('```')) {
             cleanedResponse = cleanedResponse.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
           }
+          // Try to extract JSON object even if there's extra text around it
+          const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            cleanedResponse = jsonMatch[0];
+          }
           parsedResponse = JSON.parse(cleanedResponse);
         } catch {
+          // If JSON parsing fails, try to extract the reply text from the raw response
+          // and use current data as fallback for updatedData
+          let extractedReply = fullResponse || "I understand. Could you tell me more?";
+          // If it looks like it contains a reply field, try to extract it
+          const replyMatch = fullResponse.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+          if (replyMatch && replyMatch[1].length > 0) {
+            try {
+              extractedReply = replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+            } catch {
+              // If replacement fails, use the raw response
+            }
+          }
           parsedResponse = {
-            reply: fullResponse || "I understand. Could you tell me more?",
+            reply: extractedReply,
             updatedData: {},
             isComplete: false,
           };
+        }
+
+        // Stream the reply text to the client for a nice typing effect
+        const replyText = parsedResponse.reply || "I understand. Could you tell me more?";
+        // Send reply in batches of words to reduce write overhead while maintaining streaming feel
+        const words = replyText.split(/(\s+)/);
+        const BATCH_SIZE = 8;
+        for (let i = 0; i < words.length; i += BATCH_SIZE) {
+          const batch = words.slice(i, i + BATCH_SIZE).join('');
+          if (batch) {
+            res.write(`data: ${JSON.stringify({ type: "token", content: batch })}\n\n`);
+          }
         }
 
         // Merge AI-returned updatedData with existing resume data to ensure cumulative updates
