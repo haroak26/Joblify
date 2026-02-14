@@ -763,34 +763,6 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to disable 2FA" });
     }
   });
-      if (!password) {
-        return res.status(400).json({ error: "Password is required to disable 2FA" });
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Verify password
-      const isValid = await verifyPassword(user.password, password);
-      if (!isValid) {
-        return res.status(400).json({ error: "Incorrect password" });
-      }
-
-      // Disable 2FA and clear secret and backup codes
-      await storage.updateUser(userId, {
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-        backupCodes: [],
-      });
-
-      res.json({ success: true, message: "2FA disabled successfully" });
-    } catch (error) {
-      console.error('[API] Error disabling 2FA:', error);
-      res.status(500).json({ error: "Failed to disable 2FA" });
-    }
-  });
 
   // ============================================
   // User Preferences Endpoints
