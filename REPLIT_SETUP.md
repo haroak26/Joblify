@@ -123,7 +123,7 @@ This guide will help you deploy Joblify on Replit with all necessary environment
 **`BASE_URL`**
 - **Description**: Base URL of your application
 - **How to get**: Use your Replit app URL
-- **Example**: `https://joblify.replit.app` or your custom domain
+- **Example**: `https://joblifyai.com` or your custom domain
 
 **`PORT`**
 - **Description**: Port for the server to listen on
@@ -214,7 +214,7 @@ npm start
 ### Step 6: Configure Webhooks (if using Stripe)
 
 1. Go to Stripe Dashboard → Developers → Webhooks
-2. Add endpoint: `https://your-replit-url.replit.app/api/webhooks/stripe`
+2. Add endpoint: `https://joblifyai.com/api/webhooks/stripe`
 3. Select events to listen to:
    - `checkout.session.completed`
    - `customer.subscription.updated`
