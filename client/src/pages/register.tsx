@@ -168,6 +168,7 @@ export default function Register() {
 
   const handleStep4Submit = async (data: Step4Data) => {
     const finalData = { ...formData, ...data };
+    // Save form data before attempting registration so it's preserved if we need to navigate to fix errors
     setFormData(finalData);
     
     setIsSubmitting(true);
