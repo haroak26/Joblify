@@ -2321,7 +2321,7 @@ Guidelines:
 
       const { email } = schema.parse(req.body);
 
-      // Get or create the newsletter mailing list
+      // Get or create the newsletter and marketing mailing lists
       let [newsletterList] = await db
         .select()
         .from(mailingLists)
@@ -2339,12 +2339,29 @@ Guidelines:
           .returning();
       }
 
+      let [marketingList] = await db
+        .select()
+        .from(mailingLists)
+        .where(eq(mailingLists.name, "marketing"))
+        .limit(1);
+
+      if (!marketingList) {
+        [marketingList] = await db
+          .insert(mailingLists)
+          .values({
+            name: "marketing",
+            description: "Marketing emails with new features and promotions",
+            defaultSubscribed: true,
+          })
+          .returning();
+      }
+
       // Check if user is logged in and link to their account
       const userId = req.session.userId;
 
       if (userId) {
-        // Check if already subscribed
-        const [existing] = await db
+        // Subscribe to newsletter list
+        const [existingNewsletter] = await db
           .select()
           .from(userMailingLists)
           .where(
@@ -2355,15 +2372,14 @@ Guidelines:
           )
           .limit(1);
 
-        if (existing) {
-          if (existing.subscribed) {
-            return res.json({ success: true, message: "You're already subscribed!" });
+        if (existingNewsletter) {
+          if (!existingNewsletter.subscribed) {
+            // Re-subscribe to newsletter
+            await db
+              .update(userMailingLists)
+              .set({ subscribed: true, subscribedAt: new Date(), unsubscribedAt: null })
+              .where(eq(userMailingLists.id, existingNewsletter.id));
           }
-          // Re-subscribe
-          await db
-            .update(userMailingLists)
-            .set({ subscribed: true, subscribedAt: new Date(), unsubscribedAt: null })
-            .where(eq(userMailingLists.id, existing.id));
         } else {
           await db.insert(userMailingLists).values({
             userId,
@@ -2371,16 +2387,55 @@ Guidelines:
             subscribed: true,
           });
         }
+
+        // Subscribe to marketing list
+        const [existingMarketing] = await db
+          .select()
+          .from(userMailingLists)
+          .where(
+            and(
+              eq(userMailingLists.userId, userId),
+              eq(userMailingLists.listId, marketingList.id)
+            )
+          )
+          .limit(1);
+
+        if (existingMarketing) {
+          if (!existingMarketing.subscribed) {
+            // Re-subscribe to marketing
+            await db
+              .update(userMailingLists)
+              .set({ subscribed: true, subscribedAt: new Date(), unsubscribedAt: null })
+              .where(eq(userMailingLists.id, existingMarketing.id));
+          }
+        } else {
+          await db.insert(userMailingLists).values({
+            userId,
+            listId: marketingList.id,
+            subscribed: true,
+          });
+        }
       }
 
-      // Add to Brevo list if configured
-      const brevoListId = process.env.BREVO_NEWSLETTER_LIST_ID;
-      if (brevoListId) {
-        const parsedListId = parseInt(brevoListId, 10);
-        if (!isNaN(parsedListId)) {
-          await addContactToBrevoList(email, parsedListId);
+      // Add to Brevo newsletter list (list #1) if configured
+      const brevoNewsletterListId = process.env.BREVO_NEWSLETTER_LIST_ID;
+      if (brevoNewsletterListId) {
+        const parsedNewsletterListId = parseInt(brevoNewsletterListId, 10);
+        if (!isNaN(parsedNewsletterListId)) {
+          await addContactToBrevoList(email, parsedNewsletterListId);
         } else {
-          console.error('[API] Invalid BREVO_NEWSLETTER_LIST_ID:', brevoListId);
+          console.error('[API] Invalid BREVO_NEWSLETTER_LIST_ID:', brevoNewsletterListId);
+        }
+      }
+
+      // Add to Brevo marketing list (list #2) if configured
+      const brevoMarketingListId = process.env.BREVO_MARKETING_LIST_ID;
+      if (brevoMarketingListId) {
+        const parsedMarketingListId = parseInt(brevoMarketingListId, 10);
+        if (!isNaN(parsedMarketingListId)) {
+          await addContactToBrevoList(email, parsedMarketingListId);
+        } else {
+          console.error('[API] Invalid BREVO_MARKETING_LIST_ID:', brevoMarketingListId);
         }
       }
 

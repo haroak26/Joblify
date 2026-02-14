@@ -926,6 +926,41 @@ export default function Account() {
               </div>
             </div>
 
+            {/* Sign Out Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 rounded-lg border border-primary/20 bg-primary/5">
+              <div className="space-y-2">
+                <p className="text-large font-bold text-primary flex items-center gap-2">
+                  <LogOut className="w-5 h-5" />
+                  Sign Out
+                </p>
+                <p className="text-sm text-muted-foreground">Sign out of your account on this device.</p>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="default" size="default" className="px-8 font-bold w-full sm:w-auto">
+                    Sign Out
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-large font-bold">Sign Out</AlertDialogTitle>
+                    <AlertDialogDescription className="text-body">
+                      Are you sure you want to sign out? You'll need to log in again to access your account.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="gap-3 mt-4">
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={async () => {
+                      await logout();
+                      navigate("/login");
+                    }} className="font-bold">
+                      Sign Out
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
             {/* Danger Zone */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 p-6 rounded-lg border border-destructive/20 bg-destructive/5">
               <div className="space-y-2">
@@ -956,41 +991,6 @@ export default function Account() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </div>
-
-            {/* Sign Out Section */}
-            <div className="rounded-lg border bg-background p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-subheader font-bold">Sign Out</h2>
-                  <p className="text-muted-foreground">Sign out of your account on this device</p>
-                </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-2">
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Sign Out</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to sign out? You'll need to log in again to access your account.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={async () => {
-                        await logout();
-                        navigate("/login");
-                      }}>
-                        Sign Out
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
             </div>
           </CleanTabsContent>
 
@@ -1369,17 +1369,6 @@ function EmailPreferencesSection() {
           <Switch
             checked={preferences?.marketingEmails ?? true}
             onCheckedChange={(checked) => handleToggle("marketingEmails", checked)}
-          />
-        </div>
-        <div className="h-px bg-border" />
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="font-medium">Weekly Summary Emails</p>
-            <p className="text-small text-muted-foreground">Get a weekly digest of your activity and opportunities</p>
-          </div>
-          <Switch
-            checked={preferences?.weeklySummaryEmails ?? true}
-            onCheckedChange={(checked) => handleToggle("weeklySummaryEmails", checked)}
           />
         </div>
       </div>
