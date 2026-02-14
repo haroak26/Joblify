@@ -346,6 +346,9 @@ export default function AIResumeChat({
           onUpdate(doneData.updatedData);
           if (onAutoSave) {
             console.log("[AIResumeChat] Triggering auto-save");
+            // Small delay to ensure React state has updated before triggering save
+            // This allows the parent component's resumeData state to reflect the changes
+            // before the save operation reads and persists it
             setTimeout(() => onAutoSave(), 500);
           }
         }
@@ -423,6 +426,35 @@ export default function AIResumeChat({
   }, []);
 
   // Section navigation handlers
+  
+  /**
+   * Detects if an AI message is requesting user approval for generated content.
+   * This uses pattern matching against specific phrases the AI is instructed to use
+   * in the backend system prompt (server/routes.ts lines 1289, 1299, 1316).
+   * 
+   * Future improvement: Consider adding a structured flag in the AI response
+   * (e.g., { requiresApproval: true }) to make this more robust and maintainable.
+   */
+  const isApprovalRequest = useCallback((content: string): boolean => {
+    const lowerContent = content.toLowerCase();
+    // Primary approval phrases from AI system prompt
+    const approvalPhrases = [
+      "want it more",      // "Want it more formal, more confident, or more friendly?"
+      "want me to",        // "Want me to tailor these to your target job?"
+      "want these to",     // "Want these to sound more results-focused or leadership-focused?"
+    ];
+    
+    // Check if any approval phrase is present
+    const hasApprovalPhrase = approvalPhrases.some(phrase => lowerContent.includes(phrase));
+    
+    // Additional heuristic: approval requests typically come after content synthesis
+    // and are shorter questions (not long explanations)
+    const isReasonableLength = content.length < 500;
+    const hasQuestionMark = content.includes('?');
+    
+    return hasApprovalPhrase && isReasonableLength && hasQuestionMark;
+  }, []);
+
   const handleNextSection = useCallback(() => {
     // Find next incomplete section
     const currentIndex = activeComponents.indexOf(editingSection || '');
@@ -598,22 +630,13 @@ export default function AIResumeChat({
                   )}
                 </div>
                 
-                {/* Section Navigation Buttons 
-                    These appear after the AI has synthesized content and is asking for approval.
-                    The phrases match the specific questions the AI is instructed to ask in server/routes.ts:
-                    - "Want it more formal, more confident, or more friendly?"
-                    - "Want these to sound more results-focused or leadership-focused?"
-                    - "Want me to tailor these to your target job?"
-                    This pattern is defined in the AI system prompt and unlikely to appear in other contexts.
-                */}
+                {/* Section Navigation Buttons */}
                 {message.role === "ai" && 
                  index === messages.length - 1 && 
                  !isStreaming && 
                  isGuidedBuilder &&
                  editingSection &&
-                 (message.content.toLowerCase().includes("want it more") || 
-                  message.content.toLowerCase().includes("want me to") ||
-                  message.content.toLowerCase().includes("want these to")) && (
+                 isApprovalRequest(message.content) && (
                   <div className="flex gap-2 mt-3 mr-12">
                     <Button 
                       onClick={handleNextSection}
