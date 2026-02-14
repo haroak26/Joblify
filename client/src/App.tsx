@@ -33,6 +33,8 @@ import Home from "@/pages/dashboard/home";
 import JobMatch from "@/pages/dashboard/job-match";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetter from "@/pages/dashboard/cover-letter";
+import FeatureCoverLetter from "@/pages/features/cover-letter";
+import FeatureAtsScanner from "@/pages/features/ats-scanner";
 import AdminDashboard from "@/pages/dashboard/admin";
 import AdminUserDetails from "@/pages/dashboard/admin-user-details";
 
@@ -133,6 +135,8 @@ function Router() {
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/features/cover-letter" component={FeatureCoverLetter} />
+      <Route path="/features/ats-scanner" component={FeatureAtsScanner} />
       <Route component={NotFound} />
     </Switch>
   );
