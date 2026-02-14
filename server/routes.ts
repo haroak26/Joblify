@@ -1448,8 +1448,12 @@ Respond ONLY with valid JSON (no text before or after):
           let extractedReply = fullResponse || "I understand. Could you tell me more?";
           // If it looks like it contains a reply field, try to extract it
           const replyMatch = fullResponse.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-          if (replyMatch) {
-            extractedReply = replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          if (replyMatch && replyMatch[1].length > 0) {
+            try {
+              extractedReply = replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+            } catch {
+              // If replacement fails, use the raw response
+            }
           }
           parsedResponse = {
             reply: extractedReply,
@@ -1460,11 +1464,13 @@ Respond ONLY with valid JSON (no text before or after):
 
         // Stream the reply text to the client for a nice typing effect
         const replyText = parsedResponse.reply || "I understand. Could you tell me more?";
-        // Send reply in small chunks to simulate streaming
+        // Send reply in batches of words to reduce write overhead while maintaining streaming feel
         const words = replyText.split(/(\s+)/);
-        for (const word of words) {
-          if (word) {
-            res.write(`data: ${JSON.stringify({ type: "token", content: word })}\n\n`);
+        const BATCH_SIZE = 8;
+        for (let i = 0; i < words.length; i += BATCH_SIZE) {
+          const batch = words.slice(i, i + BATCH_SIZE).join('');
+          if (batch) {
+            res.write(`data: ${JSON.stringify({ type: "token", content: batch })}\n\n`);
           }
         }
 
