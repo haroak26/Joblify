@@ -262,7 +262,8 @@ export default function ResumeBuilder() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/resumes/${resumeId}`] });
+      // Don't invalidate query to prevent refetching and state reset
+      // The local state is already up-to-date with what we just saved
       setLastSaved(new Date());
       setHasUnsavedChanges(false);
       setIsSaving(false);
