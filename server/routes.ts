@@ -848,6 +848,87 @@ export async function registerRoutes(
     }
   });
 
+  // Get usage statistics
+  app.get("/api/usage", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Get usage data
+      const usage = await storage.checkAndResetMonthlyUsage(userId);
+      
+      // Get user's profile to count skills
+      const profile = await storage.getProfile(userId);
+      const skillsCount = profile.skills.length;
+      
+      // Get user's subscription to determine limits
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+      
+      // Schedules are not implemented yet, so we use 0
+      const schedulesCount = 0;
+      
+      // Calculate limits (convert Infinity to -1 for frontend)
+      const maxSkills = planLimits.maxSkills === Infinity ? -1 : planLimits.maxSkills;
+      const maxAIEdits = planLimits.maxAIEditsPerMonth === Infinity ? -1 : planLimits.maxAIEditsPerMonth;
+      const maxCoverLetters = planLimits.maxCoverLettersPerMonth === Infinity ? -1 : planLimits.maxCoverLettersPerMonth;
+      const maxJobAnalyses = planLimits.maxJobAnalysesPerMonth === Infinity ? -1 : planLimits.maxJobAnalysesPerMonth;
+      const maxATSScans = planLimits.maxATSScansPerMonth === Infinity ? -1 : planLimits.maxATSScansPerMonth;
+      const maxImportedResumes = planLimits.maxImportedResumesPerMonth === Infinity ? -1 : planLimits.maxImportedResumesPerMonth;
+      
+      // Schedules limits (not implemented, so no access for now)
+      const maxSchedules = 0;
+      const hasScheduleAccess = false;
+      
+      // Calculate remaining usage
+      const remainingSkills = maxSkills === -1 ? -1 : Math.max(0, maxSkills - skillsCount);
+      const remainingAIEdits = maxAIEdits === -1 ? -1 : Math.max(0, maxAIEdits - usage.aiEditsThisMonth);
+      const remainingCoverLetters = maxCoverLetters === -1 ? -1 : Math.max(0, maxCoverLetters - usage.coverLettersThisMonth);
+      const remainingJobAnalyses = maxJobAnalyses === -1 ? -1 : Math.max(0, maxJobAnalyses - usage.jobAnalysesThisMonth);
+      const remainingATSScans = maxATSScans === -1 ? -1 : Math.max(0, maxATSScans - usage.atsScansThisMonth);
+      const remainingImportedResumes = maxImportedResumes === -1 ? -1 : Math.max(0, maxImportedResumes - usage.importedResumesThisMonth);
+      const remainingSchedules = maxSchedules === -1 ? -1 : Math.max(0, maxSchedules - schedulesCount);
+      
+      res.json({
+        usage: {
+          skillsCount,
+          jobsScrapedThisMonth: usage.importedResumesThisMonth,
+          aiEditsThisMonth: usage.aiEditsThisMonth,
+          importedResumesThisMonth: usage.importedResumesThisMonth,
+          jobAnalysesThisMonth: usage.jobAnalysesThisMonth,
+          coverLettersThisMonth: usage.coverLettersThisMonth,
+          atsScansThisMonth: usage.atsScansThisMonth,
+          schedulesCount,
+          monthResetDate: usage.monthResetDate.toISOString(),
+        },
+        limits: {
+          maxSkills,
+          maxJobsPerMonth: maxImportedResumes,
+          maxSchedules,
+          hasScheduleAccess,
+          maxAIEdits,
+          maxCoverLetters,
+          maxJobAnalyses,
+          maxATSScans,
+          maxImportedResumes,
+        },
+        remaining: {
+          skills: remainingSkills,
+          jobsThisMonth: remainingImportedResumes,
+          aiEdits: remainingAIEdits,
+          schedules: remainingSchedules,
+          coverLetters: remainingCoverLetters,
+          jobAnalyses: remainingJobAnalyses,
+          atsScans: remainingATSScans,
+          importedResumes: remainingImportedResumes,
+        },
+      });
+    } catch (error) {
+      console.error('[API] Error getting usage data:', error);
+      res.status(500).json({ error: "Failed to get usage data" });
+    }
+  });
+
   // ============================================
   // Resume Endpoints
   // ============================================
