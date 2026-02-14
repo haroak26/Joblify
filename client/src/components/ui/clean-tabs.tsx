@@ -10,7 +10,6 @@ const CleanTabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, children, ...props }, ref) => {
-  const [activeTab, setActiveTab] = React.useState<string>("");
   const [indicatorStyle, setIndicatorStyle] = React.useState({ left: 0, width: 0 });
   const tabsRef = React.useRef<HTMLDivElement>(null);
 

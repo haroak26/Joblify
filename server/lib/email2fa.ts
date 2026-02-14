@@ -17,6 +17,11 @@ export function verify2FACode(providedCode: string, expectedCode: string): boole
   const normalizedProvided = providedCode.replace(/\s+/g, '');
   const normalizedExpected = expectedCode.replace(/\s+/g, '');
   
+  // Check if lengths match before constant-time comparison
+  if (normalizedProvided.length !== normalizedExpected.length) {
+    return false;
+  }
+  
   // Constant-time comparison to prevent timing attacks
   return crypto.timingSafeEqual(
     Buffer.from(normalizedProvided),
