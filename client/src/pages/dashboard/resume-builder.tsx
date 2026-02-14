@@ -401,7 +401,11 @@ export default function ResumeBuilder() {
         }
       }
 
-      const filename = `${resumeTitle.replace(/[^a-z0-9\s-]/gi, '_').replace(/\s+/g, '_').toLowerCase()}.pdf`;
+      const filename = `${resumeData?.personalInfo?.name || resumeTitle}_resume.pdf`
+        .replace(/[^a-z0-9\s-]/gi, '_')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .toLowerCase();
       pdf.save(filename);
       
       toast({
@@ -518,7 +522,7 @@ export default function ResumeBuilder() {
 
   // Responsive class names for better maintainability
   const sidebarClasses = [
-    "w-full md:w-40",                    // Width: full on mobile, fixed on desktop (reduced from 48 to 40)
+    "w-full md:w-48",                    // Width: full on mobile, fixed on desktop (increased from 40 to 48)
     "border-b md:border-b-0 md:border-r", // Border: bottom on mobile, right on desktop
     "border-border bg-card",              // Theme colors
     "flex flex-col",                      // Flexbox layout
@@ -766,7 +770,7 @@ export default function ResumeBuilder() {
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile and tablet, shown on large desktop */}
-              <div className="hidden xl:block w-[700px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
+              <div className="hidden xl:block w-[650px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}
@@ -800,7 +804,7 @@ export default function ResumeBuilder() {
               </div>
 
               {/* Live Preview Section - responsive: hidden on mobile, shown on large screens */}
-              <div className="hidden xl:block w-[700px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
+              <div className="hidden xl:block w-[650px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}

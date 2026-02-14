@@ -13,38 +13,38 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
   return (
     <div className="p-8 print:p-8 font-sans text-black h-full">
       {/* Header */}
-      <div className="mb-6" data-section="personal">
-        <h1 className="text-3xl font-semibold mb-3 tracking-tight">
+      <div className="mb-4" data-section="personal">
+        <h1 className="text-3xl font-semibold mb-2 tracking-tight">
           {personalInfo.name || "Your Name"}
         </h1>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-700">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
           {personalInfo.email && (
-            <div className="flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5" />
+            <div className="flex items-baseline gap-1.5">
+              <Mail className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{personalInfo.email}</span>
             </div>
           )}
           {personalInfo.phone && (
-            <div className="flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5" />
+            <div className="flex items-baseline gap-1.5">
+              <Phone className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{personalInfo.phone}</span>
             </div>
           )}
           {personalInfo.location && (
-            <div className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5" />
+            <div className="flex items-baseline gap-1.5">
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{personalInfo.location}</span>
             </div>
           )}
           {personalInfo.linkedin && (
-            <div className="flex items-center gap-1.5">
-              <Linkedin className="w-3.5 h-3.5" />
+            <div className="flex items-baseline gap-1.5">
+              <Linkedin className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="break-all">{personalInfo.linkedin}</span>
             </div>
           )}
           {personalInfo.website && (
-            <div className="flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5" />
+            <div className="flex items-baseline gap-1.5">
+              <Globe className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="break-all">{personalInfo.website}</span>
             </div>
           )}
@@ -57,8 +57,8 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
         <div className="flex-[65]">
           {/* Summary */}
           {summary && (
-            <div className="mb-6" data-section="summary">
-              <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            <div className="mb-4" data-section="summary">
+              <h2 className="text-base font-semibold mb-1.5 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Professional Summary
               </h2>
               <p className="text-sm leading-relaxed text-gray-800">{summary}</p>
@@ -67,11 +67,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Experience */}
           {experience.length > 0 && (
-            <div className="mb-6" data-section="experience">
-              <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            <div className="mb-4" data-section="experience">
+              <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Experience
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {experience.map((exp, index) => (
                   <div key={index}>
                     <div className="flex justify-between items-baseline mb-1">
@@ -87,7 +87,7 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
                       </div>
                     </div>
                     {exp.description && exp.description.length > 0 && (
-                      <ul className="list-disc list-outside ml-5 mt-2 space-y-1">
+                      <ul className="list-disc list-outside ml-5 mt-1.5 space-y-0.5">
                         {exp.description.map((item, i) => (
                           <li key={i} className="text-sm text-gray-800 leading-relaxed">
                             {item}
@@ -103,11 +103,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Projects */}
           {projects && projects.length > 0 && (
-            <div className="mb-6" data-section="projects">
-              <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            <div className="mb-4" data-section="projects">
+              <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Projects
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {projects.map((project, index) => (
                   <div key={index}>
                     <div className="flex justify-between items-baseline mb-1">
@@ -135,11 +135,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
         <div className="flex-[35]">
           {/* Education */}
           {education.length > 0 && (
-            <div className="mb-6" data-section="education">
-              <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            <div className="mb-4" data-section="education">
+              <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Education
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {education.map((edu, index) => (
                   <div key={index}>
                     <h3 className="font-semibold text-sm">{edu.school}</h3>
@@ -159,8 +159,8 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Skills */}
           {skills.length > 0 && (
-            <div className="mb-6" data-section="skills">
-              <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            <div className="mb-4" data-section="skills">
+              <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Skills
               </h2>
               <div className="flex flex-wrap gap-2">
@@ -178,11 +178,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Certifications */}
           {certifications && certifications.length > 0 && (
-            <div className="mb-6" data-section="certifications">
-              <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            <div className="mb-4" data-section="certifications">
+              <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Certifications
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {certifications.map((cert, index) => (
                   <div key={index}>
                     <h3 className="font-semibold text-sm">{cert.name}</h3>
@@ -196,11 +196,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
           {/* Awards */}
           {awards && awards.length > 0 && (
-            <div className="mb-6" data-section="awards">
-              <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+            <div className="mb-4" data-section="awards">
+              <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
                 Awards & Honors
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {awards.map((award, index) => (
                   <div key={index}>
                     <h3 className="font-semibold text-sm">{award.title}</h3>
@@ -219,11 +219,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
       {/* Leadership */}
       {leadership && leadership.length > 0 && (
-        <div className="mb-6" data-section="leadership">
-          <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+        <div className="mb-4" data-section="leadership">
+          <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
             Leadership Experience
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {leadership.map((lead, index) => (
               <div key={index}>
                 <div className="flex justify-between items-baseline mb-1">
@@ -244,11 +244,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
       {/* Research */}
       {research && research.length > 0 && (
-        <div className="mb-6" data-section="research">
-          <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+        <div className="mb-4" data-section="research">
+          <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
             Research Experience
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {research.map((res, index) => (
               <div key={index}>
                 <div className="flex justify-between items-baseline mb-1">
@@ -272,11 +272,11 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
 
       {/* Publications */}
       {publications && publications.length > 0 && (
-        <div className="mb-6" data-section="publications">
-          <h2 className="text-base font-semibold mb-3 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
+        <div className="mb-4" data-section="publications">
+          <h2 className="text-base font-semibold mb-2 pb-1 border-b-2 border-gray-800 uppercase tracking-wide">
             Publications
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {publications.map((pub, index) => (
               <div key={index}>
                 <h3 className="font-semibold text-sm">{pub.title}</h3>
