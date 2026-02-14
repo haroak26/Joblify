@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import rateLimit from "express-rate-limit";
+import { WorkOS } from "@workos-inc/node";
 import { storage } from "./storage";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "./email";
 import { 
@@ -12,6 +13,10 @@ import {
   isArgon2Hash
 } from "./lib/crypto";
 import { authRateLimit, registrationRateLimit, trackLoginAttempt, resetLoginAttempts, isAccountLocked } from "./middleware/security";
+
+// Initialize WorkOS client
+const workos = new WorkOS(process.env.WORKOS_API_KEY || "");
+const workosClientId = process.env.WORKOS_CLIENT_ID || "";
 
 declare module "express-session" {
   interface SessionData {
@@ -127,6 +132,7 @@ export function setupAuth(app: Express) {
         email,
         password: hashedPassword,
         verificationToken,
+        profileSetupComplete: true,
       });
 
       // Profile will be set up later in account settings, not during registration
@@ -165,6 +171,8 @@ export function setupAuth(app: Express) {
           username: user.username,
           email: user.email,
           emailVerified: user.emailVerified,
+          authProvider: user.authProvider,
+          profileSetupComplete: true,
         },
         message: emailSent 
           ? "Account created. Please check your email to verify your account."
@@ -225,6 +233,8 @@ export function setupAuth(app: Express) {
           email: user.email,
           emailVerified: user.emailVerified,
           isAdmin: user.isAdmin,
+          authProvider: user.authProvider,
+          profileSetupComplete: user.profileSetupComplete,
         },
       });
     } catch (error) {
@@ -261,8 +271,173 @@ export function setupAuth(app: Express) {
         email: user.email,
         emailVerified: user.emailVerified,
         isAdmin: user.isAdmin,
+        authProvider: user.authProvider,
+        profileSetupComplete: user.profileSetupComplete,
       },
     });
+  });
+
+  // WorkOS AuthKit: Initiate OAuth flow
+  app.get("/api/auth/sso/:provider", async (req: Request, res: Response) => {
+    try {
+      const provider = String(req.params.provider);
+      const validProviders = ["GoogleOAuth", "LinkedInOAuth", "GitHubOAuth", "AppleOAuth"];
+      
+      if (!validProviders.includes(provider)) {
+        return res.status(400).json({ error: "Unsupported provider" });
+      }
+
+      if (!workosClientId) {
+        return res.status(500).json({ error: "OAuth is not configured" });
+      }
+
+      const authorizationUrl = workos.userManagement.getAuthorizationUrl({
+        provider: provider as any,
+        clientId: workosClientId,
+        redirectUri: `${process.env.APP_URL || "http://localhost:5000"}/api/auth/callback`,
+      });
+
+      res.json({ url: authorizationUrl });
+    } catch (error) {
+      console.error("SSO initiation error:", error);
+      res.status(500).json({ error: "Failed to initiate authentication" });
+    }
+  });
+
+  // WorkOS AuthKit: OAuth callback
+  app.get("/api/auth/callback", async (req: Request, res: Response) => {
+    try {
+      const { code } = req.query;
+
+      if (!code || typeof code !== "string") {
+        return res.redirect("/login?error=invalid_callback");
+      }
+
+      const { user: workosUser } = await workos.userManagement.authenticateWithCode({
+        code,
+        clientId: workosClientId,
+      });
+
+      const providerEmail = workosUser.email;
+      const providerName = [workosUser.firstName, workosUser.lastName].filter(Boolean).join(" ") || null;
+      const providerId = workosUser.id;
+
+      // Check if user already exists with this provider account
+      let user = await storage.getUserByAuthProvider("workos", providerId);
+
+      if (user) {
+        // Existing provider user - log them in
+        req.session.userId = user.id;
+        if (!user.profileSetupComplete) {
+          return res.redirect("/auth/setup-profile");
+        }
+        return res.redirect("/dashboard");
+      }
+
+      // Check if email already exists (registered via email/password)
+      const existingEmailUser = await storage.getUserByEmail(providerEmail);
+      if (existingEmailUser) {
+        // Email already registered through email/password
+        return res.redirect("/login?error=email_exists");
+      }
+
+      // Create new user from provider
+      const tempUsername = `user_${generateSecureToken(4)}`;
+      user = await storage.createUser({
+        name: providerName || undefined,
+        username: tempUsername,
+        email: providerEmail,
+        password: "",
+        authProvider: "workos",
+        authProviderId: providerId,
+        emailVerified: true,
+        profileSetupComplete: false,
+      });
+
+      // Initialize email engagement system
+      const { initializeEmailEngagement } = await import("./email-engagement");
+      initializeEmailEngagement(user.id).catch(err => {
+        console.error("Failed to initialize email engagement:", err);
+      });
+
+      // Add user to Brevo contact list on signup
+      const brevoListId = process.env.BREVO_SIGNUP_LIST_ID;
+      if (brevoListId) {
+        const parsedListId = parseInt(brevoListId, 10);
+        if (!isNaN(parsedListId)) {
+          const { addContactToBrevoList } = await import("./brevo");
+          addContactToBrevoList(user.email, parsedListId, {
+            FIRSTNAME: user.name || user.username,
+          }).catch(err => {
+            console.error("Failed to add contact to Brevo list:", err);
+          });
+        }
+      }
+
+      req.session.userId = user.id;
+      return res.redirect("/auth/setup-profile");
+    } catch (error) {
+      console.error("OAuth callback error:", error);
+      return res.redirect("/login?error=auth_failed");
+    }
+  });
+
+  // Provider profile setup - set name and username after OAuth signup
+  app.post("/api/auth/setup-profile", async (req: Request, res: Response) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { name, username } = req.body;
+
+      if (!name || name.length < 2) {
+        return res.status(400).json({ error: "Name must be at least 2 characters" });
+      }
+
+      if (!username || username.length < 3 || username.length > 20) {
+        return res.status(400).json({ error: "Username must be between 3 and 20 characters" });
+      }
+
+      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        return res.status(400).json({ error: "Username can only contain letters, numbers, hyphens, and underscores" });
+      }
+
+      // Check username availability
+      const existingUsername = await storage.getUserByUsername(username);
+      if (existingUsername && existingUsername.id !== req.session.userId) {
+        return res.status(400).json({ error: "Username already taken" });
+      }
+
+      const user = await storage.updateUser(req.session.userId, {
+        name,
+        username,
+        profileSetupComplete: true,
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Send welcome email
+      await sendWelcomeEmail(user.email, user.username);
+
+      res.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          emailVerified: user.emailVerified,
+          isAdmin: user.isAdmin,
+          authProvider: user.authProvider,
+          profileSetupComplete: user.profileSetupComplete,
+        },
+      });
+    } catch (error) {
+      console.error("Profile setup error:", error);
+      res.status(500).json({ error: "Failed to set up profile" });
+    }
   });
 
   app.get("/api/auth/verify-email", async (req: Request, res: Response) => {

@@ -20,6 +20,7 @@ import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import SetupProfile from "@/pages/auth/setup-profile";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import VerifyEmail from "@/pages/verify-email";
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/auth/setup-profile" component={SetupProfile} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/verify-email" component={VerifyEmail} />

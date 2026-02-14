@@ -76,7 +76,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
   getUserByPasswordResetToken(token: string): Promise<User | undefined>;
-  createUser(user: InsertUser & { verificationToken?: string }): Promise<User>;
+  getUserByAuthProvider(provider: string, providerId: string): Promise<User | undefined>;
+  createUser(user: InsertUser & { name?: string; verificationToken?: string; authProvider?: string; authProviderId?: string; emailVerified?: boolean; profileSetupComplete?: boolean }): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
   
@@ -176,7 +177,14 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser & { verificationToken?: string; name?: string }): Promise<User> {
+  async getUserByAuthProvider(provider: string, providerId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(
+      and(eq(users.authProvider, provider), eq(users.authProviderId, providerId))
+    );
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser & { name?: string; verificationToken?: string; authProvider?: string; authProviderId?: string; emailVerified?: boolean; profileSetupComplete?: boolean }): Promise<User> {
     const [user] = await db
       .insert(users)
       .values({
@@ -186,7 +194,10 @@ export class DatabaseStorage implements IStorage {
         email: insertUser.email,
         password: insertUser.password,
         verificationToken: insertUser.verificationToken || null,
-        emailVerified: false,
+        emailVerified: insertUser.emailVerified ?? false,
+        authProvider: (insertUser as any).authProvider || null,
+        authProviderId: (insertUser as any).authProviderId || null,
+        profileSetupComplete: (insertUser as any).profileSetupComplete ?? false,
       })
       .returning();
 

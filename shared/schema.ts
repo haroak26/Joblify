@@ -9,8 +9,12 @@ export const users = pgTable("users", {
   name: text("name"),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password").notNull().default(""),
   emailVerified: boolean("email_verified").notNull().default(false),
+  // OAuth provider info
+  authProvider: text("auth_provider"), // 'google', 'linkedin', 'github', 'apple', or null for email/password
+  authProviderId: text("auth_provider_id"), // Provider's unique user ID
+  profileSetupComplete: boolean("profile_setup_complete").notNull().default(false),
   verificationToken: text("verification_token"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpiresAt: timestamp("password_reset_expires_at"),
