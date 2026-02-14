@@ -30,7 +30,7 @@ export function UpgradeDialog({
   
   // Determine which plan to recommend based on current plan
   const isFreePlan = currentPlan === "free";
-  const recommendedPlan = isFreePlan ? "Plus" : "Pro";
+  const recommendedPlan = isFreePlan ? "Plus" : "Ultra";
   const recommendedPlanValue = isFreePlan ? "plus" : "ultra";
 
   const handleUpgrade = () => {
@@ -102,7 +102,7 @@ export function UpgradeDialog({
               ) : (
                 <>
                   <Zap className="w-4 h-4 mr-2" />
-                  Upgrade to Pro
+                  Upgrade to Ultra
                 </>
               )}
             </Button>
