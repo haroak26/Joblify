@@ -401,7 +401,7 @@ export default function ResumeBuilder() {
         }
       }
 
-      const filename = `${resumeData?.personalInfo?.name || resumeTitle}_Resume.pdf`
+      const filename = `${resumeData?.personalInfo?.name || resumeTitle}_resume.pdf`
         .replace(/[^a-z0-9\s-]/gi, '_')
         .replace(/\s+/g, '_')
         .replace(/_+/g, '_')
