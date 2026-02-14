@@ -62,7 +62,13 @@ async function throwIfResNotOk(res: Response) {
       throw new Error(errorData.error || errorData.message || 'Authentication required');
     }
     
-    throw new Error(errorData.error || errorData.message || `${res.status}: ${text || res.statusText}`);
+    // Create error with preserved data fields
+    const error: any = new Error(errorData.error || errorData.message || `${res.status}: ${text || res.statusText}`);
+    error.code = errorData.code;
+    error.limit = errorData.limit;
+    error.current = errorData.current;
+    error.message = errorData.message || error.message;
+    throw error;
   }
 }
 

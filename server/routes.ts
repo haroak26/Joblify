@@ -603,6 +603,24 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Resume ID and job description are required" });
       }
 
+      // Check cover letter usage limits
+      const usage = await storage.checkAndResetMonthlyUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const planLimits = PLAN_LIMITS[plan];
+      
+      if (usage.coverLettersThisMonth >= planLimits.maxCoverLettersPerMonth) {
+        return res.status(403).json({
+          error: "Cover letter limit reached",
+          code: "COVER_LETTER_LIMIT",
+          limit: planLimits.maxCoverLettersPerMonth,
+          current: usage.coverLettersThisMonth,
+          message: planLimits.maxCoverLettersPerMonth === Infinity
+            ? "Cover letter limit reached."
+            : `Your plan allows up to ${planLimits.maxCoverLettersPerMonth} cover letters per month. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
+        });
+      }
+
       const [resume] = await db
         .select()
         .from(resumes)
@@ -626,6 +644,14 @@ export async function registerRoutes(
         content,
         jobDescription,
       });
+
+      // Increment cover letter usage count
+      await db
+        .update(usageTable)
+        .set({ 
+          coverLettersThisMonth: sql`${usageTable.coverLettersThisMonth} + 1` 
+        })
+        .where(eq(usageTable.userId, userId));
 
       res.json(coverLetter);
     } catch (error) {
@@ -890,6 +916,7 @@ export async function registerRoutes(
       const remainingSchedules = maxSchedules === -1 ? -1 : Math.max(0, maxSchedules - schedulesCount);
       
       res.json({
+        plan,
         usage: {
           skillsCount,
           jobsScrapedThisMonth: usage.importedResumesThisMonth,
@@ -2648,17 +2675,36 @@ Respond ONLY with valid JSON, no additional text.`
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      // Check usage limits
-      const userUsage = await storage.getUsage(userId);
+      // Check resume limit first and get subscription/plan info
+      const resumeCheck = await storage.canAddResume(userId);
       const subscription = await storage.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
       const limits = PLAN_LIMITS[plan];
+      
+      if (!resumeCheck.allowed) {
+        return res.status(403).json({ 
+          error: "Resume limit reached", 
+          code: "RESUME_LIMIT",
+          limit: resumeCheck.limit,
+          current: resumeCheck.current,
+          message: limits.maxResumes === Infinity
+            ? "Resume limit reached."
+            : `Your plan allows up to ${resumeCheck.limit} resumes. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
+        });
+      }
+
+      // Check usage limits
+      const userUsage = await storage.getUsage(userId);
 
       if (userUsage.importedResumesThisMonth >= limits.maxImportedResumesPerMonth) {
         return res.status(403).json({
           error: "Resume import limit reached for this month",
+          code: "RESUME_IMPORT_LIMIT",
           limit: limits.maxImportedResumesPerMonth,
           current: userUsage.importedResumesThisMonth,
+          message: limits.maxImportedResumesPerMonth === Infinity
+            ? "Resume import limit reached."
+            : `Your plan allows up to ${limits.maxImportedResumesPerMonth} resume imports per month. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
         });
       }
 
