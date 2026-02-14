@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useRoute, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,9 @@ export default function ResumeBuilder() {
   const [selectedComponents, setSelectedComponents] = useState<string[]>(
     isAIMode ? DEFAULT_AI_COMPONENTS : []
   );
+
+  // Ref for hidden print container used by client-side PDF generation
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Fetch resume data
   const { data: resume, isLoading } = useQuery<Resume>({
@@ -330,17 +333,76 @@ export default function ResumeBuilder() {
 
   const handleDownloadPDF = async () => {
     try {
-      const response = await apiRequest("POST", `/api/resumes/${resumeId}/pdf`);
-      const blob = await response.blob();
-      
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${resumeTitle.replace(/[^a-z0-9\s-]/gi, '_').replace(/\s+/g, '_').toLowerCase()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const printContainer = printRef.current;
+      if (!printContainer) {
+        throw new Error("Print container not found");
+      }
+
+      // Dynamically import html2canvas and jsPDF for client-side PDF generation
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      // Capture the resume preview at high resolution
+      const canvas = await html2canvas(printContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        width: printContainer.scrollWidth,
+        height: printContainer.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdfWidth = 8.5;
+      const pdfHeight = 11;
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "in",
+        format: "letter",
+      });
+
+      // Scale the canvas image to fit the PDF page
+      const canvasAspect = canvas.height / canvas.width;
+
+      let renderWidth = pdfWidth;
+      let renderHeight = pdfWidth * canvasAspect;
+
+      // If content is taller than one page, scale to fit width and add pages
+      if (renderHeight <= pdfHeight) {
+        pdf.addImage(imgData, "PNG", 0, 0, renderWidth, renderHeight);
+      } else {
+        // For multi-page content, split across pages
+        const pageHeightInCanvasPixels = (pdfHeight / pdfWidth) * canvas.width;
+        let yOffset = 0;
+        let pageIndex = 0;
+
+        while (yOffset < canvas.height) {
+          if (pageIndex > 0) {
+            pdf.addPage();
+          }
+
+          // Create a temporary canvas for this page slice
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = canvas.width;
+          const sliceHeight = Math.min(pageHeightInCanvasPixels, canvas.height - yOffset);
+          pageCanvas.height = sliceHeight;
+          const ctx = pageCanvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+            const pageImgData = pageCanvas.toDataURL("image/png");
+            const imgHeight = (sliceHeight / canvas.width) * pdfWidth;
+            pdf.addImage(pageImgData, "PNG", 0, 0, pdfWidth, imgHeight);
+          } else {
+            console.warn("[PDF] Failed to get canvas context for page", pageIndex + 1);
+          }
+
+          yOffset += pageHeightInCanvasPixels;
+          pageIndex++;
+        }
+      }
+
+      const filename = `${resumeTitle.replace(/[^a-z0-9\s-]/gi, '_').replace(/\s+/g, '_').toLowerCase()}.pdf`;
+      pdf.save(filename);
       
       toast({
         title: "PDF Downloaded",
@@ -760,6 +822,26 @@ export default function ResumeBuilder() {
         initialComponents={selectedComponents}
         isAIMode={isAIMode}
       />
+
+      {/* Hidden container for PDF generation - renders the exact same template the user sees */}
+      <div
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: 0,
+          width: "816px",
+          backgroundColor: "#ffffff",
+        }}
+        aria-hidden="true"
+        role="presentation"
+      >
+        <div ref={printRef}>
+          <ResumePreview
+            data={resumeData}
+            template={selectedTemplate}
+          />
+        </div>
+      </div>
     </div>
   );
 }
