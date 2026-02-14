@@ -194,18 +194,40 @@ export default function AIResumeChat({
       if (shouldPrefillEmail) updates.personalInfo.email = user.email;
       onUpdate(updates);
     }
+
+    // Determine the first section's warm opener question for builder mode
+    const sectionOrder = ['summary', 'experience', 'education', 'skills', 'certifications', 'projects', 'awards', 'leadership', 'research', 'publications'];
+    const activeSections = activeComponents.length > 0
+      ? sectionOrder.filter(s => activeComponents.includes(s))
+      : ['summary', 'experience', 'education', 'skills'];
+    const firstSection = activeSections[0] || 'summary';
+
+    const sectionOpeners: Record<string, string> = {
+      summary: `**What kind of roles are you aiming for right now?**`,
+      experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
+      education: `**Where did you study or train?**`,
+      skills: `**What tasks or tools do people usually come to you for help with?**`,
+      certifications: `**Have you completed any courses, certifications, or training programs?**`,
+      projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
+      awards: `**What's something you've done that you're really proud of?**`,
+      leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
+      research: `**Have you been involved in any research work?**`,
+      publications: `**Have you published any papers, articles, or other written work?**`,
+    };
+
+    const firstQuestion = sectionOpeners[firstSection] || sectionOpeners.summary;
     
     const greeting = focusedComponent
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
       : mode === "builder"
-      ? `Welcome ${firstName}! I'm your **AI Resume Builder** assistant, and I'm here to help you create an amazing resume.\n\nI already have your name and email saved. Let's start by building your **Professional Summary** - I'll ask you a few quick questions to craft it.\n\n**What's your current or most recent job title?** (For example: Software Engineer, Marketing Manager, Data Analyst)`
+      ? `Hey ${firstName}! 👋 I'm your **AI Resume Builder** — think of me as a friendly career counselor. I'll ask you a few easy questions section by section, draft professional content from your answers, and you can tweak it however you like.\n\nI've already got your name and email saved, so we're good to go!\n\nLet's start with your **${COMPONENT_LABELS[firstSection] || firstSection}**.\n\n${firstQuestion}`
       : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;
     
     const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: Date.now().toString() };
     setMessages([greetingMsg]);
     // Save greeting to DB
     saveMessageToDb("ai", greeting);
-  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, saveMessageToDb]);
+  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, saveMessageToDb, activeComponents]);
 
   // Streaming send message
   const handleSendMessage = useCallback(async () => {
