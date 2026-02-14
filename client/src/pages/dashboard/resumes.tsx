@@ -28,6 +28,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { Resume } from "@shared/schema";
 
+interface ResumeLimits {
+  canCreate: boolean;
+  limit: number;
+  current: number;
+  plan: string;
+  aiAccessBlocked: boolean;
+}
+
 export default function Resumes() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -35,6 +43,11 @@ export default function Resumes() {
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
   const [hasTriggeredAICreate, setHasTriggeredAICreate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch resume limits
+  const { data: limits } = useQuery<ResumeLimits>({
+    queryKey: ["/api/resumes/limits"],
+  });
 
   // Create resume mutation
   const createResumeMutation = useMutation({
@@ -225,19 +238,22 @@ export default function Resumes() {
           onChange={handleFileUpload}
           className="hidden"
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadResumeMutation.isPending}
-        >
-          {uploadResumeMutation.isPending ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Upload className="w-4 h-4 mr-2" />
-          )}
-          {uploadResumeMutation.isPending ? "Parsing..." : "Upload Resume"}
-        </Button>
+        {/* Only show upload button if AI access is not blocked */}
+        {!limits?.aiAccessBlocked && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadResumeMutation.isPending}
+          >
+            {uploadResumeMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4 mr-2" />
+            )}
+            {uploadResumeMutation.isPending ? "Parsing..." : "Upload Resume"}
+          </Button>
+        )}
         <Button onClick={handleCreateResume} size="sm">
           <Plus className="w-4 h-4 mr-2" />
           Create New Resume

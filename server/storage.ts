@@ -19,7 +19,7 @@ import { randomUUID } from "crypto";
 // Plan limits configuration
 export const PLAN_LIMITS = {
   free: {
-    maxResumes: 3,
+    maxResumes: 1,
     maxSkills: 10,
     maxAIEditsPerMonth: 10,
     maxCoverLettersPerMonth: 3,
@@ -28,7 +28,7 @@ export const PLAN_LIMITS = {
     maxImportedResumesPerMonth: 1,
   },
   plus: {
-    maxResumes: 10,
+    maxResumes: 5,
     maxSkills: Infinity,
     maxAIEditsPerMonth: 100,
     maxCoverLettersPerMonth: 50,

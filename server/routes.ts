@@ -899,6 +899,34 @@ export async function registerRoutes(
     }
   });
 
+  // Get resume limits for current user
+  app.get("/api/resumes/limits", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Check resume limits
+      const resumeCheck = await storage.canAddResume(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      
+      res.json({
+        canCreate: resumeCheck.allowed,
+        limit: resumeCheck.limit,
+        current: resumeCheck.current,
+        plan,
+        aiAccessBlocked: user.aiAccessBlocked || false,
+      });
+    } catch (error) {
+      console.error('[API] Error fetching resume limits:', error);
+      res.status(500).json({ error: "Failed to fetch resume limits" });
+    }
+  });
+
   app.get("/api/resumes", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;

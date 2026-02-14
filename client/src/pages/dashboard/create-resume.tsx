@@ -1,15 +1,28 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Sparkles, ArrowRight, Briefcase } from "lucide-react";
+import { FileText, Sparkles, ArrowRight, Briefcase, Lock } from "lucide-react";
+
+interface ResumeLimits {
+  canCreate: boolean;
+  limit: number;
+  current: number;
+  plan: string;
+  aiAccessBlocked: boolean;
+}
 
 export default function CreateResume() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Fetch resume limits
+  const { data: limits, isLoading: limitsLoading } = useQuery<ResumeLimits>({
+    queryKey: ["/api/resumes/limits"],
+  });
 
   const createResumeMutation = useMutation({
     mutationFn: async (mode: "traditional" | "ai") => {
@@ -20,6 +33,7 @@ export default function CreateResume() {
     },
     onSuccess: ({ resume, mode }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/resumes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/resumes/limits"] });
       
       if (mode === "ai") {
         setLocation(`/dashboard/resume-builder/${resume.id}?mode=ai`);
@@ -27,10 +41,11 @@ export default function CreateResume() {
         setLocation(`/dashboard/resume-builder/${resume.id}`);
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      const errorMessage = error?.message || "Failed to create resume. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to create resume. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -41,8 +56,20 @@ export default function CreateResume() {
   };
 
   const handleAIBuilder = () => {
+    if (limits?.aiAccessBlocked) {
+      toast({
+        title: "AI Access Blocked",
+        description: "Your AI access has been restricted. Please contact support.",
+        variant: "destructive",
+      });
+      return;
+    }
     createResumeMutation.mutate("ai");
   };
+
+  // Check if AI should be hidden (limit reached or AI blocked)
+  const shouldHideAI = limits && (!limits.canCreate || limits.aiAccessBlocked);
+  const isAtLimit = limits && !limits.canCreate;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -65,11 +92,19 @@ export default function CreateResume() {
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-semibold mb-2">Create Your Resume</h1>
             <p className="text-muted-foreground text-sm sm:text-base">
-              Choose how you'd like to start building your professional resume
+              {shouldHideAI 
+                ? "Build your resume with our traditional editor"
+                : "Choose how you'd like to start building your professional resume"}
             </p>
+            {isAtLimit && (
+              <p className="text-sm text-destructive mt-2">
+                You've reached your resume limit ({limits.current}/{limits.limit}).
+                {limits.plan === "free" ? " Upgrade to create more resumes." : " Delete a resume to create a new one or upgrade your plan."}
+              </p>
+            )}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className={shouldHideAI ? 'grid md:grid-cols-1 max-w-md mx-auto gap-6' : 'grid md:grid-cols-2 gap-6'}>
             {/* Traditional Builder Option */}
             <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
               <CardContent className="p-6 sm:p-8">
@@ -83,7 +118,7 @@ export default function CreateResume() {
                   </p>
                   <Button 
                     onClick={handleTraditionalBuilder}
-                    disabled={createResumeMutation.isPending}
+                    disabled={createResumeMutation.isPending || limitsLoading}
                     size="sm"
                     className="w-full h-9"
                   >
@@ -94,34 +129,36 @@ export default function CreateResume() {
               </CardContent>
             </Card>
 
-            {/* AI-Powered Option */}
-            <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
-              <CardContent className="p-6 sm:p-8">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary flex items-center justify-center mb-4 group-hover:opacity-90 transition-opacity">
-                    <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+            {/* AI-Powered Option - Only show if not at limit and AI not blocked */}
+            {!shouldHideAI && (
+              <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
+                <CardContent className="p-6 sm:p-8">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary flex items-center justify-center mb-4 group-hover:opacity-90 transition-opacity">
+                      <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <h2 className="text-lg sm:text-xl font-semibold">AI Chat</h2>
+                      <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
+                        Recommended
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      Chat with our AI assistant to build your resume naturally through conversation. Fast, easy, and intelligent.
+                    </p>
+                    <Button 
+                      onClick={handleAIBuilder}
+                      disabled={createResumeMutation.isPending || limitsLoading}
+                      size="sm"
+                      className="w-full h-9"
+                    >
+                      Start Chat
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
                   </div>
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <h2 className="text-lg sm:text-xl font-semibold">AI Chat</h2>
-                    <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
-                      Recommended
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    Chat with our AI assistant to build your resume naturally through conversation. Fast, easy, and intelligent.
-                  </p>
-                  <Button 
-                    onClick={handleAIBuilder}
-                    disabled={createResumeMutation.isPending}
-                    size="sm"
-                    className="w-full h-9"
-                  >
-                    Start Chat
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
