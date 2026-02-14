@@ -291,8 +291,10 @@ export function setupAuth(app: Express) {
         return res.status(500).json({ error: "OAuth is not configured" });
       }
 
+      type OAuthProvider = "GoogleOAuth" | "LinkedInOAuth" | "GitHubOAuth" | "AppleOAuth";
+
       const authorizationUrl = workos.userManagement.getAuthorizationUrl({
-        provider: provider as any,
+        provider: provider as OAuthProvider,
         clientId: workosClientId,
         redirectUri: `${process.env.APP_URL || "http://localhost:5000"}/api/auth/callback`,
       });
@@ -341,11 +343,11 @@ export function setupAuth(app: Express) {
         return res.redirect("/login?error=email_exists");
       }
 
-      // Create new user from provider
-      const tempUsername = `user_${generateSecureToken(4)}`;
+      // Create new user from provider with initial username (user will set their own in profile setup)
+      const initialUsername = `user_${generateSecureToken(4)}`;
       user = await storage.createUser({
         name: providerName || undefined,
-        username: tempUsername,
+        username: initialUsername,
         email: providerEmail,
         password: "",
         authProvider: "workos",

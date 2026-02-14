@@ -195,9 +195,9 @@ export class DatabaseStorage implements IStorage {
         password: insertUser.password,
         verificationToken: insertUser.verificationToken || null,
         emailVerified: insertUser.emailVerified ?? false,
-        authProvider: (insertUser as any).authProvider || null,
-        authProviderId: (insertUser as any).authProviderId || null,
-        profileSetupComplete: (insertUser as any).profileSetupComplete ?? false,
+        authProvider: insertUser.authProvider || null,
+        authProviderId: insertUser.authProviderId || null,
+        profileSetupComplete: insertUser.profileSetupComplete ?? false,
       })
       .returning();
 

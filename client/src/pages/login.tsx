@@ -54,7 +54,6 @@ function ProviderIcon({ provider }: { provider: string }) {
 export default function Login() {
   const { login, loginWithProvider, user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const [location] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [providerLoading, setProviderLoading] = useState<string | null>(null);
