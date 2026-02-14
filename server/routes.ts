@@ -21,6 +21,24 @@ import PDFDocument from "pdfkit";
 import multer from "multer";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
+import rateLimit from "express-rate-limit";
+
+// Rate limiter for public contact/newsletter endpoints to prevent spam
+const contactRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per 15 minutes per IP
+  message: "Too many requests. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const newsletterRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 subscription attempts per hour per IP
+  message: "Too many subscription attempts. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 let poeClient: OpenAI | null = null;
 
@@ -1677,7 +1695,8 @@ Respond ONLY with valid JSON (no text before or after):
     try {
       const userId = req.session.userId!;
       const { id } = req.params;
-      const chatMode = (req.query.mode as string) || "builder";
+      const rawMode = (req.query.mode as string) || "builder";
+      const chatMode = ["builder", "enhancement"].includes(rawMode) ? rawMode : "builder";
 
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
@@ -2279,7 +2298,7 @@ Return ONLY the cover letter text, no additional commentary.`;
   });
 
   // Contact form AI response endpoint
-  app.post("/api/contact/ai-response", async (req: Request, res) => {
+  app.post("/api/contact/ai-response", contactRateLimit, async (req: Request, res) => {
     try {
       const schema = z.object({
         name: z.string().min(1, "Name is required"),
@@ -2355,7 +2374,7 @@ Guidelines:
   });
 
   // Contact form send email endpoint (for when user wants to contact support anyway)
-  app.post("/api/contact/send-email", async (req: Request, res) => {
+  app.post("/api/contact/send-email", contactRateLimit, async (req: Request, res) => {
     try {
       const schema = z.object({
         name: z.string().min(1, "Name is required"),
@@ -2406,7 +2425,7 @@ Guidelines:
   // ============================================
 
   // Newsletter endpoint - intentionally not protected by requireAuth to allow anonymous subscriptions
-  app.post("/api/newsletter/subscribe", async (req: Request, res) => {
+  app.post("/api/newsletter/subscribe", newsletterRateLimit, async (req: Request, res) => {
     try {
       const schema = z.object({
         email: z.string().email("Valid email is required"),
@@ -2705,6 +2724,12 @@ Respond ONLY with valid JSON, no additional text.`
 
       if (!extractedText || extractedText.trim().length === 0) {
         return res.status(400).json({ error: "Could not extract text from file. Please ensure the file is not empty or image-based." });
+      }
+
+      // Limit extracted text size to prevent DoS via oversized content
+      const MAX_EXTRACTED_TEXT_LENGTH = 50000; // 50,000 characters
+      if (extractedText.length > MAX_EXTRACTED_TEXT_LENGTH) {
+        extractedText = extractedText.slice(0, MAX_EXTRACTED_TEXT_LENGTH);
       }
 
       // Send to AI for structured parsing

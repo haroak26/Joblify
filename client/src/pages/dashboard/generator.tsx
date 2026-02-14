@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wand2, Copy, Check, RefreshCw, Briefcase } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface FreelancerProfile {
   intro: string;
@@ -23,6 +24,7 @@ type Tone = "professional" | "friendly" | "enthusiastic";
 type MessageType = "comment" | "initial";
 
 export default function Generator() {
+  const { toast } = useToast();
   const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [tone, setTone] = useState<Tone>("professional");
   const [messageType, setMessageType] = useState<MessageType>("initial");
@@ -73,12 +75,27 @@ export default function Generator() {
     onSuccess: (data) => {
       setGeneratedMessage(data.message);
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Generation failed",
+        description: error.message || "Failed to generate message. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(generatedMessage);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(generatedMessage);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: "Copy failed",
+        description: "Unable to copy to clipboard. Please select and copy manually.",
+        variant: "destructive",
+      });
+    }
   };
 
   const profile = profileQuery.data ?? { intro: "", skills: [] };

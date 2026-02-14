@@ -261,7 +261,6 @@ export const analytics = {
   trackError(error: Error, context?: Record<string, any>) {
     posthog.capture('error_occurred', {
       error_message: error.message,
-      error_stack: error.stack,
       ...context,
       timestamp: new Date().toISOString(),
     });
