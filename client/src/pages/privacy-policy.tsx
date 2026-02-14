@@ -1,10 +1,17 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Briefcase, ArrowLeft } from "lucide-react";
+import { SEO } from "@/components/seo";
 
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Privacy Policy"
+        description="Read Joblify's privacy policy to understand how we collect, use, and protect your personal data. Your privacy and security are our top priorities."
+        keywords="privacy policy, data protection, personal data, Joblify privacy, user data security"
+        canonicalUrl="https://joblifyai.com/privacy-policy"
+      />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">

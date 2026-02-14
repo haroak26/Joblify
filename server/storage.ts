@@ -91,6 +91,7 @@ export interface IStorage {
   createSubscription(userId: string, plan?: PlanType): Promise<Subscription>;
   updateSubscription(userId: string, updates: Partial<Subscription>): Promise<Subscription | undefined>;
   updateSubscriptionPlan(userId: string, plan: PlanType, expiresAt: Date): Promise<Subscription | undefined>;
+  getSubscriptionsNeedingRenewalReminder(): Promise<Array<Subscription & { email: string; username: string; name: string | null }>>;
   
   // Usage methods
   getUsage(userId: string): Promise<Usage>;
@@ -334,6 +335,47 @@ export class DatabaseStorage implements IStorage {
       plan,
       currentPeriodEnd: expiresAt,
     });
+  }
+
+  async getSubscriptionsNeedingRenewalReminder(): Promise<Array<Subscription & { email: string; username: string; name: string | null }>> {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const results = await db
+      .select({
+        id: subscriptions.id,
+        userId: subscriptions.userId,
+        plan: subscriptions.plan,
+        status: subscriptions.status,
+        stripeCustomerId: subscriptions.stripeCustomerId,
+        stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+        renewalReminderSent: subscriptions.renewalReminderSent,
+        email: users.email,
+        username: users.username,
+        name: users.name,
+      })
+      .from(subscriptions)
+      .innerJoin(users, eq(subscriptions.userId, users.id))
+      .where(
+        and(
+          // Only active paid plans (not free, not lifetime)
+          eq(subscriptions.status, "active"),
+          inArray(subscriptions.plan, ["plus", "ultra"]),
+          // Has a renewal date set
+          isNotNull(subscriptions.currentPeriodEnd),
+          // Renewal is within the next 7 days
+          lte(subscriptions.currentPeriodEnd, sevenDaysFromNow),
+          gte(subscriptions.currentPeriodEnd, now),
+          // Haven't already sent a reminder for this period
+          eq(subscriptions.renewalReminderSent, false),
+          // User has email notifications enabled
+          eq(users.emailNotifications, true)
+        )
+      )
+      .limit(50);
+
+    return results as Array<Subscription & { email: string; username: string; name: string | null }>;
   }
 
   // Usage methods

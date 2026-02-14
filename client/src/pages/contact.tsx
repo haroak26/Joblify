@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SEO } from "@/components/seo";
 
 export default function Contact() {
   const { toast } = useToast();
@@ -146,6 +147,12 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Contact Us"
+        description="Get in touch with the Joblify team. We're here to help with questions about our AI-powered job search tools, account support, and partnership inquiries."
+        keywords="contact Joblify, customer support, job search help, career tools support"
+        canonicalUrl="https://joblifyai.com/contact"
+      />
       {/* Success Dialog */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <AlertDialogContent>

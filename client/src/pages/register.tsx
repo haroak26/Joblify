@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/use-auth";
 import { PasswordStrengthIndicator } from "@/components/password-strength-indicator";
+import { SEO } from "@/components/seo";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -210,6 +211,12 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <SEO
+        title="Sign Up"
+        description="Create your free Joblify account and unlock AI-powered resume building, job tracking, and smart career tools to accelerate your job search."
+        keywords="sign up, create account, register, free job search tools, AI resume builder"
+        canonicalUrl="https://joblifyai.com/register"
+      />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <Link href="/">

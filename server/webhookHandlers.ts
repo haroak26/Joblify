@@ -106,6 +106,7 @@ export class WebhookHandlers {
               currentPeriodEnd: periodEnd
                 ? new Date(periodEnd * 1000)
                 : undefined,
+              renewalReminderSent: false,
             });
           }
         }

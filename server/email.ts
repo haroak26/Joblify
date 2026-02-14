@@ -681,3 +681,63 @@ export async function send2FAEmail(email: string, username: string, code: string
     html: getEmailTemplate(content, `Your verification code is ${code}`),
   });
 }
+
+/**
+ * Send subscription renewal reminder email 7 days before renewal
+ */
+export async function sendSubscriptionRenewalReminderEmail(
+  email: string,
+  username: string,
+  planName: string,
+  renewalDate: Date
+): Promise<boolean> {
+  const accountUrl = `${getAppUrl()}/dashboard/account`;
+  const formattedDate = renewalDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      Subscription Renewal Reminder
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${username},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      This is a friendly reminder that your Joblify <strong>${planName}</strong> plan will automatically renew on <strong>${formattedDate}</strong>.
+    </p>
+    <div style="background-color: #f8fafc; border-left: 4px solid #22C35D; padding: 16px 20px; margin: 24px 0; border-radius: 8px;">
+      <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 8px 0; color: #0f172a;">
+        Renewal Details
+      </h3>
+      <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0;">
+        <strong>Plan:</strong> ${planName}<br>
+        <strong>Renewal Date:</strong> ${formattedDate}
+      </p>
+    </div>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      No action is needed if you'd like to continue enjoying your current plan. If you'd like to make changes to your subscription, you can manage it from your account settings.
+    </p>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0;">
+      <tr>
+        <td style="background-color: #22C35D; border-radius: 10px;">
+          <a href="${accountUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px;">
+            Manage Subscription
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      If you have any questions about your subscription, reply to this email and we'll help you out.
+    </p>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Reminder: Your Joblify ${planName} plan renews on ${formattedDate}`,
+    html: getEmailTemplate(content, `Your Joblify ${planName} plan will renew on ${formattedDate}.`),
+  });
+}

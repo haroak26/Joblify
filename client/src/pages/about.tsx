@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { Briefcase, Target, Users, Zap, Heart, TrendingUp, Shield, Sparkles } from "lucide-react";
+import { SEO } from "@/components/seo";
 
 const values = [
   {
@@ -38,6 +39,12 @@ const stats = [
 export default function About() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="About Us"
+        description="Learn about Joblify's mission to revolutionize job searching with AI-powered tools. Discover how we help job seekers land their dream careers faster."
+        keywords="about Joblify, AI job search platform, career tools mission, job search innovation"
+        canonicalUrl="https://joblifyai.com/about"
+      />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">

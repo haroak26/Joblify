@@ -19,6 +19,7 @@ import {
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/use-auth";
+import { SEO } from "@/components/seo";
 
 const features = [
   {
@@ -81,6 +82,12 @@ export default function WhyUs() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Why Choose Joblify"
+        description="Discover why thousands of job seekers trust Joblify. AI-powered resume tools, smart job tracking, and personalized career coaching set us apart."
+        keywords="why Joblify, best job search platform, AI career tools, resume builder comparison"
+        canonicalUrl="https://joblifyai.com/why-us"
+      />
       {/* Navigation */}
       <Header />
 
