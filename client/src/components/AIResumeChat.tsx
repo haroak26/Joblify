@@ -47,6 +47,20 @@ const COMPONENT_LABELS: Record<string, string> = {
   publications: "Publications",
 };
 
+// Section opening questions for guided builder mode
+const SECTION_OPENERS: Record<string, string> = {
+  summary: `**What kind of roles are you aiming for right now?**`,
+  experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
+  education: `**Where did you study or train?**`,
+  skills: `**What tasks or tools do people usually come to you for help with?**`,
+  certifications: `**Have you completed any courses, certifications, or training programs?**`,
+  projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
+  awards: `**What's something you've done that you're really proud of?**`,
+  leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
+  research: `**Have you been involved in any research work?**`,
+  publications: `**Have you published any papers, articles, or other written work?**`,
+};
+
 // Sections restricted on free plan in AI builder
 const FREE_PLAN_RESTRICTED_SECTIONS = ["awards", "certifications", "leadership", "research", "publications"];
 
@@ -202,20 +216,12 @@ export default function AIResumeChat({
       : ['summary', 'experience', 'education', 'skills'];
     const firstSection = activeSections[0] || 'summary';
 
-    const sectionOpeners: Record<string, string> = {
-      summary: `**What kind of roles are you aiming for right now?**`,
-      experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
-      education: `**Where did you study or train?**`,
-      skills: `**What tasks or tools do people usually come to you for help with?**`,
-      certifications: `**Have you completed any courses, certifications, or training programs?**`,
-      projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
-      awards: `**What's something you've done that you're really proud of?**`,
-      leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
-      research: `**Have you been involved in any research work?**`,
-      publications: `**Have you published any papers, articles, or other written work?**`,
-    };
+    // Set the editing section to the first section in builder mode
+    if (mode === "builder" && !editingSection) {
+      setEditingSection(firstSection);
+    }
 
-    const firstQuestion = sectionOpeners[firstSection] || sectionOpeners.summary;
+    const firstQuestion = SECTION_OPENERS[firstSection] || SECTION_OPENERS.summary;
     
     const greeting = focusedComponent
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
@@ -229,24 +235,8 @@ export default function AIResumeChat({
     saveMessageToDb("ai", greeting);
   }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, saveMessageToDb, activeComponents]);
 
-  // Streaming send message
-  const handleSendMessage = useCallback(async () => {
-    if (!inputMessage.trim() || isStreaming) return;
-
-    const messageText = inputMessage.trim().slice(0, MAX_MESSAGE_LENGTH);
-    setInputMessage("");
-
-    // Add user message
-    const userMessage: ChatMessage = { 
-      role: "user", 
-      content: messageText,
-      id: `user-${Date.now()}`
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    
-    // Save user message to DB immediately
-    saveMessageToDb("user", messageText);
-
+  // Core function to send a message to AI (used by both handleSendMessage and handleRewrite)
+  const sendMessageToAI = useCallback(async (messageText: string) => {
     // Track usage on first interaction
     if (!hasInteracted) {
       setHasInteracted(true);
@@ -352,8 +342,13 @@ export default function AIResumeChat({
       // Apply structured updates from the done event
       if (doneData) {
         if (doneData.updatedData && Object.keys(doneData.updatedData).length > 0) {
+          console.log("[AIResumeChat] Applying updates:", doneData.updatedData);
           onUpdate(doneData.updatedData);
           if (onAutoSave) {
+            console.log("[AIResumeChat] Triggering auto-save");
+            // Small delay to ensure React state has updated before triggering save
+            // This allows the parent component's resumeData state to reflect the changes
+            // before the save operation reads and persists it
             setTimeout(() => onAutoSave(), 500);
           }
         }
@@ -390,7 +385,29 @@ export default function AIResumeChat({
       setIsStreaming(false);
       abortControllerRef.current = null;
     }
-  }, [inputMessage, isStreaming, resumeId, editingSection, activeComponents, resumeData, messages, hasInteracted, onUpdate, onAutoSave, onComplete, toast, saveMessageToDb]);
+  }, [isStreaming, resumeId, editingSection, activeComponents, resumeData, messages, hasInteracted, onUpdate, onAutoSave, onComplete, toast, saveMessageToDb]);
+
+  // Wrapper function for user input from text field
+  const handleSendMessage = useCallback(async () => {
+    if (!inputMessage.trim() || isStreaming) return;
+
+    const messageText = inputMessage.trim().slice(0, MAX_MESSAGE_LENGTH);
+    setInputMessage("");
+
+    // Add user message
+    const userMessage: ChatMessage = { 
+      role: "user", 
+      content: messageText,
+      id: `user-${Date.now()}`
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to DB immediately
+    saveMessageToDb("user", messageText);
+
+    // Send to AI
+    await sendMessageToAI(messageText);
+  }, [inputMessage, isStreaming, sendMessageToAI, saveMessageToDb]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -407,6 +424,79 @@ export default function AIResumeChat({
   const handleClearEditingSection = useCallback(() => {
     setEditingSection(undefined);
   }, []);
+
+  // Section navigation handlers
+  
+  /**
+   * Detects if an AI message is requesting user approval for generated content.
+   * This uses pattern matching against specific phrases the AI is instructed to use
+   * in the backend system prompt (server/routes.ts lines 1289, 1299, 1316).
+   * 
+   * Future improvement: Consider adding a structured flag in the AI response
+   * (e.g., { requiresApproval: true }) to make this more robust and maintainable.
+   */
+  const isApprovalRequest = useCallback((content: string): boolean => {
+    const lowerContent = content.toLowerCase();
+    // Primary approval phrases from AI system prompt
+    const approvalPhrases = [
+      "want it more",      // "Want it more formal, more confident, or more friendly?"
+      "want me to",        // "Want me to tailor these to your target job?"
+      "want these to",     // "Want these to sound more results-focused or leadership-focused?"
+    ];
+    
+    // Check if any approval phrase is present
+    const hasApprovalPhrase = approvalPhrases.some(phrase => lowerContent.includes(phrase));
+    
+    // Additional heuristic: approval requests typically come after content synthesis
+    // and are shorter questions (not long explanations)
+    const isReasonableLength = content.length < 500;
+    const hasQuestionMark = content.includes('?');
+    
+    return hasApprovalPhrase && isReasonableLength && hasQuestionMark;
+  }, []);
+
+  const handleNextSection = useCallback(() => {
+    // Find next incomplete section
+    const currentIndex = activeComponents.indexOf(editingSection || '');
+    if (currentIndex < activeComponents.length - 1) {
+      const nextSection = activeComponents[currentIndex + 1];
+      setEditingSection(nextSection);
+      
+      // Trigger AI to ask about next section
+      const nextQuestion = SECTION_OPENERS[nextSection] || SECTION_OPENERS.summary;
+      setMessages(prev => [...prev, {
+        role: "ai",
+        content: `Great! Now let's work on your **${COMPONENT_LABELS[nextSection]}**.\n\n${nextQuestion}`,
+        id: `ai-${Date.now()}`
+      }]);
+      
+      // Save the transition message to DB
+      saveMessageToDb("ai", `Great! Now let's work on your **${COMPONENT_LABELS[nextSection]}**.\n\n${nextQuestion}`);
+    } else {
+      // All sections complete
+      setIsComplete(true);
+      if (onComplete) onComplete();
+    }
+  }, [activeComponents, editingSection, onComplete, saveMessageToDb]);
+
+  const handleRewrite = useCallback(async () => {
+    if (isStreaming) return;
+    
+    const rewriteMessage = "I'd like you to rewrite that section.";
+    // Add user message
+    const userMessage: ChatMessage = { 
+      role: "user", 
+      content: rewriteMessage,
+      id: `user-${Date.now()}`
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to DB immediately
+    saveMessageToDb("user", rewriteMessage);
+
+    // Send to AI
+    await sendMessageToAI(rewriteMessage);
+  }, [isStreaming, saveMessageToDb, sendMessageToAI]);
 
   // Filter restricted sections for free plan in AI builder mode
   const getFilteredComponents = () => {
@@ -433,7 +523,9 @@ export default function AIResumeChat({
                 {isGuidedBuilder ? "AI Resume Builder" : "AI Resume Enhancement"}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {editingSection 
+                {editingSection && isGuidedBuilder
+                  ? `${COMPONENT_LABELS[editingSection] || editingSection} (Section ${activeComponents.indexOf(editingSection) + 1} of ${activeComponents.length})`
+                  : editingSection 
                   ? `Editing: ${COMPONENT_LABELS[editingSection] || editingSection}` 
                   : isGuidedBuilder
                   ? "Building your resume step-by-step"
@@ -490,7 +582,7 @@ export default function AIResumeChat({
       {/* Chat Messages */}
       <div className="flex-1 overflow-auto p-4" ref={scrollContainerRef}>
         <div className="space-y-4 max-w-3xl mx-auto" ref={scrollRef}>
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div
               key={message.id}
               className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
@@ -509,31 +601,58 @@ export default function AIResumeChat({
               </div>
 
               {/* Message Content */}
-              <div
-                className={`flex-1 p-3 ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground ml-12 rounded-tl-lg rounded-tr-sm rounded-b-lg"
-                    : "bg-muted mr-12 rounded-tl-sm rounded-tr-lg rounded-b-lg"
-                }`}
-              >
-                {message.role === "ai" ? (
-                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                        ul: ({ children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
-                        li: ({ children }) => <li className="mb-1">{children}</li>,
-                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                        em: ({ children }) => <em className="italic">{children}</em>,
-                        code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>,
-                      }}
+              <div className="flex-1">
+                <div
+                  className={`p-3 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground ml-12 rounded-tl-lg rounded-tr-sm rounded-b-lg"
+                      : "bg-muted mr-12 rounded-tl-sm rounded-tr-lg rounded-b-lg"
+                  }`}
+                >
+                  {message.role === "ai" ? (
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="mb-1">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          em: ({ children }) => <em className="italic">{children}</em>,
+                          code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                  )}
+                </div>
+                
+                {/* Section Navigation Buttons */}
+                {message.role === "ai" && 
+                 index === messages.length - 1 && 
+                 !isStreaming && 
+                 isGuidedBuilder &&
+                 editingSection &&
+                 isApprovalRequest(message.content) && (
+                  <div className="flex gap-2 mt-3 mr-12">
+                    <Button 
+                      onClick={handleNextSection}
+                      className="bg-primary hover:bg-primary/90"
+                      size="sm"
                     >
-                      {message.content}
-                    </ReactMarkdown>
+                      Looks Good - Next Section
+                    </Button>
+                    <Button 
+                      onClick={handleRewrite}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Rewrite This
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                 )}
               </div>
             </div>
