@@ -66,7 +66,7 @@ export function AppSidebar() {
   });
   
   // Check if user is admin
-  const { data: userDetailsData } = useQuery({
+  const { data: userDetailsData } = useQuery<{ user?: { isAdmin?: boolean } }>({
     queryKey: ["/api/auth/me"],
     enabled: !!user,
   });

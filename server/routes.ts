@@ -902,7 +902,7 @@ export async function registerRoutes(
       const remainingJobAnalyses = maxJobAnalyses === -1 ? -1 : Math.max(0, maxJobAnalyses - usage.jobAnalysesThisMonth);
       const remainingATSScans = maxATSScans === -1 ? -1 : Math.max(0, maxATSScans - usage.atsScansThisMonth);
       const remainingImportedResumes = maxImportedResumes === -1 ? -1 : Math.max(0, maxImportedResumes - usage.importedResumesThisMonth);
-      const remainingSchedules = maxSchedules === -1 ? -1 : Math.max(0, maxSchedules - schedulesCount);
+      const remainingSchedules = maxSchedules === 0 ? 0 : Math.max(0, maxSchedules - schedulesCount);
       
       res.json({
         plan,

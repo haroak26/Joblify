@@ -67,10 +67,10 @@ function CustomCalendar({
     if (onTodayClick) {
       onTodayClick();
     } else if (props.mode === "single" && props.onSelect) {
-      props.onSelect(new Date());
+      (props.onSelect as any)(new Date(), new Date(), {}, {} as any);
     } else if (props.mode === "range" && props.onSelect) {
       const today = new Date();
-      props.onSelect({ from: today, to: today });
+      (props.onSelect as any)({ from: today, to: today }, today, {}, {} as any);
     }
   };
 

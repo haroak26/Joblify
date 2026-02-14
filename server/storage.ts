@@ -1,5 +1,5 @@
 import { 
-  type User, type InsertUser, type Skill,
+  type User, type InsertUser, type ExtendedInsertUser, type Skill,
   type Subscription, type Usage, type PlanType, normalizePlan,
   type CoverLetter, type InsertCoverLetter,
   type SecurityEvent, type InsertSecurityEvent,
@@ -184,11 +184,11 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser & { name?: string; verificationToken?: string; authProvider?: string; authProviderId?: string; emailVerified?: boolean; profileSetupComplete?: boolean }): Promise<User> {
-    const [user] = await db
+  async createUser(insertUser: ExtendedInsertUser): Promise<User> {
+    const result = await db
       .insert(users)
       .values({
-        id: (insertUser as any).id || undefined,
+        id: insertUser.id || undefined,
         name: insertUser.name || null,
         username: insertUser.username,
         email: insertUser.email,
@@ -200,6 +200,8 @@ export class DatabaseStorage implements IStorage {
         profileSetupComplete: insertUser.profileSetupComplete ?? false,
       })
       .returning();
+    
+    const user = result[0];
 
     // Create profile
     await db.insert(profiles).values({
@@ -738,8 +740,8 @@ export class DatabaseStorage implements IStorage {
     
     if (conditions.length > 0) {
       const whereCondition = and(...conditions);
-      query = query.where(whereCondition);
-      countQuery = countQuery.where(whereCondition);
+      query = query.where(whereCondition) as any;
+      countQuery = countQuery.where(whereCondition) as any;
     }
     
     const logs = await query

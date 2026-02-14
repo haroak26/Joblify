@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineCh
 
 export default function AdminDashboard() {
   // Fetch dashboard stats
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<{ aiUsageByDay?: Array<{ name: string; usage: number; date: string }> }>({
     queryKey: ["/api/admin/dashboard/stats"],
   });
 

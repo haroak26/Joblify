@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, jsonb, integer, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, jsonb, integer, timestamp, uniqueIndex, index, PgTableWithColumns } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export const users: PgTableWithColumns<any> = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name"),
   username: text("username").notNull().unique(),
@@ -128,6 +128,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Extended InsertUser type for user creation with optional fields
+export type ExtendedInsertUser = {
+  id?: string;
+  username: string;
+  email: string;
+  password: string;
+  name?: string;
+  verificationToken?: string;
+  authProvider?: string;
+  authProviderId?: string;
+  emailVerified?: boolean;
+  profileSetupComplete?: boolean;
+};
 
 export const skillSchema = z.object({
   id: z.string(),
