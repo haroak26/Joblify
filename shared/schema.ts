@@ -64,6 +64,7 @@ export const subscriptions = pgTable("subscriptions", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   currentPeriodEnd: timestamp("current_period_end"),
+  renewalReminderSent: boolean("renewal_reminder_sent").notNull().default(false),
 });
 
 export const usage = pgTable("usage", {
