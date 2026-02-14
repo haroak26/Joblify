@@ -647,3 +647,37 @@ export async function sendAiAccessBlockedEmail(
     html: getEmailTemplate(content, "AI features access update notification"),
   });
 }
+
+/**
+ * Send 2FA verification code email
+ */
+export async function send2FAEmail(email: string, username: string, code: string): Promise<boolean> {
+  const content = `
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
+      Your verification code
+    </h1>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
+      Hi ${username},
+    </p>
+    <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 24px 0;">
+      You're attempting to sign in to your Joblify account. Please use the verification code below to complete your login:
+    </p>
+    <div style="background-color: #f8fafc; border: 2px solid #22C35D; border-radius: 12px; padding: 32px; text-align: center; margin: 28px 0;">
+      <div style="font-size: 48px; font-weight: 700; letter-spacing: 8px; color: #0f172a; font-family: 'Courier New', monospace;">
+        ${code}
+      </div>
+    </div>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 20px 0 0;">
+      This code will expire in <strong>5 minutes</strong>.
+    </p>
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin: 16px 0 0;">
+      If you didn't attempt to sign in, please ignore this email and ensure your account is secure.
+    </p>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: "Your Joblify verification code",
+    html: getEmailTemplate(content, `Your verification code is ${code}`),
+  });
+}

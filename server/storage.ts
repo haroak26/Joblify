@@ -10,7 +10,7 @@ import {
   users, profiles, subscriptions, usage,
   coverLetters, securityEvents, supportInteractions,
   deletedAccountsTracker, resumes, systemAdminLogs,
-  userPerks, perks, aiUsageLogs, userActivityLogs
+  userPerks, perks, aiUsageLogs, userActivityLogs, verificationCodes
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc, like, ilike } from "drizzle-orm";
@@ -810,6 +810,52 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userActivityLogs.userId, userId))
       .orderBy(desc(userActivityLogs.createdAt))
       .limit(limit || 100);
+  }
+
+  // Verification Codes methods for email-based 2FA
+  async createVerificationCode(data: {
+    userId: string;
+    code: string;
+    codeType: string;
+    expiresAt: Date;
+  }): Promise<void> {
+    await db.insert(verificationCodes).values({
+      userId: data.userId,
+      code: data.code,
+      codeType: data.codeType,
+      expiresAt: data.expiresAt,
+      used: false,
+    });
+  }
+
+  async getLatestVerificationCode(userId: string, codeType: string) {
+    const codes = await db
+      .select()
+      .from(verificationCodes)
+      .where(
+        and(
+          eq(verificationCodes.userId, userId),
+          eq(verificationCodes.codeType, codeType),
+          eq(verificationCodes.used, false)
+        )
+      )
+      .orderBy(desc(verificationCodes.createdAt))
+      .limit(1);
+    
+    return codes[0] || null;
+  }
+
+  async markVerificationCodeAsUsed(codeId: string): Promise<void> {
+    await db
+      .update(verificationCodes)
+      .set({ used: true })
+      .where(eq(verificationCodes.id, codeId));
+  }
+
+  async cleanupExpiredVerificationCodes(): Promise<void> {
+    await db
+      .delete(verificationCodes)
+      .where(lte(verificationCodes.expiresAt, new Date()));
   }
 }
 

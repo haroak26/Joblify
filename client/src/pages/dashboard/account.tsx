@@ -75,7 +75,6 @@ interface UserResponse {
 
 interface TwoFAStatus {
   enabled: boolean;
-  hasBackupCodes: boolean;
 }
 
 interface UserPreferences {
@@ -478,9 +477,6 @@ export default function Account() {
 
             {/* Email Preferences Section */}
             <EmailPreferencesSection />
-
-            {/* Notification Settings Section */}
-            <NotificationSettingsSection />
           </CleanTabsContent>
 
           {/* Usage Tab */}
@@ -961,6 +957,41 @@ export default function Account() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+
+            {/* Sign Out Section */}
+            <div className="rounded-lg border bg-background p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-subheader font-bold">Sign Out</h2>
+                  <p className="text-muted-foreground">Sign out of your account on this device</p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Sign Out</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to sign out? You'll need to log in again to access your account.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={async () => {
+                        await logout();
+                        navigate("/login");
+                      }}>
+                        Sign Out
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
           </CleanTabsContent>
 
           {/* Perks & Codes Tab */}
@@ -1001,41 +1032,6 @@ export default function Account() {
             </div>
           </CleanTabsContent>
         </CleanTabs>
-
-        {/* Sign Out Section */}
-        <div className="rounded-lg border bg-background p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-subheader font-bold">Sign Out</h2>
-              <p className="text-muted-foreground">Sign out of your account on this device</p>
-            </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <LogOut className="w-4 h-4" />
-                  Sign Out
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Sign Out</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to sign out? You'll need to log in again to access your account.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={async () => {
-                    await logout();
-                    navigate("/login");
-                  }}>
-                    Sign Out
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -1196,52 +1192,24 @@ function PasswordChangeSection() {
 // Two-Factor Authentication Section Component
 function TwoFactorAuthSection() {
   const { toast } = useToast();
-  const [qrCode, setQrCode] = useState("");
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [verificationCode, setVerificationCode] = useState("");
   const [disablePassword, setDisablePassword] = useState("");
-  const [showSetup, setShowSetup] = useState(false);
   const [showDisable, setShowDisable] = useState(false);
 
   const { data: twoFAStatus, refetch: refetchStatus } = useQuery<TwoFAStatus>({
     queryKey: ["/api/user/2fa/status"],
   });
 
-  const setupMutation = useMutation({
+  const enableMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/user/2fa/setup");
+      const response = await apiRequest("POST", "/api/user/2fa/enable");
       return response.json();
     },
-    onSuccess: (data) => {
-      setQrCode(data.qrCode);
-      setShowSetup(true);
-      toast({
-        title: "Success",
-        description: "Scan the QR code with your authenticator app",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const verifyMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/user/2fa/verify", { token: verificationCode });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setBackupCodes(data.backupCodes);
+    onSuccess: () => {
       refetchStatus();
       toast({
         title: "Success",
-        description: "2FA enabled successfully. Save your backup codes!",
+        description: "2FA enabled successfully. You will receive a verification code via email when you log in.",
       });
-      setVerificationCode("");
     },
     onError: (error: Error) => {
       toast({
@@ -1259,9 +1227,6 @@ function TwoFactorAuthSection() {
     },
     onSuccess: () => {
       setShowDisable(false);
-      setShowSetup(false);
-      setQrCode("");
-      setBackupCodes([]);
       setDisablePassword("");
       refetchStatus();
       toast({
@@ -1293,63 +1258,21 @@ function TwoFactorAuthSection() {
         )}
       </div>
       <p className="text-small text-muted-foreground mb-4">
-        Add an extra layer of security to your account
+        Add an extra layer of security to your account with email-based verification codes
       </p>
 
-      {!twoFAStatus?.enabled && !showSetup && (
-        <Button onClick={() => setupMutation.mutate()} disabled={setupMutation.isPending}>
-          {setupMutation.isPending ? "Setting up..." : "Enable 2FA"}
-        </Button>
-      )}
-
-      {showSetup && qrCode && !backupCodes.length && (
+      {!twoFAStatus?.enabled && (
         <div className="space-y-4">
-          <div className="border rounded-lg p-4 bg-muted/50">
-            <p className="text-small font-medium mb-2">1. Scan this QR code with your authenticator app:</p>
-            <img src={qrCode} alt="2FA QR Code" className="mx-auto w-48 h-48" />
+          <div className="p-4 rounded-lg border bg-muted/50">
+            <p className="text-small font-medium mb-2">How it works:</p>
+            <ul className="text-small text-muted-foreground space-y-1 list-disc list-inside">
+              <li>When you log in, a 6-digit code will be sent to your email</li>
+              <li>Enter the code to complete your login</li>
+              <li>Codes expire after 5 minutes</li>
+            </ul>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="verification-code">2. Enter the 6-digit code from your app:</Label>
-            <Input
-              id="verification-code"
-              type="text"
-              maxLength={6}
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-              placeholder="000000"
-            />
-          </div>
-          <Button onClick={() => verifyMutation.mutate()} disabled={verifyMutation.isPending || verificationCode.length !== 6}>
-            {verifyMutation.isPending ? "Verifying..." : "Verify and Enable"}
-          </Button>
-        </div>
-      )}
-
-      {backupCodes.length > 0 && (
-        <div className="border border-yellow-500/50 rounded-lg p-4 bg-yellow-500/10 space-y-3">
-          <div className="flex items-start gap-2">
-            <Shield className="w-5 h-5 text-yellow-700 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold text-yellow-700">Save Your Backup Codes</p>
-              <p className="text-small text-yellow-700/80">Store these codes in a safe place. You can use them to access your account if you lose your authenticator device.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 font-mono text-small">
-            {backupCodes.map((code, i) => (
-              <div key={i} className="bg-background border rounded px-2 py-1 text-center">
-                {code}
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              navigator.clipboard.writeText(backupCodes.join("\n"));
-              toast({ title: "Copied!", description: "Backup codes copied to clipboard" });
-            }}
-          >
-            Copy All Codes
+          <Button onClick={() => enableMutation.mutate()} disabled={enableMutation.isPending}>
+            {enableMutation.isPending ? "Enabling..." : "Enable 2FA"}
           </Button>
         </div>
       )}
@@ -1458,69 +1381,6 @@ function EmailPreferencesSection() {
             checked={preferences?.weeklySummaryEmails ?? true}
             onCheckedChange={(checked) => handleToggle("weeklySummaryEmails", checked)}
           />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Notification Settings Section Component
-function NotificationSettingsSection() {
-  const { toast } = useToast();
-
-  const { data: preferences, refetch } = useQuery<UserPreferences>({
-    queryKey: ["/api/user/preferences"],
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async (updates: Record<string, boolean>) => {
-      const response = await apiRequest("POST", "/api/user/preferences", updates);
-      return response.json();
-    },
-    onSuccess: () => {
-      refetch();
-      toast({
-        title: "Success",
-        description: "Notification settings updated",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleToggle = (key: string, value: boolean) => {
-    updateMutation.mutate({ [key]: value });
-  };
-
-  return (
-    <div className="border rounded-lg p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Bell className="w-5 h-5" />
-        <h3 className="text-large font-semibold">Notification Settings</h3>
-      </div>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="font-medium">In-App Notifications</p>
-            <p className="text-small text-muted-foreground">Show notifications within the application</p>
-          </div>
-          <Switch
-            checked={preferences?.inAppNotifications ?? true}
-            onCheckedChange={(checked) => handleToggle("inAppNotifications", checked)}
-          />
-        </div>
-        <div className="h-px bg-border" />
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="font-medium">Push Notifications</p>
-            <p className="text-small text-muted-foreground">Browser push notifications (not yet supported)</p>
-          </div>
-          <Switch disabled checked={false} />
         </div>
       </div>
     </div>
