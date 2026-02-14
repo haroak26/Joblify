@@ -326,7 +326,7 @@ export default function CoverLetterGenerator() {
         open={showUpgradeDialog}
         onOpenChange={setShowUpgradeDialog}
         featureName="cover letters"
-        currentPlan="free"
+        currentPlan={usageData?.plan || "free"}
         limit={usageData?.limits?.maxCoverLetters}
         current={usageData?.usage?.coverLettersThisMonth}
       />

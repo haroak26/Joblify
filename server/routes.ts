@@ -916,6 +916,7 @@ export async function registerRoutes(
       const remainingSchedules = maxSchedules === -1 ? -1 : Math.max(0, maxSchedules - schedulesCount);
       
       res.json({
+        plan,
         usage: {
           skillsCount,
           jobsScrapedThisMonth: usage.importedResumesThisMonth,
@@ -2674,19 +2675,19 @@ Respond ONLY with valid JSON, no additional text.`
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      // Check resume limit first
+      // Check resume limit first and get subscription/plan info
       const resumeCheck = await storage.canAddResume(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      
       if (!resumeCheck.allowed) {
-        const subscription = await storage.getSubscription(userId);
-        const plan = normalizePlan(subscription?.plan);
-        const planLimits = PLAN_LIMITS[plan];
-        
         return res.status(403).json({ 
           error: "Resume limit reached", 
           code: "RESUME_LIMIT",
           limit: resumeCheck.limit,
           current: resumeCheck.current,
-          message: planLimits.maxResumes === Infinity
+          message: limits.maxResumes === Infinity
             ? "Resume limit reached."
             : `Your plan allows up to ${resumeCheck.limit} resumes. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
         });
@@ -2694,9 +2695,6 @@ Respond ONLY with valid JSON, no additional text.`
 
       // Check usage limits
       const userUsage = await storage.getUsage(userId);
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const limits = PLAN_LIMITS[plan];
 
       if (userUsage.importedResumesThisMonth >= limits.maxImportedResumesPerMonth) {
         return res.status(403).json({
