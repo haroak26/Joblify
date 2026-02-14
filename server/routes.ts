@@ -382,7 +382,6 @@ export async function registerRoutes(
   app.get("/api/profile", requireAuth, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
-      console.log('[API] Fetching profile for user:', userId);
       const profile = await storage.getProfile(userId);
       res.json(profile);
     } catch (error) {
@@ -398,7 +397,6 @@ export async function registerRoutes(
   app.post("/api/profile", requireAuth, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
-      console.log('[API] Updating profile for user:', userId);
       const schema = z.object({
         intro: z.string(),
         skills: z.array(skillSchema),
@@ -415,7 +413,6 @@ export async function registerRoutes(
       // Check skills limit
       const skillCheck = await storage.canAddSkills(userId, data.skills.length);
       if (!skillCheck.allowed) {
-        console.log('[API] Skills limit exceeded for user:', userId, '- limit:', skillCheck.limit, 'attempted:', data.skills.length);
         return res.status(403).json({ 
           error: "Skills limit reached", 
           code: "SKILLS_LIMIT",
@@ -430,7 +427,6 @@ export async function registerRoutes(
       // Get old profile to check if skills changed
       const oldProfile = await storage.getProfile(userId);
       const profile = await storage.setProfile(userId, data);
-      console.log('[API] Profile saved successfully for user:', userId);
       
       res.json(profile);
     } catch (error) {
@@ -455,7 +451,6 @@ export async function registerRoutes(
   app.get("/api/skills", requireAuth, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
-      console.log('[API] Fetching skills for user:', userId);
       const profile = await storage.getProfile(userId);
       res.json({ skills: profile.skills });
     } catch (error) {
@@ -471,7 +466,6 @@ export async function registerRoutes(
   app.post("/api/skills", requireAuth, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
-      console.log('[API] Updating skills for user:', userId);
       const schema = z.object({
         skills: z.array(skillSchema),
       });
@@ -486,7 +480,6 @@ export async function registerRoutes(
       // Check skills limit
       const skillCheck = await storage.canAddSkills(userId, skills.length);
       if (!skillCheck.allowed) {
-        console.log('[API] Skills limit exceeded for user:', userId, '- limit:', skillCheck.limit, 'attempted:', skills.length);
         return res.status(403).json({ 
           error: "Skills limit reached", 
           code: "SKILLS_LIMIT",
@@ -500,7 +493,6 @@ export async function registerRoutes(
       
       const profile = await storage.getProfile(userId);
       const updated = await storage.setProfile(userId, { ...profile, skills });
-      console.log('[API] Skills saved successfully for user:', userId);
       
       res.json({ skills: updated.skills });
     } catch (error) {
@@ -525,7 +517,6 @@ export async function registerRoutes(
   app.post("/api/suggest-skills", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
-      console.log('[API] Suggesting skills for user:', userId);
       const schema = z.object({
         intro: z.string().min(10),
       });
@@ -548,7 +539,6 @@ export async function registerRoutes(
         max_tokens: 200,
       });
       
-      console.log('[API] AI response received for user:', userId);
       const content = response.choices[0]?.message?.content || '{"skills":[]}';
       let skills: string[] = [];
       
@@ -566,9 +556,8 @@ export async function registerRoutes(
           // Fallback for other object structures
           skills = Object.values(parsed).find(val => Array.isArray(val)) || [];
         }
-        console.log('[API] Parsed AI skills for user:', userId, '- count:', skills.length);
       } catch (e) {
-        console.error('[API] Failed to parse AI skills response for user:', userId, content, e);
+        console.error('[API] Failed to parse AI skills response:', e instanceof Error ? e.message : 'Parse error');
         // Simple regex fallback if JSON parsing fails
         const matches = content.match(/"([^"]+)"/g);
         if (matches) {
@@ -578,7 +567,7 @@ export async function registerRoutes(
       
       res.json({ skills: skills.slice(0, 10) });
     } catch (error) {
-      console.error('[API] Error suggesting skills for user:', userId, error);
+      console.error('[API] Error suggesting skills:', error instanceof Error ? error.message : 'Unknown error');
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
           error: "Invalid input", 
@@ -964,7 +953,6 @@ export async function registerRoutes(
   app.post("/api/resumes", requireAuth, async (req: Request, res) => {
     const userId = req.session.userId!;
     try {
-      console.log('[API] Creating resume for user:', userId);
       
       const insertSchema = z.object({
         title: z.string().min(1),
@@ -2300,7 +2288,6 @@ Return ONLY the cover letter text, no additional commentary.`;
       });
 
       const { name, email, message } = schema.parse(req.body);
-      console.log('[API] Contact form AI request from:', name, email);
 
       // Build knowledge base context
       const knowledgeBase = `
@@ -2378,7 +2365,6 @@ Guidelines:
       });
 
       const { name, email, message, aiResponse } = schema.parse(req.body);
-      console.log('[API] Sending contact form email from:', name, email);
 
       // Import email function
       const { sendContactFormEmail, sendContactConfirmationEmail } = await import("./email");
@@ -2402,7 +2388,6 @@ Guidelines:
         throw new Error("Failed to send email to support");
       }
 
-      console.log('[API] Contact form emails sent successfully');
       res.json({ 
         success: true,
         message: "Your message has been sent successfully. We'll respond within 24-48 hours.",

@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Briefcase, Loader2, ArrowRight, ArrowLeft, Mail, Lock, User, Sparkles } from "lucide-react";
+import { Briefcase, Loader2, ArrowRight, ArrowLeft, Mail, Lock, User, Sparkles, Phone, Globe, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,9 +42,17 @@ const step3Schema = z.object({
     .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, hyphens, and underscores"),
 });
 
+// Step 4: Quick Resume Data (Optional)
+const step4Schema = z.object({
+  phone: z.string().optional(),
+  linkedin: z.string().optional(),
+  website: z.string().optional(),
+});
+
 type Step1Data = z.infer<typeof step1Schema>;
 type Step2Data = z.infer<typeof step2Schema>;
 type Step3Data = z.infer<typeof step3Schema>;
+type Step4Data = z.infer<typeof step4Schema>;
 
 type RegistrationData = {
   name: string;
@@ -52,9 +60,12 @@ type RegistrationData = {
   password: string;
   confirmPassword: string;
   username: string;
+  phone?: string;
+  linkedin?: string;
+  website?: string;
 };
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 export default function Register() {
   const { register, user, isLoading } = useAuth();
@@ -67,6 +78,9 @@ export default function Register() {
     password: "",
     confirmPassword: "",
     username: "",
+    phone: "",
+    linkedin: "",
+    website: "",
   });
 
   // Step 1 form
@@ -95,8 +109,29 @@ export default function Register() {
     },
   });
 
+  // Step 4 form
+  const step4Form = useForm<Step4Data>({
+    resolver: zodResolver(step4Schema),
+    defaultValues: {
+      phone: formData.phone,
+      linkedin: formData.linkedin,
+      website: formData.website,
+    },
+  });
+
   const passwordValue = step2Form.watch("password");
   const showPasswordChecker = passwordValue && passwordValue.length > 0;
+
+  // Reset step 4 form when returning to step 4 with updated formData
+  useEffect(() => {
+    if (step === 4) {
+      step4Form.reset({
+        phone: formData.phone,
+        linkedin: formData.linkedin,
+        website: formData.website,
+      });
+    }
+  }, [step, formData.phone, formData.linkedin, formData.website, step4Form]);
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -126,16 +161,26 @@ export default function Register() {
     setStep(3);
   };
 
-  const handleStep3Submit = async (data: Step3Data) => {
+  const handleStep3Next = async (data: Step3Data) => {
     setFormData({ ...formData, ...data });
+    setStep(4);
+  };
+
+  const handleStep4Submit = async (data: Step4Data) => {
+    const finalData = { ...formData, ...data };
+    // Save form data before attempting registration so it's preserved if we need to navigate to fix errors
+    setFormData(finalData);
     
     setIsSubmitting(true);
     try {
       await register(
-        formData.email,
-        formData.password,
-        formData.name,
-        data.username
+        finalData.email,
+        finalData.password,
+        finalData.name,
+        finalData.username,
+        finalData.phone,
+        finalData.linkedin,
+        finalData.website
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Registration failed";
@@ -143,9 +188,12 @@ export default function Register() {
         setStep(1);
         step1Form.setError("email", { message });
       } else if (message.toLowerCase().includes("username")) {
+        // Save step 4 data before navigating away
         step3Form.setError("username", { message });
+        setStep(3);
       } else {
-        step3Form.setError("root", { message });
+        // Keep on step 4 for other errors
+        step4Form.setError("root", { message });
       }
     } finally {
       setIsSubmitting(false);
@@ -177,11 +225,13 @@ export default function Register() {
               {step === 1 && "Create your account"}
               {step === 2 && "Choose a password"}
               {step === 3 && "Choose a username"}
+              {step === 4 && "Quick resume info"}
             </CardTitle>
             <CardDescription className="mt-1">
               {step === 1 && "Let's get started with the basics"}
               {step === 2 && "Keep your account secure"}
               {step === 3 && "Pick a unique username"}
+              {step === 4 && "Add contact details for your resumes (optional)"}
             </CardDescription>
           </div>
           <div className="space-y-2">
@@ -350,7 +400,7 @@ export default function Register() {
                 transition={{ duration: 0.3 }}
               >
                 <Form {...step3Form}>
-                  <form onSubmit={step3Form.handleSubmit(handleStep3Submit)} className="space-y-4">
+                  <form onSubmit={step3Form.handleSubmit(handleStep3Next)} className="space-y-4">
                     <FormField
                       control={step3Form.control}
                       name="username"
@@ -375,6 +425,98 @@ export default function Register() {
 
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" onClick={() => setStep(2)} className="flex-1">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back
+                      </Button>
+                      <Button type="submit" className="flex-1">
+                        Next
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div
+                key="step4"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={{ duration: 0.3 }}
+              >
+                <Form {...step4Form}>
+                  <form onSubmit={step4Form.handleSubmit(handleStep4Submit)} className="space-y-4">
+                    <FormField
+                      control={step4Form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number (Optional)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                              <Input 
+                                type="tel" 
+                                placeholder="e.g., (555) 123-4567" 
+                                className="pl-10"
+                                {...field} 
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={step4Form.control}
+                      name="linkedin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>LinkedIn URL (Optional)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                              <Input 
+                                type="url" 
+                                placeholder="e.g., linkedin.com/in/yourname" 
+                                className="pl-10"
+                                {...field} 
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={step4Form.control}
+                      name="website"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Website/Portfolio (Optional)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                              <Input 
+                                type="url" 
+                                placeholder="e.g., yourwebsite.com" 
+                                className="pl-10"
+                                {...field} 
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" onClick={() => setStep(3)} className="flex-1">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back
                       </Button>

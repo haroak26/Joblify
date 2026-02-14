@@ -23,7 +23,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string, username?: string) => Promise<void>;
+  register: (email: string, password: string, name?: string, username?: string, phone?: string, linkedin?: string, website?: string) => Promise<void>;
   logout: () => Promise<void>;
   resendVerification: () => Promise<void>;
 }
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, name?: string, username?: string) => {
+  const register = async (email: string, password: string, name?: string, username?: string, phone?: string, linkedin?: string, website?: string) => {
     try {
       // Ensure CSRF token is available before registration
       const csrfToken = await ensureCsrfToken();
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers,
-        body: JSON.stringify({ email, password, name, username }),
+        body: JSON.stringify({ email, password, name, username, phone, linkedin, website }),
         credentials: "include",
       });
       const data = await response.json();

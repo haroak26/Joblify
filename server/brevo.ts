@@ -35,14 +35,13 @@ export async function sendEmail({ to, subject, htmlContent }: SendEmailParams): 
     });
 
     if (!response.ok) {
-      console.error("Brevo email error:", await response.text());
+      console.error('Brevo email error - status:', response.status);
       return false;
     }
 
-    console.log(`Email sent to ${to}`);
     return true;
   } catch (error) {
-    console.error("Brevo email error:", error);
+    console.error("Brevo email error:", error instanceof Error ? error.message : 'Unknown error');
     return false;
   }
 }
@@ -73,15 +72,13 @@ export async function addContactToBrevoList(email: string, listId: number, attri
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Brevo add contact error:", errorText);
+      console.error('Brevo add contact error - status:', response.status);
       return false;
     }
 
-    console.log(`Contact ${email} added to Brevo list ${listId}`);
     return true;
   } catch (error) {
-    console.error("Brevo add contact error:", error);
+    console.error("Brevo add contact error:", error instanceof Error ? error.message : 'Unknown error');
     return false;
   }
 }

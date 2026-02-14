@@ -87,10 +87,8 @@ export function startScheduleRunner(intervalMs = 60_000) {
                     .update(users)
                     .set({ onboardingReminderSent: true })
                     .where(eq(users.id, user.id));
-                  
-                  console.log(`[Scheduler] Sent onboarding reminder to ${user.email}`);
                 } else {
-                  console.error(`[Scheduler] Failed to send onboarding reminder to ${user.email}`);
+                  console.error('[Scheduler] Failed to send onboarding reminder');
                 }
               } else {
                 // User has completed at least one task, mark reminder as sent to not bother them
@@ -100,8 +98,7 @@ export function startScheduleRunner(intervalMs = 60_000) {
                   .where(eq(users.id, user.id));
               }
             } catch (userError) {
-              console.error(`[Scheduler] Error processing user ${user.email}:`, userError);
-              // Continue with next user
+              console.error('[Scheduler] Error processing user:', userError instanceof Error ? userError.message : 'Unknown error');
             }
           }
           

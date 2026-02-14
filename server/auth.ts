@@ -70,7 +70,7 @@ export function setupAuth(app: Express) {
   // Register endpoint - session-based authentication with rate limiting
   app.post("/api/auth/register", registrationRateLimit, async (req: Request, res: Response) => {
     try {
-      const { name, username, email, password, intro, skills } = req.body;
+      const { name, username, email, password, intro, skills, phone, linkedin, website } = req.body;
 
       if (!email || !password) {
         return res.status(400).json({ error: "Email and password are required" });
@@ -134,10 +134,31 @@ export function setupAuth(app: Express) {
       // Profile will be set up later in account settings, not during registration
       req.session.userId = user.id;
 
+      // Create initial resume with quick data if provided
+      if (phone || linkedin || website) {
+        const { resumes } = await import("../shared/schema");
+        const { createEmptyResumeData } = await import("../shared/schema");
+        const { db } = await import("./db");
+        
+        const resumeData = createEmptyResumeData();
+        resumeData.personalInfo.name = name || user.username;
+        resumeData.personalInfo.email = email;
+        if (phone) resumeData.personalInfo.phone = phone;
+        if (linkedin) resumeData.personalInfo.linkedin = linkedin;
+        if (website) resumeData.personalInfo.website = website;
+        
+        await db.insert(resumes).values({
+          userId: user.id,
+          title: "My Resume",
+          template: "modern",
+          resumeData,
+        });
+      }
+
       // Initialize email engagement system (welcome email + feature reminders)
       const { initializeEmailEngagement } = await import("./email-engagement");
-      initializeEmailEngagement(user.id).catch(err => {
-        console.error("Failed to initialize email engagement:", err);
+      initializeEmailEngagement(user.id).catch(() => {
+        console.error('[AUTH] Email engagement initialization failed');
       });
 
       // Add user to Brevo contact list on signup
@@ -148,17 +169,14 @@ export function setupAuth(app: Express) {
           const { addContactToBrevoList } = await import("./brevo");
           addContactToBrevoList(user.email, parsedListId, {
             FIRSTNAME: user.name || user.username,
-          }).catch(err => {
-            console.error("Failed to add contact to Brevo list:", err);
+          }).catch(() => {
+            console.error('[AUTH] Brevo list addition failed');
           });
         }
       }
 
       // Send verification email
       const emailSent = await sendVerificationEmail(user.email, user.username, verificationToken);
-      if (!emailSent) {
-        console.error("Failed to send verification email.");
-      }
 
       res.json({
         user: {
@@ -175,7 +193,6 @@ export function setupAuth(app: Express) {
           : "Account created. Email verification is pending.",
       });
     } catch (error) {
-      console.error("Registration error:", error);
       res.status(500).json({ error: "Registration failed" });
     }
   });
@@ -214,7 +231,6 @@ export function setupAuth(app: Express) {
 
       // Auto-upgrade password hash if using legacy scrypt
       if (!isArgon2Hash(user.password)) {
-        console.log(`[AUTH] Auto-upgrading password hash for user ${user.id}`);
         const newHash = await hashPassword(password);
         await storage.updateUser(user.id, { password: newHash });
       }
@@ -240,7 +256,6 @@ export function setupAuth(app: Express) {
         const emailSent = await send2FAEmail(user.email, user.username, code);
         
         if (!emailSent) {
-          console.error('[AUTH] Failed to send 2FA email to:', user.email);
           return res.status(500).json({ 
             error: "Failed to send verification code. Please try again or contact support." 
           });
