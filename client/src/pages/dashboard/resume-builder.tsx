@@ -75,7 +75,7 @@ type ResumeSection = {
 };
 
 const DEFAULT_SECTIONS = ["personal", "summary", "experience", "education", "skills"];
-const DEFAULT_AI_COMPONENTS = ["experience", "education", "skills"];
+const DEFAULT_AI_COMPONENTS = ["summary", "experience", "education", "skills"];
 
 const allSections: ResumeSection[] = [
   { id: "personal", name: "Personal Info", icon: User, component: PersonalInfoSection },

@@ -1219,6 +1219,7 @@ export async function registerRoutes(
 
       // Create AI prompt
       const COMPONENT_LABELS: Record<string, string> = {
+        summary: "Professional Summary",
         experience: "Work Experience",
         education: "Education",
         skills: "Skills",
