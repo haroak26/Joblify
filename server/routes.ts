@@ -1328,7 +1328,7 @@ Optional: "What was the outcome or result?"
 ${activeSections.includes('awards') ? `**🏆 Awards / Accomplishments Flow:**
 Step 1: "What's something you've done that you're really proud of?"
 Step 2: "Why was it important or difficult?"
-Step 3: "Did anyone recognise it? Awards, praise, results?"
+Step 3: "Did anyone recognize it? Awards, praise, results?"
 → SYNTHESIZE and save to updatedData awards array.
 ` : ''}
 
@@ -1339,7 +1339,7 @@ Step 2: "Which ones are most relevant to your career goals?"
 ` : ''}
 
 ${activeSections.includes('leadership') ? `**👥 Leadership Flow:**
-Step 1: "Have you held any leadership roles — at work, in organisations, or in your community?"
+Step 1: "Have you held any leadership roles — at work, in organizations, or in your community?"
 Step 2: "What were you responsible for and what was the impact?"
 → SYNTHESIZE and save to updatedData leadership array.
 ` : ''}

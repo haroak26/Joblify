@@ -210,7 +210,7 @@ export default function AIResumeChat({
       certifications: `**Have you completed any courses, certifications, or training programs?**`,
       projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
       awards: `**What's something you've done that you're really proud of?**`,
-      leadership: `**Have you held any leadership roles — at work, in organisations, or in your community?**`,
+      leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
       research: `**Have you been involved in any research work?**`,
       publications: `**Have you published any papers, articles, or other written work?**`,
     };
