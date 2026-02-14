@@ -47,6 +47,20 @@ const COMPONENT_LABELS: Record<string, string> = {
   publications: "Publications",
 };
 
+// Section opening questions for guided builder mode
+const SECTION_OPENERS: Record<string, string> = {
+  summary: `**What kind of roles are you aiming for right now?**`,
+  experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
+  education: `**Where did you study or train?**`,
+  skills: `**What tasks or tools do people usually come to you for help with?**`,
+  certifications: `**Have you completed any courses, certifications, or training programs?**`,
+  projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
+  awards: `**What's something you've done that you're really proud of?**`,
+  leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
+  research: `**Have you been involved in any research work?**`,
+  publications: `**Have you published any papers, articles, or other written work?**`,
+};
+
 // Sections restricted on free plan in AI builder
 const FREE_PLAN_RESTRICTED_SECTIONS = ["awards", "certifications", "leadership", "research", "publications"];
 
@@ -207,20 +221,7 @@ export default function AIResumeChat({
       setEditingSection(firstSection);
     }
 
-    const sectionOpeners: Record<string, string> = {
-      summary: `**What kind of roles are you aiming for right now?**`,
-      experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
-      education: `**Where did you study or train?**`,
-      skills: `**What tasks or tools do people usually come to you for help with?**`,
-      certifications: `**Have you completed any courses, certifications, or training programs?**`,
-      projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
-      awards: `**What's something you've done that you're really proud of?**`,
-      leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
-      research: `**Have you been involved in any research work?**`,
-      publications: `**Have you published any papers, articles, or other written work?**`,
-    };
-
-    const firstQuestion = sectionOpeners[firstSection] || sectionOpeners.summary;
+    const firstQuestion = SECTION_OPENERS[firstSection] || SECTION_OPENERS.summary;
     
     const greeting = focusedComponent
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
@@ -234,24 +235,8 @@ export default function AIResumeChat({
     saveMessageToDb("ai", greeting);
   }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, saveMessageToDb, activeComponents]);
 
-  // Streaming send message
-  const handleSendMessage = useCallback(async () => {
-    if (!inputMessage.trim() || isStreaming) return;
-
-    const messageText = inputMessage.trim().slice(0, MAX_MESSAGE_LENGTH);
-    setInputMessage("");
-
-    // Add user message
-    const userMessage: ChatMessage = { 
-      role: "user", 
-      content: messageText,
-      id: `user-${Date.now()}`
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    
-    // Save user message to DB immediately
-    saveMessageToDb("user", messageText);
-
+  // Core function to send a message to AI (used by both handleSendMessage and handleRewrite)
+  const sendMessageToAI = useCallback(async (messageText: string) => {
     // Track usage on first interaction
     if (!hasInteracted) {
       setHasInteracted(true);
@@ -397,7 +382,29 @@ export default function AIResumeChat({
       setIsStreaming(false);
       abortControllerRef.current = null;
     }
-  }, [inputMessage, isStreaming, resumeId, editingSection, activeComponents, resumeData, messages, hasInteracted, onUpdate, onAutoSave, onComplete, toast, saveMessageToDb]);
+  }, [isStreaming, resumeId, editingSection, activeComponents, resumeData, messages, hasInteracted, onUpdate, onAutoSave, onComplete, toast, saveMessageToDb]);
+
+  // Wrapper function for user input from text field
+  const handleSendMessage = useCallback(async () => {
+    if (!inputMessage.trim() || isStreaming) return;
+
+    const messageText = inputMessage.trim().slice(0, MAX_MESSAGE_LENGTH);
+    setInputMessage("");
+
+    // Add user message
+    const userMessage: ChatMessage = { 
+      role: "user", 
+      content: messageText,
+      id: `user-${Date.now()}`
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to DB immediately
+    saveMessageToDb("user", messageText);
+
+    // Send to AI
+    await sendMessageToAI(messageText);
+  }, [inputMessage, isStreaming, sendMessageToAI, saveMessageToDb]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -416,22 +423,6 @@ export default function AIResumeChat({
   }, []);
 
   // Section navigation handlers
-  const getSectionOpener = (sectionId: string): string => {
-    const sectionOpeners: Record<string, string> = {
-      summary: `**What kind of roles are you aiming for right now?**`,
-      experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
-      education: `**Where did you study or train?**`,
-      skills: `**What tasks or tools do people usually come to you for help with?**`,
-      certifications: `**Have you completed any courses, certifications, or training programs?**`,
-      projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
-      awards: `**What's something you've done that you're really proud of?**`,
-      leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
-      research: `**Have you been involved in any research work?**`,
-      publications: `**Have you published any papers, articles, or other written work?**`,
-    };
-    return sectionOpeners[sectionId] || sectionOpeners.summary;
-  };
-
   const handleNextSection = useCallback(() => {
     // Find next incomplete section
     const currentIndex = activeComponents.indexOf(editingSection || '');
@@ -440,7 +431,7 @@ export default function AIResumeChat({
       setEditingSection(nextSection);
       
       // Trigger AI to ask about next section
-      const nextQuestion = getSectionOpener(nextSection);
+      const nextQuestion = SECTION_OPENERS[nextSection] || SECTION_OPENERS.summary;
       setMessages(prev => [...prev, {
         role: "ai",
         content: `Great! Now let's work on your **${COMPONENT_LABELS[nextSection]}**.\n\n${nextQuestion}`,
@@ -456,14 +447,24 @@ export default function AIResumeChat({
     }
   }, [activeComponents, editingSection, onComplete, saveMessageToDb]);
 
-  const handleRewrite = useCallback(() => {
+  const handleRewrite = useCallback(async () => {
+    if (isStreaming) return;
+    
     const rewriteMessage = "I'd like you to rewrite that section.";
-    setInputMessage(rewriteMessage);
-    // Trigger send immediately
-    setTimeout(() => {
-      handleSendMessage();
-    }, 100);
-  }, [handleSendMessage]);
+    // Add user message
+    const userMessage: ChatMessage = { 
+      role: "user", 
+      content: rewriteMessage,
+      id: `user-${Date.now()}`
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    // Save user message to DB immediately
+    saveMessageToDb("user", rewriteMessage);
+
+    // Send to AI
+    await sendMessageToAI(rewriteMessage);
+  }, [isStreaming, saveMessageToDb, sendMessageToAI]);
 
   // Filter restricted sections for free plan in AI builder mode
   const getFilteredComponents = () => {
@@ -597,7 +598,14 @@ export default function AIResumeChat({
                   )}
                 </div>
                 
-                {/* Section Navigation Buttons */}
+                {/* Section Navigation Buttons 
+                    These appear after the AI has synthesized content and is asking for approval.
+                    The phrases match the specific questions the AI is instructed to ask in server/routes.ts:
+                    - "Want it more formal, more confident, or more friendly?"
+                    - "Want these to sound more results-focused or leadership-focused?"
+                    - "Want me to tailor these to your target job?"
+                    This pattern is defined in the AI system prompt and unlikely to appear in other contexts.
+                */}
                 {message.role === "ai" && 
                  index === messages.length - 1 && 
                  !isStreaming && 
@@ -605,9 +613,7 @@ export default function AIResumeChat({
                  editingSection &&
                  (message.content.toLowerCase().includes("want it more") || 
                   message.content.toLowerCase().includes("want me to") ||
-                  message.content.toLowerCase().includes("want these to") ||
-                  message.content.toLowerCase().includes("do you like") ||
-                  message.content.toLowerCase().includes("would you like")) && (
+                  message.content.toLowerCase().includes("want these to")) && (
                   <div className="flex gap-2 mt-3 mr-12">
                     <Button 
                       onClick={handleNextSection}
