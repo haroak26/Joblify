@@ -24,7 +24,7 @@ import {
   BookOpen
 } from "lucide-react";
 
-const DEFAULT_COMPONENTS = ["experience", "education", "skills"];
+const DEFAULT_COMPONENTS = ["summary", "experience", "education", "skills"];
 
 interface ComponentOption {
   id: string;
