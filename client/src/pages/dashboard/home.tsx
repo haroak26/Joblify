@@ -18,10 +18,6 @@ interface Resume {
   updatedAt: string;
 }
 
-interface ResumesResponse {
-  resumes: Resume[];
-}
-
 interface OnboardingStatus {
   hasCreatedResume: boolean;
   hasCreatedCoverLetter: boolean;
@@ -40,7 +36,7 @@ export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: resumesData, isLoading: resumesLoading } = useQuery<ResumesResponse>({
+  const { data: resumesData, isLoading: resumesLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
 
@@ -54,7 +50,7 @@ export default function DashboardHome() {
   });
 
   // Ensure resumes is always an array
-  const resumes = Array.isArray(resumesData?.resumes) ? resumesData.resumes : [];
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
   const totalResumes = resumes.length;
   const recentResumes = resumes.slice(0, 3);
 

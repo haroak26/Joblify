@@ -1019,7 +1019,7 @@ export async function registerRoutes(
         .where(eq(resumes.userId, userId))
         .orderBy(desc(resumes.updatedAt));
 
-      res.json({ resumes: userResumes });
+      res.json(userResumes);
     } catch (error) {
       console.error('[API] Error fetching resumes:', error);
       res.status(500).json({ error: "Failed to fetch resumes" });
