@@ -105,10 +105,10 @@ export default function CoverLetterGenerator() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Input Section */}
         <div className="space-y-6">
-          <Card className="border-2">
-            <CardHeader className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20">
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-bold shadow-md">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
                   1
                 </div>
                 Select Your Resume
@@ -142,10 +142,10 @@ export default function CoverLetterGenerator() {
             </CardContent>
           </Card>
 
-          <Card className="border-2">
-            <CardHeader className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-bold shadow-md">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
                   2
                 </div>
                 Job Description
@@ -176,10 +176,10 @@ export default function CoverLetterGenerator() {
             </CardContent>
           </Card>
 
-          <Card className="border-2">
-            <CardHeader className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
+          <Card>
+            <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 text-white text-sm font-bold shadow-md">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
                   3
                 </div>
                 Writing Tone
