@@ -39,7 +39,6 @@ export function setupAdminRoutes(app: Express) {
       const limit = parseInt(req.query.limit as string) || 50;
       const search = req.query.search as string;
       
-      console.log('[API] Admin fetching users:', { page, limit, search });
       const result = await storage.getAllUsers({ page, limit, search });
       console.log('[API] Admin fetch result:', { count: result.users.length, total: result.total });
       
