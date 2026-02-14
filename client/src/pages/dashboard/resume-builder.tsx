@@ -392,6 +392,8 @@ export default function ResumeBuilder() {
             const pageImgData = pageCanvas.toDataURL("image/png");
             const imgHeight = (sliceHeight / canvas.width) * pdfWidth;
             pdf.addImage(pageImgData, "PNG", 0, 0, pdfWidth, imgHeight);
+          } else {
+            console.warn("[PDF] Failed to get canvas context for page", pageIndex + 1);
           }
 
           yOffset += pageHeightInCanvasPixels;
@@ -827,10 +829,11 @@ export default function ResumeBuilder() {
           position: "fixed",
           left: "-9999px",
           top: 0,
-          width: "816px", // 8.5in at 96dpi
+          width: "816px",
           backgroundColor: "#ffffff",
         }}
         aria-hidden="true"
+        role="presentation"
       >
         <div ref={printRef}>
           <ResumePreview
