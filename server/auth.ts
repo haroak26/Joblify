@@ -141,7 +141,7 @@ export function setupAuth(app: Express) {
         const { db } = await import("./db");
         
         const resumeData = createEmptyResumeData();
-        resumeData.personalInfo.name = name || finalUsername;
+        resumeData.personalInfo.name = name || user.username;
         resumeData.personalInfo.email = email;
         if (phone) resumeData.personalInfo.phone = phone;
         if (linkedin) resumeData.personalInfo.linkedin = linkedin;

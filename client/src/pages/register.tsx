@@ -122,6 +122,17 @@ export default function Register() {
   const passwordValue = step2Form.watch("password");
   const showPasswordChecker = passwordValue && passwordValue.length > 0;
 
+  // Reset step 4 form when returning to step 4 with updated formData
+  useEffect(() => {
+    if (step === 4) {
+      step4Form.reset({
+        phone: formData.phone,
+        linkedin: formData.linkedin,
+        website: formData.website,
+      });
+    }
+  }, [step, formData.phone, formData.linkedin, formData.website, step4Form]);
+
   useEffect(() => {
     if (!isLoading && user) {
       setLocation("/dashboard");
@@ -176,8 +187,9 @@ export default function Register() {
         setStep(1);
         step1Form.setError("email", { message });
       } else if (message.toLowerCase().includes("username")) {
-        setStep(3);
+        // Save step 4 data before navigating away
         step3Form.setError("username", { message });
+        setStep(3);
       } else {
         // Keep on step 4 for other errors
         step4Form.setError("root", { message });
