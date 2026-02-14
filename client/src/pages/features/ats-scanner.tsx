@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { Briefcase, Search, CheckCircle2, AlertTriangle, FileText, Target, TrendingUp, ArrowRight, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { SEO } from "@/components/seo";
 
 const benefits = [
   {
@@ -97,6 +98,12 @@ export default function ATSScanner() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="ATS Resume Scanner"
+        description="Optimize your resume for Applicant Tracking Systems with Joblify's AI-powered ATS scanner. Get instant feedback and improve your chances of landing interviews."
+        keywords="ATS scanner, resume checker, applicant tracking system, resume optimization, ATS-friendly resume"
+        canonicalUrl="https://joblifyai.com/features/ats-scanner"
+      />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">

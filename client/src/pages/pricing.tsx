@@ -6,6 +6,7 @@ import { Check, ArrowRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/use-auth";
+import { SEO } from "@/components/seo";
 
 const plans = [
   {
@@ -100,6 +101,12 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Pricing Plans"
+        description="Choose the perfect Joblify plan for your job search. Compare Free, Plus, Ultra, and Lifetime tiers with AI-powered resume tools and career features."
+        keywords="pricing, job search plans, AI resume builder cost, career tools pricing, Joblify plans"
+        canonicalUrl="https://joblifyai.com/pricing"
+      />
       {/* Navigation */}
       <Header />
 

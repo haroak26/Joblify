@@ -9,6 +9,7 @@ import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
 import { Briefcase, Search, Calendar, Clock, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getAllBlogPosts } from "@/lib/blog-data";
+import { SEO } from "@/components/seo";
 
 export default function Blog() {
   const { user } = useAuth();
@@ -29,6 +30,12 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Blog"
+        description="Explore expert career tips, resume writing guides, interview strategies, and job search advice on the Joblify blog. Stay ahead in your career journey."
+        keywords="career blog, resume tips, job search advice, interview tips, career guidance"
+        canonicalUrl="https://joblifyai.com/blog"
+      />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">

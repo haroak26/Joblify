@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { Briefcase, FileText, Sparkles, CheckCircle2, Clock, Target, Zap, ArrowRight, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { SEO } from "@/components/seo";
 
 const benefits = [
   {
@@ -74,6 +75,12 @@ export default function CoverLetterGenerator() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="AI Cover Letter Generator"
+        description="Create compelling, personalized cover letters in seconds with Joblify's AI cover letter generator. Tailored to each job application for maximum impact."
+        keywords="AI cover letter generator, cover letter builder, personalized cover letters, job application tools"
+        canonicalUrl="https://joblifyai.com/features/cover-letter"
+      />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
