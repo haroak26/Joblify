@@ -1,26 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Rounded green background -->
-  <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="#1B9C5D"/>
+  <!-- Joblify green rounded background -->
+  <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="#22C35D"/>
   
-  <!-- Briefcase icon in white -->
-  <g transform="translate(256, 270)" fill="none">
+  <!-- Lucide-style briefcase icon (clean, minimal strokes) -->
+  <g transform="translate(256, 268)" fill="none" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main briefcase body -->
+    <rect x="-160" y="-80" width="320" height="210" rx="16" ry="16"/>
     <!-- Handle -->
-    <rect x="-48" y="-130" width="96" height="50" rx="14" ry="14" 
-          stroke="white" stroke-width="18" fill="none"/>
-    
-    <!-- Main body -->
-    <rect x="-155" y="-80" width="310" height="200" rx="24" ry="24" 
-          fill="white"/>
-    
-    <!-- Middle strap (horizontal) -->
-    <rect x="-155" y="-10" width="310" height="24" fill="#1B9C5D"/>
-    
-    <!-- Left clasp -->
-    <rect x="-95" y="-26" width="30" height="56" rx="6" ry="6" fill="#1B9C5D" 
-          stroke="white" stroke-width="4"/>
-    
-    <!-- Right clasp -->
-    <rect x="65" y="-26" width="30" height="56" rx="6" ry="6" fill="#1B9C5D" 
-          stroke="white" stroke-width="4"/>
+    <path d="M-56,-80 L-56,-110 A30,30 0 0,1 -26,-140 L26,-140 A30,30 0 0,1 56,-110 L56,-80"/>
+    <!-- Horizontal line -->
+    <line x1="-160" y1="0" x2="160" y2="0"/>
   </g>
 </svg>
