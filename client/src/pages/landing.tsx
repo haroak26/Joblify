@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CookieConsent } from "@/components/cookie-consent";
 import { Footer } from "@/components/footer";
+import { Header } from "@/components/header";
 import { SEO } from "@/components/seo";
 import { 
   Search, 
   Zap, 
   MessageSquare, 
   ArrowRight, 
-  Briefcase,
   Star,
   CheckCircle2
 } from "lucide-react";
@@ -55,30 +55,10 @@ export default function Landing() {
       />
       
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Briefcase className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-lg">Joblify</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/why-us">
-              <Button variant="ghost" size="sm">Why Us</Button>
-            </Link>
-            <Link href="/pricing">
-              <Button variant="ghost" size="sm">Pricing</Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button size="sm">{primaryCtaLabel}</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       {/* Hero */}
-      <section className="pt-24 pb-14 sm:pt-28 sm:pb-16 lg:pt-40 lg:pb-24 px-4 sm:px-6">
+      <section className="pt-28 pb-14 sm:pt-32 sm:pb-16 lg:pt-40 lg:pb-24 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="max-w-2xl">
@@ -86,11 +66,11 @@ export default function Landing() {
                 <Star className="w-3 h-3 mr-1.5" />
                 AI-Powered Resume Builder
               </Badge>
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-semibold tracking-tight mb-6 leading-[1.1]">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-[1.1]">
                 Build your perfect resume
                 <span className="text-primary block mt-1">with AI</span>
               </h1>
-              <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed">
                 Joblify uses AI to craft professional resumes through natural conversation. No complicated forms. Just chat naturally and watch your resume come to life.
               </p>
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">

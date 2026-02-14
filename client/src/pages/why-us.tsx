@@ -16,6 +16,8 @@ import {
   ArrowRight,
   Star
 } from "lucide-react";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/use-auth";
 
 const features = [
@@ -80,29 +82,10 @@ export default function WhyUs() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Briefcase className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-lg">Joblify</span>
-            </div>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/pricing">
-              <Button variant="ghost" size="sm">Pricing</Button>
-            </Link>
-            <Link href={ctaLink}>
-              <Button size="sm">{user ? "Dashboard" : "Get Started"}</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       {/* Hero Section */}
-      <section className="pt-24 pb-16 px-4 sm:px-6">
+      <section className="pt-28 pb-16 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto text-center">
           <Badge variant="secondary" className="mb-6 text-xs font-medium bg-primary/10 text-primary border-none">
             <Star className="w-3 h-3 mr-1.5" />
@@ -376,12 +359,8 @@ export default function WhyUs() {
         </div>
       </section>
 
-      {/* Simple Footer */}
-      <footer className="border-t py-6 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto text-center text-sm text-muted-foreground">
-          <p>&copy; 2026 Joblify. All rights reserved.</p>
-        </div>
-      </footer>
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
