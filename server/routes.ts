@@ -2126,7 +2126,7 @@ Key information about Joblify:
 - We help job seekers create professional, ATS-optimized resumes using AI
 - Features: AI Resume Builder, Cover Letter Generator, ATS Scanner, Job Matching, Resume Tailoring
 - Plans: Free (limited features), Plus ($9.99/mo), Ultra ($19.99/mo), Lifetime ($99 one-time)
-- We use secure Auth0 authentication and encrypt all user data
+- We use secure authentication and encrypt all user data
 - Export formats: PDF and DOCX
 - Contact email: support@joblifyai.com for technical issues, privacy@joblifyai.com for privacy concerns
 
