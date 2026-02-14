@@ -98,13 +98,13 @@ export default function CreateResume() {
             </p>
             {isAtLimit && (
               <p className="text-sm text-destructive mt-2">
-                You've reached your resume limit ({limits.current}/{limits.limit}). 
+                You've reached your resume limit ({limits.current}/{limits.limit}).
                 {limits.plan === "free" ? " Upgrade to create more resumes." : " Delete a resume to create a new one or upgrade your plan."}
               </p>
             )}
           </div>
 
-          <div className={`grid ${shouldHideAI ? 'md:grid-cols-1 max-w-md mx-auto' : 'md:grid-cols-2'} gap-6`}>
+          <div className={shouldHideAI ? 'grid md:grid-cols-1 max-w-md mx-auto gap-6' : 'grid md:grid-cols-2 gap-6'}>
             {/* Traditional Builder Option */}
             <Card className="border hover:border-primary/50 transition-colors cursor-pointer group">
               <CardContent className="p-6 sm:p-8">
