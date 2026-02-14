@@ -2674,6 +2674,24 @@ Respond ONLY with valid JSON, no additional text.`
         return res.status(400).json({ error: "No file uploaded" });
       }
 
+      // Check resume limit first
+      const resumeCheck = await storage.canAddResume(userId);
+      if (!resumeCheck.allowed) {
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const planLimits = PLAN_LIMITS[plan];
+        
+        return res.status(403).json({ 
+          error: "Resume limit reached", 
+          code: "RESUME_LIMIT",
+          limit: resumeCheck.limit,
+          current: resumeCheck.current,
+          message: planLimits.maxResumes === Infinity
+            ? "Resume limit reached."
+            : `Your plan allows up to ${resumeCheck.limit} resumes. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
+        });
+      }
+
       // Check usage limits
       const userUsage = await storage.getUsage(userId);
       const subscription = await storage.getSubscription(userId);
@@ -2683,8 +2701,12 @@ Respond ONLY with valid JSON, no additional text.`
       if (userUsage.importedResumesThisMonth >= limits.maxImportedResumesPerMonth) {
         return res.status(403).json({
           error: "Resume import limit reached for this month",
+          code: "RESUME_IMPORT_LIMIT",
           limit: limits.maxImportedResumesPerMonth,
           current: userUsage.importedResumesThisMonth,
+          message: limits.maxImportedResumesPerMonth === Infinity
+            ? "Resume import limit reached."
+            : `Your plan allows up to ${limits.maxImportedResumesPerMonth} resume imports per month. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
         });
       }
 

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient, getCsrfToken } from "@/lib/queryClient";
 import ResumePreview from "@/components/resume-preview/ResumePreview";
 import { ResumeListSkeleton } from "@/components/loading-skeleton";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
 import {
   FileText,
   Plus,
@@ -42,6 +43,7 @@ export default function Resumes() {
   const { toast } = useToast();
   const [deleteResumeId, setDeleteResumeId] = useState<string | null>(null);
   const [hasTriggeredAICreate, setHasTriggeredAICreate] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch resume limits
@@ -108,7 +110,12 @@ export default function Resumes() {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to upload resume");
+        const error: any = new Error(errorData.error || "Failed to upload resume");
+        error.code = errorData.code;
+        error.limit = errorData.limit;
+        error.current = errorData.current;
+        error.message = errorData.message || errorData.error;
+        throw error;
       }
       return response.json();
     },
@@ -124,11 +131,17 @@ export default function Resumes() {
       }
     },
     onError: (error: Error) => {
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload resume. Please try again.",
-        variant: "destructive",
-      });
+      // Check if this is a limit error
+      const errorAny = error as any;
+      if (errorAny?.code === "RESUME_LIMIT" || errorAny?.code === "RESUME_IMPORT_LIMIT") {
+        setShowUpgradeDialog(true);
+      } else {
+        toast({
+          title: "Upload Failed",
+          description: error.message || "Failed to upload resume. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -387,6 +400,16 @@ export default function Resumes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upgrade Dialog */}
+      <UpgradeDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        featureName="resumes"
+        currentPlan={limits?.plan || "free"}
+        limit={limits?.limit}
+        current={limits?.current}
+      />
     </div>
   );
 }
