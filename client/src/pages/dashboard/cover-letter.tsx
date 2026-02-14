@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getCsrfToken } from "@/lib/queryClient";
 import type { Resume } from "@shared/schema";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
 
 const MIN_JOB_DESCRIPTION_LENGTH = 20;
 
@@ -21,10 +22,16 @@ export default function CoverLetterGenerator() {
   const [jobDescription, setJobDescription] = useState("");
   const [tone, setTone] = useState<"professional" | "enthusiastic" | "creative">("professional");
   const [result, setResult] = useState<any>(null);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const { toast } = useToast();
 
   const { data: resumesData } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
+  });
+  
+  // Fetch usage data to get plan information
+  const { data: usageData } = useQuery<any>({
+    queryKey: ["/api/usage"],
   });
   
   // Ensure resumes is always an array
@@ -42,7 +49,17 @@ export default function CoverLetterGenerator() {
         headers,
         body: JSON.stringify({ resumeId, jobDescription, tone }),
       });
-      if (!res.ok) throw new Error("Failed to generate");
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        const error: any = new Error(errorData.error || "Failed to generate");
+        error.code = errorData.code;
+        error.limit = errorData.limit;
+        error.current = errorData.current;
+        error.message = errorData.message || errorData.error;
+        throw error;
+      }
+      
       return res.json();
     },
     onSuccess: (data) => {
@@ -52,12 +69,17 @@ export default function CoverLetterGenerator() {
         description: "Your personalized cover letter is ready.",
       });
     },
-    onError: () => {
-      toast({
-        title: "Generation Failed",
-        description: "Please try again or contact support.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      // Check if this is a limit error
+      if (error?.code === "COVER_LETTER_LIMIT") {
+        setShowUpgradeDialog(true);
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: error?.message || "Please try again or contact support.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -298,6 +320,16 @@ export default function CoverLetterGenerator() {
           )}
         </div>
       </div>
+
+      {/* Upgrade Dialog */}
+      <UpgradeDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        featureName="cover letters"
+        currentPlan="free"
+        limit={usageData?.limits?.maxCoverLetters}
+        current={usageData?.usage?.coverLettersThisMonth}
+      />
     </div>
   );
 }

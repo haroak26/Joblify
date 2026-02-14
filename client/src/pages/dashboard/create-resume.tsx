@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FileText, Sparkles, ArrowRight, Briefcase, Lock } from "lucide-react";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
 
 interface ResumeLimits {
   canCreate: boolean;
@@ -18,6 +19,7 @@ interface ResumeLimits {
 export default function CreateResume() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   // Fetch resume limits
   const { data: limits, isLoading: limitsLoading } = useQuery<ResumeLimits>({
@@ -42,16 +44,26 @@ export default function CreateResume() {
       }
     },
     onError: (error: any) => {
-      const errorMessage = error?.message || "Failed to create resume. Please try again.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Check if this is a limit error
+      if (error?.code === "RESUME_LIMIT" || error?.message?.includes("limit")) {
+        setShowUpgradeDialog(true);
+      } else {
+        const errorMessage = error?.message || "Failed to create resume. Please try again.";
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     },
   });
 
   const handleTraditionalBuilder = () => {
+    // Check limit before creating
+    if (isAtLimit) {
+      setShowUpgradeDialog(true);
+      return;
+    }
     createResumeMutation.mutate("traditional");
   };
 
@@ -62,6 +74,11 @@ export default function CreateResume() {
         description: "Your AI access has been restricted. Please contact support.",
         variant: "destructive",
       });
+      return;
+    }
+    // Check limit before creating
+    if (isAtLimit) {
+      setShowUpgradeDialog(true);
       return;
     }
     createResumeMutation.mutate("ai");
@@ -162,6 +179,16 @@ export default function CreateResume() {
           </div>
         </div>
       </div>
+
+      {/* Upgrade Dialog */}
+      <UpgradeDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        featureName="resumes"
+        currentPlan={limits?.plan || "free"}
+        limit={limits?.limit}
+        current={limits?.current}
+      />
     </div>
   );
 }

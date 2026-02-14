@@ -603,6 +603,24 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Resume ID and job description are required" });
       }
 
+      // Check cover letter usage limits
+      const usage = await storage.checkAndResetMonthlyUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const planLimits = PLAN_LIMITS[plan];
+      
+      if (usage.coverLettersThisMonth >= planLimits.maxCoverLettersPerMonth) {
+        return res.status(403).json({
+          error: "Cover letter limit reached",
+          code: "COVER_LETTER_LIMIT",
+          limit: planLimits.maxCoverLettersPerMonth,
+          current: usage.coverLettersThisMonth,
+          message: planLimits.maxCoverLettersPerMonth === Infinity
+            ? "Cover letter limit reached."
+            : `Your plan allows up to ${planLimits.maxCoverLettersPerMonth} cover letters per month. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
+        });
+      }
+
       const [resume] = await db
         .select()
         .from(resumes)
@@ -626,6 +644,14 @@ export async function registerRoutes(
         content,
         jobDescription,
       });
+
+      // Increment cover letter usage count
+      await db
+        .update(usage)
+        .set({ 
+          coverLettersThisMonth: sql`${usage.coverLettersThisMonth} + 1` 
+        })
+        .where(eq(usage.userId, userId));
 
       res.json(coverLetter);
     } catch (error) {
