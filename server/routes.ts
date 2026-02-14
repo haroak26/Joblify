@@ -1091,12 +1091,14 @@ export async function registerRoutes(
 
       const data = createSchema.parse(req.body);
 
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      
       // Create resume with provided data or empty data
       const [newResume] = await db
         .insert(resumes)
         .values({
           userId,
-          title: data.title || (req.user?.name ? `${req.user.name}'s Resume` : "Untitled Resume"),
+          title: data.title || (user?.name ? `${user.name}'s Resume` : "Untitled Resume"),
           template: data.template || "modern",
           resumeData: data.resumeData || createEmptyResumeData(),
         })
