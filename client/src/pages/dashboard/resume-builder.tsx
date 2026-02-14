@@ -318,6 +318,7 @@ export default function ResumeBuilder() {
 
   const handleSave = () => {
     if (!resumeData) return;
+    console.log("[ResumeBuilder] Saving resume data:", resumeData);
     setIsSaving(true);
     saveResumeMutation.mutate({
       title: resumeTitle,
@@ -354,6 +355,7 @@ export default function ResumeBuilder() {
   };
 
   const updateResumeData = useCallback((data: Partial<ResumeData>) => {
+    console.log("[ResumeBuilder] Updating resume data with:", data);
     setResumeData((prev) => {
       if (!prev) return data as ResumeData;
       // Deep merge personalInfo to prevent name/email from being overwritten
@@ -367,11 +369,13 @@ export default function ResumeBuilder() {
       if (prev.personalInfo?.email && (!mergedPersonalInfo.email || mergedPersonalInfo.email.trim() === "")) {
         mergedPersonalInfo.email = prev.personalInfo.email;
       }
-      return {
+      const updated = {
         ...prev,
         ...data,
         personalInfo: mergedPersonalInfo,
       };
+      console.log("[ResumeBuilder] New resume data:", updated);
+      return updated;
     });
   }, []);
 

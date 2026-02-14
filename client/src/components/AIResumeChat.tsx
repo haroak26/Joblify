@@ -202,6 +202,11 @@ export default function AIResumeChat({
       : ['summary', 'experience', 'education', 'skills'];
     const firstSection = activeSections[0] || 'summary';
 
+    // Set the editing section to the first section in builder mode
+    if (mode === "builder" && !editingSection) {
+      setEditingSection(firstSection);
+    }
+
     const sectionOpeners: Record<string, string> = {
       summary: `**What kind of roles are you aiming for right now?**`,
       experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
@@ -352,8 +357,10 @@ export default function AIResumeChat({
       // Apply structured updates from the done event
       if (doneData) {
         if (doneData.updatedData && Object.keys(doneData.updatedData).length > 0) {
+          console.log("[AIResumeChat] Applying updates:", doneData.updatedData);
           onUpdate(doneData.updatedData);
           if (onAutoSave) {
+            console.log("[AIResumeChat] Triggering auto-save");
             setTimeout(() => onAutoSave(), 500);
           }
         }
@@ -408,6 +415,56 @@ export default function AIResumeChat({
     setEditingSection(undefined);
   }, []);
 
+  // Section navigation handlers
+  const getSectionOpener = (sectionId: string): string => {
+    const sectionOpeners: Record<string, string> = {
+      summary: `**What kind of roles are you aiming for right now?**`,
+      experience: `**Tell me about a job, internship, or major responsibility you've had.**`,
+      education: `**Where did you study or train?**`,
+      skills: `**What tasks or tools do people usually come to you for help with?**`,
+      certifications: `**Have you completed any courses, certifications, or training programs?**`,
+      projects: `**Have you worked on any projects — personal, academic, or professional — that you're proud of?**`,
+      awards: `**What's something you've done that you're really proud of?**`,
+      leadership: `**Have you held any leadership roles — at work, in organizations, or in your community?**`,
+      research: `**Have you been involved in any research work?**`,
+      publications: `**Have you published any papers, articles, or other written work?**`,
+    };
+    return sectionOpeners[sectionId] || sectionOpeners.summary;
+  };
+
+  const handleNextSection = useCallback(() => {
+    // Find next incomplete section
+    const currentIndex = activeComponents.indexOf(editingSection || '');
+    if (currentIndex < activeComponents.length - 1) {
+      const nextSection = activeComponents[currentIndex + 1];
+      setEditingSection(nextSection);
+      
+      // Trigger AI to ask about next section
+      const nextQuestion = getSectionOpener(nextSection);
+      setMessages(prev => [...prev, {
+        role: "ai",
+        content: `Great! Now let's work on your **${COMPONENT_LABELS[nextSection]}**.\n\n${nextQuestion}`,
+        id: `ai-${Date.now()}`
+      }]);
+      
+      // Save the transition message to DB
+      saveMessageToDb("ai", `Great! Now let's work on your **${COMPONENT_LABELS[nextSection]}**.\n\n${nextQuestion}`);
+    } else {
+      // All sections complete
+      setIsComplete(true);
+      if (onComplete) onComplete();
+    }
+  }, [activeComponents, editingSection, onComplete, saveMessageToDb]);
+
+  const handleRewrite = useCallback(() => {
+    const rewriteMessage = "I'd like you to rewrite that section.";
+    setInputMessage(rewriteMessage);
+    // Trigger send immediately
+    setTimeout(() => {
+      handleSendMessage();
+    }, 100);
+  }, [handleSendMessage]);
+
   // Filter restricted sections for free plan in AI builder mode
   const getFilteredComponents = () => {
     if (!isFreePlan || !isGuidedBuilder) return activeComponents;
@@ -433,7 +490,9 @@ export default function AIResumeChat({
                 {isGuidedBuilder ? "AI Resume Builder" : "AI Resume Enhancement"}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {editingSection 
+                {editingSection && isGuidedBuilder
+                  ? `${COMPONENT_LABELS[editingSection] || editingSection} (Section ${activeComponents.indexOf(editingSection) + 1} of ${activeComponents.length})`
+                  : editingSection 
                   ? `Editing: ${COMPONENT_LABELS[editingSection] || editingSection}` 
                   : isGuidedBuilder
                   ? "Building your resume step-by-step"
@@ -490,7 +549,7 @@ export default function AIResumeChat({
       {/* Chat Messages */}
       <div className="flex-1 overflow-auto p-4" ref={scrollContainerRef}>
         <div className="space-y-4 max-w-3xl mx-auto" ref={scrollRef}>
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div
               key={message.id}
               className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
@@ -509,31 +568,62 @@ export default function AIResumeChat({
               </div>
 
               {/* Message Content */}
-              <div
-                className={`flex-1 p-3 ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground ml-12 rounded-tl-lg rounded-tr-sm rounded-b-lg"
-                    : "bg-muted mr-12 rounded-tl-sm rounded-tr-lg rounded-b-lg"
-                }`}
-              >
-                {message.role === "ai" ? (
-                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                        ul: ({ children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
-                        li: ({ children }) => <li className="mb-1">{children}</li>,
-                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                        em: ({ children }) => <em className="italic">{children}</em>,
-                        code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>,
-                      }}
+              <div className="flex-1">
+                <div
+                  className={`p-3 ${
+                    message.role === "user"
+                      ? "bg-primary text-primary-foreground ml-12 rounded-tl-lg rounded-tr-sm rounded-b-lg"
+                      : "bg-muted mr-12 rounded-tl-sm rounded-tr-lg rounded-b-lg"
+                  }`}
+                >
+                  {message.role === "ai" ? (
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="mb-1">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          em: ({ children }) => <em className="italic">{children}</em>,
+                          code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                  )}
+                </div>
+                
+                {/* Section Navigation Buttons */}
+                {message.role === "ai" && 
+                 index === messages.length - 1 && 
+                 !isStreaming && 
+                 isGuidedBuilder &&
+                 editingSection &&
+                 (message.content.toLowerCase().includes("want it more") || 
+                  message.content.toLowerCase().includes("want me to") ||
+                  message.content.toLowerCase().includes("want these to") ||
+                  message.content.toLowerCase().includes("do you like") ||
+                  message.content.toLowerCase().includes("would you like")) && (
+                  <div className="flex gap-2 mt-3 mr-12">
+                    <Button 
+                      onClick={handleNextSection}
+                      className="bg-primary hover:bg-primary/90"
+                      size="sm"
                     >
-                      {message.content}
-                    </ReactMarkdown>
+                      Looks Good - Next Section
+                    </Button>
+                    <Button 
+                      onClick={handleRewrite}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Rewrite This
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                 )}
               </div>
             </div>
