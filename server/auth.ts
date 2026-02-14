@@ -237,7 +237,14 @@ export function setupAuth(app: Express) {
         });
         
         // Send email with 2FA code
-        await send2FAEmail(user.email, user.username, code);
+        const emailSent = await send2FAEmail(user.email, user.username, code);
+        
+        if (!emailSent) {
+          console.error('[AUTH] Failed to send 2FA email to:', user.email);
+          return res.status(500).json({ 
+            error: "Failed to send verification code. Please try again or contact support." 
+          });
+        }
         
         // Store pending 2FA user ID in session
         req.session.pending2FAUserId = user.id;

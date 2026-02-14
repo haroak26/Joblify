@@ -2,6 +2,7 @@ import crypto from "crypto";
 
 /**
  * Generate a 6-digit verification code for email-based 2FA
+ * Uses crypto.randomInt which is cryptographically secure
  */
 export function generate2FACode(): string {
   // Generate a random 6-digit code

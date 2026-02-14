@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Briefcase, Loader2, AlertCircle, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,6 @@ export default function Verify2FA() {
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    // Focus input on mount
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
 
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
