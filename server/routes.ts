@@ -2418,21 +2418,25 @@ Guidelines:
       }
 
       // Add to Brevo newsletter list (list #1) if configured
-      const brevoNewsletterListId = process.env.BREVO_NEWSLETTER_LIST_ID || "1";
-      const parsedNewsletterListId = parseInt(brevoNewsletterListId, 10);
-      if (!isNaN(parsedNewsletterListId)) {
-        await addContactToBrevoList(email, parsedNewsletterListId);
-      } else {
-        console.error('[API] Invalid BREVO_NEWSLETTER_LIST_ID:', brevoNewsletterListId);
+      const brevoNewsletterListId = process.env.BREVO_NEWSLETTER_LIST_ID;
+      if (brevoNewsletterListId) {
+        const parsedNewsletterListId = parseInt(brevoNewsletterListId, 10);
+        if (!isNaN(parsedNewsletterListId)) {
+          await addContactToBrevoList(email, parsedNewsletterListId);
+        } else {
+          console.error('[API] Invalid BREVO_NEWSLETTER_LIST_ID:', brevoNewsletterListId);
+        }
       }
 
       // Add to Brevo marketing list (list #2) if configured
-      const brevoMarketingListId = process.env.BREVO_MARKETING_LIST_ID || "2";
-      const parsedMarketingListId = parseInt(brevoMarketingListId, 10);
-      if (!isNaN(parsedMarketingListId)) {
-        await addContactToBrevoList(email, parsedMarketingListId);
-      } else {
-        console.error('[API] Invalid BREVO_MARKETING_LIST_ID:', brevoMarketingListId);
+      const brevoMarketingListId = process.env.BREVO_MARKETING_LIST_ID;
+      if (brevoMarketingListId) {
+        const parsedMarketingListId = parseInt(brevoMarketingListId, 10);
+        if (!isNaN(parsedMarketingListId)) {
+          await addContactToBrevoList(email, parsedMarketingListId);
+        } else {
+          console.error('[API] Invalid BREVO_MARKETING_LIST_ID:', brevoMarketingListId);
+        }
       }
 
       res.json({ success: true, message: "Successfully subscribed to newsletter!" });

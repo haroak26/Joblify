@@ -26,8 +26,8 @@ export default function PersonalInfoSection({ data, onUpdate }: PersonalInfoSect
       linkedInValue = '@' + linkedInValue;
     }
     
-    // If user tries to remove @, keep it
-    if (!linkedInValue || linkedInValue === '') {
+    // If user tries to clear the field completely, keep just @
+    if (!linkedInValue) {
       linkedInValue = '@';
     }
     
