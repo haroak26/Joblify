@@ -157,8 +157,8 @@ export function setupAuth(app: Express) {
 
       // Initialize email engagement system (welcome email + feature reminders)
       const { initializeEmailEngagement } = await import("./email-engagement");
-      initializeEmailEngagement(user.id).catch(err => {
-        // Error logging without sensitive data
+      initializeEmailEngagement(user.id).catch(() => {
+        // Silently fail - email engagement is non-critical
       });
 
       // Add user to Brevo contact list on signup
@@ -169,8 +169,8 @@ export function setupAuth(app: Express) {
           const { addContactToBrevoList } = await import("./brevo");
           addContactToBrevoList(user.email, parsedListId, {
             FIRSTNAME: user.name || user.username,
-          }).catch(err => {
-            // Error logging without sensitive data
+          }).catch(() => {
+            // Silently fail - Brevo list addition is non-critical
           });
         }
       }

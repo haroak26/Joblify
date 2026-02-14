@@ -40,7 +40,6 @@ export function setupAdminRoutes(app: Express) {
       const search = req.query.search as string;
       
       const result = await storage.getAllUsers({ page, limit, search });
-      console.log('[API] Admin fetch result:', { count: result.users.length, total: result.total });
       
       // Remove sensitive data before sending
       const sanitizedUsers = result.users.map((user) => ({
