@@ -354,10 +354,25 @@ export default function ResumeBuilder() {
   };
 
   const updateResumeData = useCallback((data: Partial<ResumeData>) => {
-    setResumeData((prev) => ({
-      ...prev!,
-      ...data,
-    }));
+    setResumeData((prev) => {
+      if (!prev) return data as ResumeData;
+      // Deep merge personalInfo to prevent name/email from being overwritten
+      const mergedPersonalInfo = data.personalInfo
+        ? { ...prev.personalInfo, ...data.personalInfo }
+        : prev.personalInfo;
+      // Preserve name and email: never allow them to become empty if they were set
+      if (prev.personalInfo?.name && (!mergedPersonalInfo.name || mergedPersonalInfo.name.trim() === "")) {
+        mergedPersonalInfo.name = prev.personalInfo.name;
+      }
+      if (prev.personalInfo?.email && (!mergedPersonalInfo.email || mergedPersonalInfo.email.trim() === "")) {
+        mergedPersonalInfo.email = prev.personalInfo.email;
+      }
+      return {
+        ...prev,
+        ...data,
+        personalInfo: mergedPersonalInfo,
+      };
+    });
   }, []);
 
   const getSaveStatus = () => {
