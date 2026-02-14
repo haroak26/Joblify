@@ -2,8 +2,9 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Briefcase, ArrowRight } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Check, ArrowRight } from "lucide-react";
+import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/use-auth";
 
 const plans = [
@@ -100,27 +101,10 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/">
-            <a className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Briefcase className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-lg">Joblify</span>
-            </a>
-          </Link>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link href={user ? "/dashboard" : "/login"}>
-              <Button size="sm">{user ? "Dashboard" : "Sign In"}</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       {/* Hero Section */}
-      <section className="pt-24 pb-12 sm:pt-32 sm:pb-16 px-4 sm:px-6">
+      <section className="pt-28 pb-12 sm:pt-32 sm:pb-16 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <Badge variant="secondary" className="mb-4 text-xs font-medium bg-primary/10 text-primary border-none">
             Simple, Transparent Pricing
@@ -247,11 +231,7 @@ export default function Pricing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-8 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 Joblify. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
