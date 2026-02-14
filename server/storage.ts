@@ -361,7 +361,7 @@ export class DatabaseStorage implements IStorage {
         and(
           // Only active paid plans (not free, not lifetime)
           eq(subscriptions.status, "active"),
-          sql`${subscriptions.plan} IN ('plus', 'ultra')`,
+          inArray(subscriptions.plan, ["plus", "ultra"]),
           // Has a renewal date set
           isNotNull(subscriptions.currentPeriodEnd),
           // Renewal is within the next 7 days
