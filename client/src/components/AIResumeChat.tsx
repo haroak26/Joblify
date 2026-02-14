@@ -601,11 +601,11 @@ export default function AIResumeChat({
               </div>
 
               {/* Message Content */}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div
                   className={`p-3 ${
                     message.role === "user"
-                      ? "bg-primary text-primary-foreground ml-12 rounded-tl-lg rounded-tr-sm rounded-b-lg"
+                      ? "bg-primary text-primary-foreground ml-12 mr-4 rounded-tl-lg rounded-tr-sm rounded-b-lg"
                       : "bg-muted mr-12 rounded-tl-sm rounded-tr-lg rounded-b-lg"
                   }`}
                 >
