@@ -129,6 +129,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Extended InsertUser type for user creation with optional fields
+export type ExtendedInsertUser = {
+  id?: string;
+  username: string;
+  email: string;
+  password: string;
+  name?: string;
+  verificationToken?: string;
+  authProvider?: string;
+  authProviderId?: string;
+  emailVerified?: boolean;
+  profileSetupComplete?: boolean;
+};
+
 export const skillSchema = z.object({
   id: z.string(),
   name: z.string().min(1),

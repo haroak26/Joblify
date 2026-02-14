@@ -1,5 +1,5 @@
 import { 
-  type User, type InsertUser, type Skill,
+  type User, type InsertUser, type ExtendedInsertUser, type Skill,
   type Subscription, type Usage, type PlanType, normalizePlan,
   type CoverLetter, type InsertCoverLetter,
   type SecurityEvent, type InsertSecurityEvent,
@@ -184,15 +184,15 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser & { name?: string; verificationToken?: string; authProvider?: string; authProviderId?: string; emailVerified?: boolean; profileSetupComplete?: boolean }): Promise<User> {
+  async createUser(insertUser: ExtendedInsertUser): Promise<User> {
     const result = await db
       .insert(users)
       .values({
-        id: (insertUser as any).id || undefined,
+        id: insertUser.id || undefined,
         name: insertUser.name || null,
-        username: (insertUser as any).username,
-        email: (insertUser as any).email,
-        password: (insertUser as any).password,
+        username: insertUser.username,
+        email: insertUser.email,
+        password: insertUser.password,
         verificationToken: insertUser.verificationToken || null,
         emailVerified: insertUser.emailVerified ?? false,
         authProvider: insertUser.authProvider || null,

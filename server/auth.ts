@@ -129,7 +129,7 @@ export function setupAuth(app: Express) {
         password: hashedPassword,
         verificationToken,
         profileSetupComplete: true,
-      } as any);
+      });
 
       // Profile will be set up later in account settings, not during registration
       req.session.userId = user.id;
