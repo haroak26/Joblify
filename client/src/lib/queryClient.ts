@@ -1,5 +1,4 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getStoredTokens } from "./auth-storage";
 
 /**
  * Get CSRF token from cookie
@@ -68,12 +67,7 @@ async function throwIfResNotOk(res: Response) {
 }
 
 function getAuthHeaders(): HeadersInit {
-  const tokens = getStoredTokens();
   const headers: HeadersInit = {};
-  
-  if (tokens?.accessToken) {
-    headers["Authorization"] = `Bearer ${tokens.accessToken}`;
-  }
   
   // Add CSRF token for state-changing requests
   const csrfToken = getCsrfToken();

@@ -10,7 +10,7 @@ The smart contact form is an AI-powered customer support system that attempts to
 - Comprehensive knowledge base covering:
   - Product features (Resume Builder, Cover Letter Generator, ATS Scanner, etc.)
   - Pricing plans (Free, Plus, Ultra, Lifetime)
-  - Security and privacy (Auth0, GDPR compliance)
+  - Security and privacy (encryption, GDPR compliance)
   - Common questions and troubleshooting
 
 ### 2. Smart Routing

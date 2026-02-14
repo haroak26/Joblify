@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useLocation } from "wouter";
-import { apiRequest, queryClient, getCsrfToken, ensureCsrfToken } from "@/lib/queryClient";
+import { apiRequest, queryClient, ensureCsrfToken } from "@/lib/queryClient";
 import { 
   clearStoredUser, 
   getStoredUser, 
@@ -26,8 +26,6 @@ interface AuthContextType {
   register: (email: string, password: string, name?: string, username?: string) => Promise<void>;
   logout: () => Promise<void>;
   resendVerification: () => Promise<void>;
-  loginWithProvider: (provider: string) => Promise<void>;
-  setupProfile: (name: string, username: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -148,58 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithProvider = async (provider: string) => {
-    try {
-      const response = await fetch(`/api/auth/sso/${provider}`, {
-        credentials: "include",
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to initiate login");
-      }
-      // Redirect to the WorkOS authorization URL
-      window.location.href = data.url;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("Failed to initiate provider login");
-    }
-  };
-
-  const setupProfile = async (name: string, username: string) => {
-    try {
-      const csrfToken = await ensureCsrfToken();
-      
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (csrfToken) {
-        headers["x-csrf-token"] = csrfToken;
-      }
-      
-      const response = await fetch("/api/auth/setup-profile", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ name, username }),
-        credentials: "include",
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Profile setup failed");
-      }
-      setUser(data.user);
-      setStoredUser(data.user as StoredUser);
-      queryClient.clear();
-      setLocation("/dashboard");
-    } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("Profile setup failed");
-    }
-  };
-
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, resendVerification, loginWithProvider, setupProfile }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, resendVerification }}>
       {children}
     </AuthContext.Provider>
   );

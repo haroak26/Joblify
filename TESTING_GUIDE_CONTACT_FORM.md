@@ -13,7 +13,7 @@
 - [ ] Submit question about pricing → AI should respond with plan details
 - [ ] Submit question about features → AI should respond with feature info
 - [ ] Submit question about export formats → AI should mention PDF/DOCX
-- [ ] Submit question about security → AI should mention Auth0/GDPR
+- [ ] Submit question about security → AI should mention security/GDPR
 - [ ] Submit technical account question → AI should recommend support
 
 ### 3. User Decision Testing
