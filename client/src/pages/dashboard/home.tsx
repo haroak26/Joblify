@@ -28,6 +28,14 @@ interface OnboardingStatus {
   hasGottenATSScore: boolean;
 }
 
+interface ResumeLimits {
+  canCreate: boolean;
+  limit: number;
+  current: number;
+  plan: string;
+  aiAccessBlocked: boolean;
+}
+
 export default function DashboardHome() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -40,10 +48,18 @@ export default function DashboardHome() {
     queryKey: ["/api/user/onboarding-status"],
   });
 
+  // Fetch resume limits
+  const { data: limits } = useQuery<ResumeLimits>({
+    queryKey: ["/api/resumes/limits"],
+  });
+
   // Ensure resumes is always an array
   const resumes = Array.isArray(resumesData?.resumes) ? resumesData.resumes : [];
   const totalResumes = resumes.length;
   const recentResumes = resumes.slice(0, 3);
+
+  // Check if AI should be hidden (limit reached or AI blocked)
+  const shouldHideAI = limits && (!limits.canCreate || limits.aiAccessBlocked);
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString("en-US", {
@@ -156,23 +172,26 @@ export default function DashboardHome() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        <Card className="border">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium">AI Resume Builder</h3>
-              <p className="text-xs text-muted-foreground">Build with AI chat assistance</p>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => setLocation("/dashboard/resumes/create")}
-            >
-              Create <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          </CardContent>
-        </Card>
+        {/* AI Resume Builder - Only show if not at limit and AI not blocked */}
+        {!shouldHideAI && (
+          <Card className="border">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium">AI Resume Builder</h3>
+                <p className="text-xs text-muted-foreground">Build with AI chat assistance</p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setLocation("/dashboard/resumes/create")}
+              >
+                Create <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border">
           <CardContent className="p-5 flex items-center gap-4">
