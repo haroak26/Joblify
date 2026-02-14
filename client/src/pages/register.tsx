@@ -179,6 +179,7 @@ export default function Register() {
         setStep(3);
         step3Form.setError("username", { message });
       } else {
+        // Keep on step 4 for other errors
         step4Form.setError("root", { message });
       }
     } finally {

@@ -557,7 +557,7 @@ export async function registerRoutes(
           skills = Object.values(parsed).find(val => Array.isArray(val)) || [];
         }
       } catch (e) {
-        console.error('[API] Failed to parse AI skills response');
+        console.error('[API] Failed to parse AI skills response:', e instanceof Error ? e.message : 'Parse error');
         // Simple regex fallback if JSON parsing fails
         const matches = content.match(/"([^"]+)"/g);
         if (matches) {
@@ -567,7 +567,7 @@ export async function registerRoutes(
       
       res.json({ skills: skills.slice(0, 10) });
     } catch (error) {
-      console.error('[API] Error suggesting skills for user:', userId, error);
+      console.error('[API] Error suggesting skills:', error instanceof Error ? error.message : 'Unknown error');
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
           error: "Invalid input", 
