@@ -2727,7 +2727,7 @@ Respond ONLY with valid JSON, no additional text.`
       }
 
       // Limit extracted text size to prevent DoS via oversized content
-      const MAX_EXTRACTED_TEXT_LENGTH = 50000; // ~50KB of text
+      const MAX_EXTRACTED_TEXT_LENGTH = 50000; // 50,000 characters
       if (extractedText.length > MAX_EXTRACTED_TEXT_LENGTH) {
         extractedText = extractedText.slice(0, MAX_EXTRACTED_TEXT_LENGTH);
       }
