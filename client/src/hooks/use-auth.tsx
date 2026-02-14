@@ -80,6 +80,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!response.ok) {
         throw new Error(data.error || "Login failed");
       }
+      
+      // Check if 2FA is required
+      if (data.requires2FA) {
+        // Redirect to 2FA verification page
+        setLocation("/verify-2fa");
+        return;
+      }
+      
       setUser(data.user);
       setStoredUser(data.user as StoredUser);
       queryClient.clear();

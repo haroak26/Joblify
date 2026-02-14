@@ -16,6 +16,7 @@ import { authRateLimit, registrationRateLimit, trackLoginAttempt, resetLoginAtte
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+    pending2FAUserId?: string; // User ID waiting for 2FA verification
   }
 }
 
@@ -218,6 +219,43 @@ export function setupAuth(app: Express) {
         await storage.updateUser(user.id, { password: newHash });
       }
 
+      // Check if user has 2FA enabled
+      if (user.twoFactorEnabled) {
+        // Generate and send 2FA code via email
+        const { generate2FACode, get2FACodeExpiry } = await import("./lib/email2fa");
+        const { send2FAEmail } = await import("./email");
+        
+        const code = generate2FACode();
+        const expiresAt = get2FACodeExpiry();
+        
+        // Store verification code in database
+        await storage.createVerificationCode({
+          userId: user.id,
+          code,
+          codeType: 'email_2fa',
+          expiresAt,
+        });
+        
+        // Send email with 2FA code
+        const emailSent = await send2FAEmail(user.email, user.username, code);
+        
+        if (!emailSent) {
+          console.error('[AUTH] Failed to send 2FA email to:', user.email);
+          return res.status(500).json({ 
+            error: "Failed to send verification code. Please try again or contact support." 
+          });
+        }
+        
+        // Store pending 2FA user ID in session
+        req.session.pending2FAUserId = user.id;
+        
+        return res.json({
+          requires2FA: true,
+          message: "Please check your email for the verification code",
+        });
+      }
+
+      // If 2FA not enabled, complete login
       req.session.userId = user.id;
 
       res.json({
@@ -235,6 +273,71 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Verify 2FA code endpoint
+  app.post("/api/auth/verify-2fa", authRateLimit, async (req: Request, res: Response) => {
+    try {
+      const { code } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ error: "Verification code is required" });
+      }
+
+      // Check if there's a pending 2FA user
+      if (!req.session.pending2FAUserId) {
+        return res.status(400).json({ error: "No pending 2FA verification" });
+      }
+
+      const userId = req.session.pending2FAUserId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Get the most recent unused email_2fa code for this user
+      const verificationCode = await storage.getLatestVerificationCode(userId, 'email_2fa');
+      
+      if (!verificationCode) {
+        return res.status(400).json({ error: "No verification code found. Please request a new code." });
+      }
+
+      // Check if code is expired
+      const { is2FACodeExpired } = await import("./lib/email2fa");
+      if (is2FACodeExpired(verificationCode.expiresAt)) {
+        return res.status(400).json({ error: "Verification code has expired. Please request a new code." });
+      }
+
+      // Verify the code
+      const { verify2FACode } = await import("./lib/email2fa");
+      if (!verify2FACode(code, verificationCode.code)) {
+        return res.status(401).json({ error: "Invalid verification code" });
+      }
+
+      // Mark code as used
+      await storage.markVerificationCodeAsUsed(verificationCode.id);
+
+      // Complete the login
+      req.session.userId = userId;
+      delete req.session.pending2FAUserId;
+
+      res.json({
+        user: {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          emailVerified: user.emailVerified,
+          isAdmin: user.isAdmin,
+          authProvider: user.authProvider,
+          profileSetupComplete: user.profileSetupComplete,
+        },
+      });
+    } catch (error) {
+      console.error("2FA verification error:", error);
+      res.status(500).json({ error: "Verification failed" });
     }
   });
 

@@ -10,7 +10,6 @@ import {
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { getUncachableStripeClient } from "./stripeClient";
-import { generate2FASecret, generateQRCode, verify2FAToken, generateBackupCodes } from './lib/twoFactor';
 import { addContactToBrevoList } from './brevo';
 import { validateFile, getFileTypeName } from './lib/fileValidation';
 import { aiRateLimit } from './middleware/security';
@@ -692,7 +691,6 @@ export async function registerRoutes(
 
       res.json({
         enabled: user.twoFactorEnabled,
-        hasBackupCodes: Array.isArray(user.backupCodes) && user.backupCodes.length > 0,
       });
     } catch (error) {
       console.error('[API] Error getting 2FA status:', error);
@@ -700,8 +698,8 @@ export async function registerRoutes(
     }
   });
 
-  // Setup 2FA - generate secret and QR code
-  app.post("/api/user/2fa/setup", requireAuth, async (req: Request, res) => {
+  // Enable 2FA - email-based verification
+  app.post("/api/user/2fa/enable", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
 
@@ -710,65 +708,24 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Generate new 2FA secret
-      const { encryptedSecret, otpauthUrl } = generate2FASecret(user.email);
-      
-      // Generate QR code
-      const qrCode = await generateQRCode(otpauthUrl);
-
-      // Store encrypted secret temporarily (not enabled yet)
-      await storage.updateUser(userId, {
-        twoFactorSecret: encryptedSecret,
-        twoFactorEnabled: false,
-      });
-
-      res.json({
-        qrCode,
-      });
-    } catch (error) {
-      console.error('[API] Error setting up 2FA:', error);
-      res.status(500).json({ error: "Failed to setup 2FA" });
-    }
-  });
-
-  // Verify and enable 2FA
-  app.post("/api/user/2fa/verify", requireAuth, async (req: Request, res) => {
-    try {
-      const userId = req.session.userId!;
-
-      const { token } = req.body;
-      if (!token) {
-        return res.status(400).json({ error: "Verification token is required" });
+      if (user.twoFactorEnabled) {
+        return res.status(400).json({ error: "2FA is already enabled" });
       }
 
-      const user = await storage.getUser(userId);
-      if (!user || !user.twoFactorSecret) {
-        return res.status(400).json({ error: "2FA setup not initiated" });
-      }
-
-      // Verify the token
-      const isValid = verify2FAToken(user.twoFactorSecret, token);
-      if (!isValid) {
-        return res.status(400).json({ error: "Invalid verification code" });
-      }
-
-      // Generate backup codes
-      const { codes, encryptedCodes } = generateBackupCodes(10);
-
-      // Enable 2FA and store backup codes
+      // Enable 2FA (email-based)
       await storage.updateUser(userId, {
         twoFactorEnabled: true,
-        backupCodes: encryptedCodes,
+        twoFactorSecret: null, // Not needed for email-based 2FA
+        backupCodes: [], // Not needed for email-based 2FA
       });
 
       res.json({
         success: true,
-        backupCodes: codes,
-        message: "2FA enabled successfully",
+        message: "2FA enabled successfully. You will receive a verification code via email when you log in.",
       });
     } catch (error) {
-      console.error('[API] Error verifying 2FA:', error);
-      res.status(500).json({ error: "Failed to verify 2FA" });
+      console.error('[API] Error enabling 2FA:', error);
+      res.status(500).json({ error: "Failed to enable 2FA" });
     }
   });
 

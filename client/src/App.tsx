@@ -23,6 +23,7 @@ import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import VerifyEmail from "@/pages/verify-email";
+import Verify2FA from "@/pages/verify-2fa";
 import Onboarding from "@/pages/onboarding";
 import ResumeBuilder from "@/pages/dashboard/resume-builder";
 import Resumes from "@/pages/dashboard/resumes";
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/verify-2fa" component={Verify2FA} />
       <Route path="/onboarding">
         <ProtectedRoute>
           <Onboarding />
