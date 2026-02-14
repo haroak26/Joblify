@@ -1096,7 +1096,7 @@ export async function registerRoutes(
         .insert(resumes)
         .values({
           userId,
-          title: data.title || "Untitled Resume",
+          title: data.title || (req.user?.name ? `${req.user.name}'s Resume` : "Untitled Resume"),
           template: data.template || "modern",
           resumeData: data.resumeData || createEmptyResumeData(),
         })

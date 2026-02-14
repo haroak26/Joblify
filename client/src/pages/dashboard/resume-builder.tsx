@@ -104,7 +104,7 @@ export default function ResumeBuilder() {
   const isCompiling = search.includes("compiling=true");
   
   const [activeSection, setActiveSection] = useState<string>("personal");
-  const [resumeTitle, setResumeTitle] = useState<string>("Untitled Resume");
+  const [resumeTitle, setResumeTitle] = useState<string>("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("modern");

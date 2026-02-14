@@ -28,9 +28,7 @@ export default function CreateResume() {
 
   const createResumeMutation = useMutation({
     mutationFn: async (mode: "traditional" | "ai") => {
-      const response = await apiRequest("POST", "/api/resumes", {
-        title: "Untitled Resume",
-      });
+      const response = await apiRequest("POST", "/api/resumes", {});
       return { resume: await response.json(), mode };
     },
     onSuccess: ({ resume, mode }) => {
