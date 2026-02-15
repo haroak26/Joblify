@@ -190,7 +190,7 @@ export function normalizePlan(plan?: string | null): PlanType {
 export const resumeDataSchema = z.object({
   personalInfo: z.object({
     name: z.string().default(""),
-    email: z.string().email().optional().or(z.literal("")),
+    email: z.string().default(""),
     phone: z.string().default(""),
     location: z.string().default(""),
     linkedin: z.string().default(""),
@@ -222,7 +222,7 @@ export const resumeDataSchema = z.object({
     name: z.string(),
     description: z.string(),
     technologies: z.array(z.string()),
-    url: z.string().url().optional().or(z.literal("")),
+    url: z.string().optional().default(""),
   })).optional().default([]),
   awards: z.array(z.object({
     title: z.string(),
@@ -243,14 +243,14 @@ export const resumeDataSchema = z.object({
     startDate: z.string(),
     endDate: z.string().nullable(),
     description: z.string(),
-    url: z.string().url().optional().or(z.literal("")),
+    url: z.string().optional().default(""),
   })).optional().default([]),
   publications: z.array(z.object({
     title: z.string(),
     authors: z.string(),
     journal: z.string(),
     date: z.string(),
-    url: z.string().url().optional().or(z.literal("")),
+    url: z.string().optional().default(""),
   })).optional().default([]),
 });
 
