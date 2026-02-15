@@ -6,7 +6,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
 import { setupStripeRoutes } from "./stripe";
-import { startScheduleRunner } from "./scheduler";
+import { pool } from "./db";
 import { securityHeaders, sanitizeInput, generalApiRateLimit } from "./middleware/security";
 import { csrfSetToken, csrfVerifyToken } from "./middleware/csrf";
 
@@ -149,6 +149,43 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+// Track cleanup tasks
+const cleanupTasks: (() => Promise<void> | void)[] = [];
+
+export function registerCleanupTask(task: () => Promise<void> | void) {
+  cleanupTasks.push(task);
+}
+
+// Graceful shutdown handler
+async function gracefulShutdown(signal: string) {
+  log(`Received ${signal}, starting graceful shutdown...`);
+  
+  // Run cleanup tasks
+  for (const task of cleanupTasks) {
+    try {
+      await task();
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    }
+  }
+  
+  // Close HTTP server
+  httpServer.close(() => {
+    log('HTTP server closed');
+    process.exit(0);
+  });
+  
+  // Force exit if shutdown takes too long
+  setTimeout(() => {
+    console.error('Forcefully shutting down after timeout');
+    process.exit(1);
+  }, 10000); // 10 second timeout
+}
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 const shouldLogRequests = process.env.LOG_REQUESTS === "true";
 
 app.use((req, res, next) => {
@@ -169,9 +206,26 @@ app.use((req, res, next) => {
   await setupStripeRoutes(app);
   setupAdminRoutes(app);
   await registerRoutes(httpServer, app);
+  
+  // Start scheduler if enabled
+  let schedulerTimer: NodeJS.Timeout | undefined;
   if (process.env.SCHEDULE_RUNNER_ENABLED === "true") {
-    startScheduleRunner();
+    const { startScheduleRunner, stopScheduler } = await import("./scheduler");
+    schedulerTimer = startScheduleRunner();
+    
+    // Register cleanup task to stop scheduler
+    registerCleanupTask(() => {
+      if (schedulerTimer) {
+        stopScheduler(schedulerTimer);
+      }
+    });
   }
+  
+  // Register database cleanup
+  registerCleanupTask(async () => {
+    log('Closing database connections...');
+    await pool.end();
+  });
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
