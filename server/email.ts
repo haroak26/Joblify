@@ -106,7 +106,7 @@ function getAppUrl(): string {
     return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
   }
   // Final fallback to production domain
-  return "https://JoblifyAI.com";
+  return "https://joblifyai.com";
 }
 
 // Export getAppUrl for use in other modules

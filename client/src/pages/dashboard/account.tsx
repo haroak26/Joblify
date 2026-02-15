@@ -149,6 +149,9 @@ const plans = [
 // Helper function to get localStorage key for processed checkout sessions
 const getCheckoutSyncKey = (sessionId: string) => `checkout_synced_${sessionId}`;
 
+// Constant for checkout processed status
+const CHECKOUT_PROCESSED_VALUE = 'true';
+
 // Validate that sessionId matches Stripe's session ID format (cs_test_* or cs_live_*)
 const isValidStripeSessionId = (sessionId: string): boolean => {
   return /^cs_(test|live)_[a-z0-9_]+$/.test(sessionId);
@@ -371,7 +374,7 @@ export default function Account() {
       }
       
       // Mark this session as processed in localStorage
-      localStorage.setItem(getCheckoutSyncKey(sessionId), 'true');
+      localStorage.setItem(getCheckoutSyncKey(sessionId), CHECKOUT_PROCESSED_VALUE);
       
       // Remove query params from URL to prevent re-triggering on refresh
       const url = new URL(window.location.href);
@@ -423,7 +426,7 @@ export default function Account() {
     const isValidSessionId = isValidStripeSessionId(sessionId);
     
     const isSessionAlreadyProcessed = isValidSessionId
-      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
+      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === CHECKOUT_PROCESSED_VALUE 
       : false;
 
     if (isValidSessionId && !isSessionAlreadyProcessed) {
@@ -443,7 +446,7 @@ export default function Account() {
     const isValidSessionId = isValidStripeSessionId(sessionId);
     if (!isValidSessionId) return;
     
-    const isSessionAlreadyProcessed = localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true';
+    const isSessionAlreadyProcessed = localStorage.getItem(getCheckoutSyncKey(sessionId)) === CHECKOUT_PROCESSED_VALUE;
     if (isSessionAlreadyProcessed) return; // Already processed
     
     // Poll every 3 seconds for up to 30 seconds
@@ -474,7 +477,7 @@ export default function Account() {
           console.log("[Polling] Subscription updated via webhook:", result.subscription.plan);
           
           // Mark as processed and stop polling
-          localStorage.setItem(getCheckoutSyncKey(sessionId), 'true');
+          localStorage.setItem(getCheckoutSyncKey(sessionId), CHECKOUT_PROCESSED_VALUE);
           clearInterval(pollTimer);
           
           // Clean up URL params
