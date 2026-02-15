@@ -146,6 +146,14 @@ const plans = [
   },
 ];
 
+// Helper function to get localStorage key for processed checkout sessions
+const getCheckoutSyncKey = (sessionId: string) => `checkout_synced_${sessionId}`;
+
+// Validate that sessionId matches Stripe's session ID format (cs_test_* or cs_live_*)
+const isValidStripeSessionId = (sessionId: string): boolean => {
+  return /^cs_(test|live)_[a-z0-9_]+$/.test(sessionId);
+};
+
 export default function Account() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -329,14 +337,27 @@ export default function Account() {
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : null;
 
-  const [hasSyncedCheckout, setHasSyncedCheckout] = useState(false);
-
   const syncCheckoutMutation = useMutation({
     mutationFn: async (sessionId: string) => {
       const response = await apiRequest("GET", `/api/stripe/checkout-session/${sessionId}`);
       return response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (data, sessionId) => {
+      // Validate session ID format before using it in localStorage
+      if (!isValidStripeSessionId(sessionId)) {
+        console.warn('Invalid Stripe session ID format:', sessionId);
+        return;
+      }
+      
+      // Mark this session as processed in localStorage
+      localStorage.setItem(getCheckoutSyncKey(sessionId), 'true');
+      
+      // Remove query params from URL to prevent re-triggering on refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('success');
+      url.searchParams.delete('session_id');
+      window.history.replaceState(null, '', url.toString());
+      
       // Refresh user session after successful payment
       try {
         const userResponse = await fetch("/api/auth/me", {
@@ -344,15 +365,18 @@ export default function Account() {
         });
         if (userResponse.ok) {
           await userResponse.json();
-          // Invalidate queries to refetch with new session
-          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         }
       } catch (error) {
         console.error("Failed to refresh user session:", error);
       }
       
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+      // Invalidate all queries in parallel (will automatically refetch)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/usage"] }),
+      ]);
+      
       toast({
         title: "Subscription Updated",
         description: "Your upgrade has been applied.",
@@ -372,11 +396,21 @@ export default function Account() {
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
 
-    if (!hasSyncedCheckout && isSuccess && sessionId && !syncCheckoutMutation.isPending) {
-      setHasSyncedCheckout(true);
+    // Early exit if no session ID
+    if (!sessionId) return;
+
+    // Validate session ID format
+    const isValidSessionId = isValidStripeSessionId(sessionId);
+    
+    // Check if this session has already been processed
+    const isSessionAlreadyProcessed = isValidSessionId
+      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
+      : false;
+
+    if (isSuccess && isValidSessionId && !isSessionAlreadyProcessed && !syncCheckoutMutation.isPending) {
       syncCheckoutMutation.mutate(sessionId);
     }
-  }, [hasSyncedCheckout, syncCheckoutMutation]);
+  }, [syncCheckoutMutation]);
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
