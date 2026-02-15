@@ -83,9 +83,17 @@ export async function convertToWav(audioBuffer: Buffer): Promise<Buffer> {
     // Read converted audio
     return await readFile(outputPath);
   } finally {
-    // Clean up temp files
-    await unlink(inputPath).catch(() => {});
-    await unlink(outputPath).catch(() => {});
+    // Clean up temp files (ignore errors if files don't exist)
+    await unlink(inputPath).catch((err) => {
+      if (err.code !== 'ENOENT') {
+        console.warn('[Audio] Failed to clean up temp input file:', err);
+      }
+    });
+    await unlink(outputPath).catch((err) => {
+      if (err.code !== 'ENOENT') {
+        console.warn('[Audio] Failed to clean up temp output file:', err);
+      }
+    });
   }
 }
 

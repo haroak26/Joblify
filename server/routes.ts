@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
@@ -63,7 +63,7 @@ function getPoeClient(): OpenAI {
 }
 
 // Middleware to check if user has AI access
-async function requireAIAccess(req: Request, res: any, next: any) {
+async function requireAIAccess(req: Request, res: Response, next: NextFunction) {
   const userId = req.session.userId;
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
