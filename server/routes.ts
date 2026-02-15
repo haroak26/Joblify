@@ -32,6 +32,13 @@ const contactRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+/**
+ * Validation schemas
+ */
+const jobDescriptionSchema = z.object({
+  jobDescription: z.string().max(10000, "Job description is too long (max 10,000 characters)").optional()
+});
+
 const newsletterRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // 3 subscription attempts per hour per IP
@@ -1916,7 +1923,7 @@ Respond ONLY with valid JSON (no text before or after):
         return Promise.race([
           promise,
           new Promise<T>((_, reject) => 
-            setTimeout(() => reject(new Error('File parsing timeout')), timeoutMs)
+            setTimeout(() => reject(new Error(`File parsing exceeded timeout of ${timeoutMs / 1000} seconds`)), timeoutMs)
           )
         ]);
       };
@@ -1942,10 +1949,6 @@ Respond ONLY with valid JSON (no text before or after):
       }
 
       // Validate job description length
-      const jobDescriptionSchema = z.object({
-        jobDescription: z.string().max(10000, "Job description is too long (max 10,000 characters)").optional()
-      });
-      
       const { jobDescription = "" } = jobDescriptionSchema.parse(req.body);
 
       // Check usage limits before performing operation

@@ -10,6 +10,15 @@ import crypto from "crypto";
 import { z } from "zod";
 
 /**
+ * Validation schemas
+ */
+const userListQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  search: z.string().optional(),
+});
+
+/**
  * Validate and extract userId from request params
  */
 function validateUserId(params: any): string | null {
@@ -37,13 +46,7 @@ export function setupAdminRoutes(app: Express) {
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
       // Validate query parameters with proper defaults
-      const querySchema = z.object({
-        page: z.coerce.number().int().positive().default(1),
-        limit: z.coerce.number().int().min(1).max(100).default(50),
-        search: z.string().optional(),
-      });
-      
-      const { page, limit, search } = querySchema.parse(req.query);
+      const { page, limit, search } = userListQuerySchema.parse(req.query);
       
       const result = await storage.getAllUsers({ page, limit, search });
       

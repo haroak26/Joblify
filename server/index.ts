@@ -177,7 +177,7 @@ async function gracefulShutdown(signal: string) {
   
   // Force exit if shutdown takes too long
   setTimeout(() => {
-    console.error('Forcefully shutting down after timeout');
+    console.error('Graceful shutdown timed out after 10 seconds, forcefully exiting');
     process.exit(1);
   }, 10000); // 10 second timeout
 }
