@@ -825,14 +825,30 @@ export default function Account() {
               <p className="text-muted-foreground">Manage your plan and billing information</p>
             </div>
             {subscription?.stripeCustomerId && currentPlan !== "free" && (
-              <Button
-                variant="outline"
-                onClick={() => manageSubscriptionMutation.mutate()}
-                disabled={manageSubscriptionMutation.isPending}
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                {manageSubscriptionMutation.isPending ? "Loading..." : "Manage Subscription"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => manageSubscriptionMutation.mutate()}
+                  disabled={manageSubscriptionMutation.isPending}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  {manageSubscriptionMutation.isPending ? "Loading..." : "Manage Subscription"}
+                </Button>
+                <Button
+                  variant="outline"
+                  asChild
+                >
+                  <a
+                    href="https://billing.stripe.com/p/login/bJebJ3bnI4qMbSE4WI1B600"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Billing Portal</span>
+                    <span className="sm:hidden">Portal</span>
+                  </a>
+                </Button>
+              </div>
             )}
           </div>
           
