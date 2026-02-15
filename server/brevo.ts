@@ -1,3 +1,4 @@
+import { getAppUrl } from "./email";
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@joblifyai.com";
@@ -142,7 +143,7 @@ export async function sendOnboardingReminderEmail(to: string, name: string): Pro
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.APP_URL || 'https://joblifyai.com'}/dashboard" 
+      <a href="${getAppUrl()}/dashboard" 
          style="background: #16a34a; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
         Complete My Profile
       </a>
