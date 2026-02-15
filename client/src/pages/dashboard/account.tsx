@@ -841,7 +841,7 @@ export default function Account() {
                   className="w-full sm:w-auto"
                 >
                   <a
-                    href="https://billing.stripe.com/p/login/bJebJ3bnI4qMbSE4WI1B600"
+                    href={import.meta.env.VITE_STRIPE_BILLING_PORTAL_URL || "https://billing.stripe.com/p/login/bJebJ3bnI4qMbSE4WI1B600"}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
