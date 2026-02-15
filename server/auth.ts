@@ -98,7 +98,7 @@ export async function setupAuth(app: Express) {
       proxy: isProduction,
       cookie: {
         secure: isProduction,
-        sameSite: isProduction ? "none" : "lax",
+        sameSite: isProduction ? "lax" : "lax", // Changed from "none" to "lax" for better compatibility with Stripe redirects
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       },

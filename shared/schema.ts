@@ -44,6 +44,15 @@ export const users: PgTableWithColumns<any> = pgTable("users", {
   lastLoginIpHash: text("last_login_ip_hash"),
 });
 
+// Session table for express-session with connect-pg-simple
+export const session = pgTable("session", {
+  sid: varchar("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+}, (table) => ({
+  expireIdx: index("IDX_session_expire").on(table.expire),
+}));
+
 // Deleted accounts tracker for abuse prevention
 export const deletedAccountsTracker = pgTable("deleted_accounts_tracker", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

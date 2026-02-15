@@ -278,6 +278,38 @@ export async function setupStripeRoutes(app: Express) {
     }
   });
 
+  // Alias webhook route for backward compatibility with documentation
+  // Some deployments may have Stripe configured to use /api/webhooks/stripe
+  app.post("/api/webhooks/stripe", async (req: Request, res: Response) => {
+    const sig = req.headers["stripe-signature"] as string;
+
+    if (!sig) {
+      return res.status(400).json({ error: "Missing stripe-signature" });
+    }
+
+    try {
+      let payload: Buffer | undefined;
+      
+      if (Buffer.isBuffer(req.body)) {
+        payload = req.body;
+      } else if (Buffer.isBuffer(req.rawBody)) {
+        payload = req.rawBody;
+      }
+
+      if (!payload) {
+        console.error("[Webhook Alias] raw body is missing or not a Buffer. Body type:", typeof req.body);
+        return res.status(400).json({ error: "Webhook processing error" });
+      }
+
+      await WebhookHandlers.processWebhook(payload, sig);
+
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error("[Webhook Alias] error:", error.message);
+      res.status(400).json({ error: "Webhook processing error" });
+    }
+  });
+
   app.get("/api/stripe/portal", requireAuth, async (req: Request, res: Response) => {
     try {
       const stripe = await getUncachableStripeClient();

@@ -97,11 +97,20 @@ function getEmailTemplate(content: string, previewText: string): string {
 }
 
 function getAppUrl(): string {
+  // Check APP_URL first - custom domain takes precedence
+  if (process.env.APP_URL) {
+    return process.env.APP_URL;
+  }
+  // Fall back to REPLIT_DOMAINS if APP_URL not set
   if (process.env.REPLIT_DOMAINS) {
     return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
   }
-  return process.env.APP_URL || "https://JoblifyAI.com";
+  // Final fallback to production domain
+  return "https://joblifyai.com";
 }
+
+// Export getAppUrl for use in other modules
+export { getAppUrl };
 
 export async function sendVerificationEmail(email: string, username: string, token: string): Promise<boolean> {
   const verifyUrl = `${getAppUrl()}/verify-email?token=${token}`;
@@ -533,7 +542,7 @@ export async function sendPerkAwardedEmail(
       To use your perk, simply log in to your Joblify account and navigate to your dashboard. Your new perk will be available and ready to use.
     </p>
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${process.env.APP_URL || 'https://joblifyai.com'}/dashboard" 
+      <a href="${getAppUrl()}/dashboard" 
          style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
         View My Perks
       </a>

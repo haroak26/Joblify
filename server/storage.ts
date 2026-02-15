@@ -322,11 +322,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateSubscription(userId: string, updates: Partial<Subscription>): Promise<Subscription | undefined> {
+    console.log("[Storage] updateSubscription called", {
+      userId,
+      updates: {
+        plan: updates.plan,
+        status: updates.status,
+        stripeSubscriptionId: updates.stripeSubscriptionId,
+        stripeCustomerId: updates.stripeCustomerId,
+        currentPeriodEnd: updates.currentPeriodEnd,
+      },
+    });
+    
     const [sub] = await db
       .update(subscriptions)
       .set(updates)
       .where(eq(subscriptions.userId, userId))
       .returning();
+    
+    if (sub) {
+      console.log("[Storage] updateSubscription success", {
+        userId,
+        plan: sub.plan,
+        status: sub.status,
+        stripeSubscriptionId: sub.stripeSubscriptionId,
+      });
+    } else {
+      console.warn("[Storage] updateSubscription failed - no subscription found", { userId });
+    }
+    
     return sub || undefined;
   }
 

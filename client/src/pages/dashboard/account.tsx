@@ -149,6 +149,9 @@ const plans = [
 // Helper function to get localStorage key for processed checkout sessions
 const getCheckoutSyncKey = (sessionId: string) => `checkout_synced_${sessionId}`;
 
+// Constant for checkout processed status
+const CHECKOUT_PROCESSED_VALUE = 'true';
+
 // Validate that sessionId matches Stripe's session ID format (cs_test_* or cs_live_*)
 const isValidStripeSessionId = (sessionId: string): boolean => {
   return /^cs_(test|live)_[a-z0-9_]+$/.test(sessionId);
@@ -339,8 +342,29 @@ export default function Account() {
 
   const syncCheckoutMutation = useMutation({
     mutationFn: async (sessionId: string) => {
-      const response = await apiRequest("GET", `/api/stripe/checkout-session/${sessionId}`);
-      return response.json();
+      // Retry logic with exponential backoff
+      let lastError: Error | null = null;
+      const maxRetries = 3;
+      
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const response = await apiRequest("GET", `/api/stripe/checkout-session/${sessionId}`);
+          return await response.json();
+        } catch (error) {
+          lastError = error instanceof Error ? error : new Error("Unknown error");
+          console.warn(`[Checkout Sync] Attempt ${attempt + 1} failed:`, lastError.message);
+          
+          // Don't retry on the last attempt
+          if (attempt < maxRetries - 1) {
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, attempt) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+      
+      // All retries failed
+      throw lastError || new Error("Failed to sync checkout session");
     },
     onSuccess: async (data, sessionId) => {
       // Validate session ID format before using it in localStorage
@@ -350,7 +374,7 @@ export default function Account() {
       }
       
       // Mark this session as processed in localStorage
-      localStorage.setItem(getCheckoutSyncKey(sessionId), 'true');
+      localStorage.setItem(getCheckoutSyncKey(sessionId), CHECKOUT_PROCESSED_VALUE);
       
       // Remove query params from URL to prevent re-triggering on refresh
       const url = new URL(window.location.href);
@@ -382,7 +406,8 @@ export default function Account() {
         description: "Your upgrade has been applied.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("[Checkout Sync] All retries failed:", error);
       toast({
         title: "Upgrade Pending",
         description: "We could not confirm your upgrade yet. Please refresh in a moment.",
@@ -401,12 +426,91 @@ export default function Account() {
     const isValidSessionId = isValidStripeSessionId(sessionId);
     
     const isSessionAlreadyProcessed = isValidSessionId
-      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
+      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === CHECKOUT_PROCESSED_VALUE 
       : false;
 
     if (isValidSessionId && !isSessionAlreadyProcessed) {
       syncCheckoutMutation.mutate(sessionId);
     }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Polling mechanism: after checkout success, poll subscription status
+  // This serves as a fallback in case the direct sync or webhook haven't processed yet
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isSuccess = params.get("success") === "true";
+    const sessionId = params.get("session_id");
+    
+    if (!sessionId || !isSuccess) return;
+    
+    const isValidSessionId = isValidStripeSessionId(sessionId);
+    if (!isValidSessionId) return;
+    
+    const isSessionAlreadyProcessed = localStorage.getItem(getCheckoutSyncKey(sessionId)) === CHECKOUT_PROCESSED_VALUE;
+    if (isSessionAlreadyProcessed) return; // Already processed
+    
+    // Poll every 3 seconds for up to 30 seconds
+    let pollCount = 0;
+    const maxPolls = 10;
+    const pollInterval = 3000; // 3 seconds
+    
+    const pollTimer = setInterval(async () => {
+      pollCount++;
+      
+      try {
+        // Refetch subscription to see if webhook has updated it
+        const result = await queryClient.fetchQuery({
+          queryKey: ["/api/subscription"],
+          queryFn: async () => {
+            const response = await fetch("/api/subscription", {
+              credentials: "include",
+            });
+            if (!response.ok) {
+              throw new Error("Failed to fetch subscription");
+            }
+            return response.json();
+          },
+        });
+        
+        // Check if subscription has been upgraded (no longer "free")
+        if (result?.subscription?.plan && result.subscription.plan !== "free") {
+          console.log("[Polling] Subscription updated via webhook:", result.subscription.plan);
+          
+          // Mark as processed and stop polling
+          localStorage.setItem(getCheckoutSyncKey(sessionId), CHECKOUT_PROCESSED_VALUE);
+          clearInterval(pollTimer);
+          
+          // Clean up URL params
+          const url = new URL(window.location.href);
+          url.searchParams.delete('success');
+          url.searchParams.delete('session_id');
+          window.history.replaceState(null, '', url.toString());
+          
+          // Invalidate queries to refresh UI
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }),
+            queryClient.invalidateQueries({ queryKey: ["/api/subscription"] }),
+            queryClient.invalidateQueries({ queryKey: ["/api/usage"] }),
+          ]);
+          
+          toast({
+            title: "Subscription Updated",
+            description: "Your upgrade has been applied.",
+          });
+        }
+      } catch (error) {
+        console.warn("[Polling] Error checking subscription:", error);
+      }
+      
+      // Stop polling after max attempts
+      if (pollCount >= maxPolls) {
+        console.log("[Polling] Max polls reached, stopping");
+        clearInterval(pollTimer);
+      }
+    }, pollInterval);
+    
+    // Cleanup on unmount
+    return () => clearInterval(pollTimer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;

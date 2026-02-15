@@ -52,6 +52,15 @@ export class WebhookHandlers {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
         const plan = normalizePlan(session.metadata?.plan);
+        
+        console.log("[Webhook] checkout.session.completed", {
+          sessionId: session.id,
+          userId,
+          plan,
+          paymentStatus: session.payment_status,
+          mode: session.mode,
+        });
+        
         if (userId && plan !== "free") {
           const existingSubscription = await storage.getSubscription(userId);
           const existingStripeSubscriptionId = existingSubscription?.stripeSubscriptionId;
@@ -68,8 +77,9 @@ export class WebhookHandlers {
             try {
               const stripe = await getUncachableStripeClient();
               await stripe.subscriptions.cancel(existingStripeSubscriptionId);
+              console.log("[Webhook] Cancelled previous subscription:", existingStripeSubscriptionId);
             } catch (error) {
-              console.warn("Stripe subscription cancel error:", error);
+              console.warn("[Webhook] Stripe subscription cancel error:", error);
             }
           }
 
@@ -77,6 +87,17 @@ export class WebhookHandlers {
             stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
             stripeSubscriptionId: newStripeSubscriptionId,
             status: "active",
+            plan,
+          });
+          
+          console.log("[Webhook] Subscription updated successfully", {
+            userId,
+            plan,
+            stripeSubscriptionId: newStripeSubscriptionId,
+          });
+        } else {
+          console.warn("[Webhook] checkout.session.completed - missing userId or invalid plan", {
+            userId,
             plan,
           });
         }
