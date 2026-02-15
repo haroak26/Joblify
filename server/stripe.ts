@@ -205,7 +205,7 @@ export async function setupStripeRoutes(app: Express) {
       await storage.updateSubscription(userId, {
         plan,
         status,
-        stripeCustomerId: customerId,
+        stripeCustomerId: customerId || existingSubscription?.stripeCustomerId,
         stripeSubscriptionId,
         currentPeriodEnd,
       });

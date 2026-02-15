@@ -16,7 +16,7 @@ import { aiRateLimit } from './middleware/security';
 import { csrfTokenEndpoint } from './middleware/csrf';
 import { ResumePDFGenerator } from './lib/resumePDFGenerator';
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, count } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import multer from "multer";
 import pdfParse from "pdf-parse";

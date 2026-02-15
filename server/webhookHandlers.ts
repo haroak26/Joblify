@@ -84,7 +84,7 @@ export class WebhookHandlers {
           }
 
           await storage.updateSubscription(userId, {
-            stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
+            stripeCustomerId: typeof session.customer === "string" ? session.customer : (session.customer?.id ?? existingSubscription?.stripeCustomerId),
             stripeSubscriptionId: newStripeSubscriptionId,
             status: "active",
             plan,
