@@ -7,6 +7,7 @@ import { perks, userPerks, redeemableCodes, users, aiUsageLogs } from "@shared/s
 import { db } from "./db";
 import { eq, gte, desc, sql, count } from "drizzle-orm";
 import crypto from "crypto";
+import { z } from "zod";
 
 /**
  * Validate and extract userId from request params
@@ -35,9 +36,14 @@ export function setupAdminRoutes(app: Express) {
    */
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req: Request, res: Response) => {
     try {
-      const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
-      const search = req.query.search as string;
+      // Validate query parameters with proper defaults
+      const querySchema = z.object({
+        page: z.coerce.number().int().positive().default(1),
+        limit: z.coerce.number().int().min(1).max(100).default(50),
+        search: z.string().optional(),
+      });
+      
+      const { page, limit, search } = querySchema.parse(req.query);
       
       const result = await storage.getAllUsers({ page, limit, search });
       
@@ -65,6 +71,9 @@ export function setupAdminRoutes(app: Express) {
       });
     } catch (error) {
       console.error("Error fetching users:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid query parameters" });
+      }
       res.status(500).json({ error: "Failed to fetch users" });
     }
   });
