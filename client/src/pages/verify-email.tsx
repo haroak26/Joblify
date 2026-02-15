@@ -54,26 +54,11 @@ export default function VerifyEmail() {
       if (response.ok) {
         setStatus("success");
         setMessage(data.message || "Email verified successfully!");
-        // Fetch user to update auth context with new session
-        try {
-          const userResponse = await fetch("/api/auth/me", {
-            credentials: "include",
-          });
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            // The auth context will pick up the new user state
-            window.location.href = "/dashboard";
-          } else {
-            // If user fetch fails, still redirect but user might need to login
-            setTimeout(() => {
-              setLocation("/dashboard");
-            }, 2000);
-          }
-        } catch {
-          setTimeout(() => {
-            setLocation("/dashboard");
-          }, 2000);
-        }
+        // Use window.location.href to force a full page reload with new session
+        // This ensures the auth context picks up the new session cookie
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 2000);
       } else {
         setStatus("error");
         setMessage(data.error || "Verification failed");

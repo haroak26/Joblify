@@ -29,8 +29,15 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // Export for use in other modules
-// Export for use in other modules
-export { hashPassword, verifyPassword, isStrongPassword };
+export { hashPassword, verifyPassword, isStrongPassword, establishSession };
+
+// Helper to establish session for a user
+async function establishSession(req: Request, userId: string): Promise<void> {
+  req.session.userId = userId;
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((err) => err ? reject(err) : resolve());
+  });
+}
 
 // Helper to generate username from email
 function generateUsername(email: string): string {
@@ -407,10 +414,7 @@ export function setupAuth(app: Express) {
       if (user.emailVerified) {
         // Still establish session if not already logged in
         if (!req.session.userId) {
-          req.session.userId = user.id;
-          await new Promise<void>((resolve, reject) => {
-            req.session.save((err) => err ? reject(err) : resolve());
-          });
+          await establishSession(req, user.id);
         }
         return res.json({ message: "Email verified successfully", alreadyVerified: true });
       }
@@ -421,10 +425,7 @@ export function setupAuth(app: Express) {
       });
 
       // Establish session for the user (auto-login after verification)
-      req.session.userId = user.id;
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => err ? reject(err) : resolve());
-      });
+      await establishSession(req, user.id);
 
       await sendWelcomeEmail(user.email, user.username);
 
