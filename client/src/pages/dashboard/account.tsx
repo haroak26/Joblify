@@ -146,6 +146,14 @@ const plans = [
   },
 ];
 
+// Helper function to get localStorage key for processed checkout sessions
+const getCheckoutSyncKey = (sessionId: string) => `checkout_synced_${sessionId}`;
+
+// Validate that sessionId matches Stripe's session ID format (cs_test_* or cs_live_*)
+const isValidStripeSessionId = (sessionId: string): boolean => {
+  return /^cs_(test|live)_[a-zA-Z0-9]+$/.test(sessionId);
+};
+
 export default function Account() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -335,8 +343,14 @@ export default function Account() {
       return response.json();
     },
     onSuccess: async (data, sessionId) => {
+      // Validate session ID format before using it in localStorage
+      if (!isValidStripeSessionId(sessionId)) {
+        console.warn('Invalid Stripe session ID format');
+        return;
+      }
+      
       // Mark this session as processed in localStorage
-      localStorage.setItem(`checkout_synced_${sessionId}`, 'true');
+      localStorage.setItem(getCheckoutSyncKey(sessionId), 'true');
       
       // Remove query params from URL to prevent re-triggering on refresh
       const url = new URL(window.location.href);
@@ -358,13 +372,9 @@ export default function Account() {
         console.error("Failed to refresh user session:", error);
       }
       
-      // Invalidate and refetch subscription and usage data
+      // Invalidate subscription and usage data (will automatically refetch)
       await queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
-      
-      // Refetch to ensure UI updates immediately
-      await queryClient.refetchQueries({ queryKey: ["/api/subscription"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/usage"] });
       
       toast({
         title: "Subscription Updated",
@@ -385,10 +395,12 @@ export default function Account() {
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
 
-    // Check if this session has already been processed
-    const alreadySynced = sessionId ? localStorage.getItem(`checkout_synced_${sessionId}`) === 'true' : false;
+    // Check if this session has already been processed and validate format
+    const alreadySynced = sessionId && isValidStripeSessionId(sessionId) 
+      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
+      : false;
 
-    if (isSuccess && sessionId && !alreadySynced && !syncCheckoutMutation.isPending) {
+    if (isSuccess && sessionId && isValidStripeSessionId(sessionId) && !alreadySynced && !syncCheckoutMutation.isPending) {
       syncCheckoutMutation.mutate(sessionId);
     }
   }, [syncCheckoutMutation]);
