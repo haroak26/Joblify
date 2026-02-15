@@ -58,6 +58,7 @@ const passwordResetLimiter = rateLimit({
 export async function setupAuth(app: Express) {
   if (process.env.NODE_ENV === "production") {
     try {
+      // Ensure session table exists in production
       await pool.query(`
         CREATE TABLE IF NOT EXISTS "session" (
           "sid" varchar NOT NULL COLLATE "default",
@@ -67,6 +68,7 @@ export async function setupAuth(app: Express) {
         );
         CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
       `);
+      console.log('[Auth] Session table verified');
     } catch (err) {
       console.error('[Auth] Failed to ensure session table exists:', err);
     }
