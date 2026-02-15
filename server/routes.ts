@@ -881,6 +881,37 @@ export async function registerRoutes(
     }
   });
 
+  // Get subscription details
+  app.get("/api/subscription", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      let subscription = await storage.getSubscription(userId);
+      
+      if (!subscription) {
+        subscription = await storage.createSubscription(userId, "free");
+      }
+      
+      const plan = normalizePlan(subscription.plan);
+      const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+      
+      const maxSkills = planLimits.maxSkills === Infinity ? -1 : planLimits.maxSkills;
+      const maxJobsPerMonth = planLimits.maxImportedResumesPerMonth === Infinity ? -1 : planLimits.maxImportedResumesPerMonth;
+      
+      res.json({
+        subscription,
+        limits: {
+          maxSkills,
+          maxJobsPerMonth,
+          maxSchedules: 0,
+          hasScheduleAccess: false,
+        },
+      });
+    } catch (error) {
+      console.error('[API] Error getting subscription:', error);
+      res.status(500).json({ error: "Failed to get subscription data" });
+    }
+  });
+
   // Get usage statistics
   app.get("/api/usage", requireAuth, async (req: Request, res) => {
     try {
@@ -967,52 +998,6 @@ export async function registerRoutes(
   // Resume Endpoints
   // ============================================
 
-  // Get all resumes for the authenticated user
-  app.post("/api/resumes", requireAuth, async (req: Request, res) => {
-    const userId = req.session.userId!;
-    try {
-      
-      const insertSchema = z.object({
-        title: z.string().min(1),
-        template: z.string().default("modern"),
-        resumeData: resumeDataSchema.optional(),
-      });
-      
-      const data = insertSchema.parse(req.body);
-      
-      // Check resume limit
-      const resumeCheck = await storage.canAddResume(userId);
-      if (!resumeCheck.allowed) {
-        return res.status(403).json({ 
-          error: "Resume limit reached", 
-          code: "RESUME_LIMIT",
-          limit: resumeCheck.limit,
-          current: resumeCheck.current,
-          message: `Your plan allows up to ${resumeCheck.limit} resumes. Upgrade to Plus or Ultra for more.`
-        });
-      }
-
-      const [resume] = await db
-        .insert(resumes)
-        .values({
-          userId,
-          title: data.title,
-          template: data.template,
-          resumeData: data.resumeData || createEmptyResumeData(),
-        })
-        .returning();
-      
-      res.status(201).json(resume);
-    } catch (error) {
-      console.error('[API] Error creating resume:', error);
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid resume data", details: error.errors });
-      } else {
-        res.status(500).json({ error: "Failed to create resume" });
-      }
-    }
-  });
-
   // Get resume limits for current user
   app.get("/api/resumes/limits", requireAuth, async (req: Request, res) => {
     try {
@@ -1085,7 +1070,7 @@ export async function registerRoutes(
       // Validate request body
       const createSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional', 'academic', 'minimal']).optional(),
+        template: z.string().optional(),
         resumeData: resumeDataSchema.optional(),
       });
 
@@ -1187,7 +1172,7 @@ export async function registerRoutes(
       // Validate and update resume
       const updateSchema = z.object({
         title: z.string().min(1).optional(),
-        template: z.enum(['modern', 'professional', 'academic', 'minimal']).optional(),
+        template: z.string().optional(),
         resumeData: resumeDataSchema.optional(),
         aiBuilderComponents: z.array(z.string()).optional(),
         aiBuilderCompleted: z.boolean().optional(),
