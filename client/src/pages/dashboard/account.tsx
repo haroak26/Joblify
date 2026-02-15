@@ -151,7 +151,7 @@ const getCheckoutSyncKey = (sessionId: string) => `checkout_synced_${sessionId}`
 
 // Validate that sessionId matches Stripe's session ID format (cs_test_* or cs_live_*)
 const isValidStripeSessionId = (sessionId: string): boolean => {
-  return /^cs_(test|live)_[a-zA-Z0-9]+$/.test(sessionId);
+  return /^cs_(test|live)_[a-z0-9_]+$/.test(sessionId);
 };
 
 export default function Account() {
@@ -396,12 +396,15 @@ export default function Account() {
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
 
-    // Check if this session has already been processed and validate format
-    const isSessionAlreadyProcessed = sessionId && isValidStripeSessionId(sessionId) 
-      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
+    // Validate session ID format
+    const isValidSessionId = sessionId ? isValidStripeSessionId(sessionId) : false;
+    
+    // Check if this session has already been processed
+    const isSessionAlreadyProcessed = isValidSessionId
+      ? localStorage.getItem(getCheckoutSyncKey(sessionId!)) === 'true' 
       : false;
 
-    if (isSuccess && sessionId && isValidStripeSessionId(sessionId) && !isSessionAlreadyProcessed && !syncCheckoutMutation.isPending) {
+    if (isSuccess && sessionId && isValidSessionId && !isSessionAlreadyProcessed && !syncCheckoutMutation.isPending) {
       syncCheckoutMutation.mutate(sessionId);
     }
   }, [syncCheckoutMutation]);
