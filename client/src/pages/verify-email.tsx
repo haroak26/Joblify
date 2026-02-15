@@ -46,14 +46,18 @@ export default function VerifyEmail() {
   const verifyEmail = async () => {
     try {
       setStatus("loading");
-      const response = await fetch(`/api/auth/verify-email?token=${token}`);
+      const response = await fetch(`/api/auth/verify-email?token=${token}`, {
+        credentials: "include",
+      });
       const data = await response.json();
       
       if (response.ok) {
         setStatus("success");
         setMessage(data.message || "Email verified successfully!");
+        // Use window.location.href to force a full page reload with new session
+        // This ensures the auth context picks up the new session cookie
         setTimeout(() => {
-          setLocation("/dashboard");
+          window.location.href = "/dashboard";
         }, 2000);
       } else {
         setStatus("error");
@@ -132,7 +136,7 @@ export default function VerifyEmail() {
               </div>
               <p className="text-lg font-medium text-foreground mb-2">{message}</p>
               <p className="text-sm text-muted-foreground mb-8">Redirecting to dashboard...</p>
-              <Button asChild className="w-full h-12 text-base">
+              <Button asChild className="w-full h-11 text-base">
                 <Link href="/dashboard">Go to Dashboard</Link>
               </Button>
             </div>
@@ -165,7 +169,7 @@ export default function VerifyEmail() {
                     )}
                   </Button>
                 )}
-                <Button asChild variant="outline" className="w-full h-12">
+                <Button asChild variant="outline" className="w-full h-10">
                   <Link href="/login">Go to Login</Link>
                 </Button>
               </div>
@@ -187,7 +191,7 @@ export default function VerifyEmail() {
                 <Button 
                   onClick={handleResend}
                   disabled={isResending || resendCooldown > 0}
-                  className="w-full h-12"
+                  className="w-full h-10"
                   variant="default"
                 >
                   {isResending ? (
@@ -207,7 +211,7 @@ export default function VerifyEmail() {
                 <Button 
                   onClick={handleLogout}
                   variant="outline"
-                  className="w-full h-12"
+                  className="w-full h-10"
                 >
                   Logout
                 </Button>

@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { requireAuth } from "./auth";
+import { requireAuth, establishSession } from "./auth";
 import { getUncachableStripeClient } from "./stripeClient";
 import { WebhookHandlers, resolvePlanFromPrice } from "./webhookHandlers";
 import { normalizePlan } from "@shared/schema";
@@ -110,10 +110,9 @@ export async function setupStripeRoutes(app: Express) {
     }
   });
 
-  app.get("/api/stripe/checkout-session/:sessionId", requireAuth, async (req: Request, res: Response) => {
+  app.get("/api/stripe/checkout-session/:sessionId", async (req: Request, res: Response) => {
     try {
       const stripe = await getUncachableStripeClient();
-      const userId = req.session.userId!;
       const sessionId = req.params.sessionId as string;
 
       const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -124,8 +123,23 @@ export async function setupStripeRoutes(app: Express) {
         return res.status(404).json({ error: "Checkout session not found" });
       }
 
-      if (session.metadata?.userId !== userId) {
-        return res.status(403).json({ error: "Session does not belong to user" });
+      const userId = session.metadata?.userId;
+      if (!userId) {
+        return res.status(400).json({ error: "Invalid checkout session - missing user ID" });
+      }
+
+      // Verify the user exists and is active before establishing session
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // If the user's session was lost during Stripe redirect, re-establish it
+      if (!req.session.userId) {
+        await establishSession(req, userId);
+      } else if (req.session.userId !== userId) {
+        // If logged in as different user, this is an error
+        return res.status(403).json({ error: "Session does not belong to current user" });
       }
 
       let plan = normalizePlan(session.metadata?.plan);
