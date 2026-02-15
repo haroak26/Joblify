@@ -329,14 +329,21 @@ export default function Account() {
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
     : null;
 
-  const [hasSyncedCheckout, setHasSyncedCheckout] = useState(false);
-
   const syncCheckoutMutation = useMutation({
     mutationFn: async (sessionId: string) => {
       const response = await apiRequest("GET", `/api/stripe/checkout-session/${sessionId}`);
       return response.json();
     },
-    onSuccess: async () => {
+    onSuccess: async (data, sessionId) => {
+      // Mark this session as processed in localStorage
+      localStorage.setItem(`checkout_synced_${sessionId}`, 'true');
+      
+      // Remove query params from URL to prevent re-triggering on refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('success');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, '', url.toString());
+      
       // Refresh user session after successful payment
       try {
         const userResponse = await fetch("/api/auth/me", {
@@ -345,14 +352,20 @@ export default function Account() {
         if (userResponse.ok) {
           await userResponse.json();
           // Invalidate queries to refetch with new session
-          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+          await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         }
       } catch (error) {
         console.error("Failed to refresh user session:", error);
       }
       
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+      // Invalidate and refetch subscription and usage data
+      await queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+      
+      // Refetch to ensure UI updates immediately
+      await queryClient.refetchQueries({ queryKey: ["/api/subscription"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/usage"] });
+      
       toast({
         title: "Subscription Updated",
         description: "Your upgrade has been applied.",
@@ -372,11 +385,13 @@ export default function Account() {
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
 
-    if (!hasSyncedCheckout && isSuccess && sessionId && !syncCheckoutMutation.isPending) {
-      setHasSyncedCheckout(true);
+    // Check if this session has already been processed
+    const alreadySynced = sessionId ? localStorage.getItem(`checkout_synced_${sessionId}`) === 'true' : false;
+
+    if (isSuccess && sessionId && !alreadySynced && !syncCheckoutMutation.isPending) {
       syncCheckoutMutation.mutate(sessionId);
     }
-  }, [hasSyncedCheckout, syncCheckoutMutation]);
+  }, [syncCheckoutMutation]);
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
