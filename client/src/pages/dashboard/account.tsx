@@ -365,16 +365,17 @@ export default function Account() {
         });
         if (userResponse.ok) {
           await userResponse.json();
-          // Invalidate queries to refetch with new session
-          await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         }
       } catch (error) {
         console.error("Failed to refresh user session:", error);
       }
       
-      // Invalidate subscription and usage data (will automatically refetch)
-      await queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+      // Invalidate all queries in parallel (will automatically refetch)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/usage"] }),
+      ]);
       
       toast({
         title: "Subscription Updated",
@@ -396,11 +397,11 @@ export default function Account() {
     const sessionId = params.get("session_id");
 
     // Check if this session has already been processed and validate format
-    const alreadySynced = sessionId && isValidStripeSessionId(sessionId) 
+    const isSessionAlreadyProcessed = sessionId && isValidStripeSessionId(sessionId) 
       ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
       : false;
 
-    if (isSuccess && sessionId && isValidStripeSessionId(sessionId) && !alreadySynced && !syncCheckoutMutation.isPending) {
+    if (isSuccess && sessionId && isValidStripeSessionId(sessionId) && !isSessionAlreadyProcessed && !syncCheckoutMutation.isPending) {
       syncCheckoutMutation.mutate(sessionId);
     }
   }, [syncCheckoutMutation]);
