@@ -405,12 +405,25 @@ export function setupAuth(app: Express) {
 
       // If already verified, return success to avoid confusion
       if (user.emailVerified) {
+        // Still establish session if not already logged in
+        if (!req.session.userId) {
+          req.session.userId = user.id;
+          await new Promise<void>((resolve, reject) => {
+            req.session.save((err) => err ? reject(err) : resolve());
+          });
+        }
         return res.json({ message: "Email verified successfully", alreadyVerified: true });
       }
 
       await storage.updateUser(user.id, {
         emailVerified: true,
         verificationToken: null,
+      });
+
+      // Establish session for the user (auto-login after verification)
+      req.session.userId = user.id;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => err ? reject(err) : resolve());
       });
 
       await sendWelcomeEmail(user.email, user.username);

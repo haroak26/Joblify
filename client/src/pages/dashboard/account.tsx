@@ -336,7 +336,21 @@ export default function Account() {
       const response = await apiRequest("GET", `/api/stripe/checkout-session/${sessionId}`);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Refresh user session after successful payment
+      try {
+        const userResponse = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (userResponse.ok) {
+          await userResponse.json();
+          // Invalidate queries to refetch with new session
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        }
+      } catch (error) {
+        console.error("Failed to refresh user session:", error);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
       queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
       toast({

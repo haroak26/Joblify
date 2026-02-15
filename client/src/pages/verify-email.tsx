@@ -46,15 +46,34 @@ export default function VerifyEmail() {
   const verifyEmail = async () => {
     try {
       setStatus("loading");
-      const response = await fetch(`/api/auth/verify-email?token=${token}`);
+      const response = await fetch(`/api/auth/verify-email?token=${token}`, {
+        credentials: "include",
+      });
       const data = await response.json();
       
       if (response.ok) {
         setStatus("success");
         setMessage(data.message || "Email verified successfully!");
-        setTimeout(() => {
-          setLocation("/dashboard");
-        }, 2000);
+        // Fetch user to update auth context with new session
+        try {
+          const userResponse = await fetch("/api/auth/me", {
+            credentials: "include",
+          });
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            // The auth context will pick up the new user state
+            window.location.href = "/dashboard";
+          } else {
+            // If user fetch fails, still redirect but user might need to login
+            setTimeout(() => {
+              setLocation("/dashboard");
+            }, 2000);
+          }
+        } catch {
+          setTimeout(() => {
+            setLocation("/dashboard");
+          }, 2000);
+        }
       } else {
         setStatus("error");
         setMessage(data.error || "Verification failed");
@@ -132,7 +151,7 @@ export default function VerifyEmail() {
               </div>
               <p className="text-lg font-medium text-foreground mb-2">{message}</p>
               <p className="text-sm text-muted-foreground mb-8">Redirecting to dashboard...</p>
-              <Button asChild className="w-full h-12 text-base">
+              <Button asChild className="w-full h-11 text-base">
                 <Link href="/dashboard">Go to Dashboard</Link>
               </Button>
             </div>
@@ -165,7 +184,7 @@ export default function VerifyEmail() {
                     )}
                   </Button>
                 )}
-                <Button asChild variant="outline" className="w-full h-12">
+                <Button asChild variant="outline" className="w-full h-10">
                   <Link href="/login">Go to Login</Link>
                 </Button>
               </div>
@@ -187,7 +206,7 @@ export default function VerifyEmail() {
                 <Button 
                   onClick={handleResend}
                   disabled={isResending || resendCooldown > 0}
-                  className="w-full h-12"
+                  className="w-full h-10"
                   variant="default"
                 >
                   {isResending ? (
@@ -207,7 +226,7 @@ export default function VerifyEmail() {
                 <Button 
                   onClick={handleLogout}
                   variant="outline"
-                  className="w-full h-12"
+                  className="w-full h-10"
                 >
                   Logout
                 </Button>
