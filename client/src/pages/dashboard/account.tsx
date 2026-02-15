@@ -396,21 +396,18 @@ export default function Account() {
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
 
-    // Early exit if no session ID
-    if (!sessionId) return;
+    if (!sessionId || !isSuccess) return;
 
-    // Validate session ID format
     const isValidSessionId = isValidStripeSessionId(sessionId);
     
-    // Check if this session has already been processed
     const isSessionAlreadyProcessed = isValidSessionId
       ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
       : false;
 
-    if (isSuccess && isValidSessionId && !isSessionAlreadyProcessed && !syncCheckoutMutation.isPending) {
+    if (isValidSessionId && !isSessionAlreadyProcessed) {
       syncCheckoutMutation.mutate(sessionId);
     }
-  }, [syncCheckoutMutation]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;

@@ -284,9 +284,24 @@ export default function AIResumeChat({
 
       if (!response.ok) {
         if (response.status === 401) throw new Error("Session expired. Please log in again.");
-        if (response.status === 403) throw new Error("You don't have permission to perform this action.");
-        const error = await response.json();
-        throw new Error(error.error || "Failed to send message");
+        if (response.status === 403) {
+          let errorMsg = "You don't have permission to perform this action.";
+          try {
+            const errorData = await response.json();
+            if (errorData.code === "AI_EDIT_LIMIT") {
+              errorMsg = errorData.message || `You've reached your AI edit limit (${errorData.limit} per month). Upgrade your plan for more AI edits.`;
+            } else {
+              errorMsg = errorData.message || errorData.error || errorMsg;
+            }
+          } catch {}
+          throw new Error(errorMsg);
+        }
+        let errorMsg = "Failed to send message";
+        try {
+          const error = await response.json();
+          errorMsg = error.error || errorMsg;
+        } catch {}
+        throw new Error(errorMsg);
       }
 
       const reader = response.body?.getReader();

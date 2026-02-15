@@ -88,7 +88,7 @@ export async function setupStripeRoutes(app: Express) {
 
       const appUrl = resolveAppUrl(req);
 
-      const session = await stripe.checkout.sessions.create({
+      const checkoutParams: any = {
         customer: customerId,
         mode: plan === "lifetime" ? "payment" : "subscription",
         line_items: [
@@ -101,7 +101,15 @@ export async function setupStripeRoutes(app: Express) {
         success_url: `${appUrl}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${appUrl}/dashboard/account?canceled=true`,
         metadata: { userId, plan },
-      });
+      };
+
+      if (plan !== "lifetime" && subscription.stripeSubscriptionId) {
+        checkoutParams.subscription_data = {
+          metadata: { userId, plan, previous_subscription: subscription.stripeSubscriptionId },
+        };
+      }
+
+      const session = await stripe.checkout.sessions.create(checkoutParams);
 
       res.json({ url: session.url });
     } catch (error) {

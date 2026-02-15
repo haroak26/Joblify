@@ -136,8 +136,6 @@ app.use(csrfVerifyToken);
 app.use(sanitizeInput);
 app.use('/api', generalApiRateLimit);
 
-setupAuth(app);
-
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -203,6 +201,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await setupAuth(app);
   await setupStripeRoutes(app);
   setupAdminRoutes(app);
   await registerRoutes(httpServer, app);

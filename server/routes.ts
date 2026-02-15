@@ -1288,6 +1288,24 @@ export async function registerRoutes(
         return res.status(403).json({ error: "You do not have permission to access this resume" });
       }
 
+      // Check AI edit usage limits
+      const aiUsage = await storage.checkAndResetMonthlyUsage(userId);
+      const aiSubscription = await storage.getSubscription(userId);
+      const aiPlan = normalizePlan(aiSubscription?.plan);
+      const aiPlanLimits = PLAN_LIMITS[aiPlan];
+
+      if (aiUsage.aiEditsThisMonth >= aiPlanLimits.maxAIEditsPerMonth) {
+        return res.status(403).json({
+          error: "AI edit limit reached",
+          code: "AI_EDIT_LIMIT",
+          limit: aiPlanLimits.maxAIEditsPerMonth,
+          current: aiUsage.aiEditsThisMonth,
+          message: aiPlanLimits.maxAIEditsPerMonth === Infinity
+            ? "AI edit limit reached."
+            : `You've used all ${aiPlanLimits.maxAIEditsPerMonth} AI edits for this month. Upgrade your plan for more AI edits.`
+        });
+      }
+
       // Get user data
       const [user] = await db
         .select()
@@ -1674,6 +1692,16 @@ Respond ONLY with valid JSON (no text before or after):
           }
         } catch (dbError) {
           console.error('[API] Failed to save conversation:', dbError);
+        }
+
+        // Increment AI edit usage counter
+        try {
+          await db
+            .update(usageTable)
+            .set({ aiEditsThisMonth: sql`${usageTable.aiEditsThisMonth} + 1` })
+            .where(eq(usageTable.userId, userId));
+        } catch (usageError) {
+          console.error('[API] Failed to increment AI edit usage:', usageError);
         }
 
         res.write(`data: ${JSON.stringify({ type: "end" })}\n\n`);

@@ -55,13 +55,28 @@ const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export function setupAuth(app: Express) {
-  // Use PostgreSQL session store in production, memory store in development
+export async function setupAuth(app: Express) {
+  if (process.env.NODE_ENV === "production") {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS "session" (
+          "sid" varchar NOT NULL COLLATE "default",
+          "sess" json NOT NULL,
+          "expire" timestamp(6) NOT NULL,
+          CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE
+        );
+        CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+      `);
+    } catch (err) {
+      console.error('[Auth] Failed to ensure session table exists:', err);
+    }
+  }
+
   const sessionStore = process.env.NODE_ENV === "production"
     ? new (connectPgSimple(session))({
         pool: pool,
         tableName: "session",
-        createTableIfMissing: true,
+        createTableIfMissing: false,
       })
     : new (MemoryStore(session))({
         checkPeriod: 86400000,
@@ -73,16 +88,17 @@ export function setupAuth(app: Express) {
   }
 
   // Session middleware
+  const isProduction = process.env.NODE_ENV === "production";
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "joblify-dev-secret-key-insecure",
       resave: false,
       saveUninitialized: false,
       store: sessionStore,
-      proxy: true,
+      proxy: isProduction,
       cookie: {
-        secure: true,
-        sameSite: "none",
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       },
