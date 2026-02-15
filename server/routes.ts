@@ -892,9 +892,11 @@ export async function registerRoutes(
   app.get("/api/subscription", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
+      console.log('[API] Fetching subscription for user:', userId);
       let subscription = await storage.getSubscription(userId);
       
       if (!subscription) {
+        console.log('[API] No subscription found, creating free one for user:', userId);
         subscription = await storage.createSubscription(userId, "free");
       }
       
@@ -923,6 +925,7 @@ export async function registerRoutes(
   app.get("/api/usage", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
+      console.log('[API] Fetching usage for user:', userId);
       
       // Get usage data
       const usage = await storage.checkAndResetMonthlyUsage(userId);
@@ -936,6 +939,13 @@ export async function registerRoutes(
       const plan = normalizePlan(subscription?.plan);
       const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
       
+      // Get resume count
+      const resumeResult = await db
+        .select({ count: count() })
+        .from(resumes)
+        .where(eq(resumes.userId, userId));
+      const resumesCount = Number(resumeResult[0]?.count || 0);
+      
       // Schedules are not implemented yet, so we use 0
       const schedulesCount = 0;
       
@@ -946,6 +956,7 @@ export async function registerRoutes(
       const maxJobAnalyses = planLimits.maxJobAnalysesPerMonth === Infinity ? -1 : planLimits.maxJobAnalysesPerMonth;
       const maxATSScans = planLimits.maxATSScansPerMonth === Infinity ? -1 : planLimits.maxATSScansPerMonth;
       const maxImportedResumes = planLimits.maxImportedResumesPerMonth === Infinity ? -1 : planLimits.maxImportedResumesPerMonth;
+      const maxResumes = planLimits.maxResumes === Infinity ? -1 : planLimits.maxResumes;
       
       // Schedules limits (not implemented, so no access for now)
       const maxSchedules = 0;
@@ -959,11 +970,13 @@ export async function registerRoutes(
       const remainingATSScans = maxATSScans === -1 ? -1 : Math.max(0, maxATSScans - usage.atsScansThisMonth);
       const remainingImportedResumes = maxImportedResumes === -1 ? -1 : Math.max(0, maxImportedResumes - usage.importedResumesThisMonth);
       const remainingSchedules = maxSchedules === 0 ? 0 : Math.max(0, maxSchedules - schedulesCount);
+      const remainingResumes = maxResumes === -1 ? -1 : Math.max(0, maxResumes - resumesCount);
       
       res.json({
         plan,
         usage: {
           skillsCount,
+          resumesCount,
           jobsScrapedThisMonth: usage.importedResumesThisMonth,
           aiEditsThisMonth: usage.aiEditsThisMonth,
           importedResumesThisMonth: usage.importedResumesThisMonth,
@@ -983,6 +996,7 @@ export async function registerRoutes(
           maxJobAnalyses,
           maxATSScans,
           maxImportedResumes,
+          maxResumes,
         },
         remaining: {
           skills: remainingSkills,
@@ -993,6 +1007,7 @@ export async function registerRoutes(
           jobAnalyses: remainingJobAnalyses,
           atsScans: remainingATSScans,
           importedResumes: remainingImportedResumes,
+          resumes: remainingResumes,
         },
       });
     } catch (error) {

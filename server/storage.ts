@@ -445,8 +445,8 @@ export class DatabaseStorage implements IStorage {
       .from(resumes)
       .where(eq(resumes.userId, userId));
     
-    const currentCount = result[0]?.count || 0;
-    const allowed = currentCount < limits.maxResumes;
+    const currentCount = Number(result[0]?.count || 0);
+    const allowed = limits.maxResumes === Infinity || currentCount < limits.maxResumes;
     
     return {
       allowed,
