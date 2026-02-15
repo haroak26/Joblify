@@ -59,6 +59,8 @@ export async function setupAuth(app: Express) {
   if (process.env.NODE_ENV === "production") {
     try {
       // Ensure session table exists in production
+      // We use a separate query to avoid issues with schema synchronization tools
+      // that might try to drop the table if they don't see it in the ORM schema.
       await pool.query(`
         CREATE TABLE IF NOT EXISTS "session" (
           "sid" varchar NOT NULL COLLATE "default",
