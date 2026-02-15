@@ -345,7 +345,7 @@ export default function Account() {
     onSuccess: async (data, sessionId) => {
       // Validate session ID format before using it in localStorage
       if (!isValidStripeSessionId(sessionId)) {
-        console.warn('Invalid Stripe session ID format');
+        console.warn('Invalid Stripe session ID format:', sessionId);
         return;
       }
       
@@ -356,7 +356,7 @@ export default function Account() {
       const url = new URL(window.location.href);
       url.searchParams.delete('success');
       url.searchParams.delete('session_id');
-      window.history.replaceState({}, '', url.toString());
+      window.history.replaceState(null, '', url.toString());
       
       // Refresh user session after successful payment
       try {
@@ -396,15 +396,18 @@ export default function Account() {
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
 
+    // Early exit if no session ID
+    if (!sessionId) return;
+
     // Validate session ID format
-    const isValidSessionId = sessionId ? isValidStripeSessionId(sessionId) : false;
+    const isValidSessionId = isValidStripeSessionId(sessionId);
     
     // Check if this session has already been processed
     const isSessionAlreadyProcessed = isValidSessionId
-      ? localStorage.getItem(getCheckoutSyncKey(sessionId!)) === 'true' 
+      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === 'true' 
       : false;
 
-    if (isSuccess && sessionId && isValidSessionId && !isSessionAlreadyProcessed && !syncCheckoutMutation.isPending) {
+    if (isSuccess && isValidSessionId && !isSessionAlreadyProcessed && !syncCheckoutMutation.isPending) {
       syncCheckoutMutation.mutate(sessionId);
     }
   }, [syncCheckoutMutation]);
