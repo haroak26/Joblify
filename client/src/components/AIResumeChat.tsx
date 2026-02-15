@@ -245,7 +245,10 @@ export default function AIResumeChat({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featureName: 'resume_builder' }),
         credentials: 'include',
-      }).catch(() => {});
+      }).catch((err) => {
+        // Feature tracking is non-critical, but log errors for monitoring
+        console.warn('Failed to track feature usage:', err);
+      });
     }
 
     setIsStreaming(true);

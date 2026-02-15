@@ -17,7 +17,7 @@ const EMAIL_PROCESSING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const RENEWAL_REMINDER_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 
-export function startScheduleRunner(intervalMs = 60_000) {
+export function startScheduleRunner(intervalMs = 60_000): NodeJS.Timeout {
   const run = async () => {
     try {
       const now = Date.now();
@@ -173,5 +173,17 @@ export function startScheduleRunner(intervalMs = 60_000) {
   };
 
   run();
-  setInterval(run, intervalMs);
+  const timer = setInterval(run, intervalMs);
+  
+  console.log('[Scheduler] Started with interval:', intervalMs, 'ms');
+  
+  return timer;
+}
+
+/**
+ * Stop the scheduler
+ */
+export function stopScheduler(timer: NodeJS.Timeout): void {
+  clearInterval(timer);
+  console.log('[Scheduler] Stopped');
 }

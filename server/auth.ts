@@ -1,7 +1,9 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 import rateLimit from "express-rate-limit";
+import { pool } from "./db";
 import { storage } from "./storage";
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from "./email";
 import { 
@@ -54,17 +56,29 @@ const passwordResetLimiter = rateLimit({
 });
 
 export function setupAuth(app: Express) {
-  const MemoryStoreSession = MemoryStore(session);
+  // Use PostgreSQL session store in production, memory store in development
+  const sessionStore = process.env.NODE_ENV === "production"
+    ? new (connectPgSimple(session))({
+        pool: pool,
+        tableName: "session",
+        createTableIfMissing: true,
+      })
+    : new (MemoryStore(session))({
+        checkPeriod: 86400000,
+      });
 
-  // Session middleware (still needed for backwards compatibility and token storage)
+  // Require SESSION_SECRET in production
+  if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
+
+  // Session middleware
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || "joblify-secret-key-change-in-production",
+      secret: process.env.SESSION_SECRET || "joblify-dev-secret-key-insecure",
       resave: false,
       saveUninitialized: false,
-      store: new MemoryStoreSession({
-        checkPeriod: 86400000,
-      }),
+      store: sessionStore,
       cookie: {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",

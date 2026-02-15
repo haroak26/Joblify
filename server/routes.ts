@@ -1,4 +1,4 @@
-import type { Express, Request } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
@@ -32,6 +32,13 @@ const contactRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+/**
+ * Validation schemas
+ */
+const jobDescriptionSchema = z.object({
+  jobDescription: z.string().max(10000, "Job description is too long (max 10,000 characters)").optional()
+});
+
 const newsletterRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // 3 subscription attempts per hour per IP
@@ -63,7 +70,7 @@ function getPoeClient(): OpenAI {
 }
 
 // Middleware to check if user has AI access
-async function requireAIAccess(req: Request, res: any, next: any) {
+async function requireAIAccess(req: Request, res: Response, next: NextFunction) {
   const userId = req.session.userId;
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -1819,8 +1826,19 @@ Respond ONLY with valid JSON (no text before or after):
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${sanitizedTitle}.pdf"`);
 
-      // Pipe the PDF to response
+      // Pipe the PDF to response and handle errors
       doc.pipe(res);
+      
+      // Handle stream errors
+      doc.on('error', (streamError) => {
+        console.error('[API] PDF document stream error:', streamError);
+        doc.end(); // End the document stream properly
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Failed to generate PDF" });
+        } else {
+          res.end();
+        }
+      });
 
       // Generate the PDF content
       pdfGenerator.generate(resumeData, resume.title);
@@ -1830,6 +1848,8 @@ Respond ONLY with valid JSON (no text before or after):
       // If headers haven't been sent yet, send error response
       if (!res.headersSent) {
         res.status(500).json({ error: "Failed to generate PDF" });
+      } else {
+        res.end();
       }
     }
   });
@@ -1895,7 +1915,43 @@ Respond ONLY with valid JSON (no text before or after):
         });
       }
 
-      // Check usage limits
+      // Extract text from file with timeout and error handling
+      let resumeText = "";
+      
+      // Helper to wrap parsing with timeout
+      const parseWithTimeout = <T>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => 
+            setTimeout(() => reject(new Error(`File parsing exceeded timeout of ${timeoutMs / 1000} seconds`)), timeoutMs)
+          )
+        ]);
+      };
+
+      try {
+        if (req.file.mimetype === 'application/pdf') {
+          const pdfData = await parseWithTimeout(pdfParse(req.file.buffer));
+          resumeText = pdfData.text || "";
+        } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+          const result = await parseWithTimeout(mammoth.extractRawText({ buffer: req.file.buffer }));
+          resumeText = result.value || "";
+        }
+      } catch (parseError) {
+        console.error('[API] File parsing error:', parseError);
+        return res.status(400).json({ 
+          error: "Could not parse file",
+          message: "The file may be corrupted or in an unsupported format"
+        });
+      }
+
+      if (!resumeText || resumeText.trim().length === 0) {
+        return res.status(400).json({ error: "Could not extract text from file" });
+      }
+
+      // Validate job description length
+      const { jobDescription = "" } = jobDescriptionSchema.parse(req.body);
+
+      // Check usage limits before performing operation
       const usage = await storage.getUsage(userId);
       const subscription = await storage.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
@@ -1908,23 +1964,6 @@ Respond ONLY with valid JSON (no text before or after):
           current: usage.atsScansThisMonth
         });
       }
-
-      // Extract text from file
-      let resumeText = "";
-      if (req.file.mimetype === 'application/pdf') {
-        const pdfData = await pdfParse(req.file.buffer);
-        resumeText = pdfData.text;
-      } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
-        resumeText = result.value;
-      }
-
-      if (!resumeText || resumeText.trim().length === 0) {
-        return res.status(400).json({ error: "Could not extract text from file" });
-      }
-
-      // Get job description from request if provided
-      const jobDescription = req.body.jobDescription || "";
 
       // Perform ATS analysis
       const analysis = await performATSAnalysis(resumeText, jobDescription);
