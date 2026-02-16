@@ -186,45 +186,47 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: ExtendedInsertUser): Promise<User> {
-    const result = await db
-      .insert(users)
-      .values({
-        id: insertUser.id || undefined,
-        name: insertUser.name || null,
-        username: insertUser.username,
-        email: insertUser.email,
-        password: insertUser.password,
-        verificationToken: insertUser.verificationToken || null,
-        emailVerified: insertUser.emailVerified ?? false,
-        authProvider: insertUser.authProvider || null,
-        authProviderId: insertUser.authProviderId || null,
-        profileSetupComplete: insertUser.profileSetupComplete ?? false,
-      })
-      .returning();
-    
-    const user = result[0];
+    return db.transaction(async (tx) => {
+      const result = await tx
+        .insert(users)
+        .values({
+          id: insertUser.id || undefined,
+          name: insertUser.name || null,
+          username: insertUser.username,
+          email: insertUser.email,
+          password: insertUser.password,
+          verificationToken: insertUser.verificationToken || null,
+          emailVerified: insertUser.emailVerified ?? false,
+          authProvider: insertUser.authProvider || null,
+          authProviderId: insertUser.authProviderId || null,
+          profileSetupComplete: insertUser.profileSetupComplete ?? false,
+        })
+        .returning();
 
-    // Create profile
-    await db.insert(profiles).values({
-      userId: user.id,
-      intro: "",
-      skills: [],
+      const user = result[0];
+
+      // Create profile
+      await tx.insert(profiles).values({
+        userId: user.id,
+        intro: "",
+        skills: [],
+      });
+
+      // Create free subscription
+      await tx.insert(subscriptions).values({
+        userId: user.id,
+        plan: "free",
+        status: "active",
+      });
+
+      // Create usage tracking
+      await tx.insert(usage).values({
+        userId: user.id,
+        monthResetDate: new Date(),
+      });
+
+      return user;
     });
-
-    // Create free subscription
-    await db.insert(subscriptions).values({
-      userId: user.id,
-      plan: "free",
-      status: "active",
-    });
-
-    // Create usage tracking
-    await db.insert(usage).values({
-      userId: user.id,
-      monthResetDate: new Date(),
-    });
-
-    return user;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
