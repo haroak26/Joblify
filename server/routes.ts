@@ -420,8 +420,15 @@ export async function registerRoutes(
   // CSRF token endpoint - allows client to get/refresh token
   app.get("/api/csrf-token", csrfTokenEndpoint);
   
-  // Stripe webhook endpoint - needs to be before body parsing middleware
-  app.post("/api/webhooks/stripe", async (req: Request, res: Response) => {
+  // Stripe webhook endpoint aliases (kept for backwards compatibility with existing Stripe destinations)
+  app.post([
+    "/api/webhooks/stripe",
+    "/api/stripe/webhook",
+    "/webhooks/stripe",
+    "/stripe/webhook",
+    "/api/webhook/stripe",
+    "/webhook/stripe",
+  ], async (req: Request, res: Response) => {
     const sig = req.headers['stripe-signature'];
     
     if (!sig) {
