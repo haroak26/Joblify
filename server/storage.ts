@@ -294,6 +294,27 @@ export class DatabaseStorage implements IStorage {
 
 
   async deleteUser(id: string): Promise<boolean> {
+    // Cancel Stripe subscription if exists before deleting user
+    try {
+      const subscription = await this.getSubscription(id);
+      if (subscription?.stripeSubscriptionId) {
+        const { getStripeClient } = await import('./stripeClient');
+        const stripe = getStripeClient();
+        
+        try {
+          // Cancel the subscription immediately
+          await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
+          console.log('[Storage] Cancelled Stripe subscription for user:', id);
+        } catch (stripeError) {
+          console.error('[Storage] Error cancelling Stripe subscription:', stripeError);
+          // Continue with user deletion even if Stripe cancellation fails
+        }
+      }
+    } catch (error) {
+      console.error('[Storage] Error checking subscription before user deletion:', error);
+      // Continue with user deletion
+    }
+    
     const result = await db.delete(users).where(eq(users.id, id));
     return true;
   }
