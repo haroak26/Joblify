@@ -65,9 +65,21 @@ export function csrfVerifyToken(req: Request, res: Response, next: NextFunction)
     return next();
   }
 
-  // Skip CSRF check for webhook endpoints (they should use signature verification)
-  const webhookPaths = ["/api/webhooks/stripe", "/api/stripe/webhook"];
-  if (webhookPaths.some(path => req.path.startsWith(path))) {
+  // Skip CSRF check for Stripe webhook endpoints (they are authenticated via signature verification)
+  const normalizedPath = req.path.replace(/\/+$/, "") || "/";
+  const webhookPaths = new Set([
+    "/api/webhooks/stripe",
+    "/webhooks/stripe",
+    "/api/stripe/webhook",
+    "/stripe/webhook",
+  ]);
+
+  if (webhookPaths.has(normalizedPath)) {
+    return next();
+  }
+
+  // Fallback: allow Stripe-signed webhook requests even if a proxy rewrites path prefixes
+  if (typeof req.headers["stripe-signature"] === "string" && normalizedPath.includes("/webhook")) {
     return next();
   }
 
