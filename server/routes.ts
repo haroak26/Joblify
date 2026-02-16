@@ -498,8 +498,68 @@ export async function registerRoutes(
     }
     
     try {
+      const stripe = getStripeClient();
+
+      const getOrCreateLocalSubscription = async (userId: string) => {
+        let subscription = await storage.getSubscription(userId);
+        if (!subscription) {
+          subscription = await storage.createSubscription(userId, "free");
+        }
+        return subscription;
+      };
+
       // Handle the event
       switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as Stripe.Checkout.Session;
+
+          if (session.mode !== 'subscription') {
+            break;
+          }
+
+          const stripeCustomerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id;
+          const metadataUserId = session.metadata?.userId;
+
+          let userId = metadataUserId;
+          if (!userId && stripeCustomerId) {
+            const localSubscription = await storage.getSubscriptionByCustomerId(stripeCustomerId);
+            userId = localSubscription?.userId;
+          }
+
+          if (!userId) {
+            console.warn('[Stripe Webhook] checkout.session.completed missing local user mapping', {
+              stripeCustomerId,
+              sessionId: session.id,
+            });
+            break;
+          }
+
+          await getOrCreateLocalSubscription(userId);
+
+          if (stripeCustomerId) {
+            await storage.updateSubscription(userId, { stripeCustomerId });
+          }
+
+          const sessionSubscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
+
+          if (!sessionSubscriptionId) {
+            console.warn('[Stripe Webhook] checkout.session.completed missing subscription id', {
+              userId,
+              sessionId: session.id,
+            });
+            break;
+          }
+
+          const stripeSubscription = await stripe.subscriptions.retrieve(sessionSubscriptionId);
+          await syncSubscriptionFromStripeSubscription(userId, stripeSubscription);
+          console.log('[Stripe Webhook] Synced checkout session completion for user:', userId);
+          break;
+        }
+
         case 'customer.subscription.created':
         case 'customer.subscription.updated': {
           const subscription = event.data.object as Stripe.Subscription;
