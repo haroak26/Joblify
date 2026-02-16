@@ -74,7 +74,7 @@ export function csrfVerifyToken(req: Request, res: Response, next: NextFunction)
     "/stripe/webhook",
   ]);
 
-  if (webhookPaths.has(normalizedPath)) {
+  if (webhookPaths.has(normalizedPath) || normalizedPath.endsWith("/webhook")) {
     return next();
   }
 
