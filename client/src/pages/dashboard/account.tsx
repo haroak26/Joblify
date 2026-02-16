@@ -283,6 +283,37 @@ export default function Account() {
     },
   });
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutSuccess = params.get("success") === "true";
+    const sessionId = params.get("session_id");
+
+    if (!checkoutSuccess || !sessionId) {
+      return;
+    }
+
+    const syncCheckoutSession = async () => {
+      try {
+        await apiRequest("GET", `/api/checkout/session/${sessionId}/sync`);
+        toast({
+          title: "Payment Confirmed",
+          description: "Your plan has been updated successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Payment Received",
+          description: "We received your payment. Subscription sync is still processing.",
+        });
+      } finally {
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    };
+
+    syncCheckoutSession();
+  }, [toast]);
+
   const handleCancelSubscription = () => {
     cancelSubscriptionMutation.mutate();
   };
@@ -484,23 +515,23 @@ export default function Account() {
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
           <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-1 pb-2 pt-1 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-5 sm:gap-0 sm:overflow-visible sm:px-0 sm:pb-0 sm:pt-0">
-            <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="billing" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="billing" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <CreditCard className="w-4 h-4" />
               <span>Billing</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="usage" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="usage" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <BarChart3 className="w-4 h-4" />
               <span>Usage</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="perks" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="perks" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <Gift className="w-4 h-4" />
               <span>Perks & Codes</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="data" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="data" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <Database className="w-4 h-4" />
               <span>Data & Privacy</span>
             </CleanTabsTrigger>
