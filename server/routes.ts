@@ -85,6 +85,45 @@ function resolveBillingBaseUrl(req: Request): string {
   return `${req.protocol}://${req.get('host')}`.replace(/\/$/, "");
 }
 
+function mapStripeStatusToSubscriptionStatus(status: Stripe.Subscription.Status): "active" | "past_due" | "cancelled" {
+  if (status === "active" || status === "trialing") {
+    return "active";
+  }
+
+  if (status === "past_due" || status === "unpaid") {
+    return "past_due";
+  }
+
+  return "cancelled";
+}
+
+function resolvePlanFromPriceId(priceId?: string): PlanType {
+  if (priceId === process.env.STRIPE_PLUS_PRICE_ID) {
+    return "plus";
+  }
+
+  if (priceId === process.env.STRIPE_ULTRA_PRICE_ID) {
+    return "ultra";
+  }
+
+  return "free";
+}
+
+async function syncSubscriptionFromStripeSubscription(userId: string, stripeSubscription: Stripe.Subscription) {
+  const currentPeriodEndUnix = (stripeSubscription as any).current_period_end;
+  const currentPeriodEnd = typeof currentPeriodEndUnix === "number"
+    ? new Date(currentPeriodEndUnix * 1000)
+    : null;
+  const priceId = stripeSubscription.items.data[0]?.price.id;
+
+  await storage.updateSubscription(userId, {
+    plan: resolvePlanFromPriceId(priceId),
+    status: mapStripeStatusToSubscriptionStatus(stripeSubscription.status),
+    stripeSubscriptionId: stripeSubscription.id,
+    currentPeriodEnd,
+  });
+}
+
 // Middleware to check if user has AI access
 async function requireAIAccess(req: Request, res: Response, next: NextFunction) {
   const userId = req.session.userId;
@@ -467,31 +506,12 @@ export async function registerRoutes(
           const customerId = typeof subscription.customer === 'string' 
             ? subscription.customer 
             : subscription.customer.id;
-          const subscriptionId = subscription.id;
-          const status = subscription.status;
-          // Webhook events use snake_case, but TypeScript types don't reflect this
-          const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
-          
-          // Get plan from subscription items
-          const priceId = subscription.items.data[0]?.price.id;
-          let plan: PlanType = 'free';
-          
-          if (priceId === process.env.STRIPE_PLUS_PRICE_ID) {
-            plan = 'plus';
-          } else if (priceId === process.env.STRIPE_ULTRA_PRICE_ID) {
-            plan = 'ultra';
-          }
           
           // Find user by customer ID
           const userSubscription = await storage.getSubscriptionByCustomerId(customerId);
           
           if (userSubscription) {
-            await storage.updateSubscription(userSubscription.userId, {
-              plan,
-              status: status === 'active' ? 'active' : status === 'past_due' ? 'past_due' : 'cancelled',
-              stripeSubscriptionId: subscriptionId,
-              currentPeriodEnd,
-            });
+            await syncSubscriptionFromStripeSubscription(userSubscription.userId, subscription);
             console.log('[Stripe Webhook] Updated subscription for customer:', customerId);
           }
           break;
@@ -1226,6 +1246,57 @@ Return ONLY the cover letter text, no additional commentary.`;
     } catch (error) {
       console.error('[API] Error creating checkout session:', error);
       res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // Sync subscription status after Stripe Checkout redirect (covers delayed webhook delivery)
+  app.get("/api/checkout/session/:sessionId/sync", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { sessionId } = req.params;
+      const stripe = getUncachableStripeClient();
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ["subscription"],
+      });
+
+      if (session.mode !== "subscription") {
+        return res.status(400).json({ error: "Invalid checkout session mode" });
+      }
+
+      if (session.payment_status !== "paid") {
+        return res.status(400).json({ error: "Checkout session is not paid" });
+      }
+
+      const sessionUserId = session.metadata?.userId;
+      if (sessionUserId && sessionUserId !== userId) {
+        return res.status(403).json({ error: "Checkout session does not belong to this user" });
+      }
+
+      const stripeCustomerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+      const stripeSubscription = typeof session.subscription === "string"
+        ? await stripe.subscriptions.retrieve(session.subscription)
+        : session.subscription;
+
+      if (!stripeSubscription) {
+        return res.status(400).json({ error: "No subscription attached to checkout session" });
+      }
+
+      let localSubscription = await storage.getSubscription(userId);
+      if (!localSubscription) {
+        localSubscription = await storage.createSubscription(userId, "free");
+      }
+
+      if (stripeCustomerId && localSubscription.stripeCustomerId !== stripeCustomerId) {
+        await storage.updateSubscription(userId, { stripeCustomerId });
+      }
+
+      await syncSubscriptionFromStripeSubscription(userId, stripeSubscription);
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("[API] Error syncing checkout session:", error);
+      return res.status(500).json({ error: "Failed to sync checkout session" });
     }
   });
 
