@@ -302,7 +302,7 @@ export default function Account() {
       } catch (error) {
         toast({
           title: "Payment Received",
-          description: "We received your payment. Subscription sync is still processing.",
+          description: "We received your payment. Your Stripe subscription is finalizing and should update shortly.",
         });
       } finally {
         queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
