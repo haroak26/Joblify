@@ -187,6 +187,84 @@ export default function Account() {
     },
   });
 
+  // Billing mutations
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/subscription/cancel");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Subscription Cancelled",
+        description: "Your subscription will remain active until the end of the billing period.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+    },
+    onError: () => {
+      toast({
+        title: "Cancellation Failed",
+        description: "Unable to cancel subscription. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const upgradeSubscriptionMutation = useMutation({
+    mutationFn: async (newPlan: string) => {
+      const response = await apiRequest("POST", "/api/subscription/upgrade", {
+        newPlan,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Upgrade Successful",
+        description: "Your subscription has been upgraded.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Upgrade Failed",
+        description: error.message || "Unable to upgrade subscription. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const billingPortalMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("GET", "/api/subscription/portal");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to Stripe billing portal
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Portal Access Failed",
+        description: "Unable to access billing portal. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCancelSubscription = () => {
+    cancelSubscriptionMutation.mutate();
+  };
+
+  const handleUpgrade = (plan: string) => {
+    upgradeSubscriptionMutation.mutate(plan);
+  };
+
+  const handleManageBilling = () => {
+    billingPortalMutation.mutate();
+  };
+
   // GDPR/CCPA Data Rights Queries
   const dataSummaryQuery = useQuery<DataSummaryResponse>({
     queryKey: ["/api/user/data-summary"],
@@ -361,10 +439,14 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+          <CleanTabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
             <CleanTabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Settings</span>
+            </CleanTabsTrigger>
+            <CleanTabsTrigger value="billing" className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              <span className="hidden sm:inline">Billing</span>
             </CleanTabsTrigger>
             <CleanTabsTrigger value="usage" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
@@ -395,6 +477,231 @@ export default function Account() {
 
             {/* Email Preferences Section */}
             <EmailPreferencesSection />
+          </CleanTabsContent>
+
+          {/* Billing Tab */}
+          <CleanTabsContent value="billing" className="space-y-6">
+            <div>
+              <h2 className="text-subheader font-bold">Subscription & Billing</h2>
+              <p className="text-muted-foreground">Manage your subscription plan and billing</p>
+            </div>
+
+            {/* Current Subscription */}
+            <div className="bg-card border rounded-lg p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Current Plan</h3>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-base px-3 py-1">
+                      {subscriptionQuery.data?.subscription.plan ? 
+                        subscriptionQuery.data.subscription.plan.charAt(0).toUpperCase() + 
+                        subscriptionQuery.data.subscription.plan.slice(1) 
+                        : 'Free'}
+                    </Badge>
+                    {subscriptionQuery.data?.subscription.status && (
+                      <Badge 
+                        variant={subscriptionQuery.data.subscription.status === 'active' ? 'default' : 'destructive'}
+                      >
+                        {subscriptionQuery.data.subscription.status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {subscriptionQuery.data?.subscription.currentPeriodEnd && (
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>Renews on</p>
+                    <p className="font-medium text-foreground">
+                      {new Date(subscriptionQuery.data.subscription.currentPeriodEnd).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                {subscriptionQuery.data?.subscription.plan === 'free' && (
+                  <Button onClick={() => window.location.href = '/pricing'} className="flex-1">
+                    <Zap className="w-4 h-4 mr-2" />
+                    Upgrade Plan
+                  </Button>
+                )}
+                
+                {subscriptionQuery.data?.subscription.plan === 'plus' && (
+                  <>
+                    <Button 
+                      onClick={() => handleUpgrade('ultra')} 
+                      disabled={upgradeSubscriptionMutation.isPending}
+                      className="flex-1"
+                    >
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      {upgradeSubscriptionMutation.isPending ? 'Processing...' : 'Upgrade to Ultra'}
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleManageBilling()}
+                      disabled={billingPortalMutation.isPending}
+                      className="flex-1"
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      {billingPortalMutation.isPending ? 'Loading...' : 'Manage Billing'}
+                    </Button>
+                  </>
+                )}
+                
+                {subscriptionQuery.data?.subscription.plan === 'ultra' && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => handleManageBilling()}
+                    disabled={billingPortalMutation.isPending}
+                    className="flex-1"
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    {billingPortalMutation.isPending ? 'Loading...' : 'Manage Billing'}
+                  </Button>
+                )}
+              </div>
+
+              {/* Cancellation */}
+              {subscriptionQuery.data?.subscription.plan !== 'free' && 
+               subscriptionQuery.data?.subscription.plan !== 'lifetime' && (
+                <div className="mt-4 pt-4 border-t">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                        Cancel Subscription
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Your subscription will remain active until the end of the current billing period. 
+                          You'll be downgraded to the free plan afterwards and lose access to premium features.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleCancelSubscription()}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          Cancel Subscription
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+            </div>
+
+            {/* Plan Comparison */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Available Plans</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                {/* Free Plan */}
+                <div className={`border rounded-lg p-5 ${
+                  subscriptionQuery.data?.subscription.plan === 'free' ? 'border-primary bg-primary/5' : ''
+                }`}>
+                  <h4 className="font-semibold text-lg mb-1">Free</h4>
+                  <p className="text-2xl font-bold mb-3">$0<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                  <ul className="space-y-2 text-sm mb-4">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>1 resume</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>10 AI edits/month</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Basic templates</span>
+                    </li>
+                  </ul>
+                  {subscriptionQuery.data?.subscription.plan === 'free' && (
+                    <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
+                  )}
+                </div>
+
+                {/* Plus Plan */}
+                <div className={`border rounded-lg p-5 ${
+                  subscriptionQuery.data?.subscription.plan === 'plus' ? 'border-primary bg-primary/5' : ''
+                }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-semibold text-lg">Plus</h4>
+                    <Badge variant="secondary" className="text-xs">Popular</Badge>
+                  </div>
+                  <p className="text-2xl font-bold mb-3">$15<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                  <ul className="space-y-2 text-sm mb-4">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>5 resumes</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>100 AI edits/month</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>All templates</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>ATS scanner</span>
+                    </li>
+                  </ul>
+                  {subscriptionQuery.data?.subscription.plan === 'plus' ? (
+                    <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
+                  ) : subscriptionQuery.data?.subscription.plan === 'free' ? (
+                    <Button onClick={() => window.location.href = '/pricing'} className="w-full" size="sm">
+                      Upgrade
+                    </Button>
+                  ) : null}
+                </div>
+
+                {/* Ultra Plan */}
+                <div className={`border rounded-lg p-5 ${
+                  subscriptionQuery.data?.subscription.plan === 'ultra' ? 'border-primary bg-primary/5' : ''
+                }`}>
+                  <h4 className="font-semibold text-lg mb-1">Ultra</h4>
+                  <p className="text-2xl font-bold mb-3">$30<span className="text-sm font-normal text-muted-foreground">/month</span></p>
+                  <ul className="space-y-2 text-sm mb-4">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Unlimited resumes</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Unlimited AI edits</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Priority support</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Resume tailoring</span>
+                    </li>
+                  </ul>
+                  {subscriptionQuery.data?.subscription.plan === 'ultra' ? (
+                    <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
+                  ) : subscriptionQuery.data?.subscription.plan === 'free' ? (
+                    <Button onClick={() => window.location.href = '/pricing'} className="w-full" size="sm">
+                      Upgrade
+                    </Button>
+                  ) : subscriptionQuery.data?.subscription.plan === 'plus' ? (
+                    <Button 
+                      onClick={() => handleUpgrade('ultra')} 
+                      disabled={upgradeSubscriptionMutation.isPending}
+                      className="w-full" 
+                      size="sm"
+                    >
+                      {upgradeSubscriptionMutation.isPending ? 'Processing...' : 'Upgrade'}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </CleanTabsContent>
 
           {/* Usage Tab */}
