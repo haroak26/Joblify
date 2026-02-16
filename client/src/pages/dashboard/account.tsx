@@ -819,20 +819,37 @@ export default function Account() {
           {/* Subscription Tab */}
           <CleanTabsContent value="subscription" className="space-y-6">{/* Subscription Section */}
         <section className="space-y-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-subheader font-bold">Subscription & Billing</h2>
               <p className="text-muted-foreground">Manage your plan and billing information</p>
             </div>
             {subscription?.stripeCustomerId && currentPlan !== "free" && (
-              <Button
-                variant="outline"
-                onClick={() => manageSubscriptionMutation.mutate()}
-                disabled={manageSubscriptionMutation.isPending}
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                {manageSubscriptionMutation.isPending ? "Loading..." : "Manage Subscription"}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => manageSubscriptionMutation.mutate()}
+                  disabled={manageSubscriptionMutation.isPending}
+                  className="w-full sm:w-auto"
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  {manageSubscriptionMutation.isPending ? "Loading..." : "Manage Subscription"}
+                </Button>
+                <Button
+                  variant="outline"
+                  asChild
+                  className="w-full sm:w-auto"
+                >
+                  <a
+                    href={import.meta.env.VITE_STRIPE_BILLING_PORTAL_URL || "https://billing.stripe.com/p/login/bJebJ3bnI4qMbSE4WI1B600"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Billing Portal
+                  </a>
+                </Button>
+              </div>
             )}
           </div>
           
