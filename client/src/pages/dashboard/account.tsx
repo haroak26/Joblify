@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, Gift, Tag, LogOut, Loader2 } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, LogOut, Loader2 } from "lucide-react";
 import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -152,7 +152,6 @@ export default function Account() {
   const { toast } = useToast();
   const { logout } = useAuth();
   const [showDataSummary, setShowDataSummary] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
   const [pendingUpgradePlan, setPendingUpgradePlan] = useState<string | undefined>();
   const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | undefined>();
   const [isManagingBilling, setIsManagingBilling] = useState(false);
@@ -214,10 +213,7 @@ export default function Account() {
   };
 
   const startCheckout = async (plan: string) => {
-    const response = await apiRequest("POST", "/api/billing/checkout", {
-      plan,
-      couponCode: couponCode.trim() || undefined,
-    });
+    const response = await apiRequest("POST", "/api/billing/checkout", { plan });
     const result = await response.json();
 
     if (result.directUpdate) {
@@ -402,6 +398,16 @@ export default function Account() {
     : currentPlan === "lifetime"
     ? "Lifetime"
     : "Free";
+  const subscriptionStatus = subscription?.status;
+  const isCancelling = subscriptionStatus === "cancelled";
+  const statusLabel = isCancelling
+    ? "Cancelling"
+    : subscriptionStatus === "past_due"
+    ? "Past due"
+    : "Active";
+  const cancellationDateLabel = isCancelling && subscription?.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
+    : undefined;
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
@@ -497,24 +503,20 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-1 pb-2 pt-1 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-5 sm:gap-0 sm:overflow-visible sm:px-0 sm:pb-0 sm:pt-0">
-            <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+          <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-0 pb-2 pt-1 snap-x snap-mandatory whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 sm:gap-0 sm:overflow-visible sm:whitespace-normal sm:pb-0 sm:pt-0">
+            <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="billing" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="billing" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <CreditCard className="w-4 h-4" />
               <span>Billing</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="usage" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="usage" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <BarChart3 className="w-4 h-4" />
               <span>Usage</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="perks" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
-              <Gift className="w-4 h-4" />
-              <span>Perks & Codes</span>
-            </CleanTabsTrigger>
-            <CleanTabsTrigger value="data" className="flex shrink-0 snap-start items-center gap-2 border border-border/70 bg-background px-4 py-2.5 sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="data" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <Database className="w-4 h-4" />
               <span>Data & Privacy</span>
             </CleanTabsTrigger>
@@ -553,15 +555,18 @@ export default function Account() {
                     <Badge variant="secondary" className="text-sm px-2.5 py-1 font-medium">
                       {currentPlanLabel}
                     </Badge>
-                    {subscription?.status && (
-                      <Badge variant={subscription.status === "active" ? "outline" : "destructive"}>
-                        {subscription.status}
+                    {subscriptionStatus && (
+                      <Badge variant={isCancelling || subscriptionStatus === "past_due" ? "destructive" : "outline"}>
+                        {statusLabel}
                       </Badge>
+                    )}
+                    {cancellationDateLabel && (
+                      <Badge variant="secondary">Cancelling ({cancellationDateLabel})</Badge>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {isLifetime
-                      ? "Lifetime access is active."
+                      ? "Lifetime access is Active."
                       : "Manage billing, upgrades, and cancellations from this page."}
                   </p>
                 </div>
@@ -611,32 +616,9 @@ export default function Account() {
                 )}
 
                 {currentPlan !== "free" && !isLifetime && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handleManageBilling()}
-                    disabled={isManagingBilling}
-                  >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Manage Billing
-                  </Button>
-                )}
-              </div>
-
-              <div className="space-y-2 max-w-sm">
-                <Label htmlFor="coupon-code">Coupon code (optional)</Label>
-                <Input
-                  id="coupon-code"
-                  placeholder="Enter promo code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                />
-              </div>
-
-              {currentPlan !== "free" && !isLifetime && (
-                <div className="pt-4 border-t">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                      <Button variant="outline" className="sm:w-auto border-destructive/30 text-destructive hover:text-destructive">
                         Cancel Subscription
                       </Button>
                     </AlertDialogTrigger>
@@ -660,9 +642,9 @@ export default function Account() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                </div>
-              )}
+                )}
             </div>
+              </div>
 
             {/* Plan Comparison */}
             <div className="space-y-4">
@@ -1111,43 +1093,6 @@ export default function Account() {
             </div>
           </CleanTabsContent>
 
-          {/* Perks & Codes Tab */}
-          <CleanTabsContent value="perks" className="space-y-6">
-            <div>
-              <h2 className="text-subheader font-bold">Perks & Redeemable Codes</h2>
-              <p className="text-muted-foreground">Redeem codes to unlock special perks and features</p>
-            </div>
-
-            {/* Code Redemption Section */}
-            <div className="border rounded-lg p-6 space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-large font-semibold flex items-center gap-2">
-                  <Tag className="w-5 h-5" />
-                  Redeem a Code
-                </h3>
-                <p className="text-small text-muted-foreground">
-                  Enter a redeemable code to unlock special perks, features, or temporary plan upgrades.
-                </p>
-              </div>
-
-              <CodeRedemptionForm />
-            </div>
-
-            {/* Active Perks Section */}
-            <div className="border rounded-lg p-6 space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-large font-semibold flex items-center gap-2">
-                  <Gift className="w-5 h-5" />
-                  Your Perks
-                </h3>
-                <p className="text-small text-muted-foreground">
-                  View and manage your redeemed perks and their current status.
-                </p>
-              </div>
-
-              <UserPerksList />
-            </div>
-          </CleanTabsContent>
         </CleanTabs>
       </div>
     </div>
@@ -1489,160 +1434,6 @@ function EmailPreferencesSection() {
           />
         </div>
       </div>
-    </div>
-  );
-}
-
-// Code Redemption Form Component
-function CodeRedemptionForm() {
-  const [code, setCode] = useState("");
-  const { toast } = useToast();
-
-  const redeemMutation = useMutation({
-    mutationFn: async (code: string) => {
-      const response = await apiRequest("POST", "/api/codes/redeem", { code });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to redeem code");
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Success!",
-        description: data.message,
-      });
-      setCode("");
-      // Refresh the perks list
-      queryClient.invalidateQueries({ queryKey: ["/api/codes/user-perks"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (code.trim()) {
-      redeemMutation.mutate(code.trim().toUpperCase());
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex gap-2">
-        <Input
-          type="text"
-          placeholder="Enter your code"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase().trim())}
-          className="flex-1 font-mono"
-          maxLength={50}
-        />
-        <Button 
-          type="submit" 
-          disabled={!code.trim() || redeemMutation.isPending}
-        >
-          {redeemMutation.isPending ? "Redeeming..." : "Redeem"}
-        </Button>
-      </div>
-      <p className="text-small text-muted-foreground">
-        Codes are case-insensitive. Get codes from promotional emails, social media, or special events.
-      </p>
-    </form>
-  );
-}
-
-// User Perks List Component
-function UserPerksList() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["/api/codes/user-perks"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/codes/user-perks");
-      if (!response.ok) throw new Error("Failed to fetch perks");
-      return response.json();
-    },
-  });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const perks = data?.perks || [];
-
-  if (perks.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Gift className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p className="text-large font-semibold">No perks redeemed yet</p>
-        <p className="text-small mt-1">Redeem a code above to unlock special perks!</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {perks.map((perk: any) => {
-        const isExpired = perk.expiresAt && new Date(perk.expiresAt) < new Date();
-        const isActive = perk.isActive && !isExpired;
-
-        return (
-          <div 
-            key={perk.id} 
-            className={`border rounded-lg p-4 ${isActive ? 'bg-green-50/50 border-green-200' : 'bg-muted/50'}`}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-semibold">{perk.perkName}</h4>
-                  {isActive && (
-                    <Badge variant="default" className="bg-green-600">Active</Badge>
-                  )}
-                  {isExpired && (
-                    <Badge variant="secondary">Expired</Badge>
-                  )}
-                  {!perk.isActive && !isExpired && (
-                    <Badge variant="secondary">Used</Badge>
-                  )}
-                </div>
-                <p className="text-small text-muted-foreground">{perk.perkDescription}</p>
-                
-                {/* Show remaining value for credit-based perks */}
-                {perk.remainingValue !== null && perk.remainingValue !== undefined && (
-                  <p className="text-small font-medium text-primary">
-                    Remaining: {perk.remainingValue}
-                  </p>
-                )}
-                
-                <div className="flex gap-4 text-small text-muted-foreground mt-2">
-                  <span className="flex items-center gap-1">
-                    <Tag className="w-3 h-3" />
-                    Code: {perk.code}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Redeemed: {new Date(perk.redeemedAt).toLocaleDateString()}
-                  </span>
-                  {perk.expiresAt && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      Expires: {new Date(perk.expiresAt).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
