@@ -1,8 +1,8 @@
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 import { normalizePlan, type PlanType } from "@shared/schema";
 import { storage } from "../storage";
+import { pool } from "../db";
 
 declare global {
   namespace Express {
@@ -25,6 +25,143 @@ const SESSION_MAX_AGE_MS = 30 * DAY_MS;
 // Account lockout settings
 const MAX_LOGIN_ATTEMPTS = 5;
 const ACCOUNT_LOCKOUT_DURATION_MS = 15 * MINUTE_MS;
+
+const RATE_LIMIT_TABLE_NAME = "rate_limit_counters";
+let rateLimitStorageInitPromise: Promise<void> | null = null;
+
+async function ensureRateLimitStorage() {
+  if (!rateLimitStorageInitPromise) {
+    rateLimitStorageInitPromise = pool
+      .query(`
+        CREATE TABLE IF NOT EXISTS ${RATE_LIMIT_TABLE_NAME} (
+          key TEXT PRIMARY KEY,
+          hits INTEGER NOT NULL,
+          reset_time TIMESTAMPTZ NOT NULL
+        );
+      `)
+      .then(() => pool.query(`CREATE INDEX IF NOT EXISTS ${RATE_LIMIT_TABLE_NAME}_reset_time_idx ON ${RATE_LIMIT_TABLE_NAME} (reset_time);`))
+      .then(() => undefined)
+      .catch((error) => {
+        rateLimitStorageInitPromise = null;
+        throw error;
+      });
+  }
+
+  return rateLimitStorageInitPromise;
+}
+
+async function incrementRateCounter(key: string, windowMs: number) {
+  await ensureRateLimitStorage();
+  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  const result = await pool.query<{ hits: number; reset_time: Date }>(
+    `
+      INSERT INTO ${RATE_LIMIT_TABLE_NAME} (key, hits, reset_time)
+      VALUES ($1, 1, NOW() + ($2 * INTERVAL '1 second'))
+      ON CONFLICT (key) DO UPDATE
+      SET
+        hits = CASE
+          WHEN ${RATE_LIMIT_TABLE_NAME}.reset_time <= NOW() THEN 1
+          ELSE ${RATE_LIMIT_TABLE_NAME}.hits + 1
+        END,
+        reset_time = CASE
+          WHEN ${RATE_LIMIT_TABLE_NAME}.reset_time <= NOW() THEN NOW() + ($2 * INTERVAL '1 second')
+          ELSE ${RATE_LIMIT_TABLE_NAME}.reset_time
+        END
+      RETURNING hits, reset_time;
+    `,
+    [key, windowSeconds],
+  );
+
+  return {
+    hits: Number(result.rows[0]?.hits ?? 0),
+    resetTimeMs: result.rows[0]?.reset_time ? new Date(result.rows[0].reset_time).getTime() : Date.now() + windowMs,
+  };
+}
+
+async function getRateCounter(key: string) {
+  await ensureRateLimitStorage();
+  const result = await pool.query<{ hits: number; reset_time: Date }>(
+    `SELECT hits, reset_time FROM ${RATE_LIMIT_TABLE_NAME} WHERE key = $1 AND reset_time > NOW();`,
+    [key],
+  );
+
+  if (!result.rows[0]) {
+    return { hits: 0, resetTimeMs: Date.now() };
+  }
+
+  return {
+    hits: Number(result.rows[0].hits),
+    resetTimeMs: new Date(result.rows[0].reset_time).getTime(),
+  };
+}
+
+async function resetRateCounter(key: string) {
+  await ensureRateLimitStorage();
+  await pool.query(`DELETE FROM ${RATE_LIMIT_TABLE_NAME} WHERE key = $1;`, [key]);
+}
+
+function setRateLimitHeaders(res: Response, limit: number, hits: number, resetTimeMs: number) {
+  const remaining = Math.max(0, limit - hits);
+  const resetSeconds = Math.max(0, Math.ceil((resetTimeMs - Date.now()) / 1000));
+
+  res.setHeader("RateLimit-Limit", String(limit));
+  res.setHeader("RateLimit-Remaining", String(remaining));
+  res.setHeader("RateLimit-Reset", String(resetSeconds));
+}
+
+function getRequestIdentity(req: Request): string {
+  return req.user?.id || req.ip || "unknown";
+}
+
+function createDistributedRateLimit(options: {
+  namespace: string;
+  windowMs: number;
+  max: number | ((req: Request) => number | Promise<number>);
+  message: string;
+  keyGenerator?: (req: Request) => string;
+  skipSuccessfulRequests?: boolean;
+}): RequestHandler {
+  const { namespace, windowMs, max, message, keyGenerator = getRequestIdentity, skipSuccessfulRequests = false } = options;
+
+  return async (req, res, next) => {
+    const key = `${namespace}:${keyGenerator(req)}`;
+
+    try {
+      const limit = typeof max === "function" ? await max(req) : max;
+
+      if (skipSuccessfulRequests) {
+        const current = await getRateCounter(key);
+        setRateLimitHeaders(res, limit, current.hits, current.resetTimeMs);
+
+        if (current.hits >= limit) {
+          return res.status(429).json({ message });
+        }
+
+        res.on("finish", () => {
+          if (res.statusCode >= 400) {
+            incrementRateCounter(key, windowMs).catch((error) => {
+              console.error(`[Security] Failed to increment rate limit counter for ${namespace}`, error);
+            });
+          }
+        });
+
+        return next();
+      }
+
+      const counter = await incrementRateCounter(key, windowMs);
+      setRateLimitHeaders(res, limit, counter.hits, counter.resetTimeMs);
+
+      if (counter.hits > limit) {
+        return res.status(429).json({ message });
+      }
+
+      next();
+    } catch (error) {
+      console.error(`[Security] Distributed rate limiter failed for ${namespace}. Allowing request.`, error);
+      next();
+    }
+  };
+}
 
 /**
  * Security headers middleware using helmet
@@ -83,7 +220,8 @@ export function createTieredRateLimit(options: {
     message = "Too many requests, please try again later.",
   } = options;
 
-  return rateLimit({
+  return createDistributedRateLimit({
+    namespace: `tiered:${message}`,
     windowMs,
     max: (req) => {
       const plan = normalizePlan(req.userPlan);
@@ -99,10 +237,6 @@ export function createTieredRateLimit(options: {
       }
     },
     message,
-    standardHeaders: true,
-    legacyHeaders: false,
-    // Use higher limits in development but don't skip entirely
-    skip: (req) => false,
   });
 }
 
@@ -166,91 +300,81 @@ export const generalApiRateLimit = createTieredRateLimit({
 /**
  * Authentication endpoints rate limiter (prevents brute force)
  */
-export const authRateLimit = rateLimit({
+export const authRateLimit = createDistributedRateLimit({
+  namespace: "auth",
   windowMs: AUTH_WINDOW_MS,
-  max: 5, // 5 attempts per 15 minutes
-  skipSuccessfulRequests: true, // Don't count successful logins
+  max: 5,
+  skipSuccessfulRequests: true,
   message: "Too many login attempts. Please try again after 15 minutes.",
-  standardHeaders: true,
-  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || "unknown",
 });
 
 /**
  * Registration rate limiter (prevents spam)
  */
-export const registrationRateLimit = rateLimit({
+export const registrationRateLimit = createDistributedRateLimit({
+  namespace: "registration",
   windowMs: REGISTRATION_WINDOW_MS,
-  max: 3, // 3 registrations per hour per IP
+  max: 3,
   message: "Too many accounts created. Please try again later.",
-  standardHeaders: true,
-  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || "unknown",
 });
 
 /**
  * Input sanitization middleware
- * 
- * Note: This provides basic XSS protection. For production use,
- * consider using a library like DOMPurify or validator.js for more
- * comprehensive sanitization, especially for user-generated content
- * that will be rendered as HTML.
+ *
+ * This middleware avoids altering legitimate payload values and only removes
+ * prototype-pollution keys from untrusted request objects.
  */
 export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
   try {
-    // Basic XSS prevention - escape HTML special characters
-    const sanitize = (obj: any): any => {
-      if (typeof obj === "string") {
-        // HTML escape special characters
-        return obj
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#x27;")
-          .replace(/\//g, "&#x2F;");
+    const blockedKeys = new Set(["__proto__", "prototype", "constructor"]);
+
+    const scrubObject = (value: unknown): unknown => {
+      if (Array.isArray(value)) {
+        return value.map(scrubObject);
       }
-      if (Array.isArray(obj)) {
-        return obj.map(sanitize);
-      }
-      if (obj && typeof obj === "object") {
-        const sanitized: any = {};
-        for (const key in obj) {
-          sanitized[key] = sanitize(obj[key]);
+
+      if (value && typeof value === "object") {
+        const input = value as Record<string, unknown>;
+        const output: Record<string, unknown> = {};
+
+        for (const [key, nested] of Object.entries(input)) {
+          if (blockedKeys.has(key)) {
+            continue;
+          }
+
+          output[key] = scrubObject(nested);
         }
-        return sanitized;
+
+        return output;
       }
-      return obj;
+
+      return value;
     };
 
-    // Sanitize body (writable property - direct assignment works)
-    if (req.body) {
-      req.body = sanitize(req.body);
+    if (req.body && typeof req.body === "object") {
+      req.body = scrubObject(req.body);
     }
-    
-    // Sanitize query (may be read-only - mutate in place)
-    if (req.query && typeof req.query === 'object') {
-      const sanitized = sanitize(req.query);
-      // Delete existing properties first to remove any unsanitized data
-      Object.keys(req.query).forEach(key => delete (req.query as any)[key]);
-      // Assign sanitized values
-      Object.keys(sanitized).forEach(key => (req.query as any)[key] = sanitized[key]);
+
+    if (req.query && typeof req.query === "object") {
+      const sanitized = scrubObject(req.query) as Record<string, unknown>;
+      Object.keys(req.query).forEach((key) => delete (req.query as Record<string, unknown>)[key]);
+      Object.assign(req.query as Record<string, unknown>, sanitized);
     }
-    
-    // Sanitize params (may be read-only - mutate in place)
-    if (req.params && typeof req.params === 'object') {
-      const sanitized = sanitize(req.params);
-      // Delete existing properties first to remove any unsanitized data
-      Object.keys(req.params).forEach(key => delete (req.params as any)[key]);
-      // Assign sanitized values
-      Object.keys(sanitized).forEach(key => (req.params as any)[key] = sanitized[key]);
+
+    if (req.params && typeof req.params === "object") {
+      const sanitized = scrubObject(req.params) as Record<string, unknown>;
+      Object.keys(req.params).forEach((key) => delete (req.params as Record<string, unknown>)[key]);
+      Object.assign(req.params as Record<string, unknown>, sanitized);
     }
 
     next();
   } catch (error) {
-    console.error('Error in sanitizeInput middleware - sanitization failed');
-    // Return error response instead of continuing with potentially unsanitized data
-    res.status(500).json({ 
-      error: 'Request sanitization failed',
-      message: 'Unable to process request safely'
+    console.error("Error in sanitizeInput middleware - sanitization failed", error);
+    res.status(500).json({
+      error: "Request sanitization failed",
+      message: "Unable to process request safely",
     });
   }
 }
@@ -270,74 +394,43 @@ export const sessionConfig = {
   saveUninitialized: false,
 };
 
-/**
- * Account lockout tracking
- * 
- * NOTE: This uses an in-memory Map which means:
- * 1. Data is lost on server restart
- * 2. Won't work correctly in multi-server deployments
- * 
- * For production multi-server deployments, consider:
- * - Using Redis for distributed state
- * - Using the security_events table
- * - Implementing a distributed cache
- */
-const loginAttempts = new Map<string, { count: number; lockUntil?: number }>();
+function getLoginLockoutKey(identifier: string): string {
+  return `login-lockout:${identifier.toLowerCase()}`;
+}
 
-export function trackLoginAttempt(identifier: string): boolean {
-  const now = Date.now();
-  const attempt = loginAttempts.get(identifier);
-
-  // Check if locked
-  if (attempt?.lockUntil && attempt.lockUntil > now) {
-    return false; // Still locked
-  }
-
-  // Reset if lock expired
-  if (attempt?.lockUntil && attempt.lockUntil <= now) {
-    loginAttempts.delete(identifier);
+export async function trackLoginAttempt(identifier: string): Promise<boolean> {
+  try {
+    const counter = await incrementRateCounter(getLoginLockoutKey(identifier), ACCOUNT_LOCKOUT_DURATION_MS);
+    return counter.hits < MAX_LOGIN_ATTEMPTS;
+  } catch (error) {
+    console.error("[Security] Failed to track login attempt", error);
     return true;
   }
+}
 
-  // Increment attempts
-  const newCount = (attempt?.count || 0) + 1;
-  
-  // Lock after max failed attempts
-  if (newCount >= MAX_LOGIN_ATTEMPTS) {
-    loginAttempts.set(identifier, {
-      count: newCount,
-      lockUntil: now + ACCOUNT_LOCKOUT_DURATION_MS,
-    });
+export async function resetLoginAttempts(identifier: string): Promise<void> {
+  try {
+    await resetRateCounter(getLoginLockoutKey(identifier));
+  } catch (error) {
+    console.error("[Security] Failed to reset login attempts", error);
+  }
+}
+
+export async function isAccountLocked(identifier: string): Promise<boolean> {
+  try {
+    const counter = await getRateCounter(getLoginLockoutKey(identifier));
+    return counter.hits >= MAX_LOGIN_ATTEMPTS && counter.resetTimeMs > Date.now();
+  } catch (error) {
+    console.error("[Security] Failed to read account lock state", error);
     return false;
   }
-
-  loginAttempts.set(identifier, { count: newCount });
-  return true;
 }
 
-export function resetLoginAttempts(identifier: string) {
-  loginAttempts.delete(identifier);
-}
-
-export function isAccountLocked(identifier: string): boolean {
-  const attempt = loginAttempts.get(identifier);
-  if (!attempt?.lockUntil) return false;
-  
-  const now = Date.now();
-  if (attempt.lockUntil > now) return true;
-  
-  // Lock expired, clean up
-  loginAttempts.delete(identifier);
-  return false;
-}
-
-// Clean up expired locks every hour
+// Clean up expired counters every hour
 setInterval(() => {
-  const now = Date.now();
-  const entries = Array.from(loginAttempts.entries());
-  for (const [key, value] of entries) {
-    if (value.lockUntil && value.lockUntil <= now) {
-      loginAttempts.delete(key);
-    }
-  }
+  ensureRateLimitStorage()
+    .then(() => pool.query(`DELETE FROM ${RATE_LIMIT_TABLE_NAME} WHERE reset_time <= NOW();`))
+    .catch((error) => {
+      console.error("[Security] Failed cleaning expired rate limit counters", error);
+    });
 }, 60 * 60 * 1000);

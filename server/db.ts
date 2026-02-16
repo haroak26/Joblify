@@ -15,6 +15,12 @@ const poolConfig: pg.PoolConfig = {
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
   connectionTimeoutMillis: 10000, // Timeout for new connections
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? {
+          rejectUnauthorized: process.env.PG_SSL_REJECT_UNAUTHORIZED !== "false",
+        }
+      : false,
 };
 
 export const pool = new Pool(poolConfig);
