@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearch, useLocation } from "wouter";
 import { Briefcase, Loader2, CheckCircle, XCircle, Mail, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,15 @@ export default function VerifyEmail() {
   const [message, setMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const hasVerifiedTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     // If we have a token, verify it
     if (token) {
+      if (hasVerifiedTokenRef.current === token) {
+        return;
+      }
+      hasVerifiedTokenRef.current = token;
       verifyEmail();
     } else if (user && !user.emailVerified) {
       // User is logged in but not verified - show waiting state
