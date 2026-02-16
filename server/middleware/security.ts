@@ -26,20 +26,39 @@ const SESSION_MAX_AGE_MS = 30 * DAY_MS;
 const MAX_LOGIN_ATTEMPTS = 5;
 const ACCOUNT_LOCKOUT_DURATION_MS = 15 * MINUTE_MS;
 
-const RATE_LIMIT_TABLE_NAME = "rate_limit_counters";
+const CREATE_RATE_LIMIT_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS rate_limit_counters (
+    key TEXT PRIMARY KEY,
+    hits INTEGER NOT NULL,
+    reset_time TIMESTAMPTZ NOT NULL
+  );
+`;
+const CREATE_RATE_LIMIT_RESET_INDEX_SQL = "CREATE INDEX IF NOT EXISTS rate_limit_counters_reset_time_idx ON rate_limit_counters (reset_time);";
+const UPSERT_RATE_LIMIT_COUNTER_SQL = `
+  INSERT INTO rate_limit_counters (key, hits, reset_time)
+  VALUES ($1, 1, NOW() + ($2 * INTERVAL '1 second'))
+  ON CONFLICT (key) DO UPDATE
+  SET
+    hits = CASE
+      WHEN rate_limit_counters.reset_time <= NOW() THEN 1
+      ELSE rate_limit_counters.hits + 1
+    END,
+    reset_time = CASE
+      WHEN rate_limit_counters.reset_time <= NOW() THEN NOW() + ($2 * INTERVAL '1 second')
+      ELSE rate_limit_counters.reset_time
+    END
+  RETURNING hits, reset_time;
+`;
+const SELECT_RATE_LIMIT_COUNTER_SQL = "SELECT hits, reset_time FROM rate_limit_counters WHERE key = $1 AND reset_time > NOW();";
+const DELETE_RATE_LIMIT_COUNTER_SQL = "DELETE FROM rate_limit_counters WHERE key = $1;";
+const DELETE_EXPIRED_RATE_LIMIT_COUNTERS_SQL = "DELETE FROM rate_limit_counters WHERE reset_time <= NOW();";
 let rateLimitStorageInitPromise: Promise<void> | null = null;
 
 async function ensureRateLimitStorage() {
   if (!rateLimitStorageInitPromise) {
     rateLimitStorageInitPromise = pool
-      .query(`
-        CREATE TABLE IF NOT EXISTS ${RATE_LIMIT_TABLE_NAME} (
-          key TEXT PRIMARY KEY,
-          hits INTEGER NOT NULL,
-          reset_time TIMESTAMPTZ NOT NULL
-        );
-      `)
-      .then(() => pool.query(`CREATE INDEX IF NOT EXISTS ${RATE_LIMIT_TABLE_NAME}_reset_time_idx ON ${RATE_LIMIT_TABLE_NAME} (reset_time);`))
+      .query(CREATE_RATE_LIMIT_TABLE_SQL)
+      .then(() => pool.query(CREATE_RATE_LIMIT_RESET_INDEX_SQL))
       .then(() => undefined)
       .catch((error) => {
         rateLimitStorageInitPromise = null;
@@ -53,24 +72,7 @@ async function ensureRateLimitStorage() {
 async function incrementRateCounter(key: string, windowMs: number) {
   await ensureRateLimitStorage();
   const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
-  const result = await pool.query<{ hits: number; reset_time: Date }>(
-    `
-      INSERT INTO ${RATE_LIMIT_TABLE_NAME} (key, hits, reset_time)
-      VALUES ($1, 1, NOW() + ($2 * INTERVAL '1 second'))
-      ON CONFLICT (key) DO UPDATE
-      SET
-        hits = CASE
-          WHEN ${RATE_LIMIT_TABLE_NAME}.reset_time <= NOW() THEN 1
-          ELSE ${RATE_LIMIT_TABLE_NAME}.hits + 1
-        END,
-        reset_time = CASE
-          WHEN ${RATE_LIMIT_TABLE_NAME}.reset_time <= NOW() THEN NOW() + ($2 * INTERVAL '1 second')
-          ELSE ${RATE_LIMIT_TABLE_NAME}.reset_time
-        END
-      RETURNING hits, reset_time;
-    `,
-    [key, windowSeconds],
-  );
+  const result = await pool.query<{ hits: number; reset_time: Date }>(UPSERT_RATE_LIMIT_COUNTER_SQL, [key, windowSeconds]);
 
   return {
     hits: Number(result.rows[0]?.hits ?? 0),
@@ -80,10 +82,7 @@ async function incrementRateCounter(key: string, windowMs: number) {
 
 async function getRateCounter(key: string) {
   await ensureRateLimitStorage();
-  const result = await pool.query<{ hits: number; reset_time: Date }>(
-    `SELECT hits, reset_time FROM ${RATE_LIMIT_TABLE_NAME} WHERE key = $1 AND reset_time > NOW();`,
-    [key],
-  );
+  const result = await pool.query<{ hits: number; reset_time: Date }>(SELECT_RATE_LIMIT_COUNTER_SQL, [key]);
 
   if (!result.rows[0]) {
     return { hits: 0, resetTimeMs: Date.now() };
@@ -97,7 +96,7 @@ async function getRateCounter(key: string) {
 
 async function resetRateCounter(key: string) {
   await ensureRateLimitStorage();
-  await pool.query(`DELETE FROM ${RATE_LIMIT_TABLE_NAME} WHERE key = $1;`, [key]);
+  await pool.query(DELETE_RATE_LIMIT_COUNTER_SQL, [key]);
 }
 
 function setRateLimitHeaders(res: Response, limit: number, hits: number, resetTimeMs: number) {
@@ -429,7 +428,7 @@ export async function isAccountLocked(identifier: string): Promise<boolean> {
 // Clean up expired counters every hour
 setInterval(() => {
   ensureRateLimitStorage()
-    .then(() => pool.query(`DELETE FROM ${RATE_LIMIT_TABLE_NAME} WHERE reset_time <= NOW();`))
+    .then(() => pool.query(DELETE_EXPIRED_RATE_LIMIT_COUNTERS_SQL))
     .catch((error) => {
       console.error("[Security] Failed cleaning expired rate limit counters", error);
     });

@@ -13,8 +13,8 @@ async function source(fileUrl) {
 test("security middleware uses database-backed shared rate limiter storage", async () => {
   const src = await source(SECURITY_FILE);
 
-  assert.match(src, /CREATE TABLE IF NOT EXISTS \$\{RATE_LIMIT_TABLE_NAME\}/, "should create shared postgres counter table");
-  assert.match(src, /INSERT INTO \$\{RATE_LIMIT_TABLE_NAME\}/, "should upsert counters in postgres");
+  assert.match(src, /CREATE TABLE IF NOT EXISTS rate_limit_counters/, "should create shared postgres counter table");
+  assert.match(src, /INSERT INTO rate_limit_counters/, "should upsert counters in postgres");
   assert.match(src, /ON CONFLICT \(key\) DO UPDATE/, "should atomically update shared counters");
   assert.match(src, /export const authRateLimit = createDistributedRateLimit\(/, "auth limiter should use distributed limiter");
   assert.match(src, /export const registrationRateLimit = createDistributedRateLimit\(/, "registration limiter should use distributed limiter");

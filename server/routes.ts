@@ -846,26 +846,29 @@ export async function registerRoutes(
         creative: "Write with personality and creativity. Stand out while maintaining professionalism.",
       };
 
-      const systemPrompt = `You are an expert cover letter writer. Create a compelling, personalized cover letter based on the user's resume and the job description they're applying to.
-
-Guidelines:
-- ${toneInstructions[tone]}
-- Keep it to 3-4 concise paragraphs
-- Start with a strong opening that grabs attention
-- Highlight 2-3 key qualifications that match the job requirements
-- Show genuine interest in the role and company
-- End with a call to action
-- Use the candidate's name from their resume
-- Be specific about their achievements
-- Do NOT use generic phrases or clichés
-- Make it authentic and personal
-- Write like a real person, not a robot. Use natural, conversational language.
-- NEVER use em dashes (the long dash character). Use commas, periods, or semicolons instead.
-- Avoid overused phrases like "I am thrilled", "I am excited to apply", "I believe I would be a great fit". Be genuine and specific instead.
-- Keep sentences varied in length. Mix short punchy sentences with longer ones.
-- Use simple, direct language. Prefer "use" over "utilize", "help" over "facilitate".
-
-Return ONLY the cover letter text, no additional commentary.`;
+      const selectedToneInstruction = toneInstructions[tone];
+      const systemPrompt = [
+        "You are an expert cover letter writer. Create a compelling, personalized cover letter based on the user's resume and the job description they're applying to.",
+        "",
+        "Guidelines:",
+        `- ${selectedToneInstruction}`,
+        "- Keep it to 3-4 concise paragraphs",
+        "- Start with a strong opening that grabs attention",
+        "- Highlight 2-3 key qualifications that match the job requirements",
+        "- Show genuine interest in the role and company",
+        "- End with a call to action",
+        "- Use the candidate's name from their resume",
+        "- Be specific about their achievements",
+        "- Do NOT use generic phrases or clichés",
+        "- Make it authentic and personal",
+        "- Write like a real person, not a robot. Use natural, conversational language.",
+        "- NEVER use em dashes (the long dash character). Use commas, periods, or semicolons instead.",
+        "- Avoid overused phrases like \"I am thrilled\", \"I am excited to apply\", \"I believe I would be a great fit\". Be genuine and specific instead.",
+        "- Keep sentences varied in length. Mix short punchy sentences with longer ones.",
+        "- Use simple, direct language. Prefer \"use\" over \"utilize\", \"help\" over \"facilitate\".",
+        "",
+        "Return ONLY the cover letter text, no additional commentary.",
+      ].join("\n");
 
       const response = await getPoeClient().chat.completions.create({
         model: "claude-4.5-haiku",
