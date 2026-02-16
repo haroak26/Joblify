@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -146,7 +146,6 @@ const plans = [
   },
 ];
 
-const STRIPE_CUSTOMER_PORTAL_URL = "https://billing.stripe.com/p/login/bJebJ3bnI4qMbSE4WI1B600";
 
 export default function Account() {
   const [, navigate] = useLocation();
@@ -189,150 +188,32 @@ export default function Account() {
     },
   });
 
-  // Billing mutations
-  const cancelSubscriptionMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/subscription/cancel");
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Subscription Cancelled",
-        description: "Your subscription will remain active until the end of the billing period.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-    },
-    onError: () => {
-      toast({
-        title: "Cancellation Failed",
-        description: "Unable to cancel subscription. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const upgradeSubscriptionMutation = useMutation({
-    mutationFn: async (newPlan: string) => {
-      const response = await apiRequest("POST", "/api/checkout", {
-        plan: newPlan,
-      });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        toast({
-          title: "Upgrade Successful",
-          description: "Your subscription has been upgraded.",
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
-      }
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Upgrade Failed",
-        description: error.message || "Unable to upgrade subscription. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const downgradeSubscriptionMutation = useMutation({
-    mutationFn: async (newPlan: string) => {
-      const response = await apiRequest("POST", "/api/subscription/downgrade", {
-        newPlan,
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Plan Updated",
-        description: "Your subscription downgrade has been scheduled.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Downgrade Failed",
-        description: error.message || "Unable to downgrade subscription. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const billingPortalMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("GET", "/api/subscription/portal");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      // Redirect to Stripe billing portal
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Portal Access Failed",
-        description: "Unable to access billing portal. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const checkoutSuccess = params.get("success") === "true";
-    const sessionId = params.get("session_id");
-
-    if (!checkoutSuccess || !sessionId) {
-      return;
-    }
-
-    const syncCheckoutSession = async () => {
-      try {
-        await apiRequest("GET", `/api/checkout/session/${sessionId}/sync`);
-        toast({
-          title: "Payment Confirmed",
-          description: "Your plan has been updated successfully.",
-        });
-      } catch (error) {
-        toast({
-          title: "Payment Received",
-          description: "We received your payment. Your Stripe subscription is finalizing and should update shortly.",
-        });
-      } finally {
-        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-    };
-
-    syncCheckoutSession();
-  }, [toast]);
+  const billingUnavailable = () => {
+    toast({
+      title: "Billing unavailable",
+      description: "Paid plan purchases and self-serve billing are temporarily unavailable.",
+      variant: "destructive",
+    });
+  };
 
   const handleCancelSubscription = () => {
-    cancelSubscriptionMutation.mutate();
+    billingUnavailable();
   };
 
-  const handleUpgrade = (plan: string) => {
-    upgradeSubscriptionMutation.mutate(plan);
+  const handleUpgrade = (_plan: string) => {
+    billingUnavailable();
   };
 
-  const handleDowngrade = (plan: string) => {
-    downgradeSubscriptionMutation.mutate(plan);
+  const handleDowngrade = (_plan: string) => {
+    billingUnavailable();
   };
 
   const handleManageBilling = () => {
-    billingPortalMutation.mutate();
+    billingUnavailable();
   };
 
-  const handleOpenStripePortal = () => {
-    window.open(STRIPE_CUSTOMER_PORTAL_URL, "_blank", "noopener,noreferrer");
-  };
+  const pendingUpgradePlan: string | undefined = undefined;
+  const pendingDowngradePlan: string | undefined = undefined;
 
   // GDPR/CCPA Data Rights Queries
   const dataSummaryQuery = useQuery<DataSummaryResponse>({
@@ -413,12 +294,6 @@ export default function Account() {
     : currentPlan === "lifetime"
     ? "Lifetime"
     : "Free";
-  const pendingUpgradePlan = upgradeSubscriptionMutation.isPending
-    ? (upgradeSubscriptionMutation.variables as string | undefined)
-    : undefined;
-  const pendingDowngradePlan = downgradeSubscriptionMutation.isPending
-    ? (downgradeSubscriptionMutation.variables as string | undefined)
-    : undefined;
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
@@ -593,15 +468,15 @@ export default function Account() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button variant="outline" onClick={handleOpenStripePortal} className="sm:w-auto">
+                <Button variant="outline" onClick={handleManageBilling} className="sm:w-auto">
                   <CreditCard className="w-4 h-4 mr-2" />
-                  Manage in Stripe
+                  Manage Billing
                 </Button>
 
                 {currentPlan === "free" && (
                   <Button
                     onClick={() => handleUpgrade("plus")}
-                    disabled={upgradeSubscriptionMutation.isPending}
+                    disabled={false}
                     className="sm:w-auto"
                   >
                     {pendingUpgradePlan === "plus" ? (
@@ -609,21 +484,21 @@ export default function Account() {
                     ) : (
                       <Zap className="w-4 h-4 mr-2" />
                     )}
-                    {pendingUpgradePlan === "plus" ? "Starting checkout..." : "Upgrade to Plus"}
+                    {pendingUpgradePlan === "plus" ? "Contact support" : "Upgrade to Plus"}
                   </Button>
                 )}
 
                 {currentPlan === "plus" && (
                   <Button
                     onClick={() => handleUpgrade("ultra")}
-                    disabled={upgradeSubscriptionMutation.isPending}
+                    disabled={false}
                   >
                     {pendingUpgradePlan === "ultra" ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <TrendingUp className="w-4 h-4 mr-2" />
                     )}
-                    {pendingUpgradePlan === "ultra" ? "Starting checkout..." : "Upgrade to Ultra"}
+                    {pendingUpgradePlan === "ultra" ? "Contact support" : "Upgrade to Ultra"}
                   </Button>
                 )}
 
@@ -631,14 +506,10 @@ export default function Account() {
                   <Button
                     variant="outline"
                     onClick={() => handleManageBilling()}
-                    disabled={billingPortalMutation.isPending}
+                    disabled={false}
                   >
-                    {billingPortalMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <CreditCard className="w-4 h-4 mr-2" />
-                    )}
-                    {billingPortalMutation.isPending ? "Opening..." : "Manage Billing"}
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Manage Billing
                   </Button>
                 )}
               </div>
@@ -720,7 +591,7 @@ export default function Account() {
                         <Button
                           size="sm"
                           className="w-full"
-                          disabled={upgradeSubscriptionMutation.isPending || downgradeSubscriptionMutation.isPending}
+                          disabled={false}
                           onClick={() =>
                             isDowngradeAction ? handleDowngrade(plan.id) : handleUpgrade(plan.id)
                           }

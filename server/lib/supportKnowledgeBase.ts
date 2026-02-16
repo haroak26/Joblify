@@ -88,7 +88,7 @@ A: Backup codes are recovery codes you can use to access your account if you los
 ### Subscription Management
 
 Q: How do I upgrade my plan?
-A: Go to your Dashboard > Subscription > Upgrade Plan. Choose your desired plan and complete payment through Stripe.
+A: Go to your Dashboard > Subscription > Upgrade Plan. If self-serve billing is unavailable, contact support for assistance.
 
 Q: How do I cancel my subscription?
 A: Go to Account Settings > Subscription > Cancel Plan. Your subscription will remain active until the end of your billing period.

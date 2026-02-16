@@ -169,7 +169,7 @@ export async function getUserDataSummary(userId: string) {
         },
         subscriptionData: {
           description: "Payment and subscription information",
-          fields: ["plan type", "subscription status", "Stripe customer ID"],
+          fields: ["plan type", "subscription status"],
           dataPresent: true,
           source: "Generated when you subscribe or use free plan",
           purpose: "Billing, access control, and feature limits",
@@ -201,12 +201,6 @@ export async function getUserDataSummary(userId: string) {
         },
       },
       thirdPartySharing: {
-        stripe: {
-          name: "Stripe",
-          purpose: "Payment processing",
-          dataShared: ["email", "name", "payment information"],
-          privacyPolicy: "https://stripe.com/privacy",
-        },
         poe: {
           name: "Poe AI (Claude API)",
           purpose: "AI-powered features",
