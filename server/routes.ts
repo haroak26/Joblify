@@ -70,6 +70,21 @@ function getPoeClient(): OpenAI {
   return poeClient;
 }
 
+function resolveBillingBaseUrl(req: Request): string {
+  const configured = process.env.APP_URL || process.env.BASE_URL;
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (configured) {
+    return configured.replace(/\/$/, "");
+  }
+
+  if (isProduction) {
+    throw new Error("APP_URL or BASE_URL must be configured in production for Stripe redirects");
+  }
+
+  return `${req.protocol}://${req.get('host')}`.replace(/\/$/, "");
+}
+
 // Middleware to check if user has AI access
 async function requireAIAccess(req: Request, res: Response, next: NextFunction) {
   const userId = req.session.userId;
@@ -1173,9 +1188,9 @@ Return ONLY the cover letter text, no additional commentary.`;
       }
       
       // Create checkout session
-      const baseUrl = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-      const successUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account?canceled=true`;
+      const baseUrl = resolveBillingBaseUrl(req);
+      const successUrl = `${baseUrl}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${baseUrl}/dashboard/account?canceled=true`;
 
       console.log('[Stripe] Creating session with URLs:', { successUrl, cancelUrl });
 
@@ -1215,8 +1230,8 @@ Return ONLY the cover letter text, no additional commentary.`;
       }
       
       const stripe = getStripeClient();
-      const baseUrl = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-      const returnUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account`;
+      const baseUrl = resolveBillingBaseUrl(req);
+      const returnUrl = `${baseUrl}/dashboard/account`;
 
       const session = await stripe.billingPortal.sessions.create({
         customer: subscription.stripeCustomerId,
