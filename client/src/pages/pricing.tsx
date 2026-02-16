@@ -7,10 +7,6 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/use-auth";
 import { SEO } from "@/components/seo";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
 
 const plans = [
   {
@@ -98,46 +94,6 @@ const plans = [
 
 export default function Pricing() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-
-  const checkoutMutation = useMutation({
-    mutationFn: async (plan: string) => {
-      const response = await apiRequest('POST', '/api/checkout', { plan });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      // Redirect to Stripe checkout
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Checkout Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setLoadingPlan(null);
-    },
-  });
-
-  const handleCheckout = (planId: string) => {
-    if (!user) {
-      // Redirect to login if not authenticated
-      window.location.href = `/login?redirect=/pricing`;
-      return;
-    }
-
-    if (planId === 'free') {
-      // Redirect to register/dashboard for free plan
-      window.location.href = user ? `/dashboard` : `/register`;
-      return;
-    }
-
-    setLoadingPlan(planId);
-    checkoutMutation.mutate(planId);
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -212,22 +168,11 @@ export default function Pricing() {
                           : 'variant-outline'
                       }`}
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={(e) => {
-                        if (plan.id !== 'free' && user) {
-                          e.preventDefault();
-                          handleCheckout(plan.id);
-                        }
-                      }}
-                      disabled={loadingPlan === plan.id}
                     >
-                      {loadingPlan === plan.id ? (
-                        "Loading..."
-                      ) : (
-                        <>
-                          {plan.cta}
-                          {!user && plan.id === 'free' && <ArrowRight className="w-4 h-4 ml-2" />}
-                        </>
-                      )}
+                      <>
+                        {plan.cta}
+                        {!user && plan.id === "free" && <ArrowRight className="w-4 h-4 ml-2" />}
+                      </>
                     </Button>
                   </Link>
                 </CardContent>

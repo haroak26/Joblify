@@ -227,7 +227,7 @@ export default function TermsAndConditions() {
                 <li>Paid subscriptions are billed in advance on a recurring basis (monthly or annually)</li>
                 <li>All fees are non-refundable except as required by law or as explicitly stated in our refund policy</li>
                 <li>You authorize us to charge your payment method for all fees incurred</li>
-                <li>Payment processing is handled securely through our third-party payment processor (Stripe)</li>
+                <li>Payment processing may be handled by approved third-party providers when paid plans are available</li>
                 <li>Prices are stated in US dollars unless otherwise specified</li>
               </ul>
 

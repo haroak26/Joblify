@@ -60,7 +60,7 @@ export default function PrivacyPolicy() {
                 <li>Account Information: Name, email address, password (encrypted), and account preferences</li>
                 <li>Profile Information: Professional title, location, contact information (phone number, LinkedIn profile, website)</li>
                 <li>Resume Data: Work experience, education history, skills, certifications, projects, and other career-related information you provide</li>
-                <li>Payment Information: Billing details and payment card information (processed securely through our payment processor, Stripe)</li>
+                <li>Payment Information: Billing details and transaction records if paid plans are purchased</li>
               </ul>
 
               <h3 className="text-xl font-semibold mb-3 mt-6">2.2 AI Chat Interaction Data</h3>
@@ -205,8 +205,7 @@ export default function PrivacyPolicy() {
                 We share your information with trusted third-party service providers who assist us in operating our Service:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
-                <li><strong>Payment Processing:</strong> Stripe (for secure payment processing)</li>
-                <li><strong>AI Services:</strong> OpenAI (for AI chat and resume optimization features)</li>
+                                <li><strong>AI Services:</strong> OpenAI (for AI chat and resume optimization features)</li>
                 <li><strong>Cloud Hosting:</strong> Our hosting providers for infrastructure and storage</li>
                 <li><strong>Analytics:</strong> Analytics providers to understand usage patterns (anonymized data)</li>
                 <li><strong>Email Services:</strong> Email delivery services for transactional and marketing emails</li>
