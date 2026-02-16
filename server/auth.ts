@@ -251,7 +251,7 @@ export async function setupAuth(app: Express) {
       }
 
       // Check if account is locked due to failed attempts
-      if (isAccountLocked(username)) {
+      if (await isAccountLocked(username)) {
         return res.status(429).json({ 
           error: "Account temporarily locked due to multiple failed login attempts. Please try again in 15 minutes." 
         });
@@ -260,7 +260,7 @@ export async function setupAuth(app: Express) {
       // Use session-based authentication
       const user = await storage.getUserByUsername(username);
       if (!user) {
-        trackLoginAttempt(username);
+        await trackLoginAttempt(username);
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
@@ -273,12 +273,12 @@ export async function setupAuth(app: Express) {
 
       const isValid = await verifyPassword(user.password, password);
       if (!isValid) {
-        trackLoginAttempt(username);
+        await trackLoginAttempt(username);
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
       // Successful login - reset attempts
-      resetLoginAttempts(username);
+      await resetLoginAttempts(username);
 
       // Auto-upgrade password hash if using legacy scrypt
       if (!isArgon2Hash(user.password)) {
