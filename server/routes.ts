@@ -1120,7 +1120,7 @@ export async function registerRoutes(
       }
       
       // Create checkout session
-      const baseUrl = process.env.APP_URL || process.env.BASE_URL || 'http://0.0.0.0:5000';
+      const baseUrl = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       const successUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account?canceled=true`;
 
@@ -1162,7 +1162,7 @@ export async function registerRoutes(
       }
       
       const stripe = getStripeClient();
-      const baseUrl = process.env.APP_URL || process.env.BASE_URL || 'http://0.0.0.0:5000';
+      const baseUrl = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       const returnUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account`;
 
       const session = await stripe.billingPortal.sessions.create({

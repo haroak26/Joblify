@@ -16,7 +16,7 @@ export function getStripeClient(): Stripe {
     }
     
     stripeClient = new Stripe(secretKey, {
-      apiVersion: '2026-01-28.clover',
+      apiVersion: '2025-01-27.acacia',
       typescript: true,
     });
   }
@@ -36,7 +36,7 @@ export async function getUncachableStripeClient(): Promise<Stripe> {
   }
   
   return new Stripe(secretKey, {
-    apiVersion: '2026-01-28.clover',
+    apiVersion: '2025-01-27.acacia',
     typescript: true,
   });
 }
