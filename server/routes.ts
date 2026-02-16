@@ -1120,6 +1120,12 @@ export async function registerRoutes(
       }
       
       // Create checkout session
+      const baseUrl = process.env.APP_URL || process.env.BASE_URL || 'http://0.0.0.0:5000';
+      const successUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account?canceled=true`;
+
+      console.log('[Stripe] Creating session with URLs:', { successUrl, cancelUrl });
+
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
@@ -1130,8 +1136,8 @@ export async function registerRoutes(
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.APP_URL || 'http://localhost:5000'}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.APP_URL || 'http://localhost:5000'}/dashboard/account?canceled=true`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: {
           userId: user.id,
           plan: plan,
@@ -1156,9 +1162,12 @@ export async function registerRoutes(
       }
       
       const stripe = getStripeClient();
+      const baseUrl = process.env.APP_URL || process.env.BASE_URL || 'http://0.0.0.0:5000';
+      const returnUrl = `${baseUrl.replace(/\/$/, '')}/dashboard/account`;
+
       const session = await stripe.billingPortal.sessions.create({
         customer: subscription.stripeCustomerId,
-        return_url: `${process.env.APP_URL || 'http://localhost:5000'}/dashboard/account`,
+        return_url: returnUrl,
       });
       
       res.json({ url: session.url });
