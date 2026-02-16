@@ -30,6 +30,8 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+const ACCOUNT_BLOCKED_MESSAGE = "This account has been blocked. Please contact support for assistance.";
+
 // Export for use in other modules
 export { hashPassword, verifyPassword, isStrongPassword, establishSession };
 
@@ -260,6 +262,13 @@ export async function setupAuth(app: Express) {
       if (!user) {
         trackLoginAttempt(username);
         return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      if (user.accountBlocked) {
+        return res.status(403).json({
+          error: "Account access blocked",
+          message: ACCOUNT_BLOCKED_MESSAGE,
+        });
       }
 
       const isValid = await verifyPassword(user.password, password);
@@ -561,10 +570,23 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Authentication required" });
   }
+
+  const user = await storage.getUser(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ error: "User not found" });
+  }
+
+  if (user.accountBlocked) {
+    return res.status(403).json({
+      error: "Account access blocked",
+      message: ACCOUNT_BLOCKED_MESSAGE,
+    });
+  }
+
   next();
 }
 
