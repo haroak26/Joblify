@@ -86,7 +86,7 @@ export default function WhyUs() {
         title="Why Choose Joblify"
         description="Discover why thousands of job seekers trust Joblify. AI-powered resume tools, smart job tracking, and personalized career coaching set us apart."
         keywords="why Joblify, best job search platform, AI career tools, resume builder comparison"
-        canonicalUrl="https://joblifyai.com/why-us"
+        canonicalUrl="https://joblify.com/why-us"
       />
       {/* Navigation */}
       <Header />

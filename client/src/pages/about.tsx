@@ -43,7 +43,7 @@ export default function About() {
         title="About Us"
         description="Learn about Joblify's mission to revolutionize job searching with AI-powered tools. Discover how we help job seekers land their dream careers faster."
         keywords="about Joblify, AI job search platform, career tools mission, job search innovation"
-        canonicalUrl="https://joblifyai.com/about"
+        canonicalUrl="https://joblify.com/about"
       />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">

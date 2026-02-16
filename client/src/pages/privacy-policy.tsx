@@ -10,7 +10,7 @@ export default function PrivacyPolicy() {
         title="Privacy Policy"
         description="Read Joblify's privacy policy to understand how we collect, use, and protect your personal data. Your privacy and security are our top priorities."
         keywords="privacy policy, data protection, personal data, Joblify privacy, user data security"
-        canonicalUrl="https://joblifyai.com/privacy-policy"
+        canonicalUrl="https://joblify.com/privacy-policy"
       />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">

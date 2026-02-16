@@ -34,7 +34,7 @@ export default function Blog() {
         title="Blog"
         description="Explore expert career tips, resume writing guides, interview strategies, and job search advice on the Joblify blog. Stay ahead in your career journey."
         keywords="career blog, resume tips, job search advice, interview tips, career guidance"
-        canonicalUrl="https://joblifyai.com/blog"
+        canonicalUrl="https://joblify.com/blog"
       />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">

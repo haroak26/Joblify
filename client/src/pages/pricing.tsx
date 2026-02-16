@@ -101,7 +101,7 @@ export default function Pricing() {
         title="Pricing Plans"
         description="Choose the perfect Joblify plan for your job search. Compare Free, Plus, Ultra, and Lifetime tiers with AI-powered resume tools and career features."
         keywords="pricing, job search plans, AI resume builder cost, career tools pricing, Joblify plans"
-        canonicalUrl="https://joblifyai.com/pricing"
+        canonicalUrl="https://joblify.com/pricing"
       />
       {/* Navigation */}
       <Header />

@@ -37,6 +37,7 @@ export function SEO({
 
     // Standard meta tags
     setMetaTag('description', description);
+    setMetaTag('robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     if (keywords) {
       setMetaTag('keywords', keywords);
     }
@@ -46,6 +47,7 @@ export function SEO({
     setMetaTag('og:description', description, true);
     setMetaTag('og:type', ogType, true);
     setMetaTag('og:image', ogImage, true);
+    setMetaTag('og:site_name', 'Joblify', true);
     if (canonicalUrl) {
       setMetaTag('og:url', canonicalUrl, true);
     }
@@ -55,6 +57,9 @@ export function SEO({
     setMetaTag('twitter:title', title);
     setMetaTag('twitter:description', description);
     setMetaTag('twitter:image', ogImage);
+    if (canonicalUrl) {
+      setMetaTag('twitter:url', canonicalUrl);
+    }
 
     // Canonical URL
     if (canonicalUrl) {

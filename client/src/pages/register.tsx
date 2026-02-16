@@ -215,7 +215,7 @@ export default function Register() {
         title="Sign Up"
         description="Create your free Joblify account and unlock AI-powered resume building, job tracking, and smart career tools to accelerate your job search."
         keywords="sign up, create account, register, free job search tools, AI resume builder"
-        canonicalUrl="https://joblifyai.com/register"
+        canonicalUrl="https://joblify.com/register"
       />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">

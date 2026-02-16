@@ -10,7 +10,7 @@ export default function TermsAndConditions() {
         title="Terms and Conditions"
         description="Review Joblify's terms and conditions. Understand the rules and guidelines for using our AI-powered job search platform and career tools."
         keywords="terms and conditions, terms of service, user agreement, Joblify terms, platform rules"
-        canonicalUrl="https://joblifyai.com/terms-and-conditions"
+        canonicalUrl="https://joblify.com/terms-and-conditions"
       />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">
