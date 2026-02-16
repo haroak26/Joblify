@@ -6,7 +6,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
 import { pool } from "./db";
-import { securityHeaders, sanitizeInput, generalApiRateLimit } from "./middleware/security";
+import { securityHeaders, sanitizeInput, resolveUserPlan, generalApiRateLimit } from "./middleware/security";
 import { csrfSetToken, csrfVerifyToken } from "./middleware/csrf";
 
 // Validate critical environment variables
@@ -112,9 +112,8 @@ app.use(csrfSetToken);
 // Verify CSRF token for state-changing requests (POST, PUT, DELETE, PATCH)
 app.use(csrfVerifyToken);
 
-// Apply input sanitization and rate limiting
+// Apply input sanitization
 app.use(sanitizeInput);
-app.use('/api', generalApiRateLimit);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -182,6 +181,11 @@ app.use((req, res, next) => {
 
 (async () => {
   await setupAuth(app);
+
+  // Resolve user plan before applying tiered API limits
+  app.use(resolveUserPlan);
+  app.use('/api', generalApiRateLimit);
+
   setupAdminRoutes(app);
   await registerRoutes(httpServer, app);
   

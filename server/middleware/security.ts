@@ -1,7 +1,16 @@
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import type { Request, Response, NextFunction } from "express";
-import { normalizePlan } from "@shared/schema";
+import { normalizePlan, type PlanType } from "@shared/schema";
+import { storage } from "../storage";
+
+declare global {
+  namespace Express {
+    interface Request {
+      userPlan?: PlanType;
+    }
+  }
+}
 
 // Time constants (in milliseconds)
 const MINUTE_MS = 60 * 1000;
@@ -77,11 +86,7 @@ export function createTieredRateLimit(options: {
   return rateLimit({
     windowMs,
     max: (req) => {
-      // Get user plan from session
-      const user = (req as any).user;
-      if (!user) return freeLimit;
-
-      const plan = normalizePlan(user.plan || "free");
+      const plan = normalizePlan(req.userPlan);
       
       switch (plan) {
         case "ultra":
@@ -99,6 +104,33 @@ export function createTieredRateLimit(options: {
     // Use higher limits in development but don't skip entirely
     skip: (req) => false,
   });
+}
+
+/**
+ * Resolves authenticated session users to their subscription plan.
+ *
+ * This middleware should run before tiered rate limiters so they can
+ * read `req.userPlan` without doing DB work on every limiter callback.
+ */
+export async function resolveUserPlan(req: Request, _res: Response, next: NextFunction) {
+  const userId = req.session?.userId;
+
+  // Anonymous users keep free tier defaults
+  if (!userId) {
+    req.userPlan = "free";
+    return next();
+  }
+
+  try {
+    const subscription = await storage.getSubscription(userId);
+    req.userPlan = normalizePlan(subscription?.plan);
+  } catch (error) {
+    // Fail open to free limits if plan resolution errors
+    req.userPlan = "free";
+    console.error("Failed to resolve user subscription plan for rate limiting", error);
+  }
+
+  next();
 }
 
 /**
