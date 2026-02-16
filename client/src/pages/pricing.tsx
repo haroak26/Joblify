@@ -44,7 +44,6 @@ const plans = [
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
-      "LinkedIn import",
       "Cover letter generator"
     ],
     whatYouGet: [
@@ -54,7 +53,6 @@ const plans = [
       "Access to all premium templates",
       "Export as PDF and editable DOCX",
       "ATS optimization scanner",
-      "Import jobs directly from LinkedIn",
       "AI-powered cover letter generator"
     ],
     cta: "Upgrade to Plus",
@@ -73,7 +71,6 @@ const plans = [
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
-      "LinkedIn import",
       "Cover letter generator",
       "Resume & cover letter tailoring",
       "Priority support"
@@ -85,7 +82,6 @@ const plans = [
       "Full access to all premium templates",
       "Export as PDF and DOCX formats",
       "Advanced ATS optimization scanner",
-      "Import jobs directly from LinkedIn",
       "AI-powered cover letter generator",
       "Tailor resumes and cover letters to specific jobs",
       "Priority customer support"

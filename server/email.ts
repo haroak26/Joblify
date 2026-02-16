@@ -101,11 +101,7 @@ function getAppUrl(): string {
   if (process.env.APP_URL) {
     return process.env.APP_URL;
   }
-  // Fall back to REPLIT_DOMAINS if APP_URL not set
-  if (process.env.REPLIT_DOMAINS) {
-    return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
-  }
-  // Final fallback to production domain
+  // Default to production domain
   return "https://joblifyai.com";
 }
 
