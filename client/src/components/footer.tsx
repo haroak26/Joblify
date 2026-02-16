@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useState } from "react";
-import { Briefcase, Mail, Github, Twitter, Linkedin, Facebook } from "lucide-react";
+import { Briefcase, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getCsrfToken } from "@/lib/queryClient";
@@ -55,40 +55,6 @@ export function Footer() {
             <p className="text-sm text-muted-foreground">
               AI-powered resume building platform helping professionals create outstanding resumes through natural conversation.
             </p>
-            <div className="flex gap-3">
-              <a 
-                href="https://twitter.com/joblify" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center transition-colors"
-              >
-                <Twitter className="w-4 h-4 text-muted-foreground" />
-              </a>
-              <a 
-                href="https://linkedin.com/company/joblify" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center transition-colors"
-              >
-                <Linkedin className="w-4 h-4 text-muted-foreground" />
-              </a>
-              <a 
-                href="https://facebook.com/joblify" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center transition-colors"
-              >
-                <Facebook className="w-4 h-4 text-muted-foreground" />
-              </a>
-              <a 
-                href="https://github.com/joblify" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-8 h-8 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center transition-colors"
-              >
-                <Github className="w-4 h-4 text-muted-foreground" />
-              </a>
-            </div>
           </div>
 
           {/* Product */}

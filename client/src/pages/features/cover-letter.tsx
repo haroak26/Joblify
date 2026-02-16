@@ -80,7 +80,7 @@ export default function CoverLetterGenerator() {
         title="AI Cover Letter Generator"
         description="Create compelling, personalized cover letters in seconds with Joblify's AI cover letter generator. Tailored to each job application for maximum impact."
         keywords="AI cover letter generator, cover letter builder, personalized cover letters, job application tools"
-        canonicalUrl="https://joblifyai.com/features/cover-letter"
+        canonicalUrl="https://joblify.com/features/cover-letter"
       />
       {/* Navigation */}
       <Header />

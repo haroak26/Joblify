@@ -102,7 +102,7 @@ export default function ATSScanner() {
         title="ATS Resume Scanner"
         description="Optimize your resume for Applicant Tracking Systems with Joblify's AI-powered ATS scanner. Get instant feedback and improve your chances of landing interviews."
         keywords="ATS scanner, resume checker, applicant tracking system, resume optimization, ATS-friendly resume"
-        canonicalUrl="https://joblifyai.com/features/ats-scanner"
+        canonicalUrl="https://joblify.com/features/ats-scanner"
       />
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b bg-background/90 backdrop-blur-md">

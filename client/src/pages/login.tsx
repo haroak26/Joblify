@@ -65,7 +65,7 @@ export default function Login() {
         title="Log In"
         description="Sign in to your Joblify account to access AI-powered resume tools, job tracking, and personalized career resources."
         keywords="login, sign in, Joblify account, job search login, career tools access"
-        canonicalUrl="https://joblifyai.com/login"
+        canonicalUrl="https://joblify.com/login"
       />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">

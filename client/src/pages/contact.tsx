@@ -151,7 +151,7 @@ export default function Contact() {
         title="Contact Us"
         description="Get in touch with the Joblify team. We're here to help with questions about our AI-powered job search tools, account support, and partnership inquiries."
         keywords="contact Joblify, customer support, job search help, career tools support"
-        canonicalUrl="https://joblifyai.com/contact"
+        canonicalUrl="https://joblify.com/contact"
       />
       {/* Success Dialog */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
