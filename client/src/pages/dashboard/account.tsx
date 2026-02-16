@@ -131,7 +131,7 @@ const plans = [
     price: "$15",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["5 resumes", "50 AI edits/mo", "100 job imports/mo", "PDF & DOCX", "ATS scanner", "LinkedIn import", "Cover letters"],
+    features: ["5 resumes", "50 AI edits/mo", "100 job imports/mo", "PDF & DOCX", "ATS scanner", "Cover letters"],
     limits: { skills: -1, jobs: 100 },
     popular: true,
   },
@@ -141,21 +141,10 @@ const plans = [
     price: "$30",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["Unlimited resumes", "Unlimited AI edits", "Unlimited imports", "All formats", "ATS scanner", "LinkedIn import", "Cover letters", "Resume tailoring"],
+    features: ["Unlimited resumes", "Unlimited AI edits", "Unlimited imports", "All formats", "ATS scanner", "Cover letters", "Resume tailoring"],
     limits: { skills: -1, jobs: -1 },
   },
 ];
-
-// Helper function to get localStorage key for processed checkout sessions
-const getCheckoutSyncKey = (sessionId: string) => `checkout_synced_${sessionId}`;
-
-// Constant for checkout processed status
-const CHECKOUT_PROCESSED_VALUE = 'true';
-
-// Validate that sessionId matches Stripe's session ID format (cs_test_* or cs_live_*)
-const isValidStripeSessionId = (sessionId: string): boolean => {
-  return /^cs_(test|live)_[a-z0-9_]+$/.test(sessionId);
-};
 
 export default function Account() {
   const [, navigate] = useLocation();
@@ -173,65 +162,6 @@ export default function Account() {
 
   const usageQuery = useQuery<UsageResponse>({
     queryKey: ["/api/usage"],
-  });
-
-  const upgradeMutation = useMutation({
-    mutationFn: async (plan: "plus" | "ultra" | "lifetime") => {
-      const response = await apiRequest("POST", "/api/stripe/create-checkout", { plan });
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Upgrade Failed",
-        description: "Unable to start the upgrade process. Stripe may not be configured.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const cancelSubscriptionMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/stripe/cancel");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      toast({
-        title: "Subscription Cancelled",
-        description: "Your subscription will end at the current billing period.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Cancellation Failed",
-        description: "Unable to cancel subscription. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const manageSubscriptionMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("GET", "/api/stripe/portal");
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Portal Access Failed",
-        description: "Unable to access billing portal. Please try again.",
-        variant: "destructive",
-      });
-    },
   });
 
   const deleteAccountMutation = useMutation({
@@ -336,182 +266,6 @@ export default function Account() {
     : currentPlan === "lifetime"
     ? "Lifetime"
     : "Free";
-  const cancellationDate = subscription?.currentPeriodEnd
-    ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
-    : null;
-
-  const syncCheckoutMutation = useMutation({
-    mutationFn: async (sessionId: string) => {
-      // Retry logic with exponential backoff
-      let lastError: Error | null = null;
-      const maxRetries = 3;
-      
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          const response = await apiRequest("GET", `/api/stripe/checkout-session/${sessionId}`);
-          return await response.json();
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error("Unknown error");
-          console.warn(`[Checkout Sync] Attempt ${attempt + 1} failed:`, lastError.message);
-          
-          // Don't retry on the last attempt
-          if (attempt < maxRetries - 1) {
-            // Exponential backoff: 1s, 2s, 4s
-            const delay = Math.pow(2, attempt) * 1000;
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
-        }
-      }
-      
-      // All retries failed
-      throw lastError || new Error("Failed to sync checkout session");
-    },
-    onSuccess: async (data, sessionId) => {
-      // Validate session ID format before using it in localStorage
-      if (!isValidStripeSessionId(sessionId)) {
-        console.warn('Invalid Stripe session ID format:', sessionId);
-        return;
-      }
-      
-      // Mark this session as processed in localStorage
-      localStorage.setItem(getCheckoutSyncKey(sessionId), CHECKOUT_PROCESSED_VALUE);
-      
-      // Remove query params from URL to prevent re-triggering on refresh
-      const url = new URL(window.location.href);
-      url.searchParams.delete('success');
-      url.searchParams.delete('session_id');
-      window.history.replaceState(null, '', url.toString());
-      
-      // Refresh user session after successful payment
-      try {
-        const userResponse = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
-        if (userResponse.ok) {
-          await userResponse.json();
-        }
-      } catch (error) {
-        console.error("Failed to refresh user session:", error);
-      }
-      
-      // Invalidate all queries in parallel (will automatically refetch)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/usage"] }),
-      ]);
-      
-      toast({
-        title: "Subscription Updated",
-        description: "Your upgrade has been applied.",
-      });
-    },
-    onError: (error) => {
-      console.error("[Checkout Sync] All retries failed:", error);
-      toast({
-        title: "Upgrade Pending",
-        description: "We could not confirm your upgrade yet. Please refresh in a moment.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const isSuccess = params.get("success") === "true";
-    const sessionId = params.get("session_id");
-
-    if (!sessionId || !isSuccess) return;
-
-    const isValidSessionId = isValidStripeSessionId(sessionId);
-    
-    const isSessionAlreadyProcessed = isValidSessionId
-      ? localStorage.getItem(getCheckoutSyncKey(sessionId)) === CHECKOUT_PROCESSED_VALUE 
-      : false;
-
-    if (isValidSessionId && !isSessionAlreadyProcessed) {
-      syncCheckoutMutation.mutate(sessionId);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Polling mechanism: after checkout success, poll subscription status
-  // This serves as a fallback in case the direct sync or webhook haven't processed yet
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const isSuccess = params.get("success") === "true";
-    const sessionId = params.get("session_id");
-    
-    if (!sessionId || !isSuccess) return;
-    
-    const isValidSessionId = isValidStripeSessionId(sessionId);
-    if (!isValidSessionId) return;
-    
-    const isSessionAlreadyProcessed = localStorage.getItem(getCheckoutSyncKey(sessionId)) === CHECKOUT_PROCESSED_VALUE;
-    if (isSessionAlreadyProcessed) return; // Already processed
-    
-    // Poll every 3 seconds for up to 30 seconds
-    let pollCount = 0;
-    const maxPolls = 10;
-    const pollInterval = 3000; // 3 seconds
-    
-    const pollTimer = setInterval(async () => {
-      pollCount++;
-      
-      try {
-        // Refetch subscription to see if webhook has updated it
-        const result = await queryClient.fetchQuery({
-          queryKey: ["/api/subscription"],
-          queryFn: async () => {
-            const response = await fetch("/api/subscription", {
-              credentials: "include",
-            });
-            if (!response.ok) {
-              throw new Error("Failed to fetch subscription");
-            }
-            return response.json();
-          },
-        });
-        
-        // Check if subscription has been upgraded (no longer "free")
-        if (result?.subscription?.plan && result.subscription.plan !== "free") {
-          console.log("[Polling] Subscription updated via webhook:", result.subscription.plan);
-          
-          // Mark as processed and stop polling
-          localStorage.setItem(getCheckoutSyncKey(sessionId), CHECKOUT_PROCESSED_VALUE);
-          clearInterval(pollTimer);
-          
-          // Clean up URL params
-          const url = new URL(window.location.href);
-          url.searchParams.delete('success');
-          url.searchParams.delete('session_id');
-          window.history.replaceState(null, '', url.toString());
-          
-          // Invalidate queries to refresh UI
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }),
-            queryClient.invalidateQueries({ queryKey: ["/api/subscription"] }),
-            queryClient.invalidateQueries({ queryKey: ["/api/usage"] }),
-          ]);
-          
-          toast({
-            title: "Subscription Updated",
-            description: "Your upgrade has been applied.",
-          });
-        }
-      } catch (error) {
-        console.warn("[Polling] Error checking subscription:", error);
-      }
-      
-      // Stop polling after max attempts
-      if (pollCount >= maxPolls) {
-        console.log("[Polling] Max polls reached, stopping");
-        clearInterval(pollTimer);
-      }
-    }, pollInterval);
-    
-    // Cleanup on unmount
-    return () => clearInterval(pollTimer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
@@ -607,7 +361,7 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
+          <CleanTabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
             <CleanTabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">Settings</span>
@@ -615,10 +369,6 @@ export default function Account() {
             <CleanTabsTrigger value="usage" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Usage</span>
-            </CleanTabsTrigger>
-            <CleanTabsTrigger value="subscription" className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              <span className="hidden sm:inline">Subscription</span>
             </CleanTabsTrigger>
             <CleanTabsTrigger value="perks" className="flex items-center gap-2">
               <Gift className="w-4 h-4" />
@@ -816,140 +566,6 @@ export default function Account() {
             )}
           </CleanTabsContent>
 
-          {/* Subscription Tab */}
-          <CleanTabsContent value="subscription" className="space-y-6">{/* Subscription Section */}
-        <section className="space-y-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-subheader font-bold">Subscription & Billing</h2>
-              <p className="text-muted-foreground">Manage your plan and billing information</p>
-            </div>
-            {subscription?.stripeCustomerId && currentPlan !== "free" && (
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  onClick={() => manageSubscriptionMutation.mutate()}
-                  disabled={manageSubscriptionMutation.isPending}
-                  className="w-full sm:w-auto"
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  {manageSubscriptionMutation.isPending ? "Loading..." : "Manage Subscription"}
-                </Button>
-                <Button
-                  variant="outline"
-                  asChild
-                  className="w-full sm:w-auto"
-                >
-                  <a
-                    href={import.meta.env.VITE_STRIPE_BILLING_PORTAL_URL || "https://billing.stripe.com/p/login/bJebJ3bnI4qMbSE4WI1B600"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Billing Portal
-                  </a>
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          {subscription?.status === "cancelled" && cancellationDate && (
-            <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-small text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-              Your subscription will cancel on <span className="font-semibold">{cancellationDate}</span>.
-            </div>
-          )}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {visiblePlans.map((plan) => {
-              const isCurrent = currentPlan === plan.id;
-              const isCancelled = subscription?.status === "cancelled";
-              
-              return (
-                <div
-                  key={plan.id}
-                  className={`border rounded-lg p-6 ${
-                    isCurrent
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border bg-background'
-                  }`}
-                  data-testid={`card-plan-${plan.id}`}
-                >
-                  <div className="space-y-6">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-large font-bold">{plan.name}</h3>
-                          {plan.popular && !isCurrent && (
-                            <Badge className="bg-primary rounded-md">Popular</Badge>
-                          )}
-                          {isCurrent && (
-                            <Badge
-                              variant="secondary"
-                              className="h-6 rounded-md border border-primary/30 bg-primary/20 px-3 text-small font-bold uppercase tracking-wider text-primary"
-                            >
-                              {isCancelled ? "Cancelling" : "Current"}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-small uppercase tracking-widest text-muted-foreground">{plan.period}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-header font-bold">{plan.price}</span>
-                        {plan.billingSuffix && (
-                          <span className="text-muted-foreground text-small font-medium">{plan.billingSuffix}</span>
-                        )}
-                      </div>
-                    </div>
-                    <ul className="space-y-3">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-3 text-small">
-                          <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    
-                    {(plan.id === "plus" || plan.id === "ultra" || plan.id === "lifetime") && !isCurrent && (
-                      <Button 
-                        size="default"
-                        className="w-full font-bold"
-                        onClick={() => upgradeMutation.mutate(plan.id as "plus" | "ultra" | "lifetime")}
-                        disabled={upgradeMutation.isPending}
-                        data-testid={`button-upgrade-${plan.id}`}
-                      >
-                        {upgradeMutation.isPending ? "Processing..." : `Upgrade to ${plan.name}`}
-                      </Button>
-                    )}
-                    
-                    {(plan.id === "plus" || plan.id === "ultra") && isCurrent && !isCancelled && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" className="w-full" data-testid="button-cancel-subscription">
-                            Cancel Subscription
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-large font-bold">Cancel Subscription?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-body">
-                              You'll retain {currentPlanLabel} benefits until the end of your current billing cycle.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="gap-3 mt-4">
-                            <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => cancelSubscriptionMutation.mutate()} className="bg-destructive text-destructive-foreground">
-                              Confirm Cancellation
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-          </CleanTabsContent>
 
           {/* Data & Privacy Tab */}
           <CleanTabsContent value="data" className="space-y-6">

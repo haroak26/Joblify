@@ -5,7 +5,6 @@ import { setupAdminRoutes } from "./admin-routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
-import { setupStripeRoutes } from "./stripe";
 import { pool } from "./db";
 import { securityHeaders, sanitizeInput, generalApiRateLimit } from "./middleware/security";
 import { csrfSetToken, csrfVerifyToken } from "./middleware/csrf";
@@ -28,7 +27,6 @@ function validateEnvVars() {
   const optional = {
     POE_API_KEY: process.env.POE_API_KEY,
     BREVO_API_KEY: process.env.BREVO_API_KEY,
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   };
 
   const missing: string[] = [];
@@ -72,9 +70,6 @@ function validateEnvVars() {
     if (!optional.BREVO_API_KEY) {
       console.warn('[Startup]   - Email notifications will not work');
     }
-    if (!optional.STRIPE_SECRET_KEY) {
-      console.warn('[Startup]   - Payment processing will not work');
-    }
   }
 
   console.log('[Startup] Environment validation completed');
@@ -98,28 +93,13 @@ declare module "http" {
   }
 }
 
-app.use(
-  "/api/stripe/webhook",
-  express.raw({
-    type: "application/json",
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
-
 const jsonParser = express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   },
 });
 
-app.use((req, res, next) => {
-  if (req.originalUrl === "/api/stripe/webhook") {
-    return next();
-  }
-  return jsonParser(req, res, next);
-});
+app.use(jsonParser);
 
 app.use(express.urlencoded({ extended: false }));
 
@@ -202,7 +182,6 @@ app.use((req, res, next) => {
 
 (async () => {
   await setupAuth(app);
-  await setupStripeRoutes(app);
   setupAdminRoutes(app);
   await registerRoutes(httpServer, app);
   
