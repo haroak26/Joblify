@@ -483,26 +483,26 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
-            <CleanTabsTrigger value="settings" className="flex items-center gap-2">
+          <CleanTabsList className="h-auto w-full gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-5 sm:gap-0 sm:overflow-visible">
+            <CleanTabsTrigger value="settings" className="flex shrink-0 items-center gap-2">
               <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Settings</span>
+              <span>Settings</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="billing" className="flex items-center gap-2">
+            <CleanTabsTrigger value="billing" className="flex shrink-0 items-center gap-2">
               <CreditCard className="w-4 h-4" />
-              <span className="hidden sm:inline">Billing</span>
+              <span>Billing</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="usage" className="flex items-center gap-2">
+            <CleanTabsTrigger value="usage" className="flex shrink-0 items-center gap-2">
               <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Usage</span>
+              <span>Usage</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="perks" className="flex items-center gap-2">
+            <CleanTabsTrigger value="perks" className="flex shrink-0 items-center gap-2">
               <Gift className="w-4 h-4" />
-              <span className="hidden sm:inline">Perks & Codes</span>
+              <span>Perks & Codes</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="data" className="flex items-center gap-2">
+            <CleanTabsTrigger value="data" className="flex shrink-0 items-center gap-2">
               <Database className="w-4 h-4" />
-              <span className="hidden sm:inline">Data & Privacy</span>
+              <span>Data & Privacy</span>
             </CleanTabsTrigger>
           </CleanTabsList>
 

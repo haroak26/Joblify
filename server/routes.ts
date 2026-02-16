@@ -1197,6 +1197,7 @@ Return ONLY the cover letter text, no additional commentary.`;
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
+        allow_promotion_codes: true,
         line_items: [
           {
             price: priceId,
