@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, Gift, Tag, LogOut } from "lucide-react";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, Gift, Tag, LogOut, Loader2 } from "lucide-react";
 import type { Subscription, Usage } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -237,6 +237,30 @@ export default function Account() {
     },
   });
 
+  const downgradeSubscriptionMutation = useMutation({
+    mutationFn: async (newPlan: string) => {
+      const response = await apiRequest("POST", "/api/subscription/downgrade", {
+        newPlan,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Plan Updated",
+        description: "Your subscription downgrade has been scheduled.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Downgrade Failed",
+        description: error.message || "Unable to downgrade subscription. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const billingPortalMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("GET", "/api/subscription/portal");
@@ -263,6 +287,10 @@ export default function Account() {
 
   const handleUpgrade = (plan: string) => {
     upgradeSubscriptionMutation.mutate(plan);
+  };
+
+  const handleDowngrade = (plan: string) => {
+    downgradeSubscriptionMutation.mutate(plan);
   };
 
   const handleManageBilling = () => {
@@ -348,6 +376,12 @@ export default function Account() {
     : currentPlan === "lifetime"
     ? "Lifetime"
     : "Free";
+  const pendingUpgradePlan = upgradeSubscriptionMutation.isPending
+    ? (upgradeSubscriptionMutation.variables as string | undefined)
+    : undefined;
+  const pendingDowngradePlan = downgradeSubscriptionMutation.isPending
+    ? (downgradeSubscriptionMutation.variables as string | undefined)
+    : undefined;
 
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
@@ -491,84 +525,84 @@ export default function Account() {
             </div>
 
             {/* Current Subscription */}
-            <div className="bg-card border rounded-lg p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold mb-1">Current Plan</h3>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-base px-3 py-1">
-                      {subscriptionQuery.data?.subscription.plan ? 
-                        subscriptionQuery.data.subscription.plan.charAt(0).toUpperCase() + 
-                        subscriptionQuery.data.subscription.plan.slice(1) 
-                        : 'Free'}
+            <div className="border rounded-lg p-6 space-y-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Current Plan</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="text-sm px-2.5 py-1 font-medium">
+                      {currentPlanLabel}
                     </Badge>
-                    {subscriptionQuery.data?.subscription.status && (
-                      <Badge 
-                        variant={subscriptionQuery.data.subscription.status === 'active' ? 'default' : 'destructive'}
-                      >
-                        {subscriptionQuery.data.subscription.status}
+                    {subscription?.status && (
+                      <Badge variant={subscription.status === "active" ? "outline" : "destructive"}>
+                        {subscription.status}
                       </Badge>
                     )}
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    {isLifetime
+                      ? "Lifetime access is active."
+                      : "Manage billing, upgrades, and cancellations from this page."}
+                  </p>
                 </div>
-                {subscriptionQuery.data?.subscription.currentPeriodEnd && (
-                  <div className="text-right text-sm text-muted-foreground">
-                    <p>Renews on</p>
-                    <p className="font-medium text-foreground">
-                      {new Date(subscriptionQuery.data.subscription.currentPeriodEnd).toLocaleDateString()}
+                {subscription?.currentPeriodEnd && !isLifetime && (
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm text-muted-foreground">Next renewal</p>
+                    <p className="text-sm font-medium">
+                      {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                     </p>
                   </div>
                 )}
               </div>
-              
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                {subscriptionQuery.data?.subscription.plan === 'free' && (
-                  <Button onClick={() => handleUpgrade('plus')} className="flex-1">
-                    <Zap className="w-4 h-4 mr-2" />
-                    Upgrade to Plus
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                {currentPlan === "free" && (
+                  <Button
+                    onClick={() => handleUpgrade("plus")}
+                    disabled={upgradeSubscriptionMutation.isPending}
+                    className="sm:w-auto"
+                  >
+                    {pendingUpgradePlan === "plus" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Zap className="w-4 h-4 mr-2" />
+                    )}
+                    {pendingUpgradePlan === "plus" ? "Starting checkout..." : "Upgrade to Plus"}
                   </Button>
                 )}
-                
-                {subscriptionQuery.data?.subscription.plan === 'plus' && (
-                  <>
-                    <Button 
-                      onClick={() => handleUpgrade('ultra')} 
-                      disabled={upgradeSubscriptionMutation.isPending}
-                      className="flex-1"
-                    >
+
+                {currentPlan === "plus" && (
+                  <Button
+                    onClick={() => handleUpgrade("ultra")}
+                    disabled={upgradeSubscriptionMutation.isPending}
+                  >
+                    {pendingUpgradePlan === "ultra" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
                       <TrendingUp className="w-4 h-4 mr-2" />
-                      {upgradeSubscriptionMutation.isPending ? 'Processing...' : 'Upgrade to Ultra'}
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleManageBilling()}
-                      disabled={billingPortalMutation.isPending}
-                      className="flex-1"
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      {billingPortalMutation.isPending ? 'Loading...' : 'Manage Billing'}
-                    </Button>
-                  </>
+                    )}
+                    {pendingUpgradePlan === "ultra" ? "Starting checkout..." : "Upgrade to Ultra"}
+                  </Button>
                 )}
-                
-                {subscriptionQuery.data?.subscription.plan === 'ultra' && (
-                  <Button 
+
+                {currentPlan !== "free" && !isLifetime && (
+                  <Button
                     variant="outline"
                     onClick={() => handleManageBilling()}
                     disabled={billingPortalMutation.isPending}
-                    className="flex-1"
                   >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    {billingPortalMutation.isPending ? 'Loading...' : 'Manage Billing'}
+                    {billingPortalMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-4 h-4 mr-2" />
+                    )}
+                    {billingPortalMutation.isPending ? "Opening..." : "Manage Billing"}
                   </Button>
                 )}
               </div>
 
-              {/* Cancellation */}
-              {subscriptionQuery.data?.subscription.plan !== 'free' && 
-               subscriptionQuery.data?.subscription.plan !== 'lifetime' && (
-                <div className="mt-4 pt-4 border-t">
+              {currentPlan !== "free" && !isLifetime && (
+                <div className="pt-4 border-t">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
@@ -579,8 +613,8 @@ export default function Account() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Your subscription will remain active until the end of the current billing period. 
-                          You'll be downgraded to the free plan afterwards and lose access to premium features.
+                          Your subscription will remain active until the end of the current billing period.
+                          You&apos;ll be downgraded to the free plan afterwards and lose access to premium features.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -599,112 +633,65 @@ export default function Account() {
             </div>
 
             {/* Plan Comparison */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Available Plans</h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                {/* Free Plan */}
-                <div className={`border rounded-lg p-5 ${
-                  subscriptionQuery.data?.subscription.plan === 'free' ? 'border-primary bg-primary/5' : ''
-                }`}>
-                  <h4 className="font-semibold text-lg mb-1">Free</h4>
-                  <p className="text-2xl font-bold mb-3">$0<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                  <ul className="space-y-2 text-sm mb-4">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>1 resume</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>10 AI edits/month</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>Basic templates</span>
-                    </li>
-                  </ul>
-                  {subscriptionQuery.data?.subscription.plan === 'free' && (
-                    <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
-                  )}
-                </div>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Available Plans</h3>
+              <div className="grid gap-4 md:grid-cols-3">
+                {plans.map((plan) => {
+                  const isCurrentPlan = currentPlan === plan.id;
+                  const isPlanActionPending =
+                    pendingUpgradePlan === plan.id || pendingDowngradePlan === plan.id;
 
-                {/* Plus Plan */}
-                <div className={`border rounded-lg p-5 ${
-                  subscriptionQuery.data?.subscription.plan === 'plus' ? 'border-primary bg-primary/5' : ''
-                }`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-semibold text-lg">Plus</h4>
-                    <Badge variant="secondary" className="text-xs">Popular</Badge>
-                  </div>
-                  <p className="text-2xl font-bold mb-3">$15<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                  <ul className="space-y-2 text-sm mb-4">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>5 resumes</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>100 AI edits/month</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>All templates</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>ATS scanner</span>
-                    </li>
-                  </ul>
-                  {subscriptionQuery.data?.subscription.plan === 'plus' ? (
-                    <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
-                  ) : (
-                    <Button 
-                      onClick={() => handleUpgrade('plus')} 
-                      disabled={upgradeSubscriptionMutation.isPending}
-                      className="w-full"
-                      size="sm"
-                    >
-                      {subscriptionQuery.data?.subscription.plan === 'ultra' ? 'Downgrade' : 'Upgrade'}
-                    </Button>
-                  )}
-                </div>
+                  const isDowngradeAction = currentPlan === "ultra" && plan.id === "plus";
 
-                {/* Ultra Plan */}
-                <div className={`border rounded-lg p-5 ${
-                  subscriptionQuery.data?.subscription.plan === 'ultra' ? 'border-primary bg-primary/5' : ''
-                }`}>
-                  <h4 className="font-semibold text-lg mb-1">Ultra</h4>
-                  <p className="text-2xl font-bold mb-3">$30<span className="text-sm font-normal text-muted-foreground">/month</span></p>
-                  <ul className="space-y-2 text-sm mb-4">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>Unlimited resumes</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>Unlimited AI edits</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>Priority support</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>Resume tailoring</span>
-                    </li>
-                  </ul>
-                  {subscriptionQuery.data?.subscription.plan === 'ultra' ? (
-                    <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
-                  ) : (
-                    <Button 
-                      onClick={() => handleUpgrade('ultra')} 
-                      disabled={upgradeSubscriptionMutation.isPending}
-                      className="w-full"
-                      size="sm"
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`rounded-lg border p-5 space-y-4 ${isCurrentPlan ? "border-primary" : "border-border"}`}
                     >
-                      Upgrade
-                    </Button>
-                  )}
-                </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="text-base font-semibold">{plan.name}</h4>
+                          <p className="text-2xl font-semibold mt-2">
+                            {plan.price}
+                            {plan.billingSuffix && (
+                              <span className="text-sm font-normal text-muted-foreground">{plan.billingSuffix}</span>
+                            )}
+                          </p>
+                        </div>
+                        {plan.popular && (
+                          <Badge variant="outline" className="text-xs">Popular</Badge>
+                        )}
+                      </div>
+
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                        {plan.features.slice(0, 4).map((feature) => (
+                          <li key={feature} className="flex items-start gap-2">
+                            <Check className="w-4 h-4 text-foreground shrink-0 mt-0.5" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {isCurrentPlan ? (
+                        <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
+                      ) : plan.id !== "free" ? (
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          disabled={upgradeSubscriptionMutation.isPending || downgradeSubscriptionMutation.isPending}
+                          onClick={() =>
+                            isDowngradeAction ? handleDowngrade(plan.id) : handleUpgrade(plan.id)
+                          }
+                        >
+                          {isPlanActionPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          {isDowngradeAction ? "Downgrade" : "Upgrade"}
+                        </Button>
+                      ) : (
+                        <div className="h-9" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CleanTabsContent>
