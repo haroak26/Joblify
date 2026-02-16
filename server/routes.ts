@@ -424,6 +424,8 @@ export async function registerRoutes(
   app.post([
     "/api/webhooks/stripe",
     "/api/stripe/webhook",
+    "/api/stripe-webhook",
+    "/api/stripe/events",
     "/webhooks/stripe",
     "/stripe/webhook",
     "/api/webhook/stripe",

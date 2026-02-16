@@ -483,24 +483,24 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="h-auto w-full gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-5 sm:gap-0 sm:overflow-visible">
-            <CleanTabsTrigger value="settings" className="flex shrink-0 items-center gap-2">
+          <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-1 pb-2 pt-1 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-5 sm:gap-0 sm:overflow-visible sm:px-0 sm:pb-0 sm:pt-0">
+            <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="billing" className="flex shrink-0 items-center gap-2">
+            <CleanTabsTrigger value="billing" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <CreditCard className="w-4 h-4" />
               <span>Billing</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="usage" className="flex shrink-0 items-center gap-2">
+            <CleanTabsTrigger value="usage" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <BarChart3 className="w-4 h-4" />
               <span>Usage</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="perks" className="flex shrink-0 items-center gap-2">
+            <CleanTabsTrigger value="perks" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <Gift className="w-4 h-4" />
               <span>Perks & Codes</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="data" className="flex shrink-0 items-center gap-2">
+            <CleanTabsTrigger value="data" className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2.5 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-4 sm:py-3">
               <Database className="w-4 h-4" />
               <span>Data & Privacy</span>
             </CleanTabsTrigger>

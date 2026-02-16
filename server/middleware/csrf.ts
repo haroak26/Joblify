@@ -71,6 +71,8 @@ export function csrfVerifyToken(req: Request, res: Response, next: NextFunction)
     "/api/webhooks/stripe",
     "/webhooks/stripe",
     "/api/stripe/webhook",
+    "/api/stripe-webhook",
+    "/api/stripe/events",
     "/stripe/webhook",
     "/api/webhook/stripe",
     "/webhook/stripe",
@@ -83,10 +85,13 @@ export function csrfVerifyToken(req: Request, res: Response, next: NextFunction)
   const hasStripeSignatureHeader = typeof req.headers["stripe-signature"] === "string";
   const userAgent = (req.headers["user-agent"] || "").toString().toLowerCase();
   const isStripeUserAgent = userAgent.includes("stripe");
-  const looksLikeStripeWebhookPath = normalizedPath.includes("stripe") && normalizedPath.includes("webhook");
+  const looksLikeStripeWebhookPath =
+    normalizedPath.includes("stripe") &&
+    (normalizedPath.includes("webhook") || normalizedPath.includes("event"));
 
-  // Fallback: allow Stripe-signed webhook requests when a proxy rewrites path prefixes
-  if ((hasStripeSignatureHeader || isStripeUserAgent) && looksLikeStripeWebhookPath) {
+  // Fallback: allow Stripe webhook requests when proxies or API gateways rewrite path prefixes.
+  // Signature verification is still strictly enforced in the webhook route itself.
+  if (hasStripeSignatureHeader && (looksLikeStripeWebhookPath || isStripeUserAgent)) {
     return next();
   }
 
