@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
 import OpenAI from "openai";
+import Stripe from "stripe";
 import { getUncachableStripeClient, getStripeClient } from "./stripeClient";
 import { addContactToBrevoList } from './brevo';
 import { validateFile, getFileTypeName } from './lib/fileValidation';
@@ -418,12 +419,15 @@ export async function registerRoutes(
       return res.status(500).send('Webhook secret not configured');
     }
     
-    let event;
+    let event: Stripe.Event;
     
     try {
       const stripe = getStripeClient();
-      // For webhooks, we need the raw body
-      const rawBody = JSON.stringify(req.body);
+      // Use the raw body captured by express.json verify callback
+      const rawBody = (req as any).rawBody;
+      if (!rawBody) {
+        throw new Error('Raw body not available');
+      }
       event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     } catch (err: any) {
       console.error('[Stripe Webhook] Signature verification failed:', err.message);
@@ -435,11 +439,14 @@ export async function registerRoutes(
       switch (event.type) {
         case 'customer.subscription.created':
         case 'customer.subscription.updated': {
-          const subscription = event.data.object as any;
-          const customerId = subscription.customer;
+          const subscription = event.data.object as Stripe.Subscription;
+          const customerId = typeof subscription.customer === 'string' 
+            ? subscription.customer 
+            : subscription.customer.id;
           const subscriptionId = subscription.id;
           const status = subscription.status;
-          const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+          // Webhook events use snake_case, but TypeScript types don't reflect this
+          const currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
           
           // Get plan from subscription items
           const priceId = subscription.items.data[0]?.price.id;
@@ -467,8 +474,10 @@ export async function registerRoutes(
         }
         
         case 'customer.subscription.deleted': {
-          const subscription = event.data.object as any;
-          const customerId = subscription.customer;
+          const subscription = event.data.object as Stripe.Subscription;
+          const customerId = typeof subscription.customer === 'string' 
+            ? subscription.customer 
+            : subscription.customer.id;
           
           // Find user by customer ID and downgrade to free
           const userSubscription = await storage.getSubscriptionByCustomerId(customerId);
@@ -486,8 +495,15 @@ export async function registerRoutes(
         }
         
         case 'invoice.payment_succeeded': {
-          const invoice = event.data.object as any;
-          const customerId = invoice.customer;
+          const invoice = event.data.object as Stripe.Invoice;
+          const customerId = typeof invoice.customer === 'string' 
+            ? invoice.customer 
+            : invoice.customer?.id;
+          
+          if (!customerId) {
+            console.log('[Stripe Webhook] No customer ID found in invoice');
+            break;
+          }
           
           // Update subscription status to active on successful payment
           const userSubscription = await storage.getSubscriptionByCustomerId(customerId);
@@ -502,8 +518,15 @@ export async function registerRoutes(
         }
         
         case 'invoice.payment_failed': {
-          const invoice = event.data.object as any;
-          const customerId = invoice.customer;
+          const invoice = event.data.object as Stripe.Invoice;
+          const customerId = typeof invoice.customer === 'string' 
+            ? invoice.customer 
+            : invoice.customer?.id;
+          
+          if (!customerId) {
+            console.log('[Stripe Webhook] No customer ID found in invoice');
+            break;
+          }
           
           // Update subscription status to past_due on failed payment
           const userSubscription = await storage.getSubscriptionByCustomerId(customerId);
