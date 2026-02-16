@@ -1130,8 +1130,8 @@ export async function registerRoutes(
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.BASE_URL || 'http://localhost:5000'}/account?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.BASE_URL || 'http://localhost:5000'}/pricing`,
+        success_url: `${process.env.APP_URL || 'http://localhost:5000'}/dashboard/account?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.APP_URL || 'http://localhost:5000'}/dashboard/account?canceled=true`,
         metadata: {
           userId: user.id,
           plan: plan,
@@ -1158,7 +1158,7 @@ export async function registerRoutes(
       const stripe = getStripeClient();
       const session = await stripe.billingPortal.sessions.create({
         customer: subscription.stripeCustomerId,
-        return_url: `${process.env.BASE_URL || 'http://localhost:5000'}/account`,
+        return_url: `${process.env.APP_URL || 'http://localhost:5000'}/dashboard/account`,
       });
       
       res.json({ url: session.url });

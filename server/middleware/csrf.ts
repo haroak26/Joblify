@@ -66,7 +66,7 @@ export function csrfVerifyToken(req: Request, res: Response, next: NextFunction)
   }
 
   // Skip CSRF check for webhook endpoints (they should use signature verification)
-  const webhookPaths: string[] = [];
+  const webhookPaths = ["/api/stripe/webhook"];
   if (webhookPaths.some(path => req.path.startsWith(path))) {
     return next();
   }

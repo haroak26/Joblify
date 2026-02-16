@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { SEO } from "@/components/seo";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 
 const plans = [
@@ -102,20 +103,7 @@ export default function Pricing() {
 
   const checkoutMutation = useMutation({
     mutationFn: async (plan: string) => {
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ plan }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create checkout session');
-      }
-
+      const response = await apiRequest('POST', '/api/checkout', { plan });
       return response.json();
     },
     onSuccess: (data) => {

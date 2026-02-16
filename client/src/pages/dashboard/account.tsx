@@ -211,18 +211,22 @@ export default function Account() {
 
   const upgradeSubscriptionMutation = useMutation({
     mutationFn: async (newPlan: string) => {
-      const response = await apiRequest("POST", "/api/subscription/upgrade", {
-        newPlan,
+      const response = await apiRequest("POST", "/api/checkout", {
+        plan: newPlan,
       });
       return response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Upgrade Successful",
-        description: "Your subscription has been upgraded.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({
+          title: "Upgrade Successful",
+          description: "Your subscription has been upgraded.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/usage"] });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -520,9 +524,9 @@ export default function Account() {
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 mt-6">
                 {subscriptionQuery.data?.subscription.plan === 'free' && (
-                  <Button onClick={() => window.location.href = '/pricing'} className="flex-1">
+                  <Button onClick={() => handleUpgrade('plus')} className="flex-1">
                     <Zap className="w-4 h-4 mr-2" />
-                    Upgrade Plan
+                    Upgrade to Plus
                   </Button>
                 )}
                 
@@ -652,11 +656,16 @@ export default function Account() {
                   </ul>
                   {subscriptionQuery.data?.subscription.plan === 'plus' ? (
                     <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
-                  ) : subscriptionQuery.data?.subscription.plan === 'free' ? (
-                    <Button onClick={() => window.location.href = '/pricing'} className="w-full" size="sm">
-                      Upgrade
+                  ) : (
+                    <Button 
+                      onClick={() => handleUpgrade('plus')} 
+                      disabled={upgradeSubscriptionMutation.isPending}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {subscriptionQuery.data?.subscription.plan === 'ultra' ? 'Downgrade' : 'Upgrade'}
                     </Button>
-                  ) : null}
+                  )}
                 </div>
 
                 {/* Ultra Plan */}
@@ -685,20 +694,16 @@ export default function Account() {
                   </ul>
                   {subscriptionQuery.data?.subscription.plan === 'ultra' ? (
                     <Badge variant="secondary" className="w-full justify-center">Current Plan</Badge>
-                  ) : subscriptionQuery.data?.subscription.plan === 'free' ? (
-                    <Button onClick={() => window.location.href = '/pricing'} className="w-full" size="sm">
-                      Upgrade
-                    </Button>
-                  ) : subscriptionQuery.data?.subscription.plan === 'plus' ? (
+                  ) : (
                     <Button 
                       onClick={() => handleUpgrade('ultra')} 
                       disabled={upgradeSubscriptionMutation.isPending}
-                      className="w-full" 
+                      className="w-full"
                       size="sm"
                     >
-                      {upgradeSubscriptionMutation.isPending ? 'Processing...' : 'Upgrade'}
+                      Upgrade
                     </Button>
-                  ) : null}
+                  )}
                 </div>
               </div>
             </div>
