@@ -59,6 +59,11 @@ export function csrfSetToken(req: Request, res: Response, next: NextFunction) {
  * Middleware to verify CSRF token for state-changing requests
  */
 export function csrfVerifyToken(req: Request, res: Response, next: NextFunction) {
+  // Stripe webhooks use signature verification instead of CSRF tokens
+  if (req.path === "/api/webhooks/stripe") {
+    return next();
+  }
+
   // Only verify for state-changing methods
   const methodsToProtect = ["POST", "PUT", "DELETE", "PATCH"];
   if (!methodsToProtect.includes(req.method)) {

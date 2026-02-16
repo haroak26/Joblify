@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -152,6 +152,11 @@ export default function Account() {
   const { toast } = useToast();
   const { logout } = useAuth();
   const [showDataSummary, setShowDataSummary] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [pendingUpgradePlan, setPendingUpgradePlan] = useState<string | undefined>();
+  const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | undefined>();
+  const [isManagingBilling, setIsManagingBilling] = useState(false);
+  const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
 
   const userQuery = useQuery<UserResponse>({
     queryKey: ["/api/auth/me"],
@@ -188,32 +193,135 @@ export default function Account() {
     },
   });
 
-  const billingUnavailable = () => {
-    toast({
-      title: "Billing unavailable",
-      description: "Paid plan purchases and self-serve billing are temporarily unavailable.",
-      variant: "destructive",
+  const handleCancelSubscription = async () => {
+    try {
+      setIsCancellingSubscription(true);
+      await apiRequest("POST", "/api/billing/cancel");
+      await queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      toast({
+        title: "Subscription scheduled for cancellation",
+        description: "Your paid plan remains active until the end of the billing period.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Unable to cancel subscription",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancellingSubscription(false);
+    }
+  };
+
+  const startCheckout = async (plan: string) => {
+    const response = await apiRequest("POST", "/api/billing/checkout", {
+      plan,
+      couponCode: couponCode.trim() || undefined,
     });
+    const result = await response.json();
+
+    if (result.directUpdate) {
+      await queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      toast({
+        title: "Plan updated",
+        description: `Your plan is now ${plan}.`,
+      });
+      return;
+    }
+
+    if (!result.url) {
+      throw new Error("Checkout session URL was not returned");
+    }
+
+    window.location.href = result.url;
   };
 
-  const handleCancelSubscription = () => {
-    billingUnavailable();
+  const handleUpgrade = async (plan: string) => {
+    try {
+      setPendingUpgradePlan(plan);
+      await startCheckout(plan);
+    } catch (error: any) {
+      toast({
+        title: "Unable to start checkout",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPendingUpgradePlan(undefined);
+    }
   };
 
-  const handleUpgrade = (_plan: string) => {
-    billingUnavailable();
+  const handleDowngrade = async (plan: string) => {
+    try {
+      setPendingDowngradePlan(plan);
+      await startCheckout(plan);
+    } catch (error: any) {
+      toast({
+        title: "Unable to start plan change",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPendingDowngradePlan(undefined);
+    }
   };
 
-  const handleDowngrade = (_plan: string) => {
-    billingUnavailable();
+  const handleManageBilling = async () => {
+    try {
+      setIsManagingBilling(true);
+      const response = await apiRequest("POST", "/api/billing/portal");
+      const data = await response.json();
+      if (!data.url) {
+        throw new Error("Billing portal URL was not returned");
+      }
+      window.location.href = data.url;
+    } catch (error: any) {
+      toast({
+        title: "Unable to open billing portal",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsManagingBilling(false);
+    }
   };
 
-  const handleManageBilling = () => {
-    billingUnavailable();
-  };
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    const sessionId = params.get("session_id");
 
-  const pendingUpgradePlan: string | undefined = undefined;
-  const pendingDowngradePlan: string | undefined = undefined;
+    if (checkoutStatus === "cancelled") {
+      toast({
+        title: "Checkout cancelled",
+        description: "No changes were made to your subscription.",
+      });
+      window.history.replaceState({}, "", "/dashboard/account");
+      return;
+    }
+
+    if (checkoutStatus !== "success" || !sessionId) {
+      return;
+    }
+
+    (async () => {
+      try {
+        await apiRequest("POST", "/api/billing/checkout/confirm", { sessionId });
+        await queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+        toast({
+          title: "Subscription updated",
+          description: "Your new plan is active.",
+        });
+      } catch (error: any) {
+        toast({
+          title: "We are still syncing your subscription",
+          description: error?.message || "Please refresh in a few seconds.",
+        });
+      } finally {
+        window.history.replaceState({}, "", "/dashboard/account");
+      }
+    })();
+  }, [toast]);
 
   // GDPR/CCPA Data Rights Queries
   const dataSummaryQuery = useQuery<DataSummaryResponse>({
@@ -468,15 +576,15 @@ export default function Account() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button variant="outline" onClick={handleManageBilling} className="sm:w-auto">
+                <Button variant="outline" onClick={handleManageBilling} className="sm:w-auto" disabled={isManagingBilling}>
                   <CreditCard className="w-4 h-4 mr-2" />
-                  Manage Billing
+                  {isManagingBilling ? "Opening..." : "Manage Billing"}
                 </Button>
 
                 {currentPlan === "free" && (
                   <Button
                     onClick={() => handleUpgrade("plus")}
-                    disabled={false}
+                    disabled={Boolean(pendingUpgradePlan)}
                     className="sm:w-auto"
                   >
                     {pendingUpgradePlan === "plus" ? (
@@ -484,21 +592,21 @@ export default function Account() {
                     ) : (
                       <Zap className="w-4 h-4 mr-2" />
                     )}
-                    {pendingUpgradePlan === "plus" ? "Contact support" : "Upgrade to Plus"}
+                    {pendingUpgradePlan === "plus" ? "Processing..." : "Upgrade to Plus"}
                   </Button>
                 )}
 
                 {currentPlan === "plus" && (
                   <Button
                     onClick={() => handleUpgrade("ultra")}
-                    disabled={false}
+                    disabled={Boolean(pendingUpgradePlan)}
                   >
                     {pendingUpgradePlan === "ultra" ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <TrendingUp className="w-4 h-4 mr-2" />
                     )}
-                    {pendingUpgradePlan === "ultra" ? "Contact support" : "Upgrade to Ultra"}
+                    {pendingUpgradePlan === "ultra" ? "Processing..." : "Upgrade to Ultra"}
                   </Button>
                 )}
 
@@ -506,12 +614,22 @@ export default function Account() {
                   <Button
                     variant="outline"
                     onClick={() => handleManageBilling()}
-                    disabled={false}
+                    disabled={isManagingBilling}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
                     Manage Billing
                   </Button>
                 )}
+              </div>
+
+              <div className="space-y-2 max-w-sm">
+                <Label htmlFor="coupon-code">Coupon code (optional)</Label>
+                <Input
+                  id="coupon-code"
+                  placeholder="Enter promo code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                />
               </div>
 
               {currentPlan !== "free" && !isLifetime && (
@@ -535,8 +653,9 @@ export default function Account() {
                         <AlertDialogAction
                           onClick={() => handleCancelSubscription()}
                           className="bg-destructive hover:bg-destructive/90"
+                          disabled={isCancellingSubscription}
                         >
-                          Cancel Subscription
+                          {isCancellingSubscription ? "Cancelling..." : "Cancel Subscription"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -591,7 +710,7 @@ export default function Account() {
                         <Button
                           size="sm"
                           className="w-full"
-                          disabled={false}
+                          disabled={Boolean(pendingUpgradePlan || pendingDowngradePlan)}
                           onClick={() =>
                             isDowngradeAction ? handleDowngrade(plan.id) : handleUpgrade(plan.id)
                           }

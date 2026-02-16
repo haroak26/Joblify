@@ -4,7 +4,7 @@ import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
 import { 
   skillSchema, normalizePlan, resumes, users, usage as usageTable, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
-  redeemableCodes, perks, userPerks, type PlanType,
+  redeemableCodes, perks, userPerks, subscriptions, type PlanType,
   mailingLists, userMailingLists, chatConversations
 } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
@@ -21,6 +21,21 @@ import multer from "multer";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import rateLimit from "express-rate-limit";
+import {
+  isStripeConfigured,
+  getOrCreateCustomer,
+  createCheckoutSession,
+  createBillingPortalSession,
+  findPromotionCodeId,
+  retrieveCheckoutSession,
+  verifyWebhookSignature,
+  retrieveSubscription,
+  getPlanByPriceId,
+  listActiveSubscriptions,
+  cancelSubscription,
+  deleteCustomer,
+  updateSubscriptionPlan,
+} from "./lib/stripe";
 
 // Rate limiter for public contact/newsletter endpoints to prevent spam
 const contactRateLimit = rateLimit({
@@ -974,6 +989,286 @@ export async function registerRoutes(
     } catch (error) {
       console.error('[API] Error getting subscription:', error);
       res.status(500).json({ error: "Failed to get subscription data" });
+    }
+  });
+
+  const billingSchema = z.object({
+    plan: z.enum(["plus", "ultra"]),
+    couponCode: z.string().trim().min(1).max(64).optional(),
+  });
+
+  app.post("/api/billing/checkout", requireAuth, async (req: Request, res) => {
+    if (!isStripeConfigured()) {
+      return res.status(503).json({ error: "Billing is not configured" });
+    }
+
+    try {
+      const userId = req.session.userId!;
+      const { plan, couponCode } = billingSchema.parse(req.body);
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      let subscription = await storage.getSubscription(userId);
+      if (!subscription) {
+        subscription = await storage.createSubscription(userId, "free");
+      }
+
+      // Existing paid users should have the existing subscription updated to avoid duplicate active plans
+      if (subscription.stripeSubscriptionId) {
+        const updated = await updateSubscriptionPlan(subscription.stripeSubscriptionId, plan);
+        await storage.updateSubscription(userId, {
+          plan,
+          status: updated.cancel_at_period_end ? "cancelled" : (updated.status === "past_due" ? "past_due" : "active"),
+          currentPeriodEnd: updated.current_period_end ? new Date(updated.current_period_end * 1000) : null,
+        });
+
+        return res.json({
+          success: true,
+          directUpdate: true,
+          subscription: {
+            plan,
+          },
+        });
+      }
+
+      const customer = await getOrCreateCustomer({
+        email: user.email,
+        name: user.name,
+        userId,
+        existingCustomerId: subscription.stripeCustomerId,
+      });
+
+      let promotionCodeId: string | null = null;
+      if (couponCode) {
+        promotionCodeId = await findPromotionCodeId(couponCode);
+        if (!promotionCodeId) {
+          return res.status(400).json({ error: "Invalid or expired coupon code" });
+        }
+      }
+
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+      const session = await createCheckoutSession({
+        customerId: customer.id,
+        userId,
+        email: user.email,
+        plan,
+        promotionCodeId,
+        successUrl: `${baseUrl}/dashboard/account?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${baseUrl}/dashboard/account?checkout=cancelled`,
+      });
+
+      await storage.updateSubscription(userId, {
+        stripeCustomerId: customer.id,
+      });
+
+      res.json({ url: session.url, sessionId: session.id });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid billing request", details: error.errors });
+      }
+      console.error("[Billing] Failed to create checkout session", error);
+      res.status(500).json({ error: "Failed to start checkout" });
+    }
+  });
+
+  app.post("/api/billing/checkout/confirm", requireAuth, async (req: Request, res) => {
+    if (!isStripeConfigured()) {
+      return res.status(503).json({ error: "Billing is not configured" });
+    }
+
+    try {
+      const userId = req.session.userId!;
+      const body = z.object({ sessionId: z.string().min(1) }).parse(req.body);
+      const session = await retrieveCheckoutSession(body.sessionId);
+
+      if (session.metadata?.userId !== userId) {
+        return res.status(403).json({ error: "Checkout session does not belong to this account" });
+      }
+
+      const stripeSubscriptionId = typeof session.subscription === "string"
+        ? session.subscription
+        : session.subscription?.id;
+
+      if (!stripeSubscriptionId) {
+        return res.status(400).json({ error: "Checkout session has no subscription" });
+      }
+
+      const stripeSub = typeof session.subscription === "string"
+        ? await retrieveSubscription(stripeSubscriptionId)
+        : session.subscription;
+
+      const priceId = stripeSub.items?.data?.[0]?.price?.id;
+      const plan = getPlanByPriceId(priceId);
+
+      await storage.updateSubscription(userId, {
+        plan,
+        status: stripeSub.cancel_at_period_end ? "cancelled" : (stripeSub.status === "past_due" ? "past_due" : "active"),
+        stripeCustomerId: typeof session.customer === "string" ? session.customer : session.customer?.id || null,
+        stripeSubscriptionId: stripeSub.id,
+        currentPeriodEnd: stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+        renewalReminderSent: false,
+      });
+
+      // Ensure only one active Stripe subscription remains for this customer
+      const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+      if (customerId) {
+        const activeSubs = await listActiveSubscriptions(customerId);
+        await Promise.all(activeSubs
+          .filter((sub: any) => sub.id !== stripeSub.id)
+          .map((sub: any) => cancelSubscription(sub.id, true)));
+      }
+
+      return res.json({ success: true, plan });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid confirmation request", details: error.errors });
+      }
+      console.error("[Billing] Failed to confirm checkout", error);
+      return res.status(500).json({ error: "Failed to confirm checkout" });
+    }
+  });
+
+  app.post("/api/billing/portal", requireAuth, async (req: Request, res) => {
+    if (!isStripeConfigured()) {
+      return res.status(503).json({ error: "Billing is not configured" });
+    }
+
+    try {
+      const userId = req.session.userId!;
+      const sub = await storage.getSubscription(userId);
+      if (!sub?.stripeCustomerId) {
+        return res.status(400).json({ error: "No billing profile found for this user" });
+      }
+
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+      const portal = await createBillingPortalSession(sub.stripeCustomerId, `${baseUrl}/dashboard/account`);
+      return res.json({ url: portal.url });
+    } catch (error) {
+      console.error("[Billing] Failed to create portal session", error);
+      return res.status(500).json({ error: "Failed to open billing portal" });
+    }
+  });
+
+  app.post("/api/billing/cancel", requireAuth, async (req: Request, res) => {
+    if (!isStripeConfigured()) {
+      return res.status(503).json({ error: "Billing is not configured" });
+    }
+
+    try {
+      const userId = req.session.userId!;
+      const sub = await storage.getSubscription(userId);
+
+      if (!sub?.stripeSubscriptionId) {
+        return res.status(400).json({ error: "No active Stripe subscription found" });
+      }
+
+      const cancelled = await cancelSubscription(sub.stripeSubscriptionId, false);
+      await storage.updateSubscription(userId, {
+        status: "cancelled",
+        currentPeriodEnd: cancelled.current_period_end ? new Date(cancelled.current_period_end * 1000) : sub.currentPeriodEnd,
+      });
+
+      return res.json({ success: true, message: "Subscription will cancel at period end" });
+    } catch (error) {
+      console.error("[Billing] Failed to cancel subscription", error);
+      return res.status(500).json({ error: "Failed to cancel subscription" });
+    }
+  });
+
+  app.post("/api/webhooks/stripe", async (req: Request, res) => {
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(503).json({ error: "Stripe webhook is not configured" });
+    }
+
+    const sig = req.headers["stripe-signature"] as string | undefined;
+    if (!req.rawBody || !verifyWebhookSignature(req.rawBody, sig)) {
+      return res.status(400).json({ error: "Invalid webhook signature" });
+    }
+
+    const event = req.body;
+
+    try {
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+        const userId = session.metadata?.userId;
+        if (userId) {
+          const stripeSub = await retrieveSubscription(session.subscription);
+          const plan = getPlanByPriceId(stripeSub.items?.data?.[0]?.price?.id);
+
+          await storage.updateSubscription(userId, {
+            plan,
+            status: stripeSub.cancel_at_period_end ? "cancelled" : (stripeSub.status === "past_due" ? "past_due" : "active"),
+            stripeCustomerId: session.customer || null,
+            stripeSubscriptionId: stripeSub.id,
+            currentPeriodEnd: stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+            renewalReminderSent: false,
+          });
+
+          const activeSubs = await listActiveSubscriptions(session.customer);
+          await Promise.all(activeSubs
+            .filter((sub: any) => sub.id !== stripeSub.id)
+            .map((sub: any) => cancelSubscription(sub.id, true)));
+        }
+      }
+
+      if (["customer.subscription.updated", "customer.subscription.deleted", "customer.subscription.created"].includes(event.type)) {
+        const stripeSub = event.data.object;
+        const customerId = stripeSub.customer;
+
+        const [localSub] = await db
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeCustomerId, customerId))
+          .limit(1);
+
+        const plan = stripeSub.status === "canceled"
+          ? "free"
+          : getPlanByPriceId(stripeSub.items?.data?.[0]?.price?.id);
+
+        if (localSub) {
+          await storage.updateSubscription(localSub.userId, {
+            plan,
+            status: stripeSub.status === "canceled" ? "cancelled" : (stripeSub.status === "past_due" ? "past_due" : "active"),
+            stripeCustomerId: customerId || null,
+            stripeSubscriptionId: stripeSub.status === "canceled" ? null : stripeSub.id,
+            currentPeriodEnd: stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null,
+          });
+        }
+      }
+
+      return res.json({ received: true });
+    } catch (error) {
+      console.error("[Billing] Webhook handling failed", error);
+      return res.status(500).json({ error: "Webhook processing failed" });
+    }
+  });
+
+  app.delete("/api/account", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const sub = await storage.getSubscription(userId);
+      if (sub?.stripeCustomerId && isStripeConfigured()) {
+        const activeSubs = await listActiveSubscriptions(sub.stripeCustomerId);
+        await Promise.all(activeSubs.map((stripeSub: any) => cancelSubscription(stripeSub.id, true)));
+        await deleteCustomer(sub.stripeCustomerId);
+      }
+
+      await storage.addDeletedAccount(user.email, "User requested account deletion");
+      await storage.deleteUser(userId);
+
+      req.session.destroy(() => undefined);
+      res.clearCookie("connect.sid");
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("[Account] Failed to delete account", error);
+      return res.status(500).json({ error: "Failed to delete account" });
     }
   });
 
