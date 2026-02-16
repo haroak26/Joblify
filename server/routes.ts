@@ -2425,7 +2425,8 @@ Respond ONLY with valid JSON (no text before or after):
       if (!validation.valid) {
         return res.status(400).json({ 
           error: validation.error || "Invalid file format",
-          message: `Please upload a valid ${getFileTypeName(req.file.mimetype)} file`
+          fileType: getFileTypeName(req.file.mimetype),
+          message: validation.error || `Please upload a valid ${getFileTypeName(req.file.mimetype)} file`
         });
       }
 
@@ -3137,6 +3138,15 @@ Respond ONLY with valid JSON, no additional text.`
 
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const validation = validateFile(req.file.buffer, req.file.mimetype);
+      if (!validation.valid) {
+        return res.status(400).json({
+          error: validation.error || "Invalid file format",
+          fileType: getFileTypeName(req.file.mimetype),
+          message: validation.error || `Please upload a valid ${getFileTypeName(req.file.mimetype)} file`
+        });
       }
 
       // Check resume limit first and get subscription/plan info
