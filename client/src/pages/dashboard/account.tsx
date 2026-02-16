@@ -146,6 +146,8 @@ const plans = [
   },
 ];
 
+const STRIPE_CUSTOMER_PORTAL_URL = "https://billing.stripe.com/p/login/bJebJ3bnI4qMbSE4WI1B600";
+
 export default function Account() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -295,6 +297,10 @@ export default function Account() {
 
   const handleManageBilling = () => {
     billingPortalMutation.mutate();
+  };
+
+  const handleOpenStripePortal = () => {
+    window.open(STRIPE_CUSTOMER_PORTAL_URL, "_blank", "noopener,noreferrer");
   };
 
   // GDPR/CCPA Data Rights Queries
@@ -556,6 +562,11 @@ export default function Account() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
+                <Button variant="outline" onClick={handleOpenStripePortal} className="sm:w-auto">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Manage in Stripe
+                </Button>
+
                 {currentPlan === "free" && (
                   <Button
                     onClick={() => handleUpgrade("plus")}
