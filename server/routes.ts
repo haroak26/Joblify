@@ -631,9 +631,10 @@ export async function registerRoutes(
         resumeId: z.string().min(1, "Resume ID is required"),
         jobDescription: z.string().min(20, "Job description must be at least 20 characters"),
         tone: z.enum(["professional", "enthusiastic", "creative"]).default("professional"),
+        writingStyleAnswers: z.array(z.string().trim().min(10).max(500)).length(3),
       });
 
-      const { resumeId, jobDescription, tone } = schema.parse(req.body);
+      const { resumeId, jobDescription, tone, writingStyleAnswers } = schema.parse(req.body);
 
       // Check cover letter usage limits
       const usage = await storage.checkAndResetMonthlyUsage(userId);
@@ -671,6 +672,10 @@ export async function registerRoutes(
       };
 
       const selectedToneInstruction = toneInstructions[tone];
+      const writingStyleContext = writingStyleAnswers
+        .map((answer, index) => `Question ${index + 1} answer: ${answer}`)
+        .join("\n");
+
       const systemPrompt = [
         "You are an expert cover letter writer. Create a compelling, personalized cover letter based on the user's resume and the job description they're applying to.",
         "",
@@ -686,6 +691,8 @@ export async function registerRoutes(
         "- Do NOT use generic phrases or clichés",
         "- Make it authentic and personal",
         "- Write like a real person, not a robot. Use natural, conversational language.",
+        "- Match the candidate writing style notes below so the letter sounds like them.",
+        "- Keep the voice human, specific, and believable. Avoid sounding scripted.",
         "- NEVER use em dashes (the long dash character). Use commas, periods, or semicolons instead.",
         "- Avoid overused phrases like \"I am thrilled\", \"I am excited to apply\", \"I believe I would be a great fit\". Be genuine and specific instead.",
         "- Keep sentences varied in length. Mix short punchy sentences with longer ones.",
@@ -703,7 +710,7 @@ export async function registerRoutes(
           },
           {
             role: "user",
-            content: `Job Description:\n${jobDescription}\n\nCandidate's Resume:\n${resumeText}`,
+            content: `Job Description:\n${jobDescription}\n\nCandidate's Resume:\n${resumeText}\n\nCandidate writing style notes:\n${writingStyleContext}`,
           },
         ],
         max_tokens: 800,
@@ -716,6 +723,7 @@ export async function registerRoutes(
         resumeId,
         content,
         jobDescription,
+        writingStyleAnswers,
       });
 
       // Increment cover letter usage count

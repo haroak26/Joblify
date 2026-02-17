@@ -342,6 +342,7 @@ export const coverLetters = pgTable("cover_letters", {
   resumeId: varchar("resume_id").references(() => resumes.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   jobDescription: text("job_description"),
+  writingStyleAnswers: jsonb("writing_style_answers").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
 }, (table) => ({

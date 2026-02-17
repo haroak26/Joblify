@@ -122,7 +122,7 @@ const plans = [
     price: "$0",
     period: "forever",
     billingSuffix: "",
-    features: ["1 resume", "3 AI edits/mo", "5 job imports/mo", "PDF export"],
+    features: ["1 resume", "10 AI enhancements/mo", "5 job imports/mo", "PDF export", "5 cover letters/mo"],
     limits: { skills: 10, jobs: 5 },
   },
   {
@@ -131,7 +131,7 @@ const plans = [
     price: "$15",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["5 resumes", "50 AI edits/mo", "100 job imports/mo", "PDF & DOCX", "ATS scanner", "Cover letters"],
+    features: ["7-day free trial", "5 resumes", "50 AI edits/mo", "100 job imports/mo", "PDF & DOCX", "ATS scanner", "Cover letters"],
     limits: { skills: -1, jobs: 100 },
     popular: true,
   },

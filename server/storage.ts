@@ -22,7 +22,7 @@ export const PLAN_LIMITS = {
     maxResumes: 1,
     maxSkills: 10,
     maxAIEditsPerMonth: 10,
-    maxCoverLettersPerMonth: 3,
+    maxCoverLettersPerMonth: 5,
     maxJobAnalysesPerMonth: 5,
     maxATSScansPerMonth: 5,
     maxImportedResumesPerMonth: 1,

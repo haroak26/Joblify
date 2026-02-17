@@ -16,17 +16,19 @@ const plans = [
     period: "forever",
     features: [
       "1 resume",
-      "3 AI edits per month",
+      "10 AI enhancements per month",
       "5 job imports per month",
       "Basic templates",
-      "PDF download"
+      "PDF download",
+      "5 cover letters per month"
     ],
     whatYouGet: [
       "Create and store 1 professional resume",
-      "Get 3 AI-powered edits monthly to enhance your content",
+      "Get 10 AI-powered enhancements monthly to improve your resume",
       "Import up to 5 jobs per month",
       "Access to basic resume templates",
-      "Export your resume as PDF"
+      "Export your resume as PDF",
+      "Generate up to 5 AI cover letters each month"
     ],
     cta: "Get Started Free",
     ctaHref: "/register",
@@ -38,6 +40,7 @@ const plans = [
     price: "$15",
     period: "per month",
     features: [
+      "7-day free trial",
       "5 resumes",
       "50 AI edits per month",
       "100 job imports per month",

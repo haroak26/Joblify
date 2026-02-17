@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Copy, Download, Loader2, Sparkles, FileText, CheckCircle2, Wand2, Send } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Copy, Download, Loader2, Sparkles, FileText, CheckCircle2, Wand2, MessageSquareQuote, Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getCsrfToken } from "@/lib/queryClient";
 import type { Resume } from "@shared/schema";
@@ -13,328 +13,266 @@ import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 
 const MIN_JOB_DESCRIPTION_LENGTH = 20;
+const STYLE_QUESTIONS = [
+  "How would you describe your ideal role and why it fits your career direction?",
+  "What is one work achievement you are most proud of, and how do you usually describe it?",
+  "When writing to a hiring manager, what tone feels most natural for you?",
+] as const;
 
 export default function CoverLetterGenerator() {
-  // Track feature usage
   useFeatureTracking(FEATURES.COVER_LETTER);
-  
+
   const [resumeId, setResumeId] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [tone, setTone] = useState<"professional" | "enthusiastic" | "creative">("professional");
+  const [styleAnswers, setStyleAnswers] = useState<string[]>(["", "", ""]);
   const [result, setResult] = useState<any>(null);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const { toast } = useToast();
 
-  const { data: resumesData } = useQuery<Resume[]>({
-    queryKey: ["/api/resumes"],
-  });
-  
-  // Fetch usage data to get plan information
-  const { data: usageData } = useQuery<any>({
-    queryKey: ["/api/usage"],
-  });
-  
-  // Ensure resumes is always an array
+  const { data: resumesData } = useQuery<Resume[]>({ queryKey: ["/api/resumes"] });
+  const { data: usageData } = useQuery<any>({ queryKey: ["/api/usage"] });
+
   const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   const generateMutation = useMutation({
     mutationFn: async () => {
       const csrfToken = getCsrfToken();
       const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (csrfToken) {
-        headers["x-csrf-token"] = csrfToken;
-      }
+      if (csrfToken) headers["x-csrf-token"] = csrfToken;
+
       const res = await fetch("/api/cover-letter/generate", {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeId, jobDescription, tone }),
+        body: JSON.stringify({
+          resumeId,
+          jobDescription,
+          tone,
+          writingStyleAnswers: styleAnswers,
+        }),
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         const error: any = new Error(errorData.error || "Failed to generate");
         error.code = errorData.code;
-        error.limit = errorData.limit;
-        error.current = errorData.current;
         error.message = errorData.message || errorData.error;
         throw error;
       }
-      
+
       return res.json();
     },
     onSuccess: (data) => {
       setResult(data);
-      toast({
-        title: "Cover Letter Generated!",
-        description: "Your personalized cover letter is ready.",
-      });
+      toast({ title: "Cover Letter Generated!", description: "Your personalized cover letter is ready." });
     },
     onError: (error: any) => {
-      // Check if this is a limit error
       if (error?.code === "COVER_LETTER_LIMIT") {
         setShowUpgradeDialog(true);
-      } else {
-        toast({
-          title: "Generation Failed",
-          description: error?.message || "Please try again or contact support.",
-          variant: "destructive",
-        });
+        return;
       }
+      toast({
+        title: "Generation Failed",
+        description: error?.message || "Please try again or contact support.",
+        variant: "destructive",
+      });
     },
   });
 
   const copyToClipboard = () => {
-    if (result?.content) {
-      navigator.clipboard.writeText(result.content).then(() => {
-        toast({
-          title: "Copied!",
-          description: "Cover letter copied to clipboard",
-        });
-      }).catch(() => {
-        toast({
-          title: "Copy failed",
-          description: "Unable to copy to clipboard. Please select and copy manually.",
-          variant: "destructive",
-        });
-      });
-    }
+    if (!result?.content) return;
+    navigator.clipboard.writeText(result.content).then(() => {
+      toast({ title: "Copied!", description: "Cover letter copied to clipboard" });
+    }).catch(() => {
+      toast({ title: "Copy failed", description: "Unable to copy. Please copy manually.", variant: "destructive" });
+    });
   };
 
   const downloadAsText = () => {
-    if (result?.content) {
-      const blob = new Blob([result.content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'cover-letter.txt';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({
-        title: "Downloaded!",
-        description: "Cover letter saved as text file",
-      });
-    }
+    if (!result?.content) return;
+    const blob = new Blob([result.content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cover-letter.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Downloaded!", description: "Cover letter saved as text file" });
   };
 
-  const isFormValid = resumeId && jobDescription.trim().length > MIN_JOB_DESCRIPTION_LENGTH;
+  const updateStyleAnswer = (index: number, value: string) => {
+    setStyleAnswers((prev) => prev.map((answer, i) => (i === index ? value : answer)));
+  };
+
+  const styleReady = styleAnswers.every((answer) => answer.trim().length >= 10);
+  const isFormValid = styleReady && resumeId && jobDescription.trim().length >= MIN_JOB_DESCRIPTION_LENGTH;
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
-      {/* Header Section - Keep as requested */}
-      <div className="mb-8">
+    <div className="container mx-auto p-4 sm:p-6 max-w-7xl space-y-6">
+      <div>
         <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-primary" />
-          AI Cover Letter Generator
+          AI Cover Letter
         </h2>
-        <p className="text-muted-foreground">Create tailored cover letters in seconds</p>
+        <p className="text-muted-foreground">Build authentic, human sounding cover letters with a guided workflow.</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        {/* Input Section */}
-        <div className="space-y-5">
-          {/* Resume Selection */}
-          <Card className="border hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary text-sm font-bold">
-                  1
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Select Resume</CardTitle>
-                  <CardDescription className="text-sm">Choose your base resume</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Select value={resumeId} onValueChange={setResumeId}>
-                <SelectTrigger className="h-11 border hover:border-primary/50 transition-colors">
-                  <SelectValue placeholder="Select a resume" />
-                </SelectTrigger>
-                <SelectContent>
-                  {resumes.length === 0 ? (
-                    <div className="p-3 text-sm text-muted-foreground text-center">
-                      No resumes found. Create one first.
-                    </div>
-                  ) : (
-                    resumes.map((r: any) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-primary" />
-                          <span>{r.title}</span>
-                        </div>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+      <Tabs defaultValue="cover-letter" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="cover-letter" className="gap-2">
+            <FileText className="w-4 h-4" />
+            Cover Letter
+          </TabsTrigger>
+          <TabsTrigger value="ai-interview" className="gap-2">
+            <Mic className="w-4 h-4" />
+            AI Interview
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Job Description */}
-          <Card className="border hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary text-sm font-bold">
-                  2
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Job Description</CardTitle>
-                  <CardDescription className="text-sm">Paste the complete job posting</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste the job description here...&#10;&#10;Include:&#10;• Job title and requirements&#10;• Responsibilities&#10;• Company information&#10;&#10;More details = better results!"
-                rows={10}
-                className="text-sm resize-none border hover:border-primary/50 transition-colors focus-visible:border-primary"
-              />
-              <div className="flex items-center justify-between mt-3">
-                <p className="text-xs text-muted-foreground">
-                  {jobDescription.length} characters
-                </p>
-                {jobDescription.length > MIN_JOB_DESCRIPTION_LENGTH && (
-                  <div className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Ready
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Writing Tone */}
-          <Card className="border hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary text-sm font-bold">
-                  3
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Writing Style</CardTitle>
-                  <CardDescription className="text-sm">Match the company culture</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Select value={tone} onValueChange={(v: any) => setTone(v)}>
-                <SelectTrigger className="h-11 border hover:border-primary/50 transition-colors">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="professional">
-                    <div className="py-1.5">
-                      <div className="font-semibold">Professional</div>
-                      <div className="text-xs text-muted-foreground">Formal, business-focused tone</div>
+        <TabsContent value="cover-letter" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+            <div className="space-y-4">
+              <Card className="border">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><MessageSquareQuote className="w-5 h-5 text-primary" />Your Writing Style</CardTitle>
+                  <CardDescription>Answer these 3 questions first so the cover letter sounds like you.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {STYLE_QUESTIONS.map((question, index) => (
+                    <div key={question} className="space-y-2">
+                      <p className="text-sm font-medium">{index + 1}. {question}</p>
+                      <Textarea
+                        value={styleAnswers[index]}
+                        onChange={(e) => updateStyleAnswer(index, e.target.value)}
+                        rows={3}
+                        placeholder="Write naturally, as if you are talking to a recruiter."
+                        className="resize-none"
+                      />
                     </div>
-                  </SelectItem>
-                  <SelectItem value="enthusiastic">
-                    <div className="py-1.5">
-                      <div className="font-semibold">Enthusiastic</div>
-                      <div className="text-xs text-muted-foreground">Energetic and passionate</div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="creative">
-                    <div className="py-1.5">
-                      <div className="font-semibold">Creative</div>
-                      <div className="text-xs text-muted-foreground">Unique and expressive</div>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+                  ))}
+                  <p className="text-xs text-muted-foreground">Each answer must be at least 10 characters.</p>
+                </CardContent>
+              </Card>
 
-          {/* Generate Button */}
-          <Button
-            onClick={() => generateMutation.mutate()}
-            disabled={!isFormValid || generateMutation.isPending}
-            className="w-full h-12 text-base font-semibold"
-            size="lg"
-          >
-            {generateMutation.isPending ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Wand2 className="w-5 h-5 mr-2" />
-                Generate Cover Letter
-              </>
-            )}
-          </Button>
-        </div>
+              <Card className="border">
+                <CardHeader>
+                  <CardTitle className="text-lg">1. Select Resume</CardTitle>
+                  <CardDescription>Start with the resume you want to tailor from.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select value={resumeId} onValueChange={setResumeId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a resume" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {resumes.length === 0 ? (
+                        <div className="p-3 text-sm text-muted-foreground text-center">No resumes found. Create one first.</div>
+                      ) : (
+                        resumes.map((r: any) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-primary" />
+                              <span>{r.title}</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
 
-        {/* Result Section */}
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          {result ? (
-            <Card className="border bg-green-50/50 dark:bg-green-950/20">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-                      <span>Your Cover Letter</span>
-                    </CardTitle>
-                    <CardDescription className="mt-2">
-                      AI-generated and ready to customize
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyToClipboard}
-                      className="hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      <Copy className="w-4 h-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Copy</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={downloadAsText}
-                      className="hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      <Download className="w-4 h-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Download</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-white dark:bg-gray-950 rounded-lg border border-green-200 dark:border-green-800 p-6">
-                  <Textarea 
-                    value={result.content} 
-                    rows={26}
-                    readOnly
-                    className="font-serif text-sm leading-relaxed border-0 focus-visible:ring-0 p-0 resize-none bg-transparent"
+              <Card className="border">
+                <CardHeader>
+                  <CardTitle className="text-lg">2. Add Job Description</CardTitle>
+                  <CardDescription>Paste the full job post for better targeting.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Textarea
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    rows={10}
+                    className="resize-none"
+                    placeholder="Paste role requirements, responsibilities, and company details."
                   />
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border border-dashed border-muted-foreground/30 bg-muted/30">
-              <CardContent className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                  <Send className="w-10 h-10 text-primary/60" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">Ready to Generate</h3>
-                <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                  Fill out the form on the left with your resume, job description, and preferred tone, then click "Generate Cover Letter" to create your personalized cover letter.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{jobDescription.length} characters</span>
+                    {jobDescription.length >= MIN_JOB_DESCRIPTION_LENGTH && (
+                      <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Ready
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-      {/* Upgrade Dialog */}
+              <Card className="border">
+                <CardHeader>
+                  <CardTitle className="text-lg">3. Choose Tone</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select value={tone} onValueChange={(v: any) => setTone(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                      <SelectItem value="creative">Creative</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+
+              <Button onClick={() => generateMutation.mutate()} disabled={!isFormValid || generateMutation.isPending} className="w-full" size="lg">
+                {generateMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : <><Wand2 className="w-4 h-4 mr-2" />Generate Cover Letter</>}
+              </Button>
+            </div>
+
+            <div>
+              {result ? (
+                <Card className="border">
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />Your Cover Letter</CardTitle>
+                        <CardDescription>Review and customize before applying.</CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={copyToClipboard}><Copy className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Copy</span></Button>
+                        <Button variant="outline" size="sm" onClick={downloadAsText}><Download className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Download</span></Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea value={result.content} readOnly rows={26} className="font-serif leading-relaxed resize-none" />
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border">
+                  <CardContent className="py-16 text-center">
+                    <h3 className="text-lg font-semibold mb-2">Follow the workflow to generate</h3>
+                    <p className="text-sm text-muted-foreground">Answer your writing style questions, pick a resume, add the job description, then generate.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai-interview">
+          <Card className="border">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />AI Interview</CardTitle>
+              <CardDescription>Coming soon</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">We are building guided mock interviews with role-specific questions, live feedback, and coaching insights.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
       <UpgradeDialog
         open={showUpgradeDialog}
         onOpenChange={setShowUpgradeDialog}
