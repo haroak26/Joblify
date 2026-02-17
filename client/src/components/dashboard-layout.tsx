@@ -2,14 +2,38 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+const dashboardTitles: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/dashboard/account": "Account Settings",
+  "/dashboard/resumes": "My Resumes",
+  "/dashboard/resumes/create": "Create Resume",
+  "/dashboard/job-match": "Job Match",
+  "/dashboard/ats-scanner": "ATS Scanner",
+  "/dashboard/cover-letter": "Cover Letter Builder",
+  "/dashboard/admin": "Admin Dashboard",
+};
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, isLoading } = useAuth();
-  
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const routeTitle = dashboardTitles[location] ?? (location.startsWith("/dashboard/resume-builder/") ? "Resume Builder" : "Dashboard");
+    document.title = `${routeTitle} | Joblify`;
+
+    const robotsMeta = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (robotsMeta) {
+      robotsMeta.setAttribute("content", "noindex, nofollow");
+    }
+  }, [location]);
+
   const style = {
     "--sidebar-width": "14rem",
     "--sidebar-width-icon": "3rem",

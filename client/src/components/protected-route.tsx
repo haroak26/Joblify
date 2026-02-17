@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode } from "react";
 import { Redirect } from "wouter";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -10,12 +10,6 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      document.title = "Joblify";
-    }
-  }, [user]);
 
   if (isLoading) {
     return (
