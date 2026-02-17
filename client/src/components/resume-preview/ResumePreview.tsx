@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import type { Ref } from "react";
 import { ResumeData } from "@shared/schema";
 import ModernTemplate from "./ModernTemplate";
 import ProfessionalTemplate from "./ProfessionalTemplate";
@@ -9,9 +10,10 @@ interface ResumePreviewProps {
   data: ResumeData;
   template: string;
   onSectionClick?: (sectionId: string) => void;
+  previewRef?: Ref<HTMLDivElement>;
 }
 
-export default function ResumePreview({ data, template, onSectionClick }: ResumePreviewProps) {
+export default function ResumePreview({ data, template, onSectionClick, previewRef }: ResumePreviewProps) {
   const handleSectionClick = useCallback((e: React.MouseEvent) => {
     if (!onSectionClick) return;
     
@@ -51,6 +53,8 @@ export default function ResumePreview({ data, template, onSectionClick }: Resume
           minHeight: '11in',
           maxWidth: '100%',
         }}
+        ref={previewRef}
+        data-resume-preview-root="true"
         onClick={handleSectionClick}
       >
         <style>{`
