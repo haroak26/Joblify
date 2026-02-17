@@ -122,6 +122,7 @@ export default function ResumeBuilder() {
 
   // Ref for hidden print container used by client-side PDF generation
   const printRef = useRef<HTMLDivElement>(null);
+  const visiblePreviewRef = useRef<HTMLDivElement>(null);
 
   // Fetch resume data
   const { data: resume, isLoading } = useQuery<Resume>({
@@ -332,24 +333,45 @@ export default function ResumeBuilder() {
   };
 
   const handleDownloadPDF = async () => {
+    let temporaryContainer: HTMLDivElement | null = null;
     try {
-      const printContainer = printRef.current;
-      if (!printContainer) {
+      const visiblePreview = visiblePreviewRef.current;
+      const fallbackPreview = printRef.current;
+      const sourcePreview = visiblePreview || fallbackPreview;
+
+      if (!sourcePreview) {
         throw new Error("Print container not found");
       }
+
+      const sourceWidth = Math.ceil(sourcePreview.getBoundingClientRect().width || sourcePreview.scrollWidth);
+
+      temporaryContainer = document.createElement("div");
+      temporaryContainer.style.position = "fixed";
+      temporaryContainer.style.left = "-99999px";
+      temporaryContainer.style.top = "0";
+      temporaryContainer.style.width = `${sourceWidth}px`;
+      temporaryContainer.style.backgroundColor = "#ffffff";
+      temporaryContainer.style.zIndex = "-1";
+
+      const previewClone = sourcePreview.cloneNode(true) as HTMLDivElement;
+      previewClone.style.width = "100%";
+      previewClone.style.maxWidth = "none";
+      temporaryContainer.appendChild(previewClone);
+      document.body.appendChild(temporaryContainer);
 
       // Dynamically import html2canvas and jsPDF for client-side PDF generation
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
       // Capture the resume preview at high resolution
-      const canvas = await html2canvas(printContainer, {
-        scale: 2,
+      const canvas = await html2canvas(temporaryContainer, {
+        scale: Math.min(3, window.devicePixelRatio * 2),
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        width: printContainer.scrollWidth,
-        height: printContainer.scrollHeight,
+        width: sourceWidth,
+        height: Math.ceil(temporaryContainer.scrollHeight),
+        windowWidth: sourceWidth,
       });
 
       const imgData = canvas.toDataURL("image/png");
@@ -418,6 +440,10 @@ export default function ResumeBuilder() {
         description: "Failed to download PDF. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      if (temporaryContainer && temporaryContainer.parentNode) {
+        temporaryContainer.parentNode.removeChild(temporaryContainer);
+      }
     }
   };
 
@@ -776,6 +802,7 @@ export default function ResumeBuilder() {
                     data={resumeData}
                     template={selectedTemplate}
                     onSectionClick={handlePreviewSectionClick}
+                    previewRef={visiblePreviewRef}
                   />
                 </div>
               </div>
@@ -810,6 +837,7 @@ export default function ResumeBuilder() {
                     data={resumeData}
                     template={selectedTemplate}
                     onSectionClick={handlePreviewSectionClick}
+                    previewRef={visiblePreviewRef}
                   />
                 </div>
               </div>
