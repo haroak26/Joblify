@@ -118,6 +118,26 @@ async function requireAIAccess(req: Request, res: Response, next: NextFunction) 
 /**
  * Convert resume data to plain text for ATS analysis
  */
+
+async function extractTextFromUpload(file: Express.Multer.File): Promise<string> {
+  const validation = validateFile(file.buffer, file.mimetype);
+  if (!validation.valid) {
+    throw new Error(validation.error || "Invalid file format");
+  }
+
+  if (file.mimetype === "application/pdf") {
+    const pdfData = await pdfParse(file.buffer);
+    return (pdfData.text || "").trim();
+  }
+
+  if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    const result = await mammoth.extractRawText({ buffer: file.buffer });
+    return (result.value || "").trim();
+  }
+
+  throw new Error("Unsupported file format");
+}
+
 function convertResumeDataToText(resumeData: ResumeData): string {
   const sections: string[] = [];
 
@@ -1316,6 +1336,8 @@ export async function registerRoutes(
       const maxATSScans = planLimits.maxATSScansPerMonth === Infinity ? -1 : planLimits.maxATSScansPerMonth;
       const maxImportedResumes = planLimits.maxImportedResumesPerMonth === Infinity ? -1 : planLimits.maxImportedResumesPerMonth;
       const maxResumes = planLimits.maxResumes === Infinity ? -1 : planLimits.maxResumes;
+      const maxJobsPerJobMatchScan = planLimits.maxJobsPerJobMatchScan === Infinity ? -1 : (planLimits.maxJobsPerJobMatchScan ?? 5);
+      const maxResumeReviews = planLimits.maxResumeReviewsPerMonth === Infinity ? -1 : (planLimits.maxResumeReviewsPerMonth ?? 1);
       
       // Schedules limits (not implemented, so no access for now)
       const maxSchedules = 0;
@@ -1328,6 +1350,7 @@ export async function registerRoutes(
       const remainingJobAnalyses = maxJobAnalyses === -1 ? -1 : Math.max(0, maxJobAnalyses - usage.jobAnalysesThisMonth);
       const remainingATSScans = maxATSScans === -1 ? -1 : Math.max(0, maxATSScans - usage.atsScansThisMonth);
       const remainingImportedResumes = maxImportedResumes === -1 ? -1 : Math.max(0, maxImportedResumes - usage.importedResumesThisMonth);
+      const remainingResumeReviews = maxResumeReviews === -1 ? -1 : Math.max(0, maxResumeReviews - usage.resumeReviewsThisMonth);
       const remainingSchedules = maxSchedules === 0 ? 0 : Math.max(0, maxSchedules - schedulesCount);
       const remainingResumes = maxResumes === -1 ? -1 : Math.max(0, maxResumes - resumesCount);
       
@@ -1342,6 +1365,8 @@ export async function registerRoutes(
           jobAnalysesThisMonth: usage.jobAnalysesThisMonth,
           coverLettersThisMonth: usage.coverLettersThisMonth,
           atsScansThisMonth: usage.atsScansThisMonth,
+          jobMatchJobsThisMonth: usage.jobMatchJobsThisMonth,
+          resumeReviewsThisMonth: usage.resumeReviewsThisMonth,
           schedulesCount,
           monthResetDate: usage.monthResetDate.toISOString(),
         },
@@ -1356,6 +1381,8 @@ export async function registerRoutes(
           maxATSScans,
           maxImportedResumes,
           maxResumes,
+          maxJobsPerJobMatchScan,
+          maxResumeReviews,
         },
         remaining: {
           skills: remainingSkills,
@@ -1366,6 +1393,7 @@ export async function registerRoutes(
           jobAnalyses: remainingJobAnalyses,
           atsScans: remainingATSScans,
           importedResumes: remainingImportedResumes,
+          resumeReviews: remainingResumeReviews,
           resumes: remainingResumes,
         },
       });
@@ -2908,32 +2936,43 @@ Guidelines:
   });
 
   // ============================================
-  // Job Match Endpoint
+  // Job Match Endpoints
   // ============================================
 
-  app.post("/api/job-match/analyze", requireAuth, requireAIAccess, async (req: Request, res) => {
+  app.post("/api/job-match/analyze", requireAuth, requireAIAccess, upload.array('files', 20), async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
 
       const schema = z.object({
         resumeId: z.string().min(1, "Resume ID is required"),
-        jobDescription: z.string().min(20, "Job description must be at least 20 characters"),
+        jobDescriptions: z.array(z.string().min(20)).min(1).max(50),
       });
 
-      const { resumeId, jobDescription } = schema.parse(req.body);
+      const rawJobDescriptions = typeof req.body.jobDescriptions === "string"
+        ? JSON.parse(req.body.jobDescriptions)
+        : req.body.jobDescriptions;
 
-      // Get resume from database
-      const [resume] = await db
-        .select()
-        .from(resumes)
-        .where(eq(resumes.id, resumeId))
-        .limit(1);
+      const { resumeId, jobDescriptions } = schema.parse({
+        resumeId: req.body.resumeId,
+        jobDescriptions: rawJobDescriptions,
+      });
 
+      const files = Array.isArray(req.files) ? req.files : [];
+      const parsedFromFiles = await Promise.all(files.map(async (file) => {
+        const text = await extractTextFromUpload(file);
+        if (!text || text.length < 20) {
+          throw new Error(`Uploaded file ${file.originalname} does not contain enough readable job content`);
+        }
+        return text.slice(0, 10000);
+      }));
+
+      const allJobDescriptions = [...jobDescriptions, ...parsedFromFiles].slice(0, 50);
+
+      const [resume] = await db.select().from(resumes).where(eq(resumes.id, resumeId)).limit(1);
       if (!resume || resume.userId !== userId) {
         return res.status(404).json({ error: "Resume not found" });
       }
 
-      // Check usage limits
       const userUsage = await storage.getUsage(userId);
       const subscription = await storage.getSubscription(userId);
       const plan = normalizePlan(subscription?.plan);
@@ -2941,82 +2980,165 @@ Guidelines:
 
       if (userUsage.jobAnalysesThisMonth >= limits.maxJobAnalysesPerMonth) {
         return res.status(403).json({
-          error: "Job analysis limit reached for this month",
+          error: "Job match scan limit reached for this month",
           limit: limits.maxJobAnalysesPerMonth,
           current: userUsage.jobAnalysesThisMonth,
         });
       }
 
-      // Convert resume data to text
-      const resumeData = resumeDataSchema.parse(resume.resumeData);
-      const resumeText = convertResumeDataToText(resumeData);
-
-      // Send to AI for analysis
-      const poe = getPoeClient();
-      const aiResponse = await poe.chat.completions.create({
-        model: "GPT-4o",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert career advisor and recruiter. Analyze the match between a resume and a job description. 
-Provide your response in this exact JSON format:
-{
-  "matchScore": <number 0-100>,
-  "summary": "<brief overall assessment>",
-  "matchedSkills": ["<skill1>", "<skill2>"],
-  "missingSkills": ["<skill1>", "<skill2>"],
-  "strengths": ["<strength1>", "<strength2>"],
-  "improvements": ["<suggestion1>", "<suggestion2>"],
-  "keywordMatches": ["<keyword1>", "<keyword2>"],
-  "experienceMatch": "<assessment of experience alignment>",
-  "educationMatch": "<assessment of education alignment>"
-}
-Respond ONLY with valid JSON, no additional text.`
-          },
-          {
-            role: "user",
-            content: `RESUME:\n${resumeText}\n\nJOB DESCRIPTION:\n${jobDescription}`
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-      });
-
-      const aiContent = aiResponse.choices[0]?.message?.content || "{}";
-
-      let matchResult;
-      try {
-        matchResult = JSON.parse(aiContent);
-      } catch (parseError) {
-        console.error('[API] Failed to parse AI job match response:', parseError, 'Raw content:', aiContent.slice(0, 500));
-        // If AI didn't return valid JSON, create a basic response
-        matchResult = {
-          matchScore: 50,
-          summary: aiContent,
-          matchedSkills: [],
-          missingSkills: [],
-          strengths: [],
-          improvements: [],
-          keywordMatches: [],
-          experienceMatch: "Unable to determine",
-          educationMatch: "Unable to determine",
-        };
+      const maxJobsPerScan = limits.maxJobsPerJobMatchScan ?? 5;
+      if (allJobDescriptions.length > maxJobsPerScan) {
+        return res.status(403).json({
+          error: `Your plan allows up to ${maxJobsPerScan} jobs per scan`,
+          limit: maxJobsPerScan,
+          current: allJobDescriptions.length,
+        });
       }
 
-      // Increment usage counter
-      await db
-        .update(usageTable)
-        .set({ jobAnalysesThisMonth: sql`${usageTable.jobAnalysesThisMonth} + 1` })
-        .where(eq(usageTable.userId, userId));
+      const resumeData = resumeDataSchema.parse(resume.resumeData);
+      const resumeText = convertResumeDataToText(resumeData);
+      const poe = getPoeClient();
 
-      res.json(matchResult);
+      const analysis = await Promise.all(allJobDescriptions.map(async (jobDescription) => {
+        const aiResponse = await poe.chat.completions.create({
+          model: "GPT-4o",
+          messages: [
+            {
+              role: "system",
+              content: `You are a senior recruiter and career strategist. Analyze the match between one resume and one job description with tactical depth.
+Return strict JSON only with this shape:
+{
+  "matchScore": <number 0-100>,
+  "summary": "<clear executive summary>",
+  "matchedSkills": ["<skill>"],
+  "missingSkills": ["<skill>"],
+  "strengths": ["<strength>"],
+  "improvements": ["<improvement>"],
+  "keywordMatches": ["<keyword>"],
+  "experienceMatch": "<assessment>",
+  "educationMatch": "<assessment>",
+  "quickTweaks": [{"change":"<small tweak>","impact":"<what improves>","roles":["<role>"]}],
+  "recommendedRoles": ["<role>"]
+}`
+            },
+            {
+              role: "user",
+              content: `RESUME:
+${resumeText}
+
+JOB DESCRIPTION:
+${jobDescription}`,
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 2200,
+        });
+
+        const aiContent = aiResponse.choices[0]?.message?.content || "{}";
+        try {
+          return JSON.parse(aiContent);
+        } catch {
+          return {
+            matchScore: 50,
+            summary: aiContent,
+            matchedSkills: [],
+            missingSkills: [],
+            strengths: [],
+            improvements: [],
+            keywordMatches: [],
+            experienceMatch: "Unable to determine",
+            educationMatch: "Unable to determine",
+            quickTweaks: [],
+            recommendedRoles: [],
+          };
+        }
+      }));
+
+      await db.update(usageTable).set({
+        jobAnalysesThisMonth: sql`${usageTable.jobAnalysesThisMonth} + 1`,
+        jobMatchJobsThisMonth: sql`${usageTable.jobMatchJobsThisMonth} + ${allJobDescriptions.length}`,
+      }).where(eq(usageTable.userId, userId));
+
+      res.json({
+        jobsAnalyzed: allJobDescriptions.length,
+        results: analysis,
+      });
     } catch (error) {
       console.error('[API] Error analyzing job match:', error);
       res.status(500).json({ error: "Failed to analyze job match" });
     }
   });
 
-  // ============================================
+  app.post("/api/resume-review", requireAuth, requireAIAccess, upload.single('file'), async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({ idealJob: z.string().min(10).max(300) });
+      const { idealJob } = schema.parse(req.body);
+
+      if (!req.file) {
+        return res.status(400).json({ error: "Resume file is required" });
+      }
+
+      const usage = await storage.getUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan];
+      if (usage.resumeReviewsThisMonth >= (limits.maxResumeReviewsPerMonth ?? 1)) {
+        return res.status(403).json({ error: "Resume review limit reached for this month" });
+      }
+
+      const resumeText = (await extractTextFromUpload(req.file)).slice(0, 20000);
+      if (!resumeText || resumeText.length < 40) {
+        return res.status(400).json({ error: "Could not read enough resume text" });
+      }
+
+      const poe = getPoeClient();
+      const aiResponse = await poe.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert resume reviewer. Produce a deep, practical review with real data points from the resume text.
+Return strict JSON:
+{
+  "overallScore": <0-100>,
+  "summary": "",
+  "strengths": [""],
+  "gaps": [""],
+  "bulletQuality": {"score": <0-100>, "evidence": [""]},
+  "keywordCoverage": {"score": <0-100>, "matched": [""], "missing": [""]},
+  "impactMetrics": {"score": <0-100>, "foundCount": <number>, "advice": ""},
+  "recommendedEdits": [{"section":"", "change":"", "why":"", "priority":"high|medium|low"}],
+  "fitOutlook": {"currentFit":"", "ifTweaked":"", "bestFitRoles":[""]}
+}`
+          },
+          {
+            role: "user",
+            content: `IDEAL JOB: ${idealJob}
+
+RESUME:
+${resumeText}`,
+          },
+        ],
+        temperature: 0.2,
+        max_tokens: 2500,
+      });
+
+      const content = aiResponse.choices[0]?.message?.content || "{}";
+      const parsed = JSON.parse(content);
+
+      await db.update(usageTable).set({
+        resumeReviewsThisMonth: sql`${usageTable.resumeReviewsThisMonth} + 1`,
+      }).where(eq(usageTable.userId, userId));
+
+      res.json(parsed);
+    } catch (error) {
+      console.error('[API] Error creating resume review:', error);
+      res.status(500).json({ error: "Failed to create resume review" });
+    }
+  });
+
+// ============================================
   // Resume Upload & Parse Endpoint
   // ============================================
 

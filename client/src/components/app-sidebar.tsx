@@ -45,6 +45,11 @@ const mainMenuItems = [
     icon: Target,
   },
   {
+    title: "Resume Review",
+    url: "/dashboard/resume-review",
+    icon: FileText,
+  },
+  {
     title: "ATS Scanner",
     url: "/dashboard/ats-scanner",
     icon: Search,

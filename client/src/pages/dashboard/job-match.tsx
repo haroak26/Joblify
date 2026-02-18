@@ -1,15 +1,15 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Target, Briefcase, MapPin, DollarSign, Clock, TrendingUp, CheckCircle2, Search, FileText, Loader2, Upload, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Target, FileText, Loader2, Search, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ensureCsrfToken, getCsrfToken } from "@/lib/queryClient";
 
 interface MatchResult {
   matchScore: number;
@@ -18,271 +18,106 @@ interface MatchResult {
   missingSkills: string[];
   strengths: string[];
   improvements: string[];
-  keywordMatches: string[];
   experienceMatch: string;
   educationMatch: string;
+  quickTweaks?: Array<{ change: string; impact: string; roles: string[] }>;
+  recommendedRoles?: string[];
 }
 
 export default function JobMatch() {
-  // Track feature usage
   useFeatureTracking(FEATURES.JOB_MATCH);
-  
-  const [selectedResumeId, setSelectedResumeId] = useState<string>("");
-  const [jobDescription, setJobDescription] = useState<string>("");
-  const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const { toast } = useToast();
 
-  const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({
-    queryKey: ["/api/resumes"],
-  });
+  const [selectedResumeId, setSelectedResumeId] = useState("");
+  const [jobText, setJobText] = useState("");
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [results, setResults] = useState<MatchResult[]>([]);
 
-  const resumes = resumesData?.resumes || (Array.isArray(resumesData) ? resumesData : []);
+  const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({ queryKey: ["/api/resumes"] });
+  const resumes = resumesData?.resumes || [];
+
+  const jobDescriptions = useMemo(
+    () => jobText.split("\n\n").map((s) => s.trim()).filter((s) => s.length >= 20),
+    [jobText],
+  );
 
   const analyzeMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/job-match/analyze", {
-        resumeId: selectedResumeId,
-        jobDescription,
+      await ensureCsrfToken();
+      const formData = new FormData();
+      formData.append("resumeId", selectedResumeId);
+      formData.append("jobDescriptions", JSON.stringify(jobDescriptions));
+      if (files) {
+        Array.from(files).forEach((file) => formData.append("files", file));
+      }
+
+      const res = await fetch("/api/job-match/analyze", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+        headers: getCsrfToken() ? { "x-csrf-token": getCsrfToken()! } : {},
       });
-      return response.json();
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to analyze job match");
+      }
+      return res.json();
     },
-    onSuccess: (data: MatchResult) => {
-      setMatchResult(data);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Analysis Failed",
-        description: error.message || "Failed to analyze job match. Please try again.",
-        variant: "destructive",
-      });
-    },
+    onSuccess: (data) => setResults(data.results || []),
+    onError: (error: Error) => toast({ title: "Analysis failed", description: error.message, variant: "destructive" }),
   });
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const getScoreBadgeVariant = (score: number): "default" | "secondary" | "destructive" => {
-    if (score >= 80) return "default";
-    if (score >= 60) return "secondary";
-    return "destructive";
-  };
-
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
-      {/* Header */}
+    <div className="container mx-auto w-full max-w-6xl space-y-6 px-4 pb-8 sm:px-6">
       <div>
-        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
-          <Target className="w-6 h-6 text-primary" />
-          Job Match
-        </h2>
-        <p className="text-muted-foreground">
-          Analyze how well your resume matches a job description
-        </p>
+        <h2 className="text-subheader mb-1 flex items-center gap-2 font-bold"><Target className="h-6 w-6 text-primary" />Job Match</h2>
+        <p className="text-muted-foreground">Bulk scan multiple jobs and upload JD PDFs/DOCX files. Separate pasted job descriptions with blank lines.</p>
       </div>
 
-      {/* Resume Selection & Job Description */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-body">Match Your Resume</CardTitle>
-          <CardDescription>
-            Select a resume and paste a job description to see how well you match
-          </CardDescription>
+        <CardHeader>
+          <CardTitle>Bulk Job Match</CardTitle>
+          <CardDescription>Free: 2 scans (up to 5 jobs each). Plus: 5 scans (up to 20 jobs). Ultra: 50 scans (up to 50 jobs).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Choose a resume to analyze" />
-              </SelectTrigger>
-              <SelectContent>
-                {resumes.length === 0 ? (
-                  <div className="p-2 text-small text-muted-foreground">
-                    No resumes found. Create one first.
-                  </div>
-                ) : (
-                  resumes.map((resume: any) => (
-                    <SelectItem key={resume.id} value={resume.id.toString()}>
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        {resume.title}
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
+            <SelectTrigger><SelectValue placeholder="Choose resume" /></SelectTrigger>
+            <SelectContent>{resumes.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.title}</SelectItem>)}</SelectContent>
+          </Select>
 
-          <Textarea
-            placeholder="Paste the job description here..."
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            className="min-h-[150px]"
-          />
+          <Textarea className="min-h-[180px]" value={jobText} onChange={(e) => setJobText(e.target.value)} placeholder="Paste one or multiple job descriptions here..." />
+          <Input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple onChange={(e) => setFiles(e.target.files)} />
 
-          <Button
-            disabled={!selectedResumeId || jobDescription.length < 20 || analyzeMutation.isPending}
-            size="lg"
-            onClick={() => analyzeMutation.mutate()}
-            className="w-full"
-          >
-            {analyzeMutation.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4 mr-2" />
-                Analyze Match
-              </>
-            )}
+          <Button className="w-full" disabled={!selectedResumeId || (jobDescriptions.length === 0 && !files?.length) || analyzeMutation.isPending} onClick={() => analyzeMutation.mutate()}>
+            {analyzeMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing…</> : <><Search className="mr-2 h-4 w-4" />Analyze Jobs</>}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Match Results */}
-      {matchResult && (
-        <>
-          {/* Overall Score */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Match Score</h3>
-                  <p className="text-sm text-muted-foreground">{matchResult.summary}</p>
-                </div>
-                <div className="text-center">
-                  <div className={`text-4xl font-bold ${getScoreColor(matchResult.matchScore)}`}>
-                    {matchResult.matchScore}%
-                  </div>
-                  <Badge variant={getScoreBadgeVariant(matchResult.matchScore)}>
-                    {matchResult.matchScore >= 80 ? "Strong Match" : matchResult.matchScore >= 60 ? "Moderate Match" : "Weak Match"}
-                  </Badge>
-                </div>
+      {results.map((result, idx) => (
+        <Card key={idx}>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">Result #{idx + 1} <Badge>{result.matchScore}%</Badge></CardTitle>
+            <CardDescription>{result.summary}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div><strong>Matched skills:</strong> {result.matchedSkills.join(", ") || "None"}</div>
+            <div><strong>Missing skills:</strong> {result.missingSkills.join(", ") || "None"}</div>
+            <div><strong>Experience:</strong> {result.experienceMatch}</div>
+            <div><strong>Education:</strong> {result.educationMatch}</div>
+            {(result.quickTweaks || []).length > 0 && (
+              <div>
+                <strong>Quick tweaks that can improve compatibility:</strong>
+                <ul className="mt-1 space-y-1">
+                  {result.quickTweaks?.map((t, i) => <li key={i}>• {t.change} — {t.impact} (Best for: {t.roles?.join(", ") || "General"})</li>)}
+                </ul>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Skills Analysis */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-body flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  Matched Skills
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {matchResult.matchedSkills.length > 0 ? (
-                    matchResult.matchedSkills.map((skill, i) => (
-                      <Badge key={i} variant="outline" className="border-green-300 text-green-700">
-                        {skill}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No matched skills identified</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-body flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                  Missing Skills
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {matchResult.missingSkills.length > 0 ? (
-                    matchResult.missingSkills.map((skill, i) => (
-                      <Badge key={i} variant="outline" className="border-orange-300 text-orange-700">
-                        {skill}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No missing skills — great coverage!</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Strengths & Improvements */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-body flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  Strengths
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {matchResult.strengths.map((strength, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      {strength}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-body flex items-center gap-2">
-                  <Target className="w-5 h-5 text-blue-600" />
-                  Improvements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {matchResult.improvements.map((improvement, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                      {improvement}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Experience & Education Match */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-body flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-primary" />
-                  Experience Match
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{matchResult.experienceMatch}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-body flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
-                  Education Match
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{matchResult.educationMatch}</p>
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )}
+            )}
+            {(result.recommendedRoles || []).length > 0 && <div><strong>Recommended roles:</strong> {result.recommendedRoles?.join(", ")}</div>}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

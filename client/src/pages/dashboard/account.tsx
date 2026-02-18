@@ -18,8 +18,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Calendar, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, LogOut, Loader2 } from "lucide-react";
-import type { Subscription, Usage } from "@shared/schema";
+import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, LogOut, Loader2 } from "lucide-react";
+import type { Subscription } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ interface SubscriptionResponse {
     maxJobsPerMonth: number;
     maxSchedules: number;
     hasScheduleAccess: boolean;
+    maxResumeReviews: number;
   };
 }
 
@@ -46,6 +47,8 @@ interface UsageResponse {
     jobAnalysesThisMonth: number;
     coverLettersThisMonth: number;
     atsScansThisMonth: number;
+    jobMatchJobsThisMonth: number;
+    resumeReviewsThisMonth: number;
     schedulesCount: number;
     monthResetDate: string;
   };
@@ -54,12 +57,14 @@ interface UsageResponse {
     maxJobsPerMonth: number;
     maxSchedules: number;
     hasScheduleAccess: boolean;
+    maxResumeReviews: number;
   };
   remaining: {
     skills: number;
     jobsThisMonth: number;
     aiEdits: number;
     schedules: number;
+    resumeReviews: number;
   };
 }
 
@@ -122,7 +127,7 @@ const plans = [
     price: "$0",
     period: "forever",
     billingSuffix: "",
-    features: ["1 resume", "10 AI enhancements/mo", "5 job imports/mo", "PDF export", "5 cover letters/mo"],
+    features: ["1 resume", "2 job match scans/mo", "1 resume review/mo", "Up to 5 jobs per match", "5 cover letters/mo"],
     limits: { skills: 10, jobs: 5 },
   },
   {
@@ -131,7 +136,7 @@ const plans = [
     price: "$15",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["7-day free trial", "5 resumes", "50 AI edits/mo", "100 job imports/mo", "PDF & DOCX", "ATS scanner", "Cover letters"],
+    features: ["7-day free trial", "5 resumes", "5 job match scans/mo", "10 resume reviews/mo", "Up to 20 jobs per match", "ATS scanner", "Cover letters"],
     limits: { skills: -1, jobs: 100 },
     popular: true,
   },
@@ -141,7 +146,7 @@ const plans = [
     price: "$30",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["Unlimited resumes", "Unlimited AI edits", "Unlimited imports", "All formats", "ATS scanner", "Cover letters", "Resume tailoring"],
+    features: ["Unlimited resumes", "50 job match scans/mo", "50 resume reviews/mo", "Up to 50 jobs per match", "All formats", "ATS scanner", "Resume tailoring"],
     limits: { skills: -1, jobs: -1 },
   },
 ];
@@ -412,6 +417,7 @@ export default function Account() {
   const maxJobs = usageData?.limits.maxJobsPerMonth ?? 0;
   const maxSkills = usageData?.limits.maxSkills ?? 0;
   const maxSchedules = usageData?.limits.maxSchedules ?? 0;
+  const maxResumeReviews = usageData?.limits.maxResumeReviews ?? 0;
 
   const jobsUsedPercent = usageData && maxJobs > 0
     ? (usageData.usage.jobsScrapedThisMonth / maxJobs) * 100
@@ -503,7 +509,7 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-0 pb-2 pt-1 snap-x snap-mandatory whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 sm:gap-0 sm:overflow-visible sm:whitespace-normal sm:pb-0 sm:pt-0">
+          <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-0 pb-2 pt-1 snap-x snap-mandatory whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:gap-0 sm:overflow-visible sm:whitespace-normal sm:pb-0 sm:pt-0">
             <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm data-[state=active]:bg-transparent data-[state=active]:border-transparent sm:rounded-none sm:px-4 sm:py-3">
               <Settings className="w-4 h-4" />
               <span>Settings</span>
@@ -799,31 +805,21 @@ export default function Account() {
                   </p>
                 </div>
               </div>
-
-              {/* Schedules */}
+              {/* Resume Reviews */}
               <div className="border rounded-lg p-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="p-2.5 bg-indigo-500/10 rounded-lg">
-                        <Calendar className="w-5 h-5 text-indigo-500" />
+                        <FileText className="w-5 h-5 text-indigo-500" />
                       </div>
-                      <h3 className="text-body font-semibold">Schedules</h3>
+                      <h3 className="text-body font-semibold">Resume Reviews</h3>
                     </div>
-                    <Badge variant={getUsageColor(schedulesUsedPercent)} className="font-semibold rounded-md">
-                      {usageData?.usage.schedulesCount || 0}/{maxSchedules === -1 ? "∞" : maxSchedules || 0}
+                    <Badge variant="secondary" className="font-semibold rounded-md">
+                      {usageData?.usage.resumeReviewsThisMonth || 0}/{maxResumeReviews === -1 ? "∞" : maxResumeReviews || 0}
                     </Badge>
                   </div>
-                  <Progress 
-                    value={maxSchedules === -1 ? 0 : schedulesUsedPercent} 
-                    className="h-2.5"
-                  />
-                  <p className="text-small text-muted-foreground">
-                    {usageData?.limits.hasScheduleAccess
-                      ? maxSchedules === -1 ? "Unlimited schedules" : `${usageData?.remaining.schedules || 0} remaining`
-                      : "Upgrade to access schedules"
-                    }
-                  </p>
+                  <p className="text-small text-muted-foreground">Detailed resume reviews used this month</p>
                 </div>
               </div>
 
@@ -843,6 +839,9 @@ export default function Account() {
                   </div>
                   <p className="text-small text-muted-foreground">
                     Resume scans completed this month
+                  </p>
+                  <p className="text-small text-muted-foreground">
+                    Jobs analyzed in Job Match: {usageData?.usage.jobMatchJobsThisMonth || 0}
                   </p>
                 </div>
               </div>

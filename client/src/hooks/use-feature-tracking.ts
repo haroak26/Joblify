@@ -7,6 +7,7 @@ export const FEATURES = {
   ATS_SCANNER: "ats_scanner",
   COVER_LETTER: "cover_letter",
   JOB_MATCH: "job_match",
+  RESUME_REVIEW: "resume_review",
   TAILOR: "tailor",
 } as const;
 
