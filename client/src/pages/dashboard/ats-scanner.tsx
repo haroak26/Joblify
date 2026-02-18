@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 import { getCsrfToken } from "@/lib/queryClient";
+import { UpgradeDialog } from "@/components/UpgradeDialog";
 
 const loadingSteps = [
   "Searching through your resume",
@@ -29,6 +30,8 @@ export default function AtsScanner() {
   const [result, setResult] = useState<any>(null);
   const [scanMode, setScanMode] = useState<"joblify" | "upload">("upload");
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeContext, setUpgradeContext] = useState<any>(null);
   const { toast } = useToast();
 
   // Query to fetch user's Joblify resumes
@@ -36,6 +39,7 @@ export default function AtsScanner() {
     queryKey: ["/api/resumes"],
     enabled: scanMode === "joblify",
   });
+  const { data: usageData } = useQuery<any>({ queryKey: ["/api/usage"] });
 
   const scanMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -55,8 +59,11 @@ export default function AtsScanner() {
         headers,
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Failed to scan");
+        const err: any = await res.json().catch(() => ({}));
+        const error: any = new Error(err.message || "Failed to scan");
+        error.code = err.code;
+        error.upgradeModal = err.upgradeModal;
+        throw error;
       }
       return res.json();
     },
@@ -64,7 +71,12 @@ export default function AtsScanner() {
       setResult(data);
       toast({ title: "Scan Complete", description: `ATS Score: ${data.score}/100` });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      if (error?.code === "ATS_SCAN_LIMIT") {
+        setUpgradeContext(error?.upgradeModal ?? null);
+        setShowUpgradeDialog(true);
+        return;
+      }
       toast({ title: "Scan Failed", description: error.message, variant: "destructive" });
     },
   });
@@ -82,8 +94,11 @@ export default function AtsScanner() {
         body: JSON.stringify({ jobDescription: jobDescription.trim() || undefined }),
       });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Failed to scan");
+        const err: any = await res.json().catch(() => ({}));
+        const error: any = new Error(err.message || "Failed to scan");
+        error.code = err.code;
+        error.upgradeModal = err.upgradeModal;
+        throw error;
       }
       return res.json();
     },
@@ -91,7 +106,12 @@ export default function AtsScanner() {
       setResult(data);
       toast({ title: "Scan Complete", description: `ATS Score: ${data.score}/100` });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      if (error?.code === "ATS_SCAN_LIMIT") {
+        setUpgradeContext(error?.upgradeModal ?? null);
+        setShowUpgradeDialog(true);
+        return;
+      }
       toast({ title: "Scan Failed", description: error.message, variant: "destructive" });
     },
   });
@@ -137,6 +157,16 @@ export default function AtsScanner() {
         <p className="text-muted-foreground">
           Deep analysis of your resume's ATS compatibility with actionable insights
         </p>
+        {usageData?.thresholds?.atsScans?.stage === "notice_70" && (
+          <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            You’re getting close to your monthly limit.
+          </div>
+        )}
+        {usageData?.thresholds?.atsScans?.stage === "cta_90" && (
+          <div className="mt-3 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-900">
+            You’re almost out of ATS scans this month. Compare plans to avoid interruptions.
+          </div>
+        )}
       </div>
 
       {/* Scan Configuration */}
@@ -471,6 +501,16 @@ export default function AtsScanner() {
           </Card>
         </div>
       )}
+      <UpgradeDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        featureName="ATS scans"
+        currentPlan={usageData?.plan || "free"}
+        limit={usageData?.limits?.maxATSScans}
+        current={usageData?.usage?.atsScansThisMonth}
+        unlockedAmount={upgradeContext?.unlockedAmount}
+        recommendedPlanName={upgradeContext?.recommendedPlan ? String(upgradeContext.recommendedPlan).charAt(0).toUpperCase() + String(upgradeContext.recommendedPlan).slice(1) : null}
+      />
     </div>
   );
 }

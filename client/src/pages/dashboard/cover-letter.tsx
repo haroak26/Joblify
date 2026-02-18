@@ -38,6 +38,7 @@ export default function CoverLetterGenerator() {
   const [result, setResult] = useState<any>(null);
   const [step, setStep] = useState<Step>("style");
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeContext, setUpgradeContext] = useState<any>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorRecipientName, setEditorRecipientName] = useState("Hiring Manager");
   const [editorSenderName, setEditorSenderName] = useState("");
@@ -75,6 +76,7 @@ export default function CoverLetterGenerator() {
         const error: any = new Error(errorData.error || "Failed to generate");
         error.code = errorData.code;
         error.message = errorData.message || errorData.error;
+        error.upgradeModal = errorData.upgradeModal;
         throw error;
       }
 
@@ -88,6 +90,7 @@ export default function CoverLetterGenerator() {
     },
     onError: (error: any) => {
       if (error?.code === "COVER_LETTER_LIMIT") {
+        setUpgradeContext(error?.upgradeModal ?? null);
         setShowUpgradeDialog(true);
         return;
       }
@@ -147,6 +150,16 @@ export default function CoverLetterGenerator() {
           AI Cover Letter
         </h2>
         <p className="text-muted-foreground">Presentation flow: answer your style questions, move next, add job details, then generate.</p>
+        {usageData?.thresholds?.coverLetters?.stage === "notice_70" && (
+          <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            You’re getting close to your monthly limit.
+          </div>
+        )}
+        {usageData?.thresholds?.coverLetters?.stage === "cta_90" && (
+          <div className="mt-3 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-900">
+            You’re almost out of cover letters this month. Compare plans to avoid interruptions.
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
@@ -358,6 +371,8 @@ export default function CoverLetterGenerator() {
         currentPlan={usageData?.plan || "free"}
         limit={usageData?.limits?.maxCoverLetters}
         current={usageData?.usage?.coverLettersThisMonth}
+        unlockedAmount={upgradeContext?.unlockedAmount}
+        recommendedPlanName={upgradeContext?.recommendedPlan ? String(upgradeContext.recommendedPlan).charAt(0).toUpperCase() + String(upgradeContext.recommendedPlan).slice(1) : null}
       />
     </div>
   );

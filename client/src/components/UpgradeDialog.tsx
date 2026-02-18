@@ -19,6 +19,8 @@ interface UpgradeDialogProps {
   currentPlan: string;
   limit?: number;
   current?: number;
+  unlockedAmount?: number | "unlimited" | null;
+  recommendedPlanName?: string | null;
 }
 
 export function UpgradeDialog({
@@ -28,12 +30,14 @@ export function UpgradeDialog({
   currentPlan,
   limit,
   current,
+  unlockedAmount,
+  recommendedPlanName,
 }: UpgradeDialogProps) {
   const [, setLocation] = useLocation();
   
   // Determine which plan to recommend based on current plan
   const isFreePlan = currentPlan === "free";
-  const recommendedPlan = isFreePlan ? "Plus" : "Ultra";
+  const recommendedPlan = recommendedPlanName || (isFreePlan ? "Plus" : "Ultra");
 
   const normalizedMetricKey = resolveLimitMetricKey(featureName);
   const displayFeatureName = LIMIT_METRIC_LABELS[normalizedMetricKey] ?? featureName;
@@ -91,6 +95,11 @@ export function UpgradeDialog({
                   Upgrade to {recommendedPlan}
                 </h4>
                 <p className="text-sm text-muted-foreground">
+                  {unlockedAmount !== undefined && unlockedAmount !== null && (
+                    <span className="block mb-2 font-medium text-foreground">
+                      Unlock {unlockedAmount === "unlimited" ? "unlimited" : `+${unlockedAmount}`} {displayFeatureName} per month.
+                    </span>
+                  )}
                   {isFreePlan ? (
                     <>Plus is built for active weekly use with up to {PLAN_LIMITS.plus.maxResumes} resumes, {PLAN_LIMITS.plus.maxAIEditsPerMonth} AI edits, and {PLAN_LIMITS.plus.maxCoverLettersPerMonth} cover letters each month.</>
                   ) : (
