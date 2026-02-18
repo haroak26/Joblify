@@ -7,6 +7,10 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/hooks/use-auth";
 import { SEO } from "@/components/seo";
+import { PLAN_LIMITS, formatLimitValue } from "@shared/plan-limits";
+
+const freeLimits = PLAN_LIMITS.free;
+const plusLimits = PLAN_LIMITS.plus;
 
 const plans = [
   {
@@ -15,20 +19,20 @@ const plans = [
     price: "$0",
     period: "forever",
     features: [
-      "1 resume",
-      "10 AI enhancements per month",
-      "5 job imports per month",
+      `${freeLimits.maxResumes} resume`,
+      `${freeLimits.maxAIEditsPerMonth} AI enhancements per month`,
+      `${freeLimits.maxJobImportsPerMonth} job imports per month`,
       "Basic templates",
       "PDF download",
-      "5 cover letters per month"
+      `${freeLimits.maxCoverLettersPerMonth} cover letters per month`
     ],
     whatYouGet: [
-      "Create and store 1 professional resume",
-      "Get 10 AI-powered enhancements monthly to improve your resume",
-      "Import up to 5 jobs per month",
+      `Create and store ${freeLimits.maxResumes} professional resume`,
+      `Get ${freeLimits.maxAIEditsPerMonth} AI-powered enhancements monthly to improve your resume`,
+      `Import up to ${freeLimits.maxJobImportsPerMonth} jobs per month`,
       "Access to basic resume templates",
       "Export your resume as PDF",
-      "Generate up to 5 AI cover letters each month"
+      `Generate up to ${freeLimits.maxCoverLettersPerMonth} AI cover letters each month`
     ],
     cta: "Get Started Free",
     ctaHref: "/register",
@@ -41,18 +45,18 @@ const plans = [
     period: "per month",
     features: [
       "7-day free trial",
-      "5 resumes",
-      "50 AI edits per month",
-      "100 job imports per month",
+      `${plusLimits.maxResumes} resumes`,
+      `${plusLimits.maxAIEditsPerMonth} AI edits per month`,
+      `${plusLimits.maxJobImportsPerMonth} job imports per month`,
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
       "Cover letter generator"
     ],
     whatYouGet: [
-      "Create and manage up to 5 resumes",
-      "50 AI-powered edits per month",
-      "Import up to 100 jobs per month",
+      `Create and manage up to ${plusLimits.maxResumes} resumes`,
+      `${plusLimits.maxAIEditsPerMonth} AI-powered edits per month`,
+      `Import up to ${plusLimits.maxJobImportsPerMonth} jobs per month`,
       "Access to all premium templates",
       "Export as PDF and editable DOCX",
       "ATS optimization scanner",
@@ -68,9 +72,9 @@ const plans = [
     price: "$30",
     period: "per month",
     features: [
-      "Unlimited resumes",
-      "Unlimited AI edits",
-      "Unlimited job imports",
+      `${formatLimitValue(PLAN_LIMITS.ultra.maxResumes)} resumes`,
+      `${formatLimitValue(PLAN_LIMITS.ultra.maxAIEditsPerMonth)} AI edits`,
+      `${formatLimitValue(PLAN_LIMITS.ultra.maxJobImportsPerMonth)} job imports`,
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
@@ -94,6 +98,7 @@ const plans = [
     popular: false,
   },
 ];
+
 
 export default function Pricing() {
   const { user } = useAuth();

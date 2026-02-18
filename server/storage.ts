@@ -12,57 +12,12 @@ import {
   deletedAccountsTracker, resumes, systemAdminLogs,
   userPerks, perks, aiUsageLogs, userActivityLogs, verificationCodes
 } from "@shared/schema";
+import { PLAN_LIMITS } from "@shared/plan-limits";
 import { db } from "./db";
 import { eq, and, inArray, lte, isNotNull, gte, or, sql, count, desc, like, ilike } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
-// Plan limits configuration
-export const PLAN_LIMITS = {
-  free: {
-    maxResumes: 1,
-    maxSkills: 10,
-    maxAIEditsPerMonth: 10,
-    maxCoverLettersPerMonth: 5,
-    maxJobAnalysesPerMonth: 2,
-    maxJobsPerJobMatchScan: 5,
-    maxResumeReviewsPerMonth: 1,
-    maxATSScansPerMonth: 5,
-    maxImportedResumesPerMonth: 1,
-  },
-  plus: {
-    maxResumes: 5,
-    maxSkills: Infinity,
-    maxAIEditsPerMonth: 100,
-    maxCoverLettersPerMonth: 50,
-    maxJobAnalysesPerMonth: 5,
-    maxJobsPerJobMatchScan: 20,
-    maxResumeReviewsPerMonth: 10,
-    maxATSScansPerMonth: 50,
-    maxImportedResumesPerMonth: 10,
-  },
-  ultra: {
-    maxResumes: Infinity,
-    maxSkills: Infinity,
-    maxAIEditsPerMonth: Infinity,
-    maxCoverLettersPerMonth: Infinity,
-    maxJobAnalysesPerMonth: 50,
-    maxJobsPerJobMatchScan: 50,
-    maxResumeReviewsPerMonth: 50,
-    maxATSScansPerMonth: Infinity,
-    maxImportedResumesPerMonth: Infinity,
-  },
-  lifetime: {
-    maxResumes: Infinity,
-    maxSkills: Infinity,
-    maxAIEditsPerMonth: Infinity,
-    maxCoverLettersPerMonth: Infinity,
-    maxJobAnalysesPerMonth: 50,
-    maxJobsPerJobMatchScan: 50,
-    maxResumeReviewsPerMonth: 50,
-    maxATSScansPerMonth: Infinity,
-    maxImportedResumesPerMonth: Infinity,
-  },
-} as const;
+export { PLAN_LIMITS };
 
 /**
  * Represents a user's profile information

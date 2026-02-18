@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Sparkles, Zap } from "lucide-react";
 import { useLocation } from "wouter";
+import { LIMIT_METRIC_LABELS, PLAN_LIMITS, formatLimitValue, resolveLimitMetricKey } from "@shared/plan-limits";
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -31,7 +32,9 @@ export function UpgradeDialog({
   // Determine which plan to recommend based on current plan
   const isFreePlan = currentPlan === "free";
   const recommendedPlan = isFreePlan ? "Plus" : "Ultra";
-  const recommendedPlanValue = isFreePlan ? "plus" : "ultra";
+
+  const normalizedMetricKey = resolveLimitMetricKey(featureName);
+  const displayFeatureName = LIMIT_METRIC_LABELS[normalizedMetricKey] ?? featureName;
 
   const handleUpgrade = () => {
     onOpenChange(false);
@@ -55,11 +58,11 @@ export function UpgradeDialog({
           <DialogDescription className="text-base text-left pt-2">
             {limit && current !== undefined ? (
               <span>
-                You've reached your <strong>{featureName}</strong> limit ({current}/{limit}).
+                You've reached your <strong>{displayFeatureName}</strong> limit ({current}/{limit}).
               </span>
             ) : (
               <span>
-                You've maxed out your usage for <strong>{featureName}</strong>.
+                You've maxed out your usage for <strong>{displayFeatureName}</strong>.
               </span>
             )}
           </DialogDescription>
@@ -79,9 +82,9 @@ export function UpgradeDialog({
                 </h4>
                 <p className="text-sm text-muted-foreground">
                   {isFreePlan ? (
-                    <>Get up to 5 resumes and 50 cover letters per month with {recommendedPlan}.</>
+                    <>Get up to {PLAN_LIMITS.plus.maxResumes} resumes and {PLAN_LIMITS.plus.maxCoverLettersPerMonth} cover letters per month with {recommendedPlan}.</>
                   ) : (
-                    <>Unlock unlimited resumes, cover letters, and all AI features with {recommendedPlan}.</>
+                    <>Unlock {formatLimitValue(PLAN_LIMITS.ultra.maxResumes).toLowerCase()} resumes, {formatLimitValue(PLAN_LIMITS.ultra.maxCoverLettersPerMonth).toLowerCase()} cover letters, and all AI features with {recommendedPlan}.</>
                   )}
                 </p>
               </div>
