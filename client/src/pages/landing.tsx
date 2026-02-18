@@ -40,6 +40,29 @@ const benefits = [
   "ATS-compatible resume templates",
 ];
 
+const keywordFaqs = [
+  {
+    question: "What is the best resume builder for 2026 job applications?",
+    answer:
+      "Joblify is an AI resume builder that helps you build your resume with keyword-rich content, clean formatting, and ATS-safe structure in one guided flow.",
+  },
+  {
+    question: "Can I use Joblify as a free resume builder?",
+    answer:
+      "Yes. You can start with our free resume builder experience, create a complete resume, and export when you're ready.",
+  },
+  {
+    question: "Do you support coverletter and CV letter writing?",
+    answer:
+      "Yes. Joblify includes AI support for coverletter writing and CV letter creation so your resume and supporting documents stay aligned.",
+  },
+  {
+    question: "Does Joblify provide resume examples and resume formatting help?",
+    answer:
+      "Absolutely. You get guided resume examples, professional resume formatting suggestions, and actionable edits to improve readability and ATS performance.",
+  },
+];
+
 export default function Landing() {
   const { user } = useAuth();
   const primaryCtaLabel = user ? "My Account" : "Get Started";
@@ -48,9 +71,9 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SEO
-        title="AI-Powered Resume Builder"
-        description="Build your perfect resume with AI through natural conversation. Joblify's AI Chat Resume Builder makes creating professional, ATS-optimized resumes fast and easy."
-        keywords="AI resume builder, resume maker, ATS resume, professional resume, resume templates, job application, career tools"
+        title="AI Resume Builder, Resume Examples & Cover Letter Tools"
+        description="Create a resume, CV, and coverletter with Joblify. Use our AI resume builder, resume formatting guidance, and ATS optimization tools to build your resume faster."
+        keywords="resume, resume builder, build your resume, resume formatting, coverletter, cv letter, cv, resume examples, free resume builder, curriculums, resume now, AI resume builder"
         canonicalUrl="https://joblify.com"
       />
       
@@ -219,6 +242,53 @@ export default function Landing() {
                 <p className="text-4xl font-bold text-primary mb-1">Free</p>
                 <p className="text-sm text-muted-foreground">Get started at no cost</p>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SEO keyword support content */}
+      <section id="sitemap" className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-3xl mb-10">
+            <h2 className="text-2xl sm:text-4xl font-bold mb-4">Resume, CV, and coverletter tools in one platform</h2>
+            <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
+              Whether you search for a resume builder, resume examples, resume formatting guidance, CV tools, or a way to build your resume now,
+              Joblify helps you create polished application documents faster with AI assistance.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+            {[
+              "resume",
+              "resume builder",
+              "build your resume",
+              "resume formatting",
+              "coverletter",
+              "cv letter",
+              "cv",
+              "resume examples",
+              "free resume builder",
+              "curriculums",
+              "resume now",
+            ].map((keyword) => (
+              <div key={keyword} className="border rounded-xl px-4 py-3 text-sm sm:text-base bg-background">
+                {keyword}
+              </div>
+            ))}
+          </div>
+
+          <div className="max-w-4xl">
+            <h3 className="text-xl sm:text-2xl font-semibold mb-6">Frequently asked questions</h3>
+            <div className="space-y-4">
+              {keywordFaqs.map((item) => (
+                <details key={item.question} className="group border rounded-xl p-5 bg-background">
+                  <summary className="cursor-pointer list-none font-medium flex items-start justify-between gap-4">
+                    <span>{item.question}</span>
+                    <span className="text-muted-foreground group-open:rotate-180 transition-transform">⌄</span>
+                  </summary>
+                  <p className="mt-3 text-muted-foreground">{item.answer}</p>
+                </details>
+              ))}
             </div>
           </div>
         </div>
