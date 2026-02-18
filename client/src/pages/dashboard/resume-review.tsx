@@ -5,11 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CleanTabs, CleanTabsContent, CleanTabsList, CleanTabsTrigger } from "@/components/ui/clean-tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureTracking } from "@/hooks/use-feature-tracking";
 import { ensureCsrfToken, getCsrfToken } from "@/lib/queryClient";
+
+const priorityStyles: Record<string, string> = {
+  high: "bg-red-100 text-red-700 border-red-200",
+  medium: "bg-amber-100 text-amber-700 border-amber-200",
+  low: "bg-emerald-100 text-emerald-700 border-emerald-200",
+};
 
 export default function ResumeReview() {
   useFeatureTracking("resume_review");
@@ -129,9 +136,23 @@ export default function ResumeReview() {
             <div><strong>Impact metrics:</strong> Found {result.impactMetrics?.foundCount ?? 0} quantified bullets</div>
             <div>
               <strong>Recommended edits:</strong>
-              <ul className="mt-1 space-y-1">
-                {(result.recommendedEdits || []).map((e: any, i: number) => <li key={i}>• [{e.priority}] {e.section}: {e.change} — {e.why}</li>)}
-              </ul>
+              <div className="mt-3 space-y-3">
+                {(result.recommendedEdits || []).map((e: any, i: number) => {
+                  const normalizedPriority = String(e.priority || "low").toLowerCase();
+                  return (
+                    <div key={i} className="rounded-lg border bg-card p-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge className={priorityStyles[normalizedPriority] || priorityStyles.low} variant="outline">
+                          {normalizedPriority}
+                        </Badge>
+                        <p className="font-semibold">{e.section}</p>
+                      </div>
+                      <p className="text-sm">{e.change}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{e.why}</p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div><strong>Fit outlook:</strong> {result.fitOutlook?.currentFit} → {result.fitOutlook?.ifTweaked}</div>
             <div className="text-muted-foreground">

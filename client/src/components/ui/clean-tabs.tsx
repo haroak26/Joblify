@@ -15,30 +15,42 @@ const CleanTabsList = React.forwardRef<
 
   React.useEffect(() => {
     const updateIndicator = () => {
-      if (tabsRef.current) {
-        const activeButton = tabsRef.current.querySelector('[data-state="active"]') as HTMLElement;
-        if (activeButton) {
-          const { offsetLeft, offsetWidth } = activeButton;
-          setIndicatorStyle({ left: offsetLeft, width: offsetWidth });
-        }
+      if (!tabsRef.current) {
+        return;
       }
+
+      const activeButton = tabsRef.current.querySelector('[data-state="active"]') as HTMLElement | null;
+      if (!activeButton) {
+        return;
+      }
+
+      const listRect = tabsRef.current.getBoundingClientRect();
+      const buttonRect = activeButton.getBoundingClientRect();
+      setIndicatorStyle({
+        left: buttonRect.left - listRect.left + tabsRef.current.scrollLeft,
+        width: buttonRect.width,
+      });
     };
 
     updateIndicator();
-    // Update indicator on window resize
-    window.addEventListener('resize', updateIndicator);
-    // Observer for data-state changes
+    window.addEventListener("resize", updateIndicator);
+
     const observer = new MutationObserver(updateIndicator);
+    const resizeObserver = new ResizeObserver(updateIndicator);
+
     if (tabsRef.current) {
+      resizeObserver.observe(tabsRef.current);
       const buttons = tabsRef.current.querySelectorAll('[role="tab"]');
-      buttons.forEach(button => {
-        observer.observe(button, { attributes: true, attributeFilter: ['data-state'] });
+      buttons.forEach((button) => {
+        observer.observe(button, { attributes: true, attributeFilter: ["data-state"] });
+        resizeObserver.observe(button as Element);
       });
     }
 
     return () => {
-      window.removeEventListener('resize', updateIndicator);
+      window.removeEventListener("resize", updateIndicator);
       observer.disconnect();
+      resizeObserver.disconnect();
     };
   }, [children]);
 
@@ -47,7 +59,7 @@ const CleanTabsList = React.forwardRef<
       <TabsPrimitive.List
         ref={tabsRef}
         className={cn(
-          "inline-flex h-auto items-center justify-start w-full border-b border-border relative",
+          "flex h-auto w-full items-center justify-start border-b border-border relative",
           className
         )}
         {...props}
@@ -81,7 +93,7 @@ const CleanTabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap px-4 py-3 text-sm font-medium transition-all",
+        "inline-flex flex-1 items-center justify-center whitespace-nowrap px-4 py-3 text-sm font-medium transition-all sm:flex-none",
         "text-muted-foreground hover:text-foreground",
         "border border-transparent bg-transparent",
         "data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:border-transparent",
