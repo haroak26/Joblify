@@ -62,7 +62,7 @@ export function Footer() {
             <h3 className="font-semibold mb-4">Product</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/features/ai-resume-builder" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   AI Resume Builder
                 </Link>
               </li>
