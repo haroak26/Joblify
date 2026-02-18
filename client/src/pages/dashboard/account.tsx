@@ -21,6 +21,7 @@ import {
 import { User, CreditCard, BarChart3, Check, Zap, Clock, Award, TrendingUp, Download, Shield, FileText, Settings, Database, FileSpreadsheet, Briefcase, Sparkles, Eye, EyeOff, Lock, Mail, Bell, LogOut, Loader2 } from "lucide-react";
 import type { Subscription } from "@shared/schema";
 import { normalizePlan } from "@shared/schema";
+import { PLAN_LIMITS, formatLimitValue } from "@shared/plan-limits";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -120,6 +121,10 @@ interface DataSummaryResponse {
 }
 
 
+const freeLimits = PLAN_LIMITS.free;
+const plusLimits = PLAN_LIMITS.plus;
+const ultraLimits = PLAN_LIMITS.ultra;
+
 const plans = [
   {
     id: "free",
@@ -127,8 +132,14 @@ const plans = [
     price: "$0",
     period: "forever",
     billingSuffix: "",
-    features: ["1 resume", "2 job match scans/mo", "1 resume review/mo", "Up to 5 jobs per match", "5 cover letters/mo"],
-    limits: { skills: 10, jobs: 5 },
+    features: [
+      `${freeLimits.maxResumes} resume`,
+      `${freeLimits.maxJobMatchScansPerMonth} job match scans/mo`,
+      `${freeLimits.maxResumeReviewsPerMonth} resume review/mo`,
+      `Up to ${freeLimits.maxJobsPerJobMatchScan} jobs per match`,
+      `${freeLimits.maxCoverLettersPerMonth} cover letters/mo`
+    ],
+    limits: { skills: freeLimits.maxSkills, jobs: freeLimits.maxJobImportsPerMonth },
   },
   {
     id: "plus",
@@ -136,8 +147,16 @@ const plans = [
     price: "$15",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["7-day free trial", "5 resumes", "5 job match scans/mo", "10 resume reviews/mo", "Up to 20 jobs per match", "ATS scanner", "Cover letters"],
-    limits: { skills: -1, jobs: 100 },
+    features: [
+      "7-day free trial",
+      `${plusLimits.maxResumes} resumes`,
+      `${plusLimits.maxJobMatchScansPerMonth} job match scans/mo`,
+      `${plusLimits.maxResumeReviewsPerMonth} resume reviews/mo`,
+      `Up to ${plusLimits.maxJobsPerJobMatchScan} jobs per match`,
+      "ATS scanner",
+      "Cover letters"
+    ],
+    limits: { skills: -1, jobs: plusLimits.maxJobImportsPerMonth },
     popular: true,
   },
   {
@@ -146,7 +165,15 @@ const plans = [
     price: "$30",
     period: "per month",
     billingSuffix: "/mo",
-    features: ["Unlimited resumes", "50 job match scans/mo", "50 resume reviews/mo", "Up to 50 jobs per match", "All formats", "ATS scanner", "Resume tailoring"],
+    features: [
+      `${formatLimitValue(ultraLimits.maxResumes)} resumes`,
+      `${formatLimitValue(ultraLimits.maxJobMatchScansPerMonth)} job match scans/mo`,
+      `${formatLimitValue(ultraLimits.maxResumeReviewsPerMonth)} resume reviews/mo`,
+      `Up to ${formatLimitValue(ultraLimits.maxJobsPerJobMatchScan)} jobs per match`,
+      "All formats",
+      "ATS scanner",
+      "Resume tailoring"
+    ],
     limits: { skills: -1, jobs: -1 },
   },
 ];
