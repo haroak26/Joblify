@@ -110,6 +110,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   resumes: many(resumes),
   chatConversations: many(chatConversations),
   coverLetters: many(coverLetters),
+  resumeReviewHistory: many(resumeReviewHistory),
   featureUsage: many(userFeatureUsage),
   scheduledEmails: many(scheduledEmails),
   interviewSessions: many(interviewSessions),
@@ -312,6 +313,7 @@ export const resumesRelations = relations(resumes, ({ one, many }) => ({
   }),
   chatConversations: many(chatConversations),
   coverLetters: many(coverLetters),
+  resumeReviewHistory: many(resumeReviewHistory),
 }));
 
 export const chatConversations = pgTable("chat_conversations", {
@@ -364,6 +366,31 @@ export const coverLettersRelations = relations(coverLetters, ({ one }) => ({
   }),
 }));
 
+export const resumeReviewHistory = pgTable("resume_review_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  resumeId: varchar("resume_id").references(() => resumes.id, { onDelete: "set null" }),
+  idealJob: text("ideal_job").notNull(),
+  concerns: text("concerns"),
+  reviewResult: jsonb("review_result").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+}, (table) => ({
+  userIdIdx: index("resume_review_history_user_id_idx").on(table.userId),
+  resumeIdIdx: index("resume_review_history_resume_id_idx").on(table.resumeId),
+  createdAtIdx: index("resume_review_history_created_at_idx").on(table.createdAt),
+}));
+
+export const resumeReviewHistoryRelations = relations(resumeReviewHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [resumeReviewHistory.userId],
+    references: [users.id],
+  }),
+  resume: one(resumes, {
+    fields: [resumeReviewHistory.resumeId],
+    references: [resumes.id],
+  }),
+}));
+
 export const insertResumeSchema = createInsertSchema(resumes).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertResume = z.infer<typeof insertResumeSchema>;
 export type Resume = typeof resumes.$inferSelect;
@@ -375,6 +402,10 @@ export type ChatConversation = typeof chatConversations.$inferSelect;
 export const insertCoverLetterSchema = createInsertSchema(coverLetters).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCoverLetter = z.infer<typeof insertCoverLetterSchema>;
 export type CoverLetter = typeof coverLetters.$inferSelect;
+
+export const insertResumeReviewHistorySchema = createInsertSchema(resumeReviewHistory).omit({ id: true, createdAt: true });
+export type InsertResumeReviewHistory = z.infer<typeof insertResumeReviewHistorySchema>;
+export type ResumeReviewHistory = typeof resumeReviewHistory.$inferSelect;
 
 export const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),

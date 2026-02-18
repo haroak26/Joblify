@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const priorityStyles: Record<string, string> = {
 export default function ResumeReview() {
   useFeatureTracking("resume_review");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [idealJob, setIdealJob] = useState("");
   const [concerns, setConcerns] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -28,7 +29,27 @@ export default function ResumeReview() {
   const [selectedResumeId, setSelectedResumeId] = useState("");
   const [result, setResult] = useState<any>(null);
 
+  type ReviewResult = {
+    overallScore?: number;
+    summary?: string;
+    strengths?: string[];
+    gaps?: string[];
+    keywordCoverage?: { score?: number };
+    impactMetrics?: { foundCount?: number };
+    recommendedEdits?: Array<{ section?: string; change?: string; why?: string; priority?: string }>;
+    fitOutlook?: { currentFit?: string; ifTweaked?: string };
+  };
+
+  type ReviewHistoryItem = {
+    id: string;
+    idealJob: string;
+    concerns?: string | null;
+    reviewResult: ReviewResult;
+    createdAt: string;
+  };
+
   const { data: resumes = [] } = useQuery<Array<{ id: string; title: string }>>({ queryKey: ["/api/resumes"] });
+  const { data: history = [] } = useQuery<ReviewHistoryItem[]>({ queryKey: ["/api/resume-review/history"] });
 
   const reviewMutation = useMutation({
     mutationFn: async () => {
@@ -59,7 +80,10 @@ export default function ResumeReview() {
       }
       return res.json();
     },
-    onSuccess: (data) => setResult(data),
+    onSuccess: (data) => {
+      setResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/resume-review/history"] });
+    },
     onError: (error: Error) => toast({ title: "Resume review failed", description: error.message, variant: "destructive" }),
   });
 
@@ -161,6 +185,32 @@ export default function ResumeReview() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Review History</CardTitle>
+          <CardDescription>Your most recent 20 resume reviews.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {history.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No resume reviews yet. Run one to see it here.</p>
+          ) : (
+            <div className="space-y-3">
+              {history.map((item) => (
+                <div key={item.id} className="rounded-lg border p-4">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">{item.idealJob}</p>
+                    <Badge variant="outline">Score: {item.reviewResult?.overallScore ?? "N/A"}%</Badge>
+                  </div>
+                  {item.concerns && <p className="mb-2 text-sm text-muted-foreground">Concerns: {item.concerns}</p>}
+                  <p className="text-sm">{item.reviewResult?.summary || "No summary available."}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
