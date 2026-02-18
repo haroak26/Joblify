@@ -257,24 +257,25 @@ export default function Landing() {
               Joblify helps you create polished application documents faster with AI assistance.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
-            {[
-              "resume",
-              "resume builder",
-              "build your resume",
-              "resume formatting",
-              "coverletter",
-              "cv letter",
-              "cv",
-              "resume examples",
-              "free resume builder",
-              "curriculums",
-              "resume now",
-            ].map((keyword) => (
-              <div key={keyword} className="border rounded-xl px-4 py-3 text-sm sm:text-base bg-background">
-                {keyword}
-              </div>
-            ))}
+          <div className="space-y-4 mb-12 text-muted-foreground leading-relaxed max-w-4xl">
+            <p>
+              If you're looking for a <strong className="text-foreground">resume builder</strong> to build your resume quickly,
+              Joblify gives you a guided workflow that turns your experience into a polished, job-ready resume.
+              You can start with a <strong className="text-foreground">free resume builder</strong> flow, then refine content
+              and formatting as you go.
+            </p>
+            <p>
+              Need better <strong className="text-foreground">resume formatting</strong> or stronger bullet points?
+              Our AI suggests clear rewrites and role-specific improvements while keeping your document ATS friendly.
+              If you want inspiration, you'll also get practical <strong className="text-foreground">resume examples</strong>
+              and structure recommendations you can apply right away.
+            </p>
+            <p>
+              Joblify also supports both <strong className="text-foreground">CV</strong> creation and
+              <strong className="text-foreground"> coverletter</strong> writing so your full application package stays consistent.
+              Whether you're updating curriculums for academic roles or trying to create a better resume now for your next opportunity,
+              you can do it all in one place.
+            </p>
           </div>
 
           <div className="max-w-4xl">
