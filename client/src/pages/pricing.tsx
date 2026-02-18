@@ -11,6 +11,7 @@ import { PLAN_LIMITS, formatLimitValue } from "@shared/plan-limits";
 
 const freeLimits = PLAN_LIMITS.free;
 const plusLimits = PLAN_LIMITS.plus;
+const ultraLimits = PLAN_LIMITS.ultra;
 
 const plans = [
   {
@@ -18,10 +19,12 @@ const plans = [
     name: "Free",
     price: "$0",
     period: "forever",
+    subtitle: "Best for trial-like usage",
     features: [
       `${freeLimits.maxResumes} resume`,
       `${freeLimits.maxAIEditsPerMonth} AI enhancements per month`,
-      `${freeLimits.maxJobImportsPerMonth} job imports per month`,
+      `${freeLimits.maxSkills} skills`,
+      `${freeLimits.maxJobImportsPerMonth} imported resume/job analyses per month`,
       "Basic templates",
       "PDF download",
       `${freeLimits.maxCoverLettersPerMonth} cover letters per month`
@@ -29,7 +32,7 @@ const plans = [
     whatYouGet: [
       `Create and store ${freeLimits.maxResumes} professional resume`,
       `Get ${freeLimits.maxAIEditsPerMonth} AI-powered enhancements monthly to improve your resume`,
-      `Import up to ${freeLimits.maxJobImportsPerMonth} jobs per month`,
+      `Import up to ${freeLimits.maxJobImportsPerMonth} resumes/jobs per month`,
       "Access to basic resume templates",
       "Export your resume as PDF",
       `Generate up to ${freeLimits.maxCoverLettersPerMonth} AI cover letters each month`
@@ -43,11 +46,12 @@ const plans = [
     name: "Plus",
     price: "$15",
     period: "per month",
+    subtitle: "For active weekly use",
     features: [
       "7-day free trial",
       `${plusLimits.maxResumes} resumes`,
       `${plusLimits.maxAIEditsPerMonth} AI edits per month`,
-      `${plusLimits.maxJobImportsPerMonth} job imports per month`,
+      `${plusLimits.maxJobImportsPerMonth} imported resumes/job analyses per month`,
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
@@ -56,7 +60,7 @@ const plans = [
     whatYouGet: [
       `Create and manage up to ${plusLimits.maxResumes} resumes`,
       `${plusLimits.maxAIEditsPerMonth} AI-powered edits per month`,
-      `Import up to ${plusLimits.maxJobImportsPerMonth} jobs per month`,
+      `Import up to ${plusLimits.maxJobImportsPerMonth} resumes/jobs per month`,
       "Access to all premium templates",
       "Export as PDF and editable DOCX",
       "ATS optimization scanner",
@@ -71,10 +75,12 @@ const plans = [
     name: "Ultra",
     price: "$30",
     period: "per month",
+    subtitle: "Unlimited + high-volume workflows",
     features: [
-      `${formatLimitValue(PLAN_LIMITS.ultra.maxResumes)} resumes`,
-      `${formatLimitValue(PLAN_LIMITS.ultra.maxAIEditsPerMonth)} AI edits`,
-      `${formatLimitValue(PLAN_LIMITS.ultra.maxJobImportsPerMonth)} job imports`,
+      `${formatLimitValue(ultraLimits.maxResumes)} resumes`,
+      `${formatLimitValue(ultraLimits.maxAIEditsPerMonth)} AI edits`,
+      `${formatLimitValue(ultraLimits.maxJobImportsPerMonth)} imported resumes`,
+      `${ultraLimits.maxJobAnalysesPerMonth} job analyses per month`,
       "All templates",
       "PDF & DOCX download",
       "ATS scanner",
@@ -153,6 +159,7 @@ export default function Pricing() {
                 <CardHeader>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
                   <CardDescription>
+                    <p className="text-sm text-muted-foreground">{plan.subtitle}</p>
                     <div className="mt-4">
                       <span className="text-4xl font-bold text-foreground">{plan.price}</span>
                       <span className="text-muted-foreground ml-2">/ {plan.period}</span>
@@ -205,8 +212,8 @@ export default function Pricing() {
             <div>
               <h3 className="font-semibold text-lg mb-2">What happens when I hit my edit limit?</h3>
               <p className="text-muted-foreground">
-                On the Free plan, you'll need to wait for your monthly limit to reset. 
-                Upgrade to Plus or Ultra for higher or unlimited AI edits.
+                On the Free plan, monthly limits are designed for trial-like usage and reset each month.
+                Plus is built for active weekly use, while Ultra is best for unlimited and high-volume workflows.
               </p>
             </div>
             <div>
