@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, Briefcase, Moon, Sun, FileText, Target, Search, FileEdit, Shield, Sparkles } from "lucide-react";
+import { Home, User, Briefcase, Moon, Sun, FileText, Target, Search, FileEdit, Shield, Sparkles, Mic } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +23,7 @@ interface SubscriptionResponse {
   limits: { hasScheduleAccess: boolean };
 }
 
-const mainMenuItems = [
+const coreMenuItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -39,6 +39,9 @@ const mainMenuItems = [
     url: "/dashboard/resumes?create=ai",
     icon: Sparkles,
   },
+];
+
+const toolsMenuItems = [
   {
     title: "Job Match",
     url: "/dashboard/job-match",
@@ -58,6 +61,11 @@ const mainMenuItems = [
     title: "Cover Letter",
     url: "/dashboard/cover-letter",
     icon: FileEdit,
+  },
+  {
+    title: "AI Interview",
+    url: "/dashboard/ai-interview",
+    icon: Mic,
   },
 ];
 
@@ -130,16 +138,16 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2">
         <SidebarGroup>
+          <SidebarGroupLabel className="text-xs text-muted-foreground px-3">Core</SidebarGroupLabel>
           <SidebarMenu className="gap-1">
-            {/* Show regular menu items only for non-admin users */}
-            {!isAdmin && mainMenuItems.map((item) => (
+            {!isAdmin && coreMenuItems.map((item) => (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton 
-                  asChild 
-                  isActive={isActive(item.url)}
-                  className={`h-9 px-3 rounded-md transition-colors ${
-                    isActive(item.url) 
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' 
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    className={`h-9 px-3 rounded-md transition-colors ${
+                    isActive(item.url)
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
                       : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
                   }`}
                 >
@@ -152,6 +160,35 @@ export function AppSidebar() {
             ))}
           </SidebarMenu>
         </SidebarGroup>
+
+        {!isAdmin && (
+          <>
+            <SidebarSeparator className="my-2" />
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-xs text-muted-foreground px-3">AI Tools</SidebarGroupLabel>
+              <SidebarMenu className="gap-1">
+                {toolsMenuItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      className={`h-9 px-3 rounded-md transition-colors ${
+                        isActive(item.url)
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                      }`}
+                    >
+                      <Link href={item.url} data-testid={`link-nav-${item.title.toLowerCase()}`}>
+                        <item.icon className="w-4 h-4" />
+                        <span className="text-sm">{item.title}</span>
+                      </Link>
+                  </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          </>
+        )}
         
         {/* Admin Section */}
         {isAdmin && (

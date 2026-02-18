@@ -34,6 +34,7 @@ import JobMatch from "@/pages/dashboard/job-match";
 import ResumeReview from "@/pages/dashboard/resume-review";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetter from "@/pages/dashboard/cover-letter";
+import AIInterview from "@/pages/dashboard/ai-interview";
 import FeatureCoverLetter from "@/pages/features/cover-letter";
 import FeatureAtsScanner from "@/pages/features/ats-scanner";
 import AdminDashboard from "@/pages/dashboard/admin";
@@ -126,6 +127,13 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <CoverLetter />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/ai-interview">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <AIInterview />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

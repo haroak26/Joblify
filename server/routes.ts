@@ -702,6 +702,7 @@ export async function registerRoutes(
         "Guidelines:",
         `- ${selectedToneInstruction}`,
         "- Keep it to 3-4 concise paragraphs",
+        "- Keep the final result professional and business-appropriate for hiring managers",
         "- Start with a strong opening that grabs attention",
         "- Highlight 2-3 key qualifications that match the job requirements",
         "- Show genuine interest in the role and company",
@@ -770,6 +771,17 @@ export async function registerRoutes(
         });
       }
       res.status(500).json({ error: "Failed to generate cover letter" });
+    }
+  });
+
+  app.get("/api/cover-letters", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const letters = await storage.getCoverLetters(userId);
+      res.json(letters.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    } catch (error) {
+      console.error("[API] Error fetching cover letters:", error);
+      res.status(500).json({ error: "Failed to fetch cover letters" });
     }
   });
   // ============================================
@@ -868,8 +880,8 @@ export async function registerRoutes(
     }
   });
 
-  // Disable 2FA
-  app.post("/api/user/2fa/disable", requireAuth, async (req: Request, res) => {
+  // Start disable 2FA flow - password + verification email
+  app.post("/api/user/2fa/disable/request", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
 
@@ -889,7 +901,55 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Incorrect password" });
       }
 
-      // Disable 2FA and clear secret and backup codes
+      const { generate2FACode, get2FACodeExpiry } = await import("./lib/email2fa");
+      const { send2FAEmail } = await import("./email");
+
+      const code = generate2FACode();
+      const expiresAt = get2FACodeExpiry();
+
+      await storage.createVerificationCode({
+        userId,
+        code,
+        codeType: "disable_2fa",
+        expiresAt,
+      });
+
+      const emailSent = await send2FAEmail(user.email, user.username, code);
+      if (!emailSent) {
+        return res.status(500).json({ error: "Failed to send verification code" });
+      }
+
+      res.json({ success: true, message: "Verification code sent to your email" });
+    } catch (error) {
+      console.error('[API] Error requesting 2FA disable:', error);
+      res.status(500).json({ error: "Failed to request 2FA disable" });
+    }
+  });
+
+  app.post("/api/user/2fa/disable/confirm", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { code } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ error: "Verification code is required" });
+      }
+
+      const verificationCode = await storage.getLatestVerificationCode(userId, "disable_2fa");
+      if (!verificationCode) {
+        return res.status(400).json({ error: "No verification code found. Request a new code." });
+      }
+
+      if (verificationCode.expiresAt < new Date()) {
+        return res.status(400).json({ error: "Verification code has expired" });
+      }
+
+      if (verificationCode.code !== code) {
+        return res.status(400).json({ error: "Invalid verification code" });
+      }
+
+      await storage.markVerificationCodeAsUsed(verificationCode.id);
+
       await storage.updateUser(userId, {
         twoFactorEnabled: false,
         twoFactorSecret: null,
@@ -2995,8 +3055,7 @@ Guidelines:
         });
       }
 
-      const resumeData = resumeDataSchema.parse(resume.resumeData);
-      const resumeText = convertResumeDataToText(resumeData);
+      const resumeText = convertResumeDataToText(resume.resumeData);
       const poe = getPoeClient();
 
       const analysis = await Promise.all(allJobDescriptions.map(async (jobDescription) => {
@@ -3072,12 +3131,11 @@ ${jobDescription}`,
   app.post("/api/resume-review", requireAuth, requireAIAccess, upload.single('file'), async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
-      const schema = z.object({ idealJob: z.string().min(10).max(300) });
-      const { idealJob } = schema.parse(req.body);
-
-      if (!req.file) {
-        return res.status(400).json({ error: "Resume file is required" });
-      }
+      const schema = z.object({
+        idealJob: z.string().min(10).max(300),
+        resumeId: z.string().optional(),
+      });
+      const { idealJob, resumeId } = schema.parse(req.body);
 
       const usage = await storage.getUsage(userId);
       const subscription = await storage.getSubscription(userId);
@@ -3087,7 +3145,19 @@ ${jobDescription}`,
         return res.status(403).json({ error: "Resume review limit reached for this month" });
       }
 
-      const resumeText = (await extractTextFromUpload(req.file)).slice(0, 20000);
+      let resumeText = "";
+      if (resumeId) {
+        const [resume] = await db.select().from(resumes).where(eq(resumes.id, resumeId)).limit(1);
+        if (!resume || resume.userId !== userId) {
+          return res.status(404).json({ error: "Resume not found" });
+        }
+        resumeText = convertResumeDataToText(resume.resumeData).slice(0, 20000);
+      } else if (req.file) {
+        resumeText = (await extractTextFromUpload(req.file)).slice(0, 20000);
+      } else {
+        return res.status(400).json({ error: "Resume file or Joblify resume is required" });
+      }
+
       if (!resumeText || resumeText.length < 40) {
         return res.status(400).json({ error: "Could not read enough resume text" });
       }

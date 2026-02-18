@@ -246,6 +246,11 @@ export async function sendFeatureEngagementEmailTemplate(
 ): Promise<boolean> {
   const dashboardUrl = `${getAppUrl()}/dashboard`;
   const featureInfo = getFeatureInfo(featureName);
+  const dayMessage = emailType === "feature_engagement_24h"
+    ? "It has been 24 hours and it looks like"
+    : emailType === "feature_engagement_48h"
+    ? "Two days in, we noticed"
+    : "Three days in, and we still see";
   
   const content = `
     <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 12px 0; color: #0f172a;">
@@ -255,7 +260,7 @@ export async function sendFeatureEngagementEmailTemplate(
       Hi ${username},
     </p>
     <p style="font-size: 16px; line-height: 1.7; color: #334155; margin: 0 0 20px 0;">
-      We noticed you haven't tried our ${featureInfo.name} feature yet. ${featureInfo.description}
+      ${dayMessage} you haven't tried our ${featureInfo.name} feature yet. ${featureInfo.description}
     </p>
     
     <div style="background-color: #f8fafc; border-left: 4px solid #22C35D; padding: 16px 20px; margin: 24px 0; border-radius: 8px;">
@@ -286,7 +291,7 @@ export async function sendFeatureEngagementEmailTemplate(
 
   return sendEmail({
     to: email,
-    subject: `Try Joblify's ${featureInfo.name} - ${featureInfo.tagline}`,
+    subject: `${emailType === "feature_engagement_24h" ? "24-hour check-in" : emailType === "feature_engagement_48h" ? "2-day check-in" : "3-day check-in"}: Try Joblify's ${featureInfo.name}`,
     html: getEmailTemplate(content, featureInfo.previewText),
   });
 }

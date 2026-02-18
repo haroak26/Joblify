@@ -80,12 +80,12 @@ const CleanTabsTrigger = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
-    className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap px-4 py-3 text-sm font-medium transition-all",
-      "text-muted-foreground hover:text-foreground",
-      "border border-transparent",
-      "data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground",
-      "sm:border-b-2 sm:border-x-0 sm:border-t-0 sm:-mb-[1px] sm:data-[state=active]:bg-transparent",
+      className={cn(
+        "inline-flex items-center justify-center whitespace-nowrap px-4 py-3 text-sm font-medium transition-all",
+        "text-muted-foreground hover:text-foreground",
+        "border border-transparent bg-transparent",
+        "data-[state=active]:text-foreground data-[state=active]:bg-transparent data-[state=active]:border-transparent",
+        "sm:border-b-2 sm:border-x-0 sm:border-t-0 sm:-mb-[1px]",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       "disabled:pointer-events-none disabled:opacity-50",
       className
