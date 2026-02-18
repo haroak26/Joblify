@@ -4,9 +4,10 @@ import { storage, PLAN_LIMITS } from "./storage";
 import { z } from "zod";
 import { 
   skillSchema, normalizePlan, resumes, users, usage as usageTable, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
-  redeemableCodes, perks, userPerks, subscriptions, type PlanType,
+  redeemableCodes, perks, userPerks, subscriptions, type PlanType, aiUsageLogs,
   mailingLists, userMailingLists, chatConversations, resumeReviewHistory
 } from "@shared/schema";
+import { buildUsageThresholdState, type UsageFeatureKey } from "@shared/usage-thresholds";
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
 import OpenAI from "openai";
 import { addContactToBrevoList } from './brevo';
@@ -15,7 +16,7 @@ import { aiRateLimit } from './middleware/security';
 import { csrfTokenEndpoint } from './middleware/csrf';
 import { ResumePDFGenerator } from './lib/resumePDFGenerator';
 import { db } from "./db";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, gte } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import multer from "multer";
 import pdfParse from "pdf-parse";
@@ -62,6 +63,58 @@ const newsletterRateLimit = rateLimit({
 });
 
 let poeClient: OpenAI | null = null;
+
+async function trackUsageThresholdEvent(userId: string, feature: UsageFeatureKey, stage: "notice_70" | "cta_90" | "blocked_100") {
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const eventName = `usage_${stage}_${feature}`;
+
+  const [existing] = await db
+    .select({ id: aiUsageLogs.id })
+    .from(aiUsageLogs)
+    .where(and(
+      eq(aiUsageLogs.userId, userId),
+      eq(aiUsageLogs.featureName, eventName),
+      gte(aiUsageLogs.createdAt, monthStart),
+    ))
+    .limit(1);
+
+  if (!existing) {
+    await db.insert(aiUsageLogs).values({
+      userId,
+      featureName: eventName,
+      success: true,
+      tokensUsed: null,
+    });
+  }
+}
+
+async function getUsageThresholdForFeature(userId: string, feature: UsageFeatureKey, currentUsage: number) {
+  const subscription = await storage.getSubscription(userId);
+  const plan = normalizePlan(subscription?.plan);
+  const limits = PLAN_LIMITS[plan];
+
+  const currentLimit =
+    feature === "ai_edits"
+      ? limits.maxAIEditsPerMonth
+      : feature === "cover_letters"
+        ? limits.maxCoverLettersPerMonth
+        : limits.maxATSScansPerMonth;
+
+  const threshold = buildUsageThresholdState({
+    feature,
+    plan,
+    currentUsage,
+    currentLimit,
+  });
+
+  if (threshold.stage === "notice_70" || threshold.stage === "cta_90" || threshold.stage === "blocked_100") {
+    await trackUsageThresholdEvent(userId, feature, threshold.stage);
+  }
+
+  return { threshold, plan, limits };
+}
 
 function getPoeClient(): OpenAI {
   if (poeClient) {
@@ -658,16 +711,26 @@ export async function registerRoutes(
 
       // Check cover letter usage limits
       const usage = await storage.checkAndResetMonthlyUsage(userId);
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const planLimits = PLAN_LIMITS[plan];
-      
+      const { threshold: coverLetterThreshold, plan, limits: planLimits } = await getUsageThresholdForFeature(
+        userId,
+        "cover_letters",
+        usage.coverLettersThisMonth,
+      );
+
       if (usage.coverLettersThisMonth >= planLimits.maxCoverLettersPerMonth) {
         return res.status(403).json({
           error: "Cover letter limit reached",
           code: "COVER_LETTER_LIMIT",
           limit: planLimits.maxCoverLettersPerMonth,
           current: usage.coverLettersThisMonth,
+          threshold: coverLetterThreshold,
+          upgradeModal: {
+            feature: "cover_letters",
+            recommendedPlan: coverLetterThreshold.recommendedPlan,
+            unlockedAmount: coverLetterThreshold.unlockedAmount,
+            currentLimit: coverLetterThreshold.currentLimit,
+            recommendedLimit: coverLetterThreshold.recommendedLimit,
+          },
           message: planLimits.maxCoverLettersPerMonth === Infinity
             ? "Cover letter limit reached."
             : `Your plan allows up to ${planLimits.maxCoverLettersPerMonth} cover letters per month. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
@@ -755,11 +818,19 @@ export async function registerRoutes(
         })
         .where(eq(usageTable.userId, userId));
 
+      const postActionThreshold = buildUsageThresholdState({
+        feature: "cover_letters",
+        plan,
+        currentUsage: usage.coverLettersThisMonth + 1,
+        currentLimit: planLimits.maxCoverLettersPerMonth,
+      });
+
       res.json({
         id: coverLetter.id,
         content,
         tone,
         createdAt: coverLetter.createdAt,
+        threshold: postActionThreshold,
       });
     } catch (error) {
       console.error('[API] Error generating cover letter:', error);
@@ -1413,6 +1484,33 @@ export async function registerRoutes(
       const remainingResumeReviews = maxResumeReviews === -1 ? -1 : Math.max(0, maxResumeReviews - usage.resumeReviewsThisMonth);
       const remainingSchedules = maxSchedules === 0 ? 0 : Math.max(0, maxSchedules - schedulesCount);
       const remainingResumes = maxResumes === -1 ? -1 : Math.max(0, maxResumes - resumesCount);
+
+      const featureThresholds = {
+        aiEdits: buildUsageThresholdState({
+          feature: "ai_edits",
+          plan,
+          currentUsage: usage.aiEditsThisMonth,
+          currentLimit: planLimits.maxAIEditsPerMonth,
+        }),
+        coverLetters: buildUsageThresholdState({
+          feature: "cover_letters",
+          plan,
+          currentUsage: usage.coverLettersThisMonth,
+          currentLimit: planLimits.maxCoverLettersPerMonth,
+        }),
+        atsScans: buildUsageThresholdState({
+          feature: "ats_scans",
+          plan,
+          currentUsage: usage.atsScansThisMonth,
+          currentLimit: planLimits.maxATSScansPerMonth,
+        }),
+      };
+
+      await Promise.all(
+        Object.values(featureThresholds)
+          .filter((item) => item.stage === "notice_70" || item.stage === "cta_90" || item.stage === "blocked_100")
+          .map((item) => trackUsageThresholdEvent(userId, item.feature, item.stage as "notice_70" | "cta_90" | "blocked_100"))
+      );
       
       res.json({
         plan,
@@ -1456,6 +1554,7 @@ export async function registerRoutes(
           resumeReviews: remainingResumeReviews,
           resumes: remainingResumes,
         },
+        thresholds: featureThresholds,
       });
     } catch (error) {
       console.error('[API] Error getting usage data:', error);
@@ -1737,9 +1836,11 @@ export async function registerRoutes(
 
       // Check AI edit usage limits
       const aiUsage = await storage.checkAndResetMonthlyUsage(userId);
-      const aiSubscription = await storage.getSubscription(userId);
-      const aiPlan = normalizePlan(aiSubscription?.plan);
-      const aiPlanLimits = PLAN_LIMITS[aiPlan];
+      const { threshold: aiEditThreshold, plan: aiPlan, limits: aiPlanLimits } = await getUsageThresholdForFeature(
+        userId,
+        "ai_edits",
+        aiUsage.aiEditsThisMonth,
+      );
 
       if (aiUsage.aiEditsThisMonth >= aiPlanLimits.maxAIEditsPerMonth) {
         return res.status(403).json({
@@ -1747,6 +1848,14 @@ export async function registerRoutes(
           code: "AI_EDIT_LIMIT",
           limit: aiPlanLimits.maxAIEditsPerMonth,
           current: aiUsage.aiEditsThisMonth,
+          threshold: aiEditThreshold,
+          upgradeModal: {
+            feature: "ai_edits",
+            recommendedPlan: aiEditThreshold.recommendedPlan,
+            unlockedAmount: aiEditThreshold.unlockedAmount,
+            currentLimit: aiEditThreshold.currentLimit,
+            recommendedLimit: aiEditThreshold.recommendedLimit,
+          },
           message: aiPlanLimits.maxAIEditsPerMonth === Infinity
             ? "AI edit limit reached."
             : `You've used all ${aiPlanLimits.maxAIEditsPerMonth} AI edits for this month. Upgrade your plan for more AI edits.`
@@ -2444,15 +2553,29 @@ Respond ONLY with valid JSON (no text before or after):
 
       // Check usage limits before performing operation
       const usage = await storage.getUsage(userId);
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const limits = PLAN_LIMITS[plan];
+      const { threshold: atsThreshold, plan, limits } = await getUsageThresholdForFeature(
+        userId,
+        "ats_scans",
+        usage.atsScansThisMonth,
+      );
 
       if (usage.atsScansThisMonth >= limits.maxATSScansPerMonth) {
         return res.status(403).json({ 
           error: "ATS scan limit reached for this month",
+          code: "ATS_SCAN_LIMIT",
           limit: limits.maxATSScansPerMonth,
-          current: usage.atsScansThisMonth
+          current: usage.atsScansThisMonth,
+          threshold: atsThreshold,
+          upgradeModal: {
+            feature: "ats_scans",
+            recommendedPlan: atsThreshold.recommendedPlan,
+            unlockedAmount: atsThreshold.unlockedAmount,
+            currentLimit: atsThreshold.currentLimit,
+            recommendedLimit: atsThreshold.recommendedLimit,
+          },
+          message: limits.maxATSScansPerMonth === Infinity
+            ? "ATS scan limit reached for this month"
+            : `Your plan allows up to ${limits.maxATSScansPerMonth} ATS scans per month. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
         });
       }
 
@@ -2465,7 +2588,14 @@ Respond ONLY with valid JSON (no text before or after):
         .set({ atsScansThisMonth: sql`${usageTable.atsScansThisMonth} + 1` })
         .where(eq(usageTable.userId, userId));
 
-      res.json(analysis);
+      const postActionThreshold = buildUsageThresholdState({
+        feature: "ats_scans",
+        plan,
+        currentUsage: usage.atsScansThisMonth + 1,
+        currentLimit: limits.maxATSScansPerMonth,
+      });
+
+      res.json({ ...analysis, threshold: postActionThreshold });
     } catch (error) {
       console.error('[API] Error scanning resume:', error);
       res.status(500).json({ error: "Failed to scan resume" });
@@ -2484,15 +2614,29 @@ Respond ONLY with valid JSON (no text before or after):
 
       // Check usage limits
       const usage = await storage.getUsage(userId);
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const limits = PLAN_LIMITS[plan];
+      const { threshold: atsThreshold, plan, limits } = await getUsageThresholdForFeature(
+        userId,
+        "ats_scans",
+        usage.atsScansThisMonth,
+      );
 
       if (usage.atsScansThisMonth >= limits.maxATSScansPerMonth) {
         return res.status(403).json({ 
           error: "ATS scan limit reached for this month",
+          code: "ATS_SCAN_LIMIT",
           limit: limits.maxATSScansPerMonth,
-          current: usage.atsScansThisMonth
+          current: usage.atsScansThisMonth,
+          threshold: atsThreshold,
+          upgradeModal: {
+            feature: "ats_scans",
+            recommendedPlan: atsThreshold.recommendedPlan,
+            unlockedAmount: atsThreshold.unlockedAmount,
+            currentLimit: atsThreshold.currentLimit,
+            recommendedLimit: atsThreshold.recommendedLimit,
+          },
+          message: limits.maxATSScansPerMonth === Infinity
+            ? "ATS scan limit reached for this month"
+            : `Your plan allows up to ${limits.maxATSScansPerMonth} ATS scans per month. Upgrade to ${plan === 'free' ? 'Plus' : 'Ultra'} for more.`
         });
       }
 
@@ -2522,7 +2666,14 @@ Respond ONLY with valid JSON (no text before or after):
         .set({ atsScansThisMonth: sql`${usageTable.atsScansThisMonth} + 1` })
         .where(eq(usageTable.userId, userId));
 
-      res.json(analysis);
+      const postActionThreshold = buildUsageThresholdState({
+        feature: "ats_scans",
+        plan,
+        currentUsage: usage.atsScansThisMonth + 1,
+        currentLimit: limits.maxATSScansPerMonth,
+      });
+
+      res.json({ ...analysis, threshold: postActionThreshold });
     } catch (error) {
       console.error('[API] Error scanning Joblify resume:', error);
       res.status(500).json({ error: "Failed to scan resume" });
