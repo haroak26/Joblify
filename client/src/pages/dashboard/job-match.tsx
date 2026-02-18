@@ -33,8 +33,8 @@ export default function JobMatch() {
   const [files, setFiles] = useState<FileList | null>(null);
   const [results, setResults] = useState<MatchResult[]>([]);
 
-  const { data: resumesData } = useQuery<{ resumes: Array<{ id: number; title: string }> }>({ queryKey: ["/api/resumes"] });
-  const resumes = resumesData?.resumes || [];
+  const { data: resumesData = [] } = useQuery<Array<{ id: string; title: string }>>({ queryKey: ["/api/resumes"] });
+  const resumes = Array.isArray(resumesData) ? resumesData : [];
 
   const jobDescriptions = useMemo(
     () => jobText.split("\n\n").map((s) => s.trim()).filter((s) => s.length >= 20),

@@ -447,10 +447,10 @@ export default function Account() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <div className="p-4 sm:p-6 lg:p-10 space-y-8 max-w-6xl mx-auto">
         {/* Profile Header - Always Visible */}
-        <div className="rounded-lg border bg-background p-8">
+        <div className="rounded-lg border bg-background p-5 sm:p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             {/* Avatar */}
             <div className="relative">
@@ -509,24 +509,28 @@ export default function Account() {
 
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
-          <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-0 pb-2 pt-1 snap-x snap-mandatory whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:gap-0 sm:overflow-visible sm:whitespace-normal sm:pb-0 sm:pt-0">
-            <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm data-[state=active]:bg-transparent data-[state=active]:border-transparent sm:rounded-none sm:px-4 sm:py-3">
+          <div className="relative -mx-1 sm:mx-0">
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent z-10 sm:hidden" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" />
+            <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-2 pb-2 pt-1 snap-x snap-mandatory whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:gap-0 sm:overflow-visible sm:whitespace-normal sm:px-0 sm:pb-0 sm:pt-0">
+            <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <Settings className="w-4 h-4" />
               <span>Settings</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="billing" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm data-[state=active]:bg-transparent data-[state=active]:border-transparent sm:rounded-none sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="billing" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <CreditCard className="w-4 h-4" />
               <span>Billing</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="usage" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm data-[state=active]:bg-transparent data-[state=active]:border-transparent sm:rounded-none sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="usage" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <BarChart3 className="w-4 h-4" />
               <span>Usage</span>
             </CleanTabsTrigger>
-            <CleanTabsTrigger value="data" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm data-[state=active]:bg-transparent data-[state=active]:border-transparent sm:rounded-none sm:px-4 sm:py-3">
+            <CleanTabsTrigger value="data" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <Database className="w-4 h-4" />
               <span>Data & Privacy</span>
             </CleanTabsTrigger>
           </CleanTabsList>
+          </div>
 
           {/* Settings Tab */}
           <CleanTabsContent value="settings" className="space-y-6">
@@ -1254,7 +1258,9 @@ function PasswordChangeSection() {
 function TwoFactorAuthSection() {
   const { toast } = useToast();
   const [disablePassword, setDisablePassword] = useState("");
+  const [disableCode, setDisableCode] = useState("");
   const [showDisable, setShowDisable] = useState(false);
+  const [awaitingDisableCode, setAwaitingDisableCode] = useState(false);
 
   const { data: twoFAStatus, refetch: refetchStatus } = useQuery<TwoFAStatus>({
     queryKey: ["/api/user/2fa/status"],
@@ -1281,18 +1287,16 @@ function TwoFactorAuthSection() {
     },
   });
 
-  const disableMutation = useMutation({
+  const requestDisableMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/user/2fa/disable", { password: disablePassword });
+      const response = await apiRequest("POST", "/api/user/2fa/disable/request", { password: disablePassword });
       return response.json();
     },
     onSuccess: () => {
-      setShowDisable(false);
-      setDisablePassword("");
-      refetchStatus();
+      setAwaitingDisableCode(true);
       toast({
-        title: "Success",
-        description: "2FA disabled successfully",
+        title: "Verification required",
+        description: "We sent a verification code to your email to confirm disabling 2FA.",
       });
     },
     onError: (error: Error) => {
@@ -1301,6 +1305,24 @@ function TwoFactorAuthSection() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  const confirmDisableMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/user/2fa/disable/confirm", { code: disableCode.trim() });
+      return response.json();
+    },
+    onSuccess: () => {
+      setShowDisable(false);
+      setAwaitingDisableCode(false);
+      setDisablePassword("");
+      setDisableCode("");
+      refetchStatus();
+      toast({ title: "Success", description: "2FA disabled successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1346,22 +1368,45 @@ function TwoFactorAuthSection() {
 
       {showDisable && (
         <div className="space-y-4 mt-4 border rounded-lg p-4 bg-muted/50">
-          <p className="text-small font-medium">Enter your password to disable 2FA:</p>
-          <Input
-            type="password"
-            value={disablePassword}
-            onChange={(e) => setDisablePassword(e.target.value)}
-            placeholder="Password"
-          />
+          {!awaitingDisableCode ? (
+            <>
+              <p className="text-small font-medium">Enter your password to disable 2FA:</p>
+              <Input
+                type="password"
+                value={disablePassword}
+                onChange={(e) => setDisablePassword(e.target.value)}
+                placeholder="Password"
+              />
+            </>
+          ) : (
+            <>
+              <p className="text-small font-medium">Enter the verification code sent to your email:</p>
+              <Input
+                value={disableCode}
+                onChange={(e) => setDisableCode(e.target.value)}
+                placeholder="6-digit code"
+                maxLength={6}
+              />
+            </>
+          )}
           <div className="flex gap-2">
             <Button
               variant="destructive"
-              onClick={() => disableMutation.mutate()}
-              disabled={disableMutation.isPending || !disablePassword}
+              onClick={() => awaitingDisableCode ? confirmDisableMutation.mutate() : requestDisableMutation.mutate()}
+              disabled={requestDisableMutation.isPending || confirmDisableMutation.isPending || (!awaitingDisableCode && !disablePassword) || (awaitingDisableCode && disableCode.trim().length < 6)}
             >
-              {disableMutation.isPending ? "Disabling..." : "Disable 2FA"}
+              {requestDisableMutation.isPending || confirmDisableMutation.isPending
+                ? "Processing..."
+                : awaitingDisableCode
+                ? "Confirm Disable 2FA"
+                : "Send Verification Code"}
             </Button>
-            <Button variant="outline" onClick={() => setShowDisable(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowDisable(false);
+              setAwaitingDisableCode(false);
+              setDisablePassword("");
+              setDisableCode("");
+            }}>
               Cancel
             </Button>
           </div>
