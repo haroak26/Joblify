@@ -5,7 +5,7 @@ import { z } from "zod";
 import { 
   skillSchema, normalizePlan, resumes, users, usage as usageTable, type ResumeData, resumeDataSchema, type Resume, createEmptyResumeData,
   redeemableCodes, perks, userPerks, subscriptions, type PlanType,
-  mailingLists, userMailingLists, chatConversations
+  mailingLists, userMailingLists, chatConversations, resumeReviewHistory
 } from "@shared/schema";
 import { requireAuth, requireVerifiedEmail, hashPassword, verifyPassword, isStrongPassword } from "./auth";
 import OpenAI from "openai";
@@ -3200,6 +3200,14 @@ ${resumeText}`,
       const content = aiResponse.choices[0]?.message?.content || "{}";
       const parsed = JSON.parse(content);
 
+      await db.insert(resumeReviewHistory).values({
+        userId,
+        resumeId: resumeId ?? null,
+        idealJob,
+        concerns: concerns?.trim() || null,
+        reviewResult: parsed,
+      });
+
       await db.update(usageTable).set({
         resumeReviewsThisMonth: sql`${usageTable.resumeReviewsThisMonth} + 1`,
       }).where(eq(usageTable.userId, userId));
@@ -3208,6 +3216,31 @@ ${resumeText}`,
     } catch (error) {
       console.error('[API] Error creating resume review:', error);
       res.status(500).json({ error: "Failed to create resume review" });
+    }
+  });
+
+  app.get("/api/resume-review/history", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      const history = await db
+        .select({
+          id: resumeReviewHistory.id,
+          resumeId: resumeReviewHistory.resumeId,
+          idealJob: resumeReviewHistory.idealJob,
+          concerns: resumeReviewHistory.concerns,
+          reviewResult: resumeReviewHistory.reviewResult,
+          createdAt: resumeReviewHistory.createdAt,
+        })
+        .from(resumeReviewHistory)
+        .where(eq(resumeReviewHistory.userId, userId))
+        .orderBy(desc(resumeReviewHistory.createdAt))
+        .limit(20);
+
+      res.json(history);
+    } catch (error) {
+      console.error('[API] Error loading resume review history:', error);
+      res.status(500).json({ error: "Failed to load resume review history" });
     }
   });
 
