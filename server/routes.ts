@@ -3133,9 +3133,10 @@ ${jobDescription}`,
       const userId = req.session.userId!;
       const schema = z.object({
         idealJob: z.string().min(10).max(300),
+        concerns: z.string().max(500).optional(),
         resumeId: z.string().optional(),
       });
-      const { idealJob, resumeId } = schema.parse(req.body);
+      const { idealJob, concerns, resumeId } = schema.parse(req.body);
 
       const usage = await storage.getUsage(userId);
       const subscription = await storage.getSubscription(userId);
@@ -3185,6 +3186,8 @@ Return strict JSON:
           {
             role: "user",
             content: `IDEAL JOB: ${idealJob}
+
+USER CONCERNS: ${concerns?.trim() || "None provided"}
 
 RESUME:
 ${resumeText}`,

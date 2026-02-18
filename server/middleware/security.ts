@@ -109,7 +109,8 @@ function setRateLimitHeaders(res: Response, limit: number, hits: number, resetTi
 }
 
 function getRequestIdentity(req: Request): string {
-  return req.user?.id || req.ip || "unknown";
+  const sessionUserId = req.session?.userId;
+  return (sessionUserId ? String(sessionUserId) : req.ip) || "unknown";
 }
 
 function createDistributedRateLimit(options: {

@@ -3,9 +3,10 @@ import type { PlanType } from "@shared/schema";
 
 const STRIPE_API_BASE = "https://api.stripe.com/v1";
 
-type FormValue = string | number | boolean | null | undefined | FormValue[] | Record<string, FormValue>;
+type FormPrimitive = string | number | boolean | null | undefined;
+type FormValue = FormPrimitive | Record<string, unknown> | unknown[];
 
-function appendFormData(params: URLSearchParams, key: string, value: FormValue): void {
+function appendFormData(params: URLSearchParams, key: string, value: unknown): void {
   if (value === null || value === undefined) return;
   if (Array.isArray(value)) {
     value.forEach((item, index) => appendFormData(params, `${key}[${index}]`, item));
@@ -20,7 +21,7 @@ function appendFormData(params: URLSearchParams, key: string, value: FormValue):
   params.append(key, String(value));
 }
 
-async function stripeRequest<T>(method: "GET" | "POST" | "DELETE", path: string, data?: Record<string, FormValue>): Promise<T> {
+async function stripeRequest<T>(method: "GET" | "POST" | "DELETE", path: string, data?: Record<string, unknown>): Promise<T> {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     throw new Error("Stripe is not configured. STRIPE_SECRET_KEY is missing.");
@@ -127,7 +128,7 @@ export async function createCheckoutSession(params: {
   promotionCodeId?: string | null;
 }) {
   const priceId = getPriceIdForPlan(params.plan);
-  const body: Record<string, FormValue> = {
+  const body: Record<string, unknown> = {
     mode: "subscription",
     customer: params.customerId,
     success_url: params.successUrl,

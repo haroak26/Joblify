@@ -528,9 +528,9 @@ export default function AIResumeChat({
     : [];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background border-0">
       {/* Chat Header */}
-      <div className="flex flex-col p-4 border-b bg-background">
+      <div className="flex flex-col p-4 border-b border-border bg-background">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
@@ -726,7 +726,7 @@ export default function AIResumeChat({
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-background">
+      <div className="p-4 border-t border-border bg-background">
         <div className="max-w-3xl mx-auto">
           {/* Editing section tag */}
           {editingSection && !isGuidedBuilder && (
