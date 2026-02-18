@@ -14,6 +14,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 import { getCsrfToken } from "@/lib/queryClient";
 
+const loadingSteps = [
+  "Searching through your resume",
+  "Analyzing ATS pain points",
+  "Compiling personalized findings",
+];
+
 export default function AtsScanner() {
   // Track feature usage
   useFeatureTracking(FEATURES.ATS_SCANNER);
@@ -256,6 +262,27 @@ export default function AtsScanner() {
           </>
         )}
       </Button>
+
+      {isScanning && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="space-y-4 p-6">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <h3 className="text-base font-semibold">Running ATS analysis...</h3>
+            </div>
+            <div className="space-y-3">
+              {loadingSteps.map((step, index) => (
+                <div key={step} className="flex items-center gap-3 rounded-md bg-background/70 p-3">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                    {index + 1}
+                  </span>
+                  <p className="text-sm text-foreground/90">{step}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Results */}
       {result && (

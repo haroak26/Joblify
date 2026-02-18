@@ -448,7 +448,7 @@ export default function Account() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <div className="p-4 sm:p-6 lg:p-10 space-y-8 max-w-6xl mx-auto">
+      <div className="mx-auto max-w-6xl space-y-6 px-3 py-4 sm:space-y-8 sm:p-6 lg:p-10">
         {/* Profile Header - Always Visible */}
         <div className="rounded-lg border bg-background p-5 sm:p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
@@ -533,7 +533,7 @@ export default function Account() {
           </div>
 
           {/* Settings Tab */}
-          <CleanTabsContent value="settings" className="space-y-6">
+          <CleanTabsContent value="settings" className="space-y-5 sm:space-y-6">
             <div>
               <h2 className="text-subheader font-bold">Account Settings</h2>
               <p className="text-muted-foreground">Manage your account preferences and security</p>
@@ -550,14 +550,14 @@ export default function Account() {
           </CleanTabsContent>
 
           {/* Billing Tab */}
-          <CleanTabsContent value="billing" className="space-y-6">
+          <CleanTabsContent value="billing" className="space-y-5 sm:space-y-6">
             <div>
               <h2 className="text-subheader font-bold">Subscription & Billing</h2>
               <p className="text-muted-foreground">Manage your subscription plan and billing</p>
             </div>
 
             {/* Current Subscription */}
-            <div className="border rounded-lg p-6 space-y-6">
+            <div className="rounded-lg border p-4 sm:p-6 space-y-5 sm:space-y-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold">Current Plan</h3>
@@ -721,7 +721,7 @@ export default function Account() {
           </CleanTabsContent>
 
           {/* Usage Tab */}
-          <CleanTabsContent value="usage" className="space-y-6">
+          <CleanTabsContent value="usage" className="space-y-5 sm:space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-subheader font-bold">Usage Overview</h2>
@@ -884,13 +884,13 @@ export default function Account() {
 
 
           {/* Data & Privacy Tab */}
-          <CleanTabsContent value="data" className="space-y-6">
+          <CleanTabsContent value="data" className="space-y-5 sm:space-y-6">
             <div>
               <h2 className="text-subheader font-bold">Data & Privacy</h2>
               <p className="text-muted-foreground">Manage your personal data and privacy settings</p>
             </div>
 
-            <div className="border rounded-lg p-6">
+            <div className="rounded-lg border p-4 sm:p-6">
               <div className="space-y-6">
                 <div className="space-y-2">
                   <h3 className="text-large font-semibold flex items-center gap-2">
@@ -1173,7 +1173,7 @@ function PasswordChangeSection() {
   };
 
   return (
-    <div className="border rounded-lg p-6">
+    <div className="rounded-lg border p-4 sm:p-6">
       <div className="flex items-center gap-2 mb-4">
         <Lock className="w-5 h-5" />
         <h3 className="text-large font-semibold">Change Password</h3>
@@ -1327,7 +1327,7 @@ function TwoFactorAuthSection() {
   });
 
   return (
-    <div className="border rounded-lg p-6">
+    <div className="rounded-lg border p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5" />
@@ -1354,14 +1354,14 @@ function TwoFactorAuthSection() {
               <li>Codes expire after 5 minutes</li>
             </ul>
           </div>
-          <Button onClick={() => enableMutation.mutate()} disabled={enableMutation.isPending}>
+          <Button className="w-full sm:w-auto" onClick={() => enableMutation.mutate()} disabled={enableMutation.isPending}>
             {enableMutation.isPending ? "Enabling..." : "Enable 2FA"}
           </Button>
         </div>
       )}
 
       {twoFAStatus?.enabled && !showDisable && (
-        <Button variant="outline" onClick={() => setShowDisable(true)}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={() => setShowDisable(true)}>
           Disable 2FA
         </Button>
       )}
@@ -1389,7 +1389,7 @@ function TwoFactorAuthSection() {
               />
             </>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               variant="destructive"
               onClick={() => awaitingDisableCode ? confirmDisableMutation.mutate() : requestDisableMutation.mutate()}
@@ -1450,13 +1450,13 @@ function EmailPreferencesSection() {
   };
 
   return (
-    <div className="border rounded-lg p-6">
+    <div className="rounded-lg border p-4 sm:p-6">
       <div className="flex items-center gap-2 mb-4">
         <Mail className="w-5 h-5" />
         <h3 className="text-large font-semibold">Email Preferences</h3>
       </div>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
             <p className="font-medium">Notification Emails</p>
             <p className="text-small text-muted-foreground">Receive emails about important account activities</p>
@@ -1467,7 +1467,7 @@ function EmailPreferencesSection() {
           />
         </div>
         <div className="h-px bg-border" />
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
             <p className="font-medium">Marketing Emails</p>
             <p className="text-small text-muted-foreground">Receive updates about new features and promotions</p>
