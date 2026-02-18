@@ -548,7 +548,7 @@ export default function ResumeBuilder() {
 
   // Responsive class names for better maintainability
   const sidebarClasses = [
-    "w-full md:w-48",                    // Width: full on mobile, fixed on desktop (increased from 40 to 48)
+    "w-full md:w-44 lg:w-40",             // Width: slightly narrower on tablet/desktop to preserve preview space
     "border-b md:border-b-0 md:border-r", // Border: bottom on mobile, right on desktop
     "border-border bg-card",              // Theme colors
     "flex flex-col",                      // Flexbox layout
@@ -782,7 +782,7 @@ export default function ResumeBuilder() {
           {/* Conditionally render AI Chat or Manual Editor */}
           {isAIMode ? (
             <>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 lg:flex-[0_0_54%] overflow-hidden">
               <AIResumeChat
                   resumeId={resumeId!}
                   resumeData={resumeData}
@@ -795,8 +795,8 @@ export default function ResumeBuilder() {
                   mode="builder"
                 />
               </div>
-              {/* Preview in AI mode - hidden on mobile and tablet, shown on large desktop */}
-              <div className="hidden xl:block w-[650px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
+              {/* Preview in AI mode - hidden on mobile, shown from tablet landscape and up */}
+              <div className="hidden lg:block lg:flex-[0_0_46%] lg:max-w-[46%] lg:min-w-[420px] border-l border-border bg-muted/30 overflow-auto p-4 xl:p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}
@@ -810,7 +810,7 @@ export default function ResumeBuilder() {
           ) : (
             <>
               {/* Editor Section - now responsive */}
-              <div className="flex-1 overflow-auto p-4 sm:p-6">
+              <div className="flex-1 lg:flex-[0_0_54%] overflow-auto p-4 sm:p-6">
                 {activeSection === "ai-chat" ? (
                   <AIResumeChat
                     resumeId={resumeId!}
@@ -830,8 +830,8 @@ export default function ResumeBuilder() {
                 ) : null}
               </div>
 
-              {/* Live Preview Section - responsive: hidden on mobile, shown on large screens */}
-              <div className="hidden xl:block w-[650px] xl:border-l border-border bg-muted/30 overflow-auto p-6">
+              {/* Live Preview Section - responsive: hidden on mobile, shown from tablet landscape and up */}
+              <div className="hidden lg:block lg:flex-[0_0_46%] lg:max-w-[46%] lg:min-w-[420px] border-l border-border bg-muted/30 overflow-auto p-4 xl:p-6">
                 <div className="sticky top-0">
                   <ResumePreview
                     data={resumeData}

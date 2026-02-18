@@ -15,6 +15,7 @@ export default function ResumeReview() {
   useFeatureTracking("resume_review");
   const { toast } = useToast();
   const [idealJob, setIdealJob] = useState("");
+  const [concerns, setConcerns] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [resumeMode, setResumeMode] = useState<"joblify" | "upload">("joblify");
   const [selectedResumeId, setSelectedResumeId] = useState("");
@@ -27,6 +28,9 @@ export default function ResumeReview() {
       await ensureCsrfToken();
       const formData = new FormData();
       formData.append("idealJob", idealJob);
+      if (concerns.trim()) {
+        formData.append("concerns", concerns.trim());
+      }
 
       if (resumeMode === "joblify") {
         if (!selectedResumeId) throw new Error("Please select a Joblify resume");
@@ -65,6 +69,15 @@ export default function ResumeReview() {
           <div>
             <Label>Ideal Job</Label>
             <Textarea value={idealJob} onChange={(e) => setIdealJob(e.target.value)} placeholder="e.g., Senior Product Manager in B2B SaaS" />
+          </div>
+
+          <div>
+            <Label>Concerns (optional)</Label>
+            <Textarea
+              value={concerns}
+              onChange={(e) => setConcerns(e.target.value)}
+              placeholder="e.g., I have applied to 20 jobs but still haven't gotten interviews."
+            />
           </div>
 
           <div>
@@ -121,6 +134,9 @@ export default function ResumeReview() {
               </ul>
             </div>
             <div><strong>Fit outlook:</strong> {result.fitOutlook?.currentFit} → {result.fitOutlook?.ifTweaked}</div>
+            <div className="text-muted-foreground">
+              For the overall resume review, you can touch up your resume with our AI enhancement tool.
+            </div>
           </CardContent>
         </Card>
       )}
