@@ -82,6 +82,8 @@ export const usage = pgTable("usage", {
   aiEditsThisMonth: integer("ai_edits_this_month").notNull().default(0),
   importedResumesThisMonth: integer("imported_resumes_this_month").notNull().default(0),
   jobAnalysesThisMonth: integer("job_analyses_this_month").notNull().default(0),
+  jobMatchJobsThisMonth: integer("job_match_jobs_this_month").notNull().default(0),
+  resumeReviewsThisMonth: integer("resume_reviews_this_month").notNull().default(0),
   coverLettersThisMonth: integer("cover_letters_this_month").notNull().default(0),
   atsScansThisMonth: integer("ats_scans_this_month").notNull().default(0),
   monthResetDate: timestamp("month_reset_date").notNull().default(sql`NOW()`),

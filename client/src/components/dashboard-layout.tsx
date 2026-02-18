@@ -1,4 +1,4 @@
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { EmailVerificationBanner } from "@/components/email-verification-banner";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +15,7 @@ const dashboardTitles: Record<string, string> = {
   "/dashboard/resumes": "My Resumes",
   "/dashboard/resumes/create": "Create Resume",
   "/dashboard/job-match": "Job Match",
+  "/dashboard/resume-review": "Resume Review",
   "/dashboard/ats-scanner": "ATS Scanner",
   "/dashboard/cover-letter": "Cover Letter Builder",
   "/dashboard/admin": "Admin Dashboard",
@@ -49,7 +50,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <EmailVerificationBanner email={user.email} />
             </div>
           )}
-          <main className="flex-1 overflow-auto pt-6">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto pt-3 md:pt-6">
+            <div className="px-4 md:hidden"><SidebarTrigger className="mb-3" /></div>
             {children}
           </main>
         </div>

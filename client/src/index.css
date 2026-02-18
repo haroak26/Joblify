@@ -272,3 +272,8 @@
     inset: -1px;
   }
 }
+
+html, body, #root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
