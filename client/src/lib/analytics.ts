@@ -227,6 +227,16 @@ export const analytics = {
     });
   },
 
+  trackPaywallHit(featureName: string, limit: number | undefined, currentPlan: string, currentUsage?: number) {
+    posthog.capture('paywall_hit', {
+      feature_name: featureName,
+      limit: limit ?? null,
+      current_plan: currentPlan,
+      current_usage: currentUsage ?? null,
+      timestamp: new Date().toISOString(),
+    });
+  },
+
   trackButtonClicked(buttonName: string, location: string) {
     posthog.capture('button_clicked', {
       button_name: buttonName,

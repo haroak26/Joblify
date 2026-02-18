@@ -7,8 +7,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Sparkles, Zap } from "lucide-react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { LIMIT_METRIC_LABELS, PLAN_LIMITS, formatLimitValue, resolveLimitMetricKey } from "@shared/plan-limits";
+import { analytics } from "@/lib/analytics";
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -35,6 +37,14 @@ export function UpgradeDialog({
 
   const normalizedMetricKey = resolveLimitMetricKey(featureName);
   const displayFeatureName = LIMIT_METRIC_LABELS[normalizedMetricKey] ?? featureName;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    analytics.trackPaywallHit(normalizedMetricKey, limit, currentPlan, current);
+  }, [open, normalizedMetricKey, limit, currentPlan, current]);
 
   const handleUpgrade = () => {
     onOpenChange(false);
@@ -82,9 +92,9 @@ export function UpgradeDialog({
                 </h4>
                 <p className="text-sm text-muted-foreground">
                   {isFreePlan ? (
-                    <>Get up to {PLAN_LIMITS.plus.maxResumes} resumes and {PLAN_LIMITS.plus.maxCoverLettersPerMonth} cover letters per month with {recommendedPlan}.</>
+                    <>Plus is built for active weekly use with up to {PLAN_LIMITS.plus.maxResumes} resumes, {PLAN_LIMITS.plus.maxAIEditsPerMonth} AI edits, and {PLAN_LIMITS.plus.maxCoverLettersPerMonth} cover letters each month.</>
                   ) : (
-                    <>Unlock {formatLimitValue(PLAN_LIMITS.ultra.maxResumes).toLowerCase()} resumes, {formatLimitValue(PLAN_LIMITS.ultra.maxCoverLettersPerMonth).toLowerCase()} cover letters, and all AI features with {recommendedPlan}.</>
+                    <>Ultra unlocks {formatLimitValue(PLAN_LIMITS.ultra.maxResumes).toLowerCase()} resumes, {formatLimitValue(PLAN_LIMITS.ultra.maxCoverLettersPerMonth).toLowerCase()} cover letters, and high-volume usage across advanced tools.</>
                   )}
                 </p>
               </div>
