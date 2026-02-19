@@ -15,45 +15,38 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
       {/* Centered Header */}
       <div className="mb-6 text-center border-b-2 border-black pb-4" data-section="personal">
         <h1 className="text-3xl font-serif font-semibold mb-3">{personalInfo.name || "Your Name"}</h1>
-        <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-sm font-sans">
+        <div className="inline-flex flex-col items-start gap-1 text-sm font-sans text-left">
           {personalInfo.email && (
-            <div className="flex items-center gap-1">
-              <Mail className="w-3.5 h-3.5" />
-              <span>{personalInfo.email}</span>
+            <div className="flex items-center gap-1.5 leading-tight">
+              <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="break-all">{personalInfo.email}</span>
             </div>
           )}
-          {personalInfo.email && personalInfo.phone && <span>•</span>}
           {personalInfo.phone && (
-            <div className="flex items-center gap-1">
-              <Phone className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 leading-tight">
+              <Phone className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{personalInfo.phone}</span>
             </div>
           )}
-          {personalInfo.phone && personalInfo.location && <span>•</span>}
           {personalInfo.location && (
-            <div className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 leading-tight">
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{personalInfo.location}</span>
             </div>
           )}
+          {personalInfo.linkedin && (
+            <div className="flex items-center gap-1.5 leading-tight">
+              <Linkedin className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="break-all">{personalInfo.linkedin}</span>
+            </div>
+          )}
+          {personalInfo.website && (
+            <div className="flex items-center gap-1.5 leading-tight">
+              <Globe className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="break-all">{personalInfo.website}</span>
+            </div>
+          )}
         </div>
-        {(personalInfo.linkedin || personalInfo.website) && (
-          <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-sm font-sans mt-2">
-            {personalInfo.linkedin && (
-              <div className="flex items-center gap-1">
-                <Linkedin className="w-3.5 h-3.5" />
-                <span className="break-all">{personalInfo.linkedin}</span>
-              </div>
-            )}
-            {personalInfo.website && personalInfo.linkedin && <span>•</span>}
-            {personalInfo.website && (
-              <div className="flex items-center gap-1">
-                <Globe className="w-3.5 h-3.5" />
-                <span className="break-all">{personalInfo.website}</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Summary */}
