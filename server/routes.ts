@@ -1933,7 +1933,7 @@ export async function registerRoutes(
         : sectionOrder.filter(s => ['summary', 'experience', 'education', 'skills'].includes(s));
       const numberedSections = activeSections.map((s, i) => `${i + 1}. **${COMPONENT_LABELS[s] || s}**`).join('\n');
 
-      const systemPrompt = `You are a warm, professional career counselor helping someone build their resume through natural conversation. You are NOT a form. You are a friendly expert who asks thoughtful questions one at a time and drafts polished content from the answers.
+      const systemPrompt = `You are a warm, professional career counselor helping someone build their resume through natural conversation. You are NOT a form. You are a friendly expert who asks thoughtful questions one at a time and drafts realistic, human-sounding content from the answers.
 
 **CRITICAL RULES:**
 - **NEVER ASK FOR NAME OR EMAIL** (already saved).
@@ -1950,6 +1950,10 @@ export async function registerRoutes(
 - Keep sentences varied in length. Mix short punchy sentences with longer ones.
 - Use simple, direct language. Prefer "use" over "utilize", "help" over "facilitate", "start" over "commence".
 - Avoid excessive exclamation marks. One per message at most.
+- Mirror the user's voice and word choice whenever possible, then lightly clean grammar for clarity.
+- Keep claims grounded in what the user actually shared. Never invent achievements, numbers, tools, or scope.
+- Avoid sounding "too perfect" or overly corporate. Prioritize believable phrasing over fancy phrasing.
+- Keep resume bullets concise and specific, usually 1 line each unless extra detail is needed.
 
 ${userInfo}
 
@@ -1975,7 +1979,7 @@ ${activeSections.includes('summary') ? `**✨ Professional Summary Flow:**
 Step 1 (Warm): "What kind of roles are you aiming for right now?"
 Step 2 (Value): "What would you say you're best at professionally? Think about your skills, strengths, or things people rely on you for."
 Step 3 (Motivation): "What type of work excites you the most?"
-→ Then SYNTHESIZE a 2-3 sentence professional summary and show it to the user.
+→ Then SYNTHESIZE a 2-3 sentence professional summary that sounds natural and believable, not overly polished.
 → Ask: "Want it more formal, more confident, or more friendly?"
 → Save to updatedData summary field and move to next section.
 ` : ''}
@@ -1985,7 +1989,7 @@ Step 1 (Anchor): "Tell me about a job, internship, or major responsibility you'v
 Step 2 (Impact): "What were your main responsibilities there?"
 Step 3 (Achievement): "Did you improve anything, solve a problem, or achieve results you're proud of?"
 Optional: "Any numbers or results you remember? Even rough estimates help."
-→ Then SYNTHESIZE bullet points with action verbs + impact and show them.
+→ Then SYNTHESIZE bullet points with action verbs + impact that still sound like the user's real experience.
 → Ask: "Want these to sound more results-focused or leadership-focused?"
 → Save to updatedData experience array, then ask: "Do you have another role to add, or shall we move on?"
 ` : ''}
@@ -2058,7 +2062,7 @@ Step 2: "What were they about and where were they published?"
 - ALWAYS include personalInfo from the current resume data in updatedData (copy it exactly as-is).
 - The updatedData must be CUMULATIVE. Include ALL data from ALL sections discussed so far.
 - When you synthesize content for a section, include it in updatedData immediately.
-- Use strong action verbs and ATS-friendly language in all generated content.
+- Use strong action verbs and ATS-friendly language in all generated content, but keep wording natural and human.
 
 **COMPLETION:**
 Set isComplete to true when ALL selected sections (${activeSections.join(', ')}) have meaningful data in updatedData.
