@@ -2049,7 +2049,29 @@ export async function registerRoutes(
         : sectionOrder.filter(s => ['summary', 'experience', 'education', 'skills'].includes(s));
       const numberedSections = activeSections.map((s, i) => `${i + 1}. **${COMPONENT_LABELS[s] || s}**`).join('\n');
 
-      const systemPrompt = `You are a warm, professional career counselor helping someone build their resume through natural conversation. You are NOT a form. You are a friendly expert who asks thoughtful questions one at a time and drafts polished content from the answers.
+      const baseStyleRules = `
+**WRITING STYLE RULES (apply to ALL generated content):**
+- Write like a real person, not a robot. Use natural, conversational language.
+- NEVER use em dashes (the long dash character). Use commas, periods, or semicolons instead.
+- Avoid overused AI phrases like "I'd be happy to", "Certainly!", "Absolutely!", "dive into", "leverage", "utilize", "in order to", "It's important to note".
+- Keep sentences varied in length. Mix short punchy sentences with longer ones.
+- Use simple, direct language. Prefer "use" over "utilize", "help" over "facilitate", "start" over "commence".
+- Avoid excessive exclamation marks. One per message at most.`;
+
+      const enhancementInstructions = `
+You are helping with **AI Resume Enhancement** for an existing resume.
+
+**CRITICAL ENHANCEMENT RULES:**
+- Preserve all existing resume content unless the user explicitly asks to remove something.
+- Never delete or blank out previously written content.
+- If the user asks for a rewrite (for example, "make this sound more human"), ask 1-2 clarifying questions first, then provide an improved draft.
+- If you say you will ask questions, ask them immediately in the same reply.
+- Only update the section currently being edited when focusedComponent is provided.
+- Keep updatedData cumulative and include unchanged existing sections as-is.
+`;
+
+      const builderInstructions = `
+You are a warm, professional career counselor helping someone build their resume through natural conversation. You are NOT a form. You are a friendly expert who asks thoughtful questions one at a time and drafts polished content from the answers.
 
 **CRITICAL RULES:**
 - **NEVER ASK FOR NAME OR EMAIL** (already saved).
@@ -2058,19 +2080,6 @@ export async function registerRoutes(
 - **Use markdown** for readability (bold, bullet points).
 - **ALWAYS include cumulative updatedData** in every response with ALL data collected so far, including personalInfo from the current resume data.
 - **NEVER return empty or partial personalInfo**. Always copy existing personalInfo into updatedData.
-
-**WRITING STYLE RULES (apply to ALL generated content):**
-- Write like a real person, not a robot. Use natural, conversational language.
-- NEVER use em dashes (the long dash character). Use commas, periods, or semicolons instead.
-- Avoid overused AI phrases like "I'd be happy to", "Certainly!", "Absolutely!", "dive into", "leverage", "utilize", "in order to", "It's important to note".
-- Keep sentences varied in length. Mix short punchy sentences with longer ones.
-- Use simple, direct language. Prefer "use" over "utilize", "help" over "facilitate", "start" over "commence".
-- Avoid excessive exclamation marks. One per message at most.
-
-${userInfo}
-
-Current resume data (PRESERVE this, especially personalInfo):
-${JSON.stringify(currentData, null, 2)}
 
 **SECTION ORDER (follow strictly):**
 ${numberedSections}
@@ -2170,14 +2179,24 @@ Step 2: "What were they about and where were they published?"
 - If user says "that's it", "no more", "next", "move on", IMMEDIATELY proceed to the next section.
 - NEVER ask the user to confirm data they just gave you. Draft it, show it, ask about tone, save, move on.
 
-**DATA RULES (CRITICAL):**
-- ALWAYS include personalInfo from the current resume data in updatedData (copy it exactly as-is).
-- The updatedData must be CUMULATIVE. Include ALL data from ALL sections discussed so far.
-- When you synthesize content for a section, include it in updatedData immediately.
-- Use strong action verbs and ATS-friendly language in all generated content.
-
 **COMPLETION:**
 Set isComplete to true when ALL selected sections (${activeSections.join(', ')}) have meaningful data in updatedData.
+`;
+
+      const systemPrompt = `${chatMode === "enhancement" ? enhancementInstructions : builderInstructions}
+
+${baseStyleRules}
+
+${userInfo}
+
+Current resume data (PRESERVE this, especially personalInfo):
+${JSON.stringify(currentData, null, 2)}
+
+**DATA RULES (CRITICAL):**
+- ALWAYS include personalInfo from the current resume data in updatedData (copy it exactly as-is).
+- The updatedData must be CUMULATIVE. Include all unchanged content plus any new or improved content.
+- When you synthesize content for a section, include it in updatedData immediately.
+- Use strong action verbs and ATS-friendly language in all generated content.
 
 ${componentsList}
 ${focusedMode}
@@ -2280,11 +2299,40 @@ Respond ONLY with valid JSON (no text before or after):
           }
         }
 
+        const hasMeaningfulValue = (value: unknown): boolean => {
+          if (value === null || value === undefined) return false;
+          if (typeof value === "string") return value.trim().length > 0;
+          if (Array.isArray(value)) return value.length > 0;
+          if (typeof value === "object") return Object.keys(value as Record<string, unknown>).length > 0;
+          return true;
+        };
+
         // Merge AI-returned updatedData with existing resume data to ensure cumulative updates
-        // Deep merge personalInfo to prevent name/email from being lost
+        // and prevent destructive clears, especially in enhancement mode.
         let mergedUpdatedData: Record<string, any> = {};
         if (parsedResponse.updatedData && Object.keys(parsedResponse.updatedData).length > 0) {
-          const aiData = parsedResponse.updatedData;
+          let aiData = { ...parsedResponse.updatedData };
+
+          if (chatMode === "enhancement") {
+            const allowedKeys = new Set<string>(["personalInfo"]);
+            if (focusedComponent) {
+              allowedKeys.add(focusedComponent);
+            }
+
+            aiData = Object.fromEntries(
+              Object.entries(aiData).filter(([key, value]) => {
+                if (allowedKeys.has(key)) {
+                  return true;
+                }
+                const existingValue = (currentData as Record<string, unknown>)[key];
+                if (hasMeaningfulValue(existingValue) && !hasMeaningfulValue(value)) {
+                  return false;
+                }
+                return hasMeaningfulValue(value);
+              })
+            );
+          }
+
           mergedUpdatedData = { ...currentData, ...aiData };
           // Deep merge personalInfo: preserve existing name/email if AI omits them
           if (currentData.personalInfo) {
