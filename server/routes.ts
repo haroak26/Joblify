@@ -2659,7 +2659,7 @@ Respond ONLY with valid JSON (no text before or after):
         const plan = normalizePlan(subscription?.plan);
         const limits = PLAN_LIMITS[plan];
         const threshold = buildUsageThresholdState({
-          feature: "resumes",
+          feature: "resumes" as any,
           plan,
           currentUsage: resumeCheck.current,
           currentLimit: limits.maxResumes,

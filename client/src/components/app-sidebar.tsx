@@ -44,7 +44,7 @@ const coreMenuItems = [
 const toolsMenuItems = [
   {
     title: "Tailor Resume",
-    url: "/dashboard/tailor",
+    url: "/dashboard/job-tailor",
     icon: Sparkles,
   },
   {

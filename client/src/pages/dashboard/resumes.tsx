@@ -100,7 +100,7 @@ export default function Resumes() {
       if (csrfToken) {
         headers["x-csrf-token"] = csrfToken;
       }
-      const response = await fetch("/api/resumes/upload", {
+      const response = await fetch("/api/resumes/import", {
         method: "POST",
         body: formData,
         credentials: "include",
