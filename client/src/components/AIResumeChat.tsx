@@ -697,22 +697,6 @@ export default function AIResumeChat({
               </div>
             </div>
           )}
-                    </ReactMarkdown>
-                    <span className="inline-block w-1.5 h-4 bg-primary/70 animate-pulse ml-0.5 align-text-bottom" />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </div>
-                    <span className="text-sm text-muted-foreground">Generating response...</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Completion Message */}
           {isComplete && (

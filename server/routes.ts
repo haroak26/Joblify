@@ -3577,7 +3577,7 @@ ${resumeText}`,
   // Resume Upload & Parse Endpoint
   // ============================================
 
-  app.get("/api/resume-artifacts/:key(*)", requireAuth, async (req: Request, res) => {
+  app.get("/api/resume-artifacts/:key", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const rawKey = req.params.key;
