@@ -18,6 +18,35 @@ const priorityStyles: Record<string, string> = {
   low: "bg-emerald-100 text-emerald-700 border-emerald-200",
 };
 
+type ContentReview = {
+  overallScore?: number;
+  summary?: string;
+  strengths?: string[];
+  gaps?: string[];
+  keywordCoverage?: { score?: number };
+  impactMetrics?: { foundCount?: number };
+  recommendedEdits?: Array<{ section?: string; change?: string; why?: string; priority?: string }>;
+  fitOutlook?: { currentFit?: string; ifTweaked?: string };
+};
+
+type DesignReview = {
+  summary?: string;
+  overallVisualScore?: number;
+  hierarchy?: { score?: number; notes?: string[] };
+  readability?: { score?: number; notes?: string[] };
+  spacingAndDensity?: { score?: number; notes?: string[] };
+  sectionBalance?: { score?: number; notes?: string[] };
+  consistency?: { score?: number; notes?: string[] };
+  scannability?: { score?: number; notes?: string[] };
+  atsRiskLayoutPatterns?: string[];
+  pageComments?: Array<{ page?: number; strengths?: string[]; issues?: string[]; recommendations?: string[] }>;
+};
+
+type ReviewPayload = {
+  contentReview?: ContentReview;
+  designReview?: DesignReview | null;
+} & ContentReview;
+
 export default function ResumeReview() {
   useFeatureTracking("resume_review");
   const { toast } = useToast();
@@ -27,24 +56,13 @@ export default function ResumeReview() {
   const [file, setFile] = useState<File | null>(null);
   const [resumeMode, setResumeMode] = useState<"joblify" | "upload">("joblify");
   const [selectedResumeId, setSelectedResumeId] = useState("");
-  const [result, setResult] = useState<any>(null);
-
-  type ReviewResult = {
-    overallScore?: number;
-    summary?: string;
-    strengths?: string[];
-    gaps?: string[];
-    keywordCoverage?: { score?: number };
-    impactMetrics?: { foundCount?: number };
-    recommendedEdits?: Array<{ section?: string; change?: string; why?: string; priority?: string }>;
-    fitOutlook?: { currentFit?: string; ifTweaked?: string };
-  };
+  const [result, setResult] = useState<ReviewPayload | null>(null);
 
   type ReviewHistoryItem = {
     id: string;
     idealJob: string;
     concerns?: string | null;
-    reviewResult: ReviewResult;
+    reviewResult: ReviewPayload;
     createdAt: string;
   };
 
@@ -80,7 +98,7 @@ export default function ResumeReview() {
       }
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: ReviewPayload) => {
       setResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/resume-review/history"] });
     },
@@ -88,6 +106,8 @@ export default function ResumeReview() {
   });
 
   const hasResume = resumeMode === "joblify" ? Boolean(selectedResumeId) : Boolean(file);
+  const contentReview = (result?.contentReview || result) as ContentReview | null;
+  const designReview = result?.designReview || null;
 
   return (
     <div className="container mx-auto w-full max-w-5xl space-y-6 px-4 pb-8 sm:px-6">
@@ -150,36 +170,79 @@ export default function ResumeReview() {
       {result && (
         <Card>
           <CardHeader>
-            <CardTitle>Score: {result.overallScore}%</CardTitle>
-            <CardDescription>{result.summary}</CardDescription>
+            <CardTitle>Content Score: {contentReview?.overallScore ?? "N/A"}%</CardTitle>
+            <CardDescription>{contentReview?.summary}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div><strong>Strengths:</strong> {(result.strengths || []).join(", ")}</div>
-            <div><strong>Gaps:</strong> {(result.gaps || []).join(", ")}</div>
-            <div><strong>Keyword coverage:</strong> {result.keywordCoverage?.score}%</div>
-            <div><strong>Impact metrics:</strong> Found {result.impactMetrics?.foundCount ?? 0} quantified bullets</div>
-            <div>
-              <strong>Recommended edits:</strong>
-              <div className="mt-3 space-y-3">
-                {(result.recommendedEdits || []).map((e: any, i: number) => {
-                  const normalizedPriority = String(e.priority || "low").toLowerCase();
-                  return (
-                    <div key={i} className="rounded-lg border bg-card p-4">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <Badge className={priorityStyles[normalizedPriority] || priorityStyles.low} variant="outline">
-                          {normalizedPriority}
-                        </Badge>
-                        <p className="font-semibold">{e.section}</p>
+          <CardContent>
+            <CleanTabs defaultValue="content" className="space-y-4">
+              <CleanTabsList className="w-full max-w-sm">
+                <CleanTabsTrigger value="content">Content Feedback</CleanTabsTrigger>
+                <CleanTabsTrigger value="design">Design Feedback</CleanTabsTrigger>
+              </CleanTabsList>
+
+              <CleanTabsContent value="content" className="space-y-3 text-sm">
+                <div><strong>Strengths:</strong> {(contentReview?.strengths || []).join(", ")}</div>
+                <div><strong>Gaps:</strong> {(contentReview?.gaps || []).join(", ")}</div>
+                <div><strong>Keyword coverage:</strong> {contentReview?.keywordCoverage?.score}%</div>
+                <div><strong>Impact metrics:</strong> Found {contentReview?.impactMetrics?.foundCount ?? 0} quantified bullets</div>
+                <div>
+                  <strong>Recommended edits:</strong>
+                  <div className="mt-3 space-y-3">
+                    {(contentReview?.recommendedEdits || []).map((e, i) => {
+                      const normalizedPriority = String(e.priority || "low").toLowerCase();
+                      return (
+                        <div key={i} className="rounded-lg border bg-card p-4">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <Badge className={priorityStyles[normalizedPriority] || priorityStyles.low} variant="outline">
+                              {normalizedPriority}
+                            </Badge>
+                            <p className="font-semibold">{e.section}</p>
+                          </div>
+                          <p className="text-sm">{e.change}</p>
+                          <p className="mt-2 text-sm text-muted-foreground">{e.why}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div><strong>Fit outlook:</strong> {contentReview?.fitOutlook?.currentFit} → {contentReview?.fitOutlook?.ifTweaked}</div>
+              </CleanTabsContent>
+
+              <CleanTabsContent value="design" className="space-y-3 text-sm">
+                {!designReview ? (
+                  <div className="rounded-lg border border-dashed p-4 text-muted-foreground">
+                    Design review is currently available for uploaded PDF resumes. For Joblify or DOCX resumes, content review is still fully supported.
+                  </div>
+                ) : (
+                  <>
+                    <div><strong>Visual score:</strong> {designReview.overallVisualScore ?? "N/A"}%</div>
+                    <div><strong>Summary:</strong> {designReview.summary}</div>
+                    <div><strong>Hierarchy:</strong> {designReview.hierarchy?.score}% • {(designReview.hierarchy?.notes || []).join("; ")}</div>
+                    <div><strong>Readability:</strong> {designReview.readability?.score}% • {(designReview.readability?.notes || []).join("; ")}</div>
+                    <div><strong>Spacing:</strong> {designReview.spacingAndDensity?.score}% • {(designReview.spacingAndDensity?.notes || []).join("; ")}</div>
+                    <div><strong>Section balance:</strong> {designReview.sectionBalance?.score}% • {(designReview.sectionBalance?.notes || []).join("; ")}</div>
+                    <div><strong>Consistency:</strong> {designReview.consistency?.score}% • {(designReview.consistency?.notes || []).join("; ")}</div>
+                    <div><strong>Scannability:</strong> {designReview.scannability?.score}% • {(designReview.scannability?.notes || []).join("; ")}</div>
+                    <div><strong>ATS-risk layout patterns:</strong> {(designReview.atsRiskLayoutPatterns || []).join(", ")}</div>
+
+                    <div>
+                      <strong>Page-specific comments:</strong>
+                      <div className="mt-3 space-y-3">
+                        {(designReview.pageComments || []).map((comment, index) => (
+                          <div key={index} className="rounded-lg border bg-card p-4">
+                            <p className="font-semibold">Page {comment.page ?? index + 1}</p>
+                            <p className="mt-2"><strong>Strengths:</strong> {(comment.strengths || []).join(", ")}</p>
+                            <p className="mt-2"><strong>Issues:</strong> {(comment.issues || []).join(", ")}</p>
+                            <p className="mt-2"><strong>Recommendations:</strong> {(comment.recommendations || []).join(", ")}</p>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-sm">{e.change}</p>
-                      <p className="mt-2 text-sm text-muted-foreground">{e.why}</p>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div><strong>Fit outlook:</strong> {result.fitOutlook?.currentFit} → {result.fitOutlook?.ifTweaked}</div>
-            <div className="text-muted-foreground">
+                  </>
+                )}
+              </CleanTabsContent>
+            </CleanTabs>
+            <div className="pt-2 text-sm text-muted-foreground">
               For the overall resume review, you can touch up your resume with our AI enhancement tool.
             </div>
           </CardContent>
@@ -196,17 +259,20 @@ export default function ResumeReview() {
             <p className="text-sm text-muted-foreground">No resume reviews yet. Run one to see it here.</p>
           ) : (
             <div className="space-y-3">
-              {history.map((item) => (
-                <div key={item.id} className="rounded-lg border p-4">
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">{item.idealJob}</p>
-                    <Badge variant="outline">Score: {item.reviewResult?.overallScore ?? "N/A"}%</Badge>
+              {history.map((item) => {
+                const historyContentReview = item.reviewResult?.contentReview || item.reviewResult;
+                return (
+                  <div key={item.id} className="rounded-lg border p-4">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">{item.idealJob}</p>
+                      <Badge variant="outline">Score: {historyContentReview?.overallScore ?? "N/A"}%</Badge>
+                    </div>
+                    {item.concerns && <p className="mb-2 text-sm text-muted-foreground">Concerns: {item.concerns}</p>}
+                    <p className="text-sm">{historyContentReview?.summary || "No summary available."}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</p>
                   </div>
-                  {item.concerns && <p className="mb-2 text-sm text-muted-foreground">Concerns: {item.concerns}</p>}
-                  <p className="text-sm">{item.reviewResult?.summary || "No summary available."}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
