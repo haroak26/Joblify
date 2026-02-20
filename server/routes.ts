@@ -22,6 +22,11 @@ import multer from "multer";
 import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import rateLimit from "express-rate-limit";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import path from "path";
+import { promisify } from "util";
+import { execFile } from "child_process";
 import {
   isStripeConfigured,
   getOrCreateCustomer,
@@ -63,6 +68,7 @@ const newsletterRateLimit = rateLimit({
 });
 
 let poeClient: OpenAI | null = null;
+const execFileAsync = promisify(execFile);
 
 async function trackUsageThresholdEvent(userId: string, feature: UsageFeatureKey, stage: "notice_70" | "cta_90" | "blocked_100") {
   const monthStart = new Date();
@@ -189,6 +195,116 @@ async function extractTextFromUpload(file: Express.Multer.File): Promise<string>
   }
 
   throw new Error("Unsupported file format");
+}
+
+type ResumeDesignReview = {
+  summary: string;
+  overallVisualScore: number;
+  hierarchy: { score: number; notes: string[] };
+  readability: { score: number; notes: string[] };
+  spacingAndDensity: { score: number; notes: string[] };
+  sectionBalance: { score: number; notes: string[] };
+  consistency: { score: number; notes: string[] };
+  scannability: { score: number; notes: string[] };
+  atsRiskLayoutPatterns: string[];
+  pageComments: Array<{ page: number; strengths: string[]; issues: string[]; recommendations: string[] }>;
+};
+
+async function renderPdfToPageImages(fileBuffer: Buffer, maxPages = 4): Promise<Array<{ page: number; dataUrl: string }>> {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "resume-review-"));
+  const pdfPath = path.join(tempDir, "resume.pdf");
+  const outPrefix = path.join(tempDir, "page");
+
+  try {
+    await writeFile(pdfPath, fileBuffer);
+
+    let pages = maxPages;
+    try {
+      const info = await execFileAsync("pdfinfo", [pdfPath]);
+      const match = info.stdout.match(/Pages:\s+(\d+)/i);
+      if (match) {
+        pages = Math.min(maxPages, Math.max(1, Number(match[1])));
+      }
+    } catch {
+      // Best effort only; we'll default to maxPages.
+    }
+
+    await execFileAsync("pdftoppm", ["-png", "-f", "1", "-l", String(pages), pdfPath, outPrefix]);
+
+    const files = (await readdir(tempDir))
+      .filter((name) => name.startsWith("page-") && name.endsWith(".png"))
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+    const pageImages = await Promise.all(
+      files.map(async (name, index) => {
+        const fullPath = path.join(tempDir, name);
+        const image = await readFile(fullPath);
+        return {
+          page: index + 1,
+          dataUrl: `data:image/png;base64,${image.toString("base64")}`,
+        };
+      })
+    );
+
+    return pageImages;
+  } finally {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function performVisualResumeReview(file: Express.Multer.File, idealJob: string, concerns?: string): Promise<ResumeDesignReview | null> {
+  if (file.mimetype !== "application/pdf") {
+    return null;
+  }
+
+  const pageImages = await renderPdfToPageImages(file.buffer);
+  if (!pageImages.length) {
+    return null;
+  }
+
+  const poe = getPoeClient();
+  const aiResponse = await poe.chat.completions.create({
+    model: "gpt-5-nano",
+    messages: [
+      {
+        role: "system",
+        content: `You are an expert in resume visual design and ATS-safe layout auditing.
+Review page images and return strict JSON only:
+{
+  "summary": "",
+  "overallVisualScore": <0-100>,
+  "hierarchy": {"score": <0-100>, "notes": [""]},
+  "readability": {"score": <0-100>, "notes": [""]},
+  "spacingAndDensity": {"score": <0-100>, "notes": [""]},
+  "sectionBalance": {"score": <0-100>, "notes": [""]},
+  "consistency": {"score": <0-100>, "notes": [""]},
+  "scannability": {"score": <0-100>, "notes": [""]},
+  "atsRiskLayoutPatterns": [""],
+  "pageComments": [{"page": <number>, "strengths": [""], "issues": [""], "recommendations": [""]}]
+}`,
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `IDEAL JOB: ${idealJob}\n\nUSER CONCERNS: ${concerns?.trim() || "None provided"}\n\nEvaluate visual hierarchy, readability, spacing, section balance, consistency, scannability, and ATS-risk layout patterns. Include specific page-level feedback tied to page numbers.`,
+          },
+          ...pageImages.map((pageImage) => ({
+            type: "image_url" as const,
+            image_url: {
+              url: pageImage.dataUrl,
+            },
+          })),
+        ],
+      },
+    ],
+    temperature: 0.2,
+    max_tokens: 2200,
+  });
+
+  const content = aiResponse.choices[0]?.message?.content || "{}";
+  return JSON.parse(content) as ResumeDesignReview;
 }
 
 function convertResumeDataToText(resumeData: ResumeData): string {
@@ -3298,6 +3414,7 @@ ${jobDescription}`,
       }
 
       let resumeText = "";
+      let designReview: ResumeDesignReview | null = null;
       if (resumeId) {
         const [resume] = await db.select().from(resumes).where(eq(resumes.id, resumeId)).limit(1);
         if (!resume || resume.userId !== userId) {
@@ -3306,6 +3423,13 @@ ${jobDescription}`,
         resumeText = convertResumeDataToText(resume.resumeData).slice(0, 20000);
       } else if (req.file) {
         resumeText = (await extractTextFromUpload(req.file)).slice(0, 20000);
+
+        try {
+          designReview = await performVisualResumeReview(req.file, idealJob, concerns);
+        } catch (designReviewError) {
+          console.warn("[API] Visual resume review failed, falling back to text-only review:", designReviewError);
+          designReview = null;
+        }
       } else {
         return res.status(400).json({ error: "Resume file or Joblify resume is required" });
       }
@@ -3349,21 +3473,25 @@ ${resumeText}`,
       });
 
       const content = aiResponse.choices[0]?.message?.content || "{}";
-      const parsed = JSON.parse(content);
+      const contentReview = JSON.parse(content);
+      const combinedResponse = {
+        contentReview,
+        designReview,
+      };
 
       await db.insert(resumeReviewHistory).values({
         userId,
         resumeId: resumeId ?? null,
         idealJob,
         concerns: concerns?.trim() || null,
-        reviewResult: parsed,
+        reviewResult: combinedResponse,
       });
 
       await db.update(usageTable).set({
         resumeReviewsThisMonth: sql`${usageTable.resumeReviewsThisMonth} + 1`,
       }).where(eq(usageTable.userId, userId));
 
-      res.json(parsed);
+      res.json(combinedResponse);
     } catch (error) {
       console.error('[API] Error creating resume review:', error);
       res.status(500).json({ error: "Failed to create resume review" });
