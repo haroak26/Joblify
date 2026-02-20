@@ -355,8 +355,8 @@ export default function AIResumeChat({
       setMessages((prev) => [...prev, { role: "ai", content: aiReply, id: `ai-${Date.now()}` }]);
       setStreamingContent("");
 
-      // Save AI response to DB
-      await saveMessageToDb("ai", aiReply);
+      // We no longer call saveMessageToDb here because the /api/chat endpoint 
+      // now handles saving both the user and AI messages to the database conversation.
 
       // Apply structured updates from the done event
       if (doneData) {
@@ -420,8 +420,8 @@ export default function AIResumeChat({
     };
     setMessages((prev) => [...prev, userMessage]);
     
-    // Save user message to DB immediately
-    await saveMessageToDb("user", messageText);
+    // We no longer call saveMessageToDb here because the /api/chat endpoint 
+    // now handles saving both the user and AI messages to the database conversation.
 
     // Send to AI
     await sendMessageToAI(messageText);

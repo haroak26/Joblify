@@ -2760,28 +2760,6 @@ Respond ONLY with valid JSON (no text before or after):
     }
   });
 
-  // ============================================
-  // ATS Scanner Endpoints
-  // ============================================
-
-  // Configure multer for file uploads
-  const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-  const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-      fileSize: MAX_FILE_SIZE_BYTES,
-    },
-    fileFilter: (req, file, cb) => {
-      // Only accept PDF and DOCX files
-      const allowedMimes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (allowedMimes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Invalid file type. Only PDF and DOCX are allowed.'));
-      }
-    },
-  });
-
   // ATS Scanner - Upload file and scan
   app.post("/api/ats/scan", requireAuth, requireAIAccess, upload.single('file'), async (req: Request, res) => {
     try {
@@ -2877,7 +2855,7 @@ Respond ONLY with valid JSON (no text before or after):
       const postActionThreshold = buildUsageThresholdState({
         feature: "ats_scans",
         plan,
-        currentUsage: usage.atsScansThisMonth + 1,
+        currentUsage: usageStats.atsScansThisMonth + 1,
         currentLimit: limits.maxATSScansPerMonth,
       });
 
@@ -2955,7 +2933,7 @@ Respond ONLY with valid JSON (no text before or after):
       const postActionThreshold = buildUsageThresholdState({
         feature: "ats_scans",
         plan,
-        currentUsage: usage.atsScansThisMonth + 1,
+        currentUsage: usageStats.atsScansThisMonth + 1,
         currentLimit: limits.maxATSScansPerMonth,
       });
 
