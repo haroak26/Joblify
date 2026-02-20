@@ -425,7 +425,7 @@ export default function AIResumeChat({
 
     // Send to AI
     await sendMessageToAI(messageText);
-  }, [inputMessage, isStreaming, sendMessageToAI, saveMessageToDb]);
+  }, [inputMessage, isStreaming, sendMessageToAI]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
