@@ -1890,6 +1890,93 @@ export async function registerRoutes(
     }
   });
 
+  // Tailor an existing resume for a provided job description
+  app.post("/api/resumes/:id/tailor", aiRateLimit, requireAuth, requireAIAccess, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { id } = req.params;
+      if (!id || Array.isArray(id)) {
+        return res.status(400).json({ error: "Resume ID is required", message: "Resume ID is required" });
+      }
+
+      const schema = z.object({
+        jobDescription: z.string().min(40, "Please provide a fuller job description (at least 40 characters)").max(12000),
+      });
+      const { jobDescription } = schema.parse(req.body);
+
+      const [resume] = await db.select().from(resumes).where(eq(resumes.id, id)).limit(1);
+      if (!resume || resume.userId !== userId) {
+        return res.status(404).json({ error: "Resume not found", message: "Resume not found" });
+      }
+
+      const baseData = resumeDataSchema.parse(resume.resumeData);
+      const baseResumeText = convertResumeDataToText(baseData).slice(0, 18000);
+      const poe = getPoeClient();
+
+      const aiResponse = await poe.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert resume editor.
+Given a JSON resume and job description, return strict JSON only:
+{
+  "resumeData": <valid resume JSON with same shape>,
+  "enhancements": ["specific improvement 1", "specific improvement 2", "specific improvement 3"],
+  "titleSuffix": "Tailored"
+}
+Rules:
+- Preserve factual integrity; do not invent employers, dates, credentials, or outcomes.
+- Keep edits ATS-friendly and keyword-relevant.
+- Prioritize summary, skills, and bullet phrasing to match role requirements.
+- Keep structure valid for our resume schema.`,
+          },
+          {
+            role: "user",
+            content: `JOB DESCRIPTION:\n${jobDescription.slice(0, 12000)}\n\nCURRENT RESUME TEXT:\n${baseResumeText}`,
+          },
+          {
+            role: "user",
+            content: JSON.stringify(baseData),
+          },
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const parsed = JSON.parse(aiResponse.choices[0]?.message?.content || "{}");
+      const tailoredResumeData = resumeDataSchema.parse(parsed.resumeData || baseData);
+      const enhancements = Array.isArray(parsed.enhancements)
+        ? parsed.enhancements.filter((item: unknown) => typeof item === "string").slice(0, 8)
+        : [];
+
+      const titleSuffix = typeof parsed.titleSuffix === "string" && parsed.titleSuffix.trim()
+        ? parsed.titleSuffix.trim().slice(0, 40)
+        : "Tailored";
+
+      const [updatedResume] = await db
+        .update(resumes)
+        .set({
+          resumeData: tailoredResumeData,
+          title: resume.title.includes("Tailored") ? resume.title : `${resume.title} (${titleSuffix})`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(resumes.id, id), eq(resumes.userId, userId)))
+        .returning();
+
+      res.json({
+        success: true,
+        resume: updatedResume,
+        enhancements,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid request", message: error.errors[0]?.message || "Invalid request" });
+      }
+      console.error("[API] Error tailoring resume:", error);
+      res.status(500).json({ error: "Failed to tailor resume", message: "Failed to tailor resume" });
+    }
+  });
+
   // Delete a resume
   app.delete("/api/resumes/:id", requireAuth, async (req: Request, res) => {
     try {
@@ -2769,37 +2856,9 @@ Respond ONLY with valid JSON (no text before or after):
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      // Validate file using magic bytes
-      const validation = validateFile(req.file.buffer, req.file.mimetype);
-      if (!validation.valid) {
-        return res.status(400).json({ 
-          error: validation.error || "Invalid file format",
-          fileType: getFileTypeName(req.file.mimetype),
-          message: validation.error || `Please upload a valid ${getFileTypeName(req.file.mimetype)} file`
-        });
-      }
-
-      // Extract text from file with timeout and error handling
       let resumeText = "";
-      
-      // Helper to wrap parsing with timeout
-      const parseWithTimeout = <T>(promise: Promise<T>, timeoutMs = 10000): Promise<T> => {
-        return Promise.race([
-          promise,
-          new Promise<T>((_, reject) => 
-            setTimeout(() => reject(new Error(`File parsing exceeded timeout of ${timeoutMs / 1000} seconds`)), timeoutMs)
-          )
-        ]);
-      };
-
       try {
-        if (req.file.mimetype === 'application/pdf') {
-          const pdfData = await parseWithTimeout(pdfParse(req.file.buffer));
-          resumeText = pdfData.text || "";
-        } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-          const result = await parseWithTimeout(mammoth.extractRawText({ buffer: req.file.buffer }));
-          resumeText = result.value || "";
-        }
+        resumeText = await extractTextFromUpload(req.file);
       } catch (parseError) {
         console.error('[API] File parsing error:', parseError);
         return res.status(400).json({ 
@@ -2862,7 +2921,7 @@ Respond ONLY with valid JSON (no text before or after):
       res.json({ ...analysis, threshold: postActionThreshold });
     } catch (error) {
       console.error('[API] Error scanning resume:', error);
-      res.status(500).json({ error: "Failed to scan resume" });
+      res.status(500).json({ error: "Failed to scan resume", message: "Failed to scan resume" });
     }
   });
 
@@ -2919,7 +2978,7 @@ Respond ONLY with valid JSON (no text before or after):
       const resumeText = convertResumeDataToText(resume.resumeData);
 
       // Get job description from request if provided
-      const jobDescription = req.body.jobDescription || "";
+      const { jobDescription = "" } = jobDescriptionSchema.parse(req.body || {});
 
       // Perform ATS analysis
       const analysis = await performATSAnalysis(resumeText, jobDescription);
@@ -2940,7 +2999,7 @@ Respond ONLY with valid JSON (no text before or after):
       res.json({ ...analysis, threshold: postActionThreshold });
     } catch (error) {
       console.error('[API] Error scanning Joblify resume:', error);
-      res.status(500).json({ error: "Failed to scan resume" });
+      res.status(500).json({ error: "Failed to scan resume", message: "Failed to scan resume" });
     }
   });
 
