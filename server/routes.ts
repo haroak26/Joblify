@@ -2621,6 +2621,28 @@ Respond ONLY with valid JSON (no text before or after):
     }
   });
 
+  // ============================================
+  // ATS Scanner Endpoints
+  // ============================================
+
+  // Configure multer for file uploads
+  const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: MAX_FILE_SIZE_BYTES,
+    },
+    fileFilter: (req, file, cb) => {
+      // Only accept PDF and DOCX files
+      const allowedMimes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only PDF and DOCX are allowed.'));
+      }
+    },
+  });
+
   app.post("/api/resumes/import", requireAuth, requireVerifiedEmail, upload.single('file'), async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
@@ -2716,6 +2738,9 @@ Respond ONLY with valid JSON (no text before or after):
       res.status(500).json({ error: "Failed to import resume" });
     }
   });
+
+  // Feature tracking endpoint
+  app.post("/api/track-feature", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const schema = z.object({

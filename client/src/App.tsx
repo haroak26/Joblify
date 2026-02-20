@@ -31,6 +31,7 @@ import CreateResume from "@/pages/dashboard/create-resume";
 import Account from "@/pages/dashboard/account";
 import Home from "@/pages/dashboard/home";
 import JobMatch from "@/pages/dashboard/job-match";
+import JobTailor from "@/pages/dashboard/job-tailor";
 import ResumeReview from "@/pages/dashboard/resume-review";
 import AtsScanner from "@/pages/dashboard/ats-scanner";
 import CoverLetter from "@/pages/dashboard/cover-letter";
@@ -106,6 +107,13 @@ function Router() {
         <ProtectedRoute>
           <DashboardLayout>
             <JobMatch />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/dashboard/job-tailor">
+        <ProtectedRoute>
+          <DashboardLayout>
+            <JobTailor />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
