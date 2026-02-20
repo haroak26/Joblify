@@ -207,6 +207,7 @@ export default function AIResumeChat({
       if (shouldPrefillName) updates.personalInfo.name = user.name;
       if (shouldPrefillEmail) updates.personalInfo.email = user.email;
       onUpdate(updates);
+      if (onAutoSave) onAutoSave();
     }
 
     // Determine the first section's warm opener question for builder mode
@@ -229,11 +230,11 @@ export default function AIResumeChat({
       ? `Hey ${firstName}! 👋 I'm your **AI Resume Builder** — think of me as a friendly career counselor. I'll ask you a few easy questions section by section, draft professional content from your answers, and you can tweak it however you like.\n\nI've already got your name and email saved, so we're good to go!\n\nLet's start with your **${COMPONENT_LABELS[firstSection] || firstSection}**.\n\n${firstQuestion}`
       : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;
     
-    const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: Date.now().toString() };
+    const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: `greeting-${Date.now()}` };
     setMessages([greetingMsg]);
     // Save greeting to DB
     saveMessageToDb("ai", greeting);
-  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, saveMessageToDb, activeComponents]);
+  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, onAutoSave, saveMessageToDb, activeComponents]);
 
   // Core function to send a message to AI (used by both handleSendMessage and handleRewrite)
   const sendMessageToAI = useCallback(async (messageText: string) => {
@@ -355,19 +356,18 @@ export default function AIResumeChat({
       setStreamingContent("");
 
       // Save AI response to DB
-      saveMessageToDb("ai", aiReply);
+      await saveMessageToDb("ai", aiReply);
 
       // Apply structured updates from the done event
       if (doneData) {
         if (doneData.updatedData && Object.keys(doneData.updatedData).length > 0) {
           console.log("[AIResumeChat] Applying updates:", doneData.updatedData);
           onUpdate(doneData.updatedData);
+          
+          // Ensure auto-save is called after state update
           if (onAutoSave) {
             console.log("[AIResumeChat] Triggering auto-save");
-            // Small delay to ensure React state has updated before triggering save
-            // This allows the parent component's resumeData state to reflect the changes
-            // before the save operation reads and persists it
-            setTimeout(() => onAutoSave(), 500);
+            onAutoSave();
           }
         }
 
@@ -421,7 +421,7 @@ export default function AIResumeChat({
     setMessages((prev) => [...prev, userMessage]);
     
     // Save user message to DB immediately
-    saveMessageToDb("user", messageText);
+    await saveMessageToDb("user", messageText);
 
     // Send to AI
     await sendMessageToAI(messageText);
@@ -714,18 +714,22 @@ export default function AIResumeChat({
         <div className="max-w-3xl mx-auto">
           {/* Editing section tag */}
           {editingSection && !isGuidedBuilder && (
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
-                <Sparkles className="w-3 h-3" />
-                Editing: {COMPONENT_LABELS[editingSection] || editingSection}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10 text-primary animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10">
+                  <Sparkles className="w-3 h-3" />
+                </div>
+                <span className="text-xs font-medium">
+                  Refining <span className="font-bold">{COMPONENT_LABELS[editingSection] || editingSection}</span>
+                </span>
                 <button
                   onClick={handleClearEditingSection}
-                  className="ml-0.5 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
-                  title="Clear editing focus"
+                  className="ml-1 hover:bg-primary/20 rounded-md p-0.5 transition-colors"
+                  title="Clear focus"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
-              </span>
+              </div>
             </div>
           )}
 
