@@ -548,7 +548,7 @@ export default function ResumeBuilder() {
 
   // Responsive class names for better maintainability
   const sidebarClasses = [
-    "w-full md:w-44 lg:w-40",             // Width: slightly narrower on tablet/desktop to preserve preview space
+    "w-full md:w-56 lg:w-64",             // Width: slightly wider for easier component navigation
     "border-b md:border-b-0 md:border-r", // Border: bottom on mobile, right on desktop
     "border-border bg-card",              // Theme colors
     "flex flex-col",                      // Flexbox layout
@@ -810,7 +810,7 @@ export default function ResumeBuilder() {
           ) : (
             <>
               {/* Editor Section - now responsive */}
-              <div className="flex-1 lg:flex-[0_0_54%] overflow-auto p-4 sm:p-6">
+              <div className={`flex-1 lg:flex-[0_0_50%] overflow-auto ${activeSection === "ai-chat" ? "p-0" : "p-4 sm:p-6"}`}>
                 {activeSection === "ai-chat" ? (
                   <AIResumeChat
                     resumeId={resumeId!}

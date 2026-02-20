@@ -43,6 +43,11 @@ const coreMenuItems = [
 
 const toolsMenuItems = [
   {
+    title: "Tailor Resume",
+    url: "/dashboard/tailor",
+    icon: Sparkles,
+  },
+  {
     title: "Job Match",
     url: "/dashboard/job-match",
     icon: Target,

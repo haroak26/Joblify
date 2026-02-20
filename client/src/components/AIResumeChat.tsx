@@ -598,7 +598,7 @@ export default function AIResumeChat({
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-auto p-4" ref={scrollContainerRef}>
+      <div className="flex-1 overflow-auto px-4 py-3" ref={scrollContainerRef}>
         <div className="space-y-4 max-w-3xl mx-auto" ref={scrollRef}>
           {messages.map((message, index) => (
             <div
@@ -621,10 +621,10 @@ export default function AIResumeChat({
               {/* Message Content */}
               <div className="flex-1 min-w-0">
                 <div
-                  className={`p-3 ${
+                  className={`p-3 border border-border/70 ${
                     message.role === "user"
-                      ? "bg-primary text-primary-foreground ml-12 mr-4 rounded-tl-lg rounded-tr-sm rounded-b-lg"
-                      : "bg-muted mr-12 rounded-tl-sm rounded-tr-lg rounded-b-lg"
+                      ? "bg-accent text-accent-foreground ml-6 rounded-tl-lg rounded-tr-sm rounded-b-lg"
+                      : "bg-muted mr-6 rounded-tl-sm rounded-tr-lg rounded-b-lg"
                   }`}
                 >
                   {message.role === "ai" ? (
@@ -655,7 +655,7 @@ export default function AIResumeChat({
                  isGuidedBuilder &&
                  editingSection &&
                  isApprovalRequest(message.content) && (
-                  <div className="flex gap-2 mt-3 mr-12">
+                  <div className="flex gap-2 mt-3 mr-6">
                     <Button 
                       onClick={handleNextSection}
                       className="bg-primary hover:bg-primary/90"
@@ -682,7 +682,7 @@ export default function AIResumeChat({
               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-4 h-4 text-primary-foreground" />
               </div>
-              <div className="flex-1 bg-muted rounded-tl-sm rounded-tr-lg rounded-b-lg p-3 mr-12">
+              <div className="flex-1 bg-muted border border-border/70 rounded-tl-sm rounded-tr-lg rounded-b-lg p-3 mr-6">
                 {streamingContent ? (
                   <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
