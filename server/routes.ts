@@ -2621,8 +2621,101 @@ Respond ONLY with valid JSON (no text before or after):
     }
   });
 
-  // Feature tracking endpoint
-  app.post("/api/track-feature", requireAuth, async (req: Request, res) => {
+  app.post("/api/resumes/import", requireAuth, requireVerifiedEmail, upload.single('file'), async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Check usage limits
+      const resumeCheck = await storage.canAddResume(userId);
+      if (!resumeCheck.allowed) {
+        const usageStats = await storage.getUsage(userId);
+        const subscription = await storage.getSubscription(userId);
+        const plan = normalizePlan(subscription?.plan);
+        const limits = PLAN_LIMITS[plan];
+        const threshold = buildUsageThresholdState({
+          feature: "resumes",
+          plan,
+          currentUsage: resumeCheck.current,
+          currentLimit: limits.maxResumes,
+        });
+
+        return res.status(403).json({ 
+          error: "Resume limit reached",
+          code: "RESUME_LIMIT",
+          limit: resumeCheck.limit,
+          current: resumeCheck.current,
+          upgradeModal: {
+            feature: "resumes",
+            recommendedPlan: threshold.recommendedPlan,
+            unlockedAmount: threshold.unlockedAmount,
+            currentLimit: threshold.currentLimit,
+            recommendedLimit: threshold.recommendedLimit,
+          },
+          message: `Your plan allows up to ${resumeCheck.limit} resumes. Upgrade for more.`
+        });
+      }
+
+      // Extract text
+      let resumeText = "";
+      try {
+        if (req.file.mimetype === 'application/pdf') {
+          const pdfData = await pdfParse(req.file.buffer);
+          resumeText = pdfData.text || "";
+        } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+          const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+          resumeText = result.value || "";
+        }
+      } catch (parseError) {
+        return res.status(400).json({ error: "Could not parse file" });
+      }
+
+      // Use AI to extract structured data and also identify best template/style
+      const poe = getPoeClient();
+      const aiResponse = await poe.chat.completions.create({
+        model: "gpt-5-nano",
+        messages: [
+          {
+            role: "system",
+            content: `Extract structured resume data from the text. Also, based on the content and tone, recommend one of these templates: 'modern', 'professional', 'creative', 'executive', 'technical'.
+            Return valid JSON only:
+            {
+              "resumeData": { ... },
+              "recommendedTemplate": "modern",
+              "suggestedTitle": "Software Engineer Resume"
+            }`
+          },
+          { role: "user", content: resumeText }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      const extracted = JSON.parse(aiResponse.choices[0]?.message?.content || "{}");
+      
+      const [newResume] = await db.insert(resumes).values({
+        userId,
+        title: extracted.suggestedTitle || req.file.originalname.replace(/\.[^/.]+$/, ""),
+        template: extracted.recommendedTemplate || "modern",
+        resumeData: extracted.resumeData || createEmptyResumeData(),
+        originalFilename: req.file.originalname,
+        originalMimeType: req.file.mimetype,
+        importedAt: new Date(),
+      }).returning();
+
+      // Increment imported usage
+      await db.update(usageTable)
+        .set({ importedResumesThisMonth: sql`${usageTable.importedResumesThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
+
+      res.json(newResume);
+    } catch (error) {
+      console.error('[API] Error importing resume:', error);
+      res.status(500).json({ error: "Failed to import resume" });
+    }
+  });
     try {
       const userId = req.session.userId!;
       const schema = z.object({
@@ -2720,19 +2813,19 @@ Respond ONLY with valid JSON (no text before or after):
       const { jobDescription = "" } = jobDescriptionSchema.parse(req.body);
 
       // Check usage limits before performing operation
-      const usage = await storage.getUsage(userId);
+      const usageStats = await storage.getUsage(userId);
       const { threshold: atsThreshold, plan, limits } = await getUsageThresholdForFeature(
         userId,
         "ats_scans",
-        usage.atsScansThisMonth,
+        usageStats.atsScansThisMonth,
       );
 
-      if (usage.atsScansThisMonth >= limits.maxATSScansPerMonth) {
+      if (usageStats.atsScansThisMonth >= limits.maxATSScansPerMonth) {
         return res.status(403).json({ 
           error: "ATS scan limit reached for this month",
           code: "ATS_SCAN_LIMIT",
           limit: limits.maxATSScansPerMonth,
-          current: usage.atsScansThisMonth,
+          current: usageStats.atsScansThisMonth,
           threshold: atsThreshold,
           upgradeModal: {
             feature: "ats_scans",
@@ -2781,19 +2874,19 @@ Respond ONLY with valid JSON (no text before or after):
       }
 
       // Check usage limits
-      const usage = await storage.getUsage(userId);
+      const usageStats = await storage.getUsage(userId);
       const { threshold: atsThreshold, plan, limits } = await getUsageThresholdForFeature(
         userId,
         "ats_scans",
-        usage.atsScansThisMonth,
+        usageStats.atsScansThisMonth,
       );
 
-      if (usage.atsScansThisMonth >= limits.maxATSScansPerMonth) {
+      if (usageStats.atsScansThisMonth >= limits.maxATSScansPerMonth) {
         return res.status(403).json({ 
           error: "ATS scan limit reached for this month",
           code: "ATS_SCAN_LIMIT",
           limit: limits.maxATSScansPerMonth,
-          current: usage.atsScansThisMonth,
+          current: usageStats.atsScansThisMonth,
           threshold: atsThreshold,
           upgradeModal: {
             feature: "ats_scans",
