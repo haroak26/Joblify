@@ -60,7 +60,7 @@ export default function AtsScanner() {
       });
       if (!res.ok) {
         const err: any = await res.json().catch(() => ({}));
-        const error: any = new Error(err.message || "Failed to scan");
+        const error: any = new Error(err.message || err.error || "Failed to scan");
         error.code = err.code;
         error.upgradeModal = err.upgradeModal;
         throw error;
@@ -95,7 +95,7 @@ export default function AtsScanner() {
       });
       if (!res.ok) {
         const err: any = await res.json().catch(() => ({}));
-        const error: any = new Error(err.message || "Failed to scan");
+        const error: any = new Error(err.message || err.error || "Failed to scan");
         error.code = err.code;
         error.upgradeModal = err.upgradeModal;
         throw error;
