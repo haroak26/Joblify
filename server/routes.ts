@@ -2053,7 +2053,9 @@ export async function registerRoutes(
 
       const baseStyleRules = `
 **WRITING STYLE RULES (apply to ALL generated content):**
-- Write like a real person, not a robot. Use natural, conversational language.
+- Write like a real person, not a robot. Use natural, professional human voice. Avoid "AI-speak", buzzword stuffing, or overly flowery language.
+- BE CONCISE: For the Professional Summary, stay between 30-50 words (2-3 sentences max).
+- Use active verbs and concrete achievements.
 - NEVER use em dashes (the long dash character). Use commas, periods, or semicolons instead.
 - Avoid overused AI phrases like "I'd be happy to", "Certainly!", "Absolutely!", "dive into", "leverage", "utilize", "in order to", "It's important to note".
 - Keep sentences varied in length. Mix short punchy sentences with longer ones.
