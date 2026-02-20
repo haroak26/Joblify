@@ -599,32 +599,19 @@ export default function AIResumeChat({
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-auto px-4 py-3" ref={scrollContainerRef}>
-        <div className="space-y-4 max-w-3xl mx-auto" ref={scrollRef}>
+        <div className="space-y-6 max-w-3xl mx-auto" ref={scrollRef}>
           {messages.map((message, index) => (
             <div
               key={message.id}
-              className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {/* Avatar */}
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  message.role === "ai" ? "bg-primary" : "bg-primary"
-                }`}
-              >
-                {message.role === "ai" ? (
-                  <Sparkles className="w-4 h-4 text-primary-foreground" />
-                ) : (
-                  <UserIcon className="w-4 h-4 text-primary-foreground" />
-                )}
-              </div>
-
               {/* Message Content */}
-              <div className="flex-1 min-w-0">
+              <div className={`${message.role === "user" ? "max-w-[80%]" : "w-full"}`}>
                 <div
-                  className={`p-3 border border-border/70 ${
+                  className={`${
                     message.role === "user"
-                      ? "bg-accent text-accent-foreground ml-6 rounded-tl-lg rounded-tr-sm rounded-b-lg"
-                      : "bg-muted mr-6 rounded-tl-sm rounded-tr-lg rounded-b-lg"
+                      ? "bg-primary text-primary-foreground p-3 rounded-2xl rounded-tr-none"
+                      : "bg-transparent text-foreground p-0"
                   }`}
                 >
                   {message.role === "ai" ? (
@@ -655,7 +642,7 @@ export default function AIResumeChat({
                  isGuidedBuilder &&
                  editingSection &&
                  isApprovalRequest(message.content) && (
-                  <div className="flex gap-2 mt-3 mr-6">
+                  <div className="flex gap-2 mt-3">
                     <Button 
                       onClick={handleNextSection}
                       className="bg-primary hover:bg-primary/90"
@@ -678,11 +665,8 @@ export default function AIResumeChat({
 
           {/* Streaming AI Response */}
           {isStreaming && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <div className="flex-1 bg-muted border border-border/70 rounded-tl-sm rounded-tr-lg rounded-b-lg p-3 mr-6">
+            <div className="flex justify-start w-full">
+              <div className="w-full bg-transparent text-foreground p-0">
                 {streamingContent ? (
                   <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
@@ -697,6 +681,22 @@ export default function AIResumeChat({
                       }}
                     >
                       {streamingContent}
+                    </ReactMarkdown>
+                    <span className="inline-block w-1.5 h-4 bg-primary/70 animate-pulse ml-0.5 align-text-bottom" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Generating response...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
                     </ReactMarkdown>
                     <span className="inline-block w-1.5 h-4 bg-primary/70 animate-pulse ml-0.5 align-text-bottom" />
                   </div>
