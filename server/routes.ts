@@ -15,6 +15,7 @@ import { validateFile, getFileTypeName } from './lib/fileValidation';
 import { aiRateLimit } from './middleware/security';
 import { csrfTokenEndpoint } from './middleware/csrf';
 import { ResumePDFGenerator } from './lib/resumePDFGenerator';
+import { resumeArtifactStorage } from "./lib/resumeArtifactStorage";
 import { db } from "./db";
 import { eq, desc, and, sql, count, gte } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -23,6 +24,7 @@ import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import rateLimit from "express-rate-limit";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "fs/promises";
+import crypto from "crypto";
 import { tmpdir } from "os";
 import path from "path";
 import { promisify } from "util";
@@ -3575,6 +3577,44 @@ ${resumeText}`,
   // Resume Upload & Parse Endpoint
   // ============================================
 
+  app.get("/api/resume-artifacts/:key(*)", requireAuth, async (req: Request, res) => {
+    try {
+      const userId = req.session.userId!;
+      const rawKey = req.params.key;
+      const key = decodeURIComponent(Array.isArray(rawKey) ? rawKey.join("/") : (rawKey || "")).trim();
+
+      if (!key) {
+        return res.status(400).json({ error: "Missing artifact key" });
+      }
+
+      const [resumeRecord] = await db
+        .select({
+          id: resumes.id,
+          originalStorageKey: resumes.originalStorageKey,
+          originalFilename: resumes.originalFilename,
+          originalMimeType: resumes.originalMimeType,
+        })
+        .from(resumes)
+        .where(and(eq(resumes.userId, userId), eq(resumes.originalStorageKey, key)))
+        .limit(1);
+
+      if (!resumeRecord?.originalStorageKey) {
+        return res.status(404).json({ error: "Artifact not found" });
+      }
+
+      const bytes = await resumeArtifactStorage.read(resumeRecord.originalStorageKey);
+      const filename = (resumeRecord.originalFilename || "resume").replace(/[\r\n"]/g, "");
+
+      res.setHeader("Content-Type", resumeRecord.originalMimeType || "application/octet-stream");
+      res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+      res.setHeader("Cache-Control", "private, max-age=300");
+      res.send(bytes);
+    } catch (error) {
+      console.error("[API] Error serving resume artifact:", error);
+      res.status(404).json({ error: "Artifact not found" });
+    }
+  });
+
   app.post("/api/resumes/upload", requireAuth, requireAIAccess, upload.single('file'), async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
@@ -3627,9 +3667,11 @@ ${resumeText}`,
 
       // Extract text from uploaded file
       let extractedText = "";
+      let pageCount: number | null = null;
       if (req.file.mimetype === 'application/pdf') {
         const pdfData = await pdfParse(req.file.buffer);
         extractedText = pdfData.text;
+        pageCount = Number.isFinite(pdfData.numpages) ? pdfData.numpages : null;
       } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const result = await mammoth.extractRawText({ buffer: req.file.buffer });
         extractedText = result.value;
@@ -3825,14 +3867,30 @@ Extract ALL information you can find. For dates, use formats like "Jan 2023" or 
         ? `${resumeData.personalInfo.name.replace(/[<>"'`;\\]/g, '').slice(0, 100)}'s Resume`
         : sanitizedFilename;
 
+      // Save uploaded artifact bytes to durable storage and create resume metadata
+      const resumeId = crypto.randomUUID();
+      const storedArtifact = await resumeArtifactStorage.save({
+        userId,
+        resumeId,
+        originalFilename: req.file.originalname || `${resumeId}.pdf`,
+        bytes: req.file.buffer,
+      });
+
       // Create the resume in database
       const [newResume] = await db
         .insert(resumes)
         .values({
+          id: resumeId,
           userId,
           title,
           template: "modern",
           resumeData,
+          originalFilename: req.file.originalname,
+          originalMimeType: req.file.mimetype,
+          originalStorageKey: storedArtifact.key,
+          originalStorageUrl: storedArtifact.url,
+          originalPageCount: pageCount,
+          importedAt: new Date(),
         })
         .returning();
 
@@ -3845,6 +3903,14 @@ Extract ALL information you can find. For dates, use formats like "Jan 2023" or 
       res.json({
         success: true,
         resume: newResume,
+        artifact: {
+          originalFilename: newResume.originalFilename,
+          mimeType: newResume.originalMimeType,
+          storageKey: newResume.originalStorageKey,
+          url: newResume.originalStorageUrl,
+          pageCount: newResume.originalPageCount,
+          importedAt: newResume.importedAt,
+        },
         message: "Resume uploaded and parsed successfully!",
       });
     } catch (error) {

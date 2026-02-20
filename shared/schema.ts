@@ -297,6 +297,12 @@ export const resumes = pgTable("resumes", {
   title: text("title").notNull(),
   template: varchar("template").notNull().default("modern"), // 'modern', 'professional', 'creative', 'executive', 'technical'
   resumeData: jsonb("resume_data").notNull().$type<ResumeData>(),
+  originalFilename: text("original_filename"),
+  originalMimeType: text("original_mime_type"),
+  originalStorageKey: text("original_storage_key"),
+  originalStorageUrl: text("original_storage_url"),
+  originalPageCount: integer("original_page_count"),
+  importedAt: timestamp("imported_at"),
   aiBuilderComponents: jsonb("ai_builder_components").$type<string[]>(), // Components selected in AI Builder
   aiBuilderCompleted: boolean("ai_builder_completed").default(false), // Whether AI Builder session was completed
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),

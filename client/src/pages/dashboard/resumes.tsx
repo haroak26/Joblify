@@ -347,6 +347,11 @@ export default function Resumes() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Updated {formatDate(resume.updatedAt)}
                   </p>
+                  {resume.originalFilename && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      Original: {resume.originalFilename}
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions */}
