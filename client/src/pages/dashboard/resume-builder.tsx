@@ -119,6 +119,7 @@ export default function ResumeBuilder() {
   const [selectedComponents, setSelectedComponents] = useState<string[]>(
     isAIMode ? DEFAULT_AI_COMPONENTS : []
   );
+  const [previewMode, setPreviewMode] = useState<"template" | "original" | "compare">("template");
 
   // Ref for hidden print container used by client-side PDF generation
   const printRef = useRef<HTMLDivElement>(null);
@@ -541,6 +542,10 @@ export default function ResumeBuilder() {
     );
   }
 
+  const hasOriginalArtifact = Boolean(resume.originalStorageUrl);
+  const canEmbedOriginalPdf = hasOriginalArtifact && resume.originalMimeType === "application/pdf";
+  const effectivePreviewMode = hasOriginalArtifact ? previewMode : "template";
+
   // Show compiling screen if in compiling mode
   if (isCompiling) {
     return <ResumeCompiling resumeId={resumeId!} />;
@@ -563,6 +568,67 @@ export default function ResumeBuilder() {
     "px-3 sm:px-6",                       // Horizontal padding
     isAIMode ? 'hidden md:flex' : 'flex'  // Conditional visibility in AI mode
   ].join(" ");
+
+  const sectionReferenceHints: Record<string, string> = {
+    personal: "Verify contact details and links against your original file.",
+    summary: "Mirror the strongest opening statements from your original summary.",
+    experience: "Reuse quantifiable impact bullets from your original experience.",
+    education: "Cross-check school names, majors, and dates.",
+    skills: "Pull exact keywords and tools from your uploaded resume.",
+  };
+
+  const renderPreviewPane = () => (
+    <div className="hidden lg:block lg:flex-[0_0_46%] lg:max-w-[46%] lg:min-w-[420px] border-l border-border bg-muted/30 overflow-auto p-4 xl:p-6">
+      <div className="sticky top-0 space-y-3">
+        {hasOriginalArtifact && (
+          <div className="bg-background border border-border rounded-md p-2 flex gap-2">
+            <Button variant={effectivePreviewMode === "template" ? "default" : "outline"} size="sm" onClick={() => setPreviewMode("template")}>Template Preview</Button>
+            <Button variant={effectivePreviewMode === "original" ? "default" : "outline"} size="sm" onClick={() => setPreviewMode("original")}>Original Resume</Button>
+            {canEmbedOriginalPdf && (
+              <Button variant={effectivePreviewMode === "compare" ? "default" : "outline"} size="sm" onClick={() => setPreviewMode("compare")}>Compare Side-by-Side</Button>
+            )}
+          </div>
+        )}
+
+        {effectivePreviewMode === "compare" && canEmbedOriginalPdf ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-background border border-border rounded-md h-[75vh] overflow-hidden">
+              <iframe src={resume.originalStorageUrl || ""} className="w-full h-full" title="Original Resume" />
+            </div>
+            <div>
+              <ResumePreview
+                data={resumeData}
+                template={selectedTemplate}
+                onSectionClick={handlePreviewSectionClick}
+                previewRef={visiblePreviewRef}
+              />
+            </div>
+          </div>
+        ) : effectivePreviewMode === "original" ? (
+          <div className="bg-background border border-border rounded-md p-3">
+            <p className="text-sm font-medium mb-2">Original Resume</p>
+            {canEmbedOriginalPdf ? (
+              <iframe src={resume.originalStorageUrl || ""} className="w-full h-[75vh] rounded border" title="Original Resume" />
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                This file type can’t be embedded in-browser. Open the original file in a new tab.
+                <div className="mt-2">
+                  <a href={resume.originalStorageUrl || "#"} target="_blank" rel="noreferrer" className="text-primary underline">Open Original Resume</a>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <ResumePreview
+            data={resumeData}
+            template={selectedTemplate}
+            onSectionClick={handlePreviewSectionClick}
+            previewRef={visiblePreviewRef}
+          />
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-background">
@@ -796,16 +862,7 @@ export default function ResumeBuilder() {
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile, shown from tablet landscape and up */}
-              <div className="hidden lg:block lg:flex-[0_0_46%] lg:max-w-[46%] lg:min-w-[420px] border-l border-border bg-muted/30 overflow-auto p-4 xl:p-6">
-                <div className="sticky top-0">
-                  <ResumePreview
-                    data={resumeData}
-                    template={selectedTemplate}
-                    onSectionClick={handlePreviewSectionClick}
-                    previewRef={visiblePreviewRef}
-                  />
-                </div>
-              </div>
+              {renderPreviewPane()}
             </>
           ) : (
             <>
@@ -823,24 +880,34 @@ export default function ResumeBuilder() {
                     onAutoSave={handleSave}
                   />
                 ) : ActiveSectionComponent ? (
-                  <ActiveSectionComponent
-                    data={resumeData}
-                    onUpdate={updateResumeData}
-                  />
+                  <>
+                    {hasOriginalArtifact && (
+                      <div className="mb-4 rounded-md border border-border bg-muted/40 p-3 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium">Use original as reference</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {sectionReferenceHints[activeSection] || "Keep this section aligned with your source resume details."}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPreviewMode(canEmbedOriginalPdf ? "compare" : "original")}
+                        >
+                          Open Reference
+                        </Button>
+                      </div>
+                    )}
+                    <ActiveSectionComponent
+                      data={resumeData}
+                      onUpdate={updateResumeData}
+                    />
+                  </>
                 ) : null}
               </div>
 
               {/* Live Preview Section - responsive: hidden on mobile, shown from tablet landscape and up */}
-              <div className="hidden lg:block lg:flex-[0_0_46%] lg:max-w-[46%] lg:min-w-[420px] border-l border-border bg-muted/30 overflow-auto p-4 xl:p-6">
-                <div className="sticky top-0">
-                  <ResumePreview
-                    data={resumeData}
-                    template={selectedTemplate}
-                    onSectionClick={handlePreviewSectionClick}
-                    previewRef={visiblePreviewRef}
-                  />
-                </div>
-              </div>
+              {renderPreviewPane()}
             </>
           )}
         </div>
