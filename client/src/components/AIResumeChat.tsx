@@ -227,7 +227,7 @@ export default function AIResumeChat({
     const greeting = focusedComponent
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
       : mode === "builder"
-      ? `Hey ${firstName}! 👋 I'm your **AI Resume Builder** — think of me as a friendly career counselor. I'll ask you a few easy questions section by section, draft professional content from your answers, and you can tweak it however you like.\n\nI've already got your name and email saved, so we're good to go!\n\nLet's start with your **${COMPONENT_LABELS[firstSection] || firstSection}**.\n\n${firstQuestion}`
+      ? `Hey ${firstName}! 👋 I'm your **AI Resume Builder**. I'll help you build your resume section by section through conversation. We'll start with your **${COMPONENT_LABELS[firstSection] || firstSection}**.\n\n${firstQuestion}`
       : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;
     
     const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: `greeting-${Date.now()}` };
