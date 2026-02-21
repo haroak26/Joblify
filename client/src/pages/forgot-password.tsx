@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
+import { SEO } from "@/components/seo";
 
 const schema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -41,7 +42,14 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <>
+      <SEO
+        title="Forgot Password"
+        description="Reset your Joblify password securely and regain access to your account and career tools."
+        keywords="forgot password, password reset, Joblify account recovery"
+        canonicalUrl="https://joblify.com/forgot-password"
+      />
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
@@ -106,6 +114,7 @@ export default function ForgotPassword() {
           </p>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

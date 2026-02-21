@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { apiRequest } from "@/lib/queryClient";
+import { SEO } from "@/components/seo";
 
 export default function Verify2FA() {
   const { user, isLoading } = useAuth();
@@ -58,7 +59,14 @@ export default function Verify2FA() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <>
+      <SEO
+        title="Two-Factor Verification"
+        description="Complete two-factor authentication to securely sign in to your Joblify account."
+        keywords="2FA verification, two-factor authentication, Joblify login security"
+        canonicalUrl="https://joblify.com/verify-2fa"
+      />
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <Link href="/">
@@ -144,6 +152,7 @@ export default function Verify2FA() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

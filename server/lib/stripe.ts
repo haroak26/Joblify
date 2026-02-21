@@ -153,7 +153,6 @@ export async function createCheckoutSession(params: {
         userId: params.userId,
         plan: params.plan,
       },
-      trial_period_days: params.plan === "plus" || params.plan === "student" ? 7 : undefined,
     },
   };
 

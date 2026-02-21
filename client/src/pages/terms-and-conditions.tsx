@@ -241,9 +241,9 @@ export default function TermsAndConditions() {
                 If a payment fails, we may suspend your access to paid features until payment is received. We may attempt to re-charge your payment method. After multiple failed payment attempts, your subscription may be cancelled.
               </p>
 
-              <h3 className="text-xl font-semibold mb-3 mt-6">7.5 Free Trial</h3>
+              <h3 className="text-xl font-semibold mb-3 mt-6">7.5 Plan Activation</h3>
               <p className="text-muted-foreground leading-relaxed">
-                We may offer free trials for paid plans. At the end of the trial period, you will be automatically charged for the subscription unless you cancel before the trial ends. Free trial eligibility is limited to new users and may be subject to additional terms.
+                Paid plans begin billing immediately at checkout. Your subscription stays active until the end of the current billing cycle unless cancelled in your account settings.
               </p>
             </section>
 

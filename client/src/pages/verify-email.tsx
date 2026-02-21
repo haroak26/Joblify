@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { SEO } from "@/components/seo";
 
 export default function VerifyEmail() {
   const search = useSearch();
@@ -99,7 +100,14 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <>
+      <SEO
+        title="Verify Email"
+        description="Verify your email address to secure your Joblify account and unlock full platform access."
+        keywords="verify email, account verification, Joblify"
+        canonicalUrl="https://joblify.com/verify-email"
+      />
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md border">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
@@ -225,6 +233,7 @@ export default function VerifyEmail() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
