@@ -16,6 +16,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://joblify.com/students</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://joblify.com/why-us</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

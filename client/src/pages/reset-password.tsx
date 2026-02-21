@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
+import { SEO } from "@/components/seo";
 
 const passwordSchema = z.string()
   .min(8, "Password must be at least 8 characters")
@@ -94,7 +95,14 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <>
+      <SEO
+        title="Reset Password"
+        description="Create a new secure password for your Joblify account to continue your job search workflow."
+        keywords="reset password, Joblify security, account recovery"
+        canonicalUrl="https://joblify.com/reset-password"
+      />
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
@@ -206,6 +214,7 @@ export default function ResetPassword() {
           </p>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
