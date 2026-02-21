@@ -8,7 +8,7 @@ async function getSource() {
   return readFile(SECURITY_FILE, "utf8");
 }
 
-test("tiered rate limiter resolves limits from req.userPlan and supports free/plus/ultra/lifetime ceilings", async () => {
+test("tiered rate limiter resolves limits from req.userPlan and supports free/student/plus/ultra/lifetime ceilings", async () => {
   const source = await getSource();
 
   assert.match(
@@ -17,7 +17,7 @@ test("tiered rate limiter resolves limits from req.userPlan and supports free/pl
     "createTieredRateLimit should derive plan from req.userPlan",
   );
 
-  assert.match(source, /case "plus":\s*return plusLimit;/, "plus plan should use plusLimit ceiling");
+  assert.match(source, /case "student":\s*case "plus":\s*return plusLimit;/, "student and plus plans should use plusLimit ceiling");
   assert.match(source, /case "ultra":\s*case "lifetime":\s*return ultraLimit;/, "ultra/lifetime should share ultraLimit ceiling");
   assert.match(source, /default:\s*return freeLimit;/, "free/default users should use freeLimit ceiling");
 });

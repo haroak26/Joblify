@@ -124,6 +124,11 @@ async function getUsageThresholdForFeature(userId: string, feature: UsageFeature
   return { threshold, plan, limits };
 }
 
+function isStudentEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  return normalized.endsWith(".edu") || normalized.endsWith(".sch.uk");
+}
+
 function getPoeClient(): OpenAI {
   if (poeClient) {
     return poeClient;
@@ -1270,7 +1275,7 @@ export async function registerRoutes(
   });
 
   const billingSchema = z.object({
-    plan: z.enum(["plus", "ultra"]),
+    plan: z.enum(["student", "plus", "ultra"]),
     couponCode: z.string().trim().min(1).max(64).optional(),
   });
 
@@ -1285,6 +1290,13 @@ export async function registerRoutes(
 
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ error: "User not found" });
+
+      if (plan === "student" && !isStudentEmail(user.email)) {
+        return res.status(403).json({
+          error: "Student plan requires a valid school email ending in .edu or .sch.uk",
+          code: "STUDENT_EMAIL_REQUIRED",
+        });
+      }
 
       let subscription = await storage.getSubscription(userId);
       if (!subscription) {
@@ -1581,6 +1593,7 @@ export async function registerRoutes(
       const maxSkills = planLimits.maxSkills === Infinity ? -1 : planLimits.maxSkills;
       const maxAIEdits = planLimits.maxAIEditsPerMonth === Infinity ? -1 : planLimits.maxAIEditsPerMonth;
       const maxCoverLetters = planLimits.maxCoverLettersPerMonth === Infinity ? -1 : planLimits.maxCoverLettersPerMonth;
+      const maxAIBuilderActions = planLimits.maxAIBuilderActionsPerMonth === Infinity ? -1 : planLimits.maxAIBuilderActionsPerMonth;
       const maxJobAnalyses = planLimits.maxJobAnalysesPerMonth === Infinity ? -1 : planLimits.maxJobAnalysesPerMonth;
       const maxATSScans = planLimits.maxATSScansPerMonth === Infinity ? -1 : planLimits.maxATSScansPerMonth;
       const maxImportedResumes = planLimits.maxImportedResumesPerMonth === Infinity ? -1 : planLimits.maxImportedResumesPerMonth;
@@ -1596,6 +1609,7 @@ export async function registerRoutes(
       const remainingSkills = maxSkills === -1 ? -1 : Math.max(0, maxSkills - skillsCount);
       const remainingAIEdits = maxAIEdits === -1 ? -1 : Math.max(0, maxAIEdits - usage.aiEditsThisMonth);
       const remainingCoverLetters = maxCoverLetters === -1 ? -1 : Math.max(0, maxCoverLetters - usage.coverLettersThisMonth);
+      const remainingAIBuilderActions = maxAIBuilderActions === -1 ? -1 : Math.max(0, maxAIBuilderActions - usage.aiBuilderActionsThisMonth);
       const remainingJobAnalyses = maxJobAnalyses === -1 ? -1 : Math.max(0, maxJobAnalyses - usage.jobAnalysesThisMonth);
       const remainingATSScans = maxATSScans === -1 ? -1 : Math.max(0, maxATSScans - usage.atsScansThisMonth);
       const remainingImportedResumes = maxImportedResumes === -1 ? -1 : Math.max(0, maxImportedResumes - usage.importedResumesThisMonth);
@@ -1640,6 +1654,7 @@ export async function registerRoutes(
           importedResumesThisMonth: usage.importedResumesThisMonth,
           jobAnalysesThisMonth: usage.jobAnalysesThisMonth,
           coverLettersThisMonth: usage.coverLettersThisMonth,
+          aiBuilderActionsThisMonth: usage.aiBuilderActionsThisMonth,
           atsScansThisMonth: usage.atsScansThisMonth,
           jobMatchJobsThisMonth: usage.jobMatchJobsThisMonth,
           resumeReviewsThisMonth: usage.resumeReviewsThisMonth,
@@ -1653,6 +1668,7 @@ export async function registerRoutes(
           hasScheduleAccess,
           maxAIEdits,
           maxCoverLetters,
+          maxAIBuilderActions,
           maxJobAnalyses,
           maxATSScans,
           maxImportedResumes,
@@ -1666,6 +1682,7 @@ export async function registerRoutes(
           aiEdits: remainingAIEdits,
           schedules: remainingSchedules,
           coverLetters: remainingCoverLetters,
+          aiBuilderActions: remainingAIBuilderActions,
           jobAnalyses: remainingJobAnalyses,
           atsScans: remainingATSScans,
           importedResumes: remainingImportedResumes,
@@ -2039,6 +2056,9 @@ Rules:
         return res.status(403).json({ error: "You do not have permission to access this resume" });
       }
 
+      const rawMode = typeof req.body?.mode === "string" ? req.body.mode : "builder";
+      const requestedMode = rawMode === "enhancement" ? "enhancement" : "builder";
+
       // Check AI edit usage limits
       const aiUsage = await storage.checkAndResetMonthlyUsage(userId);
       const { threshold: aiEditThreshold, plan: aiPlan, limits: aiPlanLimits } = await getUsageThresholdForFeature(
@@ -2067,6 +2087,18 @@ Rules:
         });
       }
 
+      if (requestedMode === "builder" && aiUsage.aiBuilderActionsThisMonth >= aiPlanLimits.maxAIBuilderActionsPerMonth) {
+        return res.status(403).json({
+          error: "AI builder limit reached",
+          code: "AI_BUILDER_LIMIT",
+          limit: aiPlanLimits.maxAIBuilderActionsPerMonth,
+          current: aiUsage.aiBuilderActionsThisMonth,
+          message: aiPlanLimits.maxAIBuilderActionsPerMonth === Infinity
+            ? "AI builder action limit reached."
+            : `You've used all ${aiPlanLimits.maxAIBuilderActionsPerMonth} AI builder actions this month. Upgrade your plan for more builder usage.`,
+        });
+      }
+
       // Get user data
       const [user] = await db
         .select()
@@ -2090,7 +2122,7 @@ Rules:
         mode: z.enum(["builder", "enhancement"]).optional().default("builder"),
       });
 
-      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent, mode: chatMode } = chatSchema.parse(req.body);
+      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent, mode: chatMode } = chatSchema.parse({ ...req.body, mode: requestedMode });
 
       // Sanitize inputs by limiting size and truncating if needed
       const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
@@ -2509,7 +2541,12 @@ Respond ONLY with valid JSON (no text before or after):
         try {
           await db
             .update(usageTable)
-            .set({ aiEditsThisMonth: sql`${usageTable.aiEditsThisMonth} + 1` })
+            .set({
+              aiEditsThisMonth: sql`${usageTable.aiEditsThisMonth} + 1`,
+              aiBuilderActionsThisMonth: chatMode === "builder"
+                ? sql`${usageTable.aiBuilderActionsThisMonth} + 1`
+                : usageTable.aiBuilderActionsThisMonth,
+            })
             .where(eq(usageTable.userId, userId));
         } catch (usageError) {
           console.error('[API] Failed to increment AI edit usage:', usageError);
@@ -3142,7 +3179,7 @@ Respond ONLY with valid JSON (no text before or after):
         const currentPlan = normalizePlan(subscription?.plan);
         
         // Only upgrade if current plan is lower
-        const planHierarchy: PlanType[] = ['free', 'plus', 'ultra', 'lifetime'];
+        const planHierarchy: PlanType[] = ['free', 'student', 'plus', 'ultra', 'lifetime'];
         const newPlan: PlanType = perk.perkType === 'temp_pro_access' ? 'plus' : 'ultra';
         const currentPlanIndex = planHierarchy.indexOf(currentPlan);
         const newPlanIndex = planHierarchy.indexOf(newPlan);

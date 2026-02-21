@@ -6,6 +6,7 @@ export interface PlanLimitSet {
   maxResumes: PlanLimitValue;
   maxSkills: PlanLimitValue;
   maxAIEditsPerMonth: PlanLimitValue;
+  maxAIBuilderActionsPerMonth: PlanLimitValue;
   maxCoverLettersPerMonth: PlanLimitValue;
   maxJobImportsPerMonth: PlanLimitValue;
   maxJobMatchScansPerMonth: PlanLimitValue;
@@ -28,6 +29,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimitSet> = {
     maxResumes: 1,
     maxSkills: 8,
     maxAIEditsPerMonth: 6,
+    maxAIBuilderActionsPerMonth: 3,
     maxCoverLettersPerMonth: 2,
     maxJobImportsPerMonth: 1,
     maxJobMatchScansPerMonth: 1,
@@ -35,10 +37,23 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimitSet> = {
     maxResumeReviewsPerMonth: 1,
     maxATSScansPerMonth: 2,
   }),
+  student: withAliases({
+    maxResumes: 2,
+    maxSkills: 20,
+    maxAIEditsPerMonth: 50,
+    maxAIBuilderActionsPerMonth: 25,
+    maxCoverLettersPerMonth: 50,
+    maxJobImportsPerMonth: 3,
+    maxJobMatchScansPerMonth: 5,
+    maxJobsPerJobMatchScan: 10,
+    maxResumeReviewsPerMonth: 4,
+    maxATSScansPerMonth: Infinity,
+  }),
   plus: withAliases({
     maxResumes: 5,
     maxSkills: 50,
     maxAIEditsPerMonth: 60,
+    maxAIBuilderActionsPerMonth: 50,
     maxCoverLettersPerMonth: 20,
     maxJobImportsPerMonth: 5,
     maxJobMatchScansPerMonth: 10,
@@ -50,6 +65,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimitSet> = {
     maxResumes: Infinity,
     maxSkills: Infinity,
     maxAIEditsPerMonth: Infinity,
+    maxAIBuilderActionsPerMonth: Infinity,
     maxCoverLettersPerMonth: Infinity,
     maxJobImportsPerMonth: Infinity,
     maxJobMatchScansPerMonth: 50,
@@ -61,6 +77,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimitSet> = {
     maxResumes: Infinity,
     maxSkills: Infinity,
     maxAIEditsPerMonth: Infinity,
+    maxAIBuilderActionsPerMonth: Infinity,
     maxCoverLettersPerMonth: Infinity,
     maxJobImportsPerMonth: Infinity,
     maxJobMatchScansPerMonth: 50,
@@ -74,6 +91,7 @@ export const LIMIT_METRIC_LABELS = {
   maxResumes: "resumes",
   maxSkills: "skills",
   maxAIEditsPerMonth: "AI edits",
+  maxAIBuilderActionsPerMonth: "AI builder actions",
   maxCoverLettersPerMonth: "cover letters",
   maxJobImportsPerMonth: "job imports",
   maxJobMatchScansPerMonth: "job match scans",

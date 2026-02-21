@@ -122,6 +122,7 @@ interface DataSummaryResponse {
 
 
 const freeLimits = PLAN_LIMITS.free;
+const studentLimits = PLAN_LIMITS.student;
 const plusLimits = PLAN_LIMITS.plus;
 const ultraLimits = PLAN_LIMITS.ultra;
 
@@ -134,12 +135,28 @@ const plans = [
     billingSuffix: "",
     features: [
       `${freeLimits.maxResumes} resume`,
-      `${freeLimits.maxJobMatchScansPerMonth} job match scans/mo`,
-      `${freeLimits.maxResumeReviewsPerMonth} resume review/mo`,
-      `Up to ${freeLimits.maxJobsPerJobMatchScan} jobs per match`,
+      `${freeLimits.maxAIEditsPerMonth} AI edits/mo`,
+      `${freeLimits.maxAIBuilderActionsPerMonth} AI builder actions/mo`,
+      `${freeLimits.maxATSScansPerMonth} ATS scans/mo`,
       `${freeLimits.maxCoverLettersPerMonth} cover letters/mo`
     ],
     limits: { skills: freeLimits.maxSkills, jobs: freeLimits.maxJobImportsPerMonth },
+  },
+  {
+    id: "student",
+    name: "Student",
+    price: "$5",
+    period: "per month",
+    billingSuffix: "/mo",
+    features: [
+      `${studentLimits.maxResumes} resumes`,
+      `${studentLimits.maxAIEditsPerMonth} AI edits/mo`,
+      `${studentLimits.maxAIBuilderActionsPerMonth} AI builder actions/mo`,
+      `Unlimited ATS scans`,
+      `${studentLimits.maxCoverLettersPerMonth} cover letters/mo`
+    ],
+    limits: { skills: studentLimits.maxSkills, jobs: studentLimits.maxJobImportsPerMonth },
+    popular: true,
   },
   {
     id: "plus",
@@ -148,16 +165,13 @@ const plans = [
     period: "per month",
     billingSuffix: "/mo",
     features: [
-      "7-day free trial",
       `${plusLimits.maxResumes} resumes`,
-      `${plusLimits.maxJobMatchScansPerMonth} job match scans/mo`,
-      `${plusLimits.maxResumeReviewsPerMonth} resume reviews/mo`,
-      `Up to ${plusLimits.maxJobsPerJobMatchScan} jobs per match`,
-      "ATS scanner",
-      "Cover letters"
+      `${plusLimits.maxAIEditsPerMonth} AI edits/mo`,
+      `${plusLimits.maxAIBuilderActionsPerMonth} AI builder actions/mo`,
+      `${plusLimits.maxATSScansPerMonth} ATS scans/mo`,
+      `${plusLimits.maxCoverLettersPerMonth} cover letters/mo`
     ],
     limits: { skills: -1, jobs: plusLimits.maxJobImportsPerMonth },
-    popular: true,
   },
   {
     id: "ultra",
@@ -167,16 +181,15 @@ const plans = [
     billingSuffix: "/mo",
     features: [
       `${formatLimitValue(ultraLimits.maxResumes)} resumes`,
-      `${formatLimitValue(ultraLimits.maxJobMatchScansPerMonth)} job match scans/mo`,
-      `${formatLimitValue(ultraLimits.maxResumeReviewsPerMonth)} resume reviews/mo`,
-      `Up to ${formatLimitValue(ultraLimits.maxJobsPerJobMatchScan)} jobs per match`,
-      "All formats",
-      "ATS scanner",
-      "Resume tailoring"
+      `${formatLimitValue(ultraLimits.maxAIEditsPerMonth)} AI edits`,
+      `${formatLimitValue(ultraLimits.maxAIBuilderActionsPerMonth)} AI builder actions`,
+      `${formatLimitValue(ultraLimits.maxATSScansPerMonth)} ATS scans`,
+      `${formatLimitValue(ultraLimits.maxCoverLettersPerMonth)} cover letters`
     ],
     limits: { skills: -1, jobs: -1 },
   },
 ];
+
 
 
 export default function Account() {
@@ -419,6 +432,7 @@ export default function Account() {
   const usageData = usageQuery.data;
   const user = userQuery.data?.user;
   const currentPlan = normalizedPlan;
+  const isStudent = currentPlan === "student";
   const isPlus = currentPlan === "plus";
   const isUltra = currentPlan === "ultra";
   const isLifetime = currentPlan === "lifetime";
@@ -427,6 +441,8 @@ export default function Account() {
     ? "Ultra"
     : currentPlan === "plus"
     ? "Plus"
+    : currentPlan === "student"
+    ? "Student"
     : currentPlan === "lifetime"
     ? "Lifetime"
     : "Free";
@@ -625,6 +641,21 @@ export default function Account() {
 
                 {currentPlan === "free" && (
                   <Button
+                    onClick={() => handleUpgrade("student")}
+                    disabled={Boolean(pendingUpgradePlan)}
+                    variant="outline"
+                  >
+                    {pendingUpgradePlan === "student" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                    )}
+                    {pendingUpgradePlan === "student" ? "Processing..." : "Get Student Plan"}
+                  </Button>
+                )}
+
+                {currentPlan === "free" && (
+                  <Button
                     onClick={() => handleUpgrade("plus")}
                     disabled={Boolean(pendingUpgradePlan)}
                     className="sm:w-auto"
@@ -638,7 +669,7 @@ export default function Account() {
                   </Button>
                 )}
 
-                {currentPlan === "plus" && (
+                {(currentPlan === "student" || currentPlan === "plus") && (
                   <Button
                     onClick={() => handleUpgrade("ultra")}
                     disabled={Boolean(pendingUpgradePlan)}
@@ -686,13 +717,13 @@ export default function Account() {
             {/* Plan Comparison */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Available Plans</h3>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-4">
                 {plans.map((plan) => {
                   const isCurrentPlan = currentPlan === plan.id;
                   const isPlanActionPending =
                     pendingUpgradePlan === plan.id || pendingDowngradePlan === plan.id;
 
-                  const isDowngradeAction = currentPlan === "ultra" && plan.id === "plus";
+                  const isDowngradeAction = (currentPlan === "ultra" && (plan.id === "plus" || plan.id === "student")) || (currentPlan === "plus" && plan.id === "student");
 
                   return (
                     <div
@@ -879,7 +910,7 @@ export default function Account() {
             </div>
 
             {/* Premium Benefits Callout */}
-            {(isPlus || isUltra || isLifetime) && (
+            {(isStudent || isPlus || isUltra || isLifetime) && (
               <div className="border border-primary/20 bg-primary/5 rounded-lg p-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">

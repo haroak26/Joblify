@@ -96,6 +96,8 @@ export function AppSidebar() {
     ? "Ultra"
     : planValue === "plus"
     ? "Plus"
+    : planValue === "student"
+    ? "Student"
     : "Free";
 
   const isActive = (url: string) => {

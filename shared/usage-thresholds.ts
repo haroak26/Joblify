@@ -17,7 +17,8 @@ const THRESHOLDS = {
 } as const;
 
 function getNextPlan(plan: PlanType): PlanType {
-  if (plan === "free") return "plus";
+  if (plan === "free") return "student";
+  if (plan === "student") return "plus";
   if (plan === "plus") return "ultra";
   return plan;
 }

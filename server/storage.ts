@@ -344,7 +344,7 @@ export class DatabaseStorage implements IStorage {
         and(
           // Only active paid plans (not free, not lifetime)
           eq(subscriptions.status, "active"),
-          inArray(subscriptions.plan, ["plus", "ultra"]),
+          inArray(subscriptions.plan, ["student", "plus", "ultra"]),
           // Has a renewal date set
           isNotNull(subscriptions.currentPeriodEnd),
           // Renewal is within the next 7 days
@@ -380,6 +380,14 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(usage)
       .set({ 
+        aiEditsThisMonth: 0,
+        aiBuilderActionsThisMonth: 0,
+        importedResumesThisMonth: 0,
+        jobAnalysesThisMonth: 0,
+        jobMatchJobsThisMonth: 0,
+        resumeReviewsThisMonth: 0,
+        coverLettersThisMonth: 0,
+        atsScansThisMonth: 0,
         monthResetDate: new Date() 
       })
       .where(eq(usage.userId, userId))
