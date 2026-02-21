@@ -101,6 +101,7 @@ export default function ResetPassword() {
         description="Create a new secure password for your Joblify account to continue your job search workflow."
         keywords="reset password, Joblify security, account recovery"
         canonicalUrl="https://joblify.com/reset-password"
+        robots="noindex, nofollow"
       />
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
