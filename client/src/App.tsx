@@ -13,6 +13,7 @@ import Landing from "@/pages/landing";
 import Pricing from "@/pages/pricing";
 import WhyUs from "@/pages/why-us";
 import About from "@/pages/about";
+import Students from "@/pages/students";
 import Contact from "@/pages/contact";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsAndConditions from "@/pages/terms-and-conditions";
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/why-us" component={WhyUs} />
       <Route path="/about" component={About} />
+      <Route path="/students" component={Students} />
       <Route path="/contact" component={Contact} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/terms-and-conditions" component={TermsAndConditions} />
