@@ -48,6 +48,7 @@ export default function ForgotPassword() {
         description="Reset your Joblify password securely and regain access to your account and career tools."
         keywords="forgot password, password reset, Joblify account recovery"
         canonicalUrl="https://joblify.com/forgot-password"
+        robots="noindex, nofollow"
       />
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">

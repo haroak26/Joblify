@@ -65,6 +65,7 @@ export default function Verify2FA() {
         description="Complete two-factor authentication to securely sign in to your Joblify account."
         keywords="2FA verification, two-factor authentication, Joblify login security"
         canonicalUrl="https://joblify.com/verify-2fa"
+        robots="noindex, nofollow"
       />
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">

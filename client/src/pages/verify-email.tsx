@@ -106,6 +106,7 @@ export default function VerifyEmail() {
         description="Verify your email address to secure your Joblify account and unlock full platform access."
         keywords="verify email, account verification, Joblify"
         canonicalUrl="https://joblify.com/verify-email"
+        robots="noindex, nofollow"
       />
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md border">
