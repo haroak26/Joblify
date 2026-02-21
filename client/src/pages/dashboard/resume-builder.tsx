@@ -716,7 +716,7 @@ export default function ResumeBuilder() {
               {resume && resume.aiBuilderComponents && Array.isArray(resume.aiBuilderComponents) && resume.aiBuilderComponents.length > 0 && (
                 (() => {
                   const isCompleted = resume.aiBuilderCompleted || incompleteBuilderSections.length === 0;
-                  const canUseBuilder = !isCompleted || (userPlan === "plus" || userPlan === "ultra");
+                  const canUseBuilder = !isCompleted || (userPlan === "student" || userPlan === "plus" || userPlan === "ultra");
                   
                   return (
                     <button
@@ -725,7 +725,7 @@ export default function ResumeBuilder() {
                           toast({
                             title: "Builder Complete",
                             description: userPlan === "free" 
-                              ? "AI Builder has completed all sections. Upgrade to Plus or Ultra for additional builder sessions."
+                              ? "AI Builder has completed all sections. Upgrade to Student, Plus, or Ultra for additional builder sessions."
                               : "All selected sections have been filled.",
                           });
                           return;

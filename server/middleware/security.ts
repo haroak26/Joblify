@@ -230,6 +230,7 @@ export function createTieredRateLimit(options: {
         case "ultra":
         case "lifetime":
           return ultraLimit;
+        case "student":
         case "plus":
           return plusLimit;
         default:

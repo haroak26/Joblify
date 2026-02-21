@@ -68,7 +68,7 @@ export const deletedAccountsTracker = pgTable("deleted_accounts_tracker", {
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
-  plan: text("plan").notNull().default("free"), // 'free', 'plus', 'ultra', or 'lifetime'
+  plan: text("plan").notNull().default("free"), // 'free', 'student', 'plus', 'ultra', or 'lifetime'
   status: text("status").notNull().default("active"), // 'active', 'cancelled', 'past_due'
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
@@ -80,6 +80,7 @@ export const usage = pgTable("usage", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
   aiEditsThisMonth: integer("ai_edits_this_month").notNull().default(0),
+  aiBuilderActionsThisMonth: integer("ai_builder_actions_this_month").notNull().default(0),
   importedResumesThisMonth: integer("imported_resumes_this_month").notNull().default(0),
   jobAnalysesThisMonth: integer("job_analyses_this_month").notNull().default(0),
   jobMatchJobsThisMonth: integer("job_match_jobs_this_month").notNull().default(0),
@@ -177,12 +178,13 @@ export const insertUsageSchema = createInsertSchema(usage).omit({ id: true });
 export type InsertUsage = z.infer<typeof insertUsageSchema>;
 export type Usage = typeof usage.$inferSelect;
 
-export type PlanType = "free" | "plus" | "ultra" | "lifetime";
+export type PlanType = "free" | "student" | "plus" | "ultra" | "lifetime";
 export type LegacyPlanType = PlanType | "pro";
 
 export function normalizePlan(plan?: string | null): PlanType {
   switch (plan) {
     case "plus":
+    case "student":
     case "ultra":
     case "lifetime":
     case "free":

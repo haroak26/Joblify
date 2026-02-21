@@ -59,11 +59,16 @@ export function isStripeConfigured(): boolean {
   return Boolean(
     process.env.STRIPE_SECRET_KEY &&
     process.env.STRIPE_PLUS_PRICE_ID &&
-    process.env.STRIPE_ULTRA_PRICE_ID,
+    process.env.STRIPE_ULTRA_PRICE_ID &&
+    process.env.STRIPE_STUDENT_PRICE_ID,
   );
 }
 
 export function getPriceIdForPlan(plan: PlanType): string {
+  if (plan === "student") {
+    if (!process.env.STRIPE_STUDENT_PRICE_ID) throw new Error("STRIPE_STUDENT_PRICE_ID missing");
+    return process.env.STRIPE_STUDENT_PRICE_ID;
+  }
   if (plan === "plus") {
     if (!process.env.STRIPE_PLUS_PRICE_ID) throw new Error("STRIPE_PLUS_PRICE_ID missing");
     return process.env.STRIPE_PLUS_PRICE_ID;
@@ -77,6 +82,7 @@ export function getPriceIdForPlan(plan: PlanType): string {
 
 export function getPlanByPriceId(priceId: string | undefined): PlanType {
   if (!priceId) return "free";
+  if (priceId === process.env.STRIPE_STUDENT_PRICE_ID) return "student";
   if (priceId === process.env.STRIPE_PLUS_PRICE_ID) return "plus";
   if (priceId === process.env.STRIPE_ULTRA_PRICE_ID) return "ultra";
   return "free";
@@ -147,7 +153,7 @@ export async function createCheckoutSession(params: {
         userId: params.userId,
         plan: params.plan,
       },
-      trial_period_days: params.plan === "plus" ? 7 : undefined,
+      trial_period_days: params.plan === "plus" || params.plan === "student" ? 7 : undefined,
     },
   };
 

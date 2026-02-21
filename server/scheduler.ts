@@ -138,7 +138,7 @@ export function startScheduleRunner(intervalMs = 60_000): NodeJS.Timeout {
           for (const sub of subscriptionsNeedingReminder) {
             try {
               const displayName = sub.name || sub.username;
-              const planLabel = sub.plan === "ultra" ? "Ultra" : "Plus";
+              const planLabel = sub.plan === "ultra" ? "Ultra" : sub.plan === "student" ? "Student" : "Plus";
               const emailSent = await sendSubscriptionRenewalReminderEmail(
                 sub.email,
                 displayName,
