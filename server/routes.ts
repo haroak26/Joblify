@@ -42,7 +42,6 @@ import {
   listActiveSubscriptions,
   cancelSubscription,
   deleteCustomer,
-  updateSubscriptionPlan,
 } from "./lib/stripe";
 
 // Rate limiter for public contact/newsletter endpoints to prevent spam
@@ -1311,24 +1310,6 @@ export async function registerRoutes(
       let subscription = await storage.getSubscription(userId);
       if (!subscription) {
         subscription = await storage.createSubscription(userId, "free");
-      }
-
-      // Existing paid users should have the existing subscription updated to avoid duplicate active plans
-      if (subscription.stripeSubscriptionId) {
-        const updated = await updateSubscriptionPlan(subscription.stripeSubscriptionId, plan);
-        await storage.updateSubscription(userId, {
-          plan,
-          status: updated.cancel_at_period_end ? "cancelled" : (updated.status === "past_due" ? "past_due" : "active"),
-          currentPeriodEnd: updated.current_period_end ? new Date(updated.current_period_end * 1000) : null,
-        });
-
-        return res.json({
-          success: true,
-          directUpdate: true,
-          subscription: {
-            plan,
-          },
-        });
       }
 
       const customer = await getOrCreateCustomer({

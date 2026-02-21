@@ -261,15 +261,6 @@ export default function Account() {
     const response = await apiRequest("POST", "/api/billing/checkout", { plan });
     const result = await response.json();
 
-    if (result.directUpdate) {
-      await queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      toast({
-        title: "Plan updated",
-        description: `Your plan is now ${plan}.`,
-      });
-      return;
-    }
-
     if (!result.url) {
       throw new Error("Checkout session URL was not returned");
     }
