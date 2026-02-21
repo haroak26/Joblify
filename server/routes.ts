@@ -314,6 +314,16 @@ Review page images and return strict JSON only:
   return JSON.parse(content) as ResumeDesignReview;
 }
 
+
+function getNormalizedResumeData(rawData: unknown): ResumeData {
+  const parsed = resumeDataSchema.safeParse(rawData);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  return createEmptyResumeData();
+}
+
 function convertResumeDataToText(resumeData: ResumeData): string {
   const sections: string[] = [];
 
@@ -869,7 +879,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Resume not found" });
       }
 
-      const resumeText = convertResumeDataToText(resume.resumeData);
+      const resumeText = convertResumeDataToText(getNormalizedResumeData(resume.resumeData));
 
       const toneInstructions = {
         professional: "Write in a formal, business-appropriate tone. Be confident but not overly enthusiastic.",
@@ -1926,7 +1936,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Resume not found", message: "Resume not found" });
       }
 
-      const baseData = resumeDataSchema.parse(resume.resumeData);
+      const baseData = getNormalizedResumeData(resume.resumeData);
       const baseResumeText = convertResumeDataToText(baseData).slice(0, 18000);
       const poe = getPoeClient();
 
@@ -2134,7 +2144,7 @@ Rules:
       ).join('\n');
 
       // Get current resume data - prefer client data (most recent) over database
-      const currentData = clientData || resumeDataSchema.parse(resume.resumeData);
+      const currentData = clientData || getNormalizedResumeData(resume.resumeData);
 
       // Create AI prompt
       const COMPONENT_LABELS: Record<string, string> = {
@@ -2697,7 +2707,7 @@ Respond ONLY with valid JSON (no text before or after):
       }
 
       // Parse resume data
-      const resumeData = resumeDataSchema.parse(resume.resumeData);
+      const resumeData = getNormalizedResumeData(resume.resumeData);
 
       // Create professional PDF generator with selected template
       const pdfGenerator = new ResumePDFGenerator({
@@ -3012,7 +3022,7 @@ Respond ONLY with valid JSON (no text before or after):
       }
 
       // Convert resume data to text
-      const resumeText = convertResumeDataToText(resume.resumeData);
+      const resumeText = convertResumeDataToText(getNormalizedResumeData(resume.resumeData));
 
       // Get job description from request if provided
       const { jobDescription = "" } = jobDescriptionSchema.parse(req.body || {});
@@ -3566,7 +3576,7 @@ Guidelines:
         });
       }
 
-      const resumeText = convertResumeDataToText(resume.resumeData);
+      const resumeText = convertResumeDataToText(getNormalizedResumeData(resume.resumeData));
       const poe = getPoeClient();
 
       const analysis = await Promise.all(allJobDescriptions.map(async (jobDescription) => {
@@ -3664,7 +3674,7 @@ ${jobDescription}`,
         if (!resume || resume.userId !== userId) {
           return res.status(404).json({ error: "Resume not found" });
         }
-        resumeText = convertResumeDataToText(resume.resumeData).slice(0, 20000);
+        resumeText = convertResumeDataToText(getNormalizedResumeData(resume.resumeData)).slice(0, 20000);
       } else if (req.file) {
         resumeText = (await extractTextFromUpload(req.file)).slice(0, 20000);
 
