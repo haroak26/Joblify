@@ -1,0 +1,87 @@
+
+User
+[API] Fetching subscription for user: 54492b85-ffd6-4042-b75a-b05d60a38482
+2026-02-22 01:26:01.03
+22473883
+User
+[API] Fetching subscription for user: 54492b85-ffd6-4042-b75a-b05d60a38482
+2026-02-22 01:26:09.49
+22473883
+User
+[API] Fetching subscription for user: 54492b85-ffd6-4042-b75a-b05d60a38482
+2026-02-22 01:26:15.61
+22473883
+User
+[API] Fetching subscription for user: 54492b85-ffd6-4042-b75a-b05d60a38482
+2026-02-22 01:34:20.68
+22473883
+User
+[API] Fetching subscription for user: 54492b85-ffd6-4042-b75a-b05d60a38482
+2026-02-22 02:00:20.02
+22473883
+User
+at cw. (/home/runner/workspace/dist/index.cjs:74:4604)
+2026-02-22 02:00:20.02
+22473883
+User
+at /home/runner/workspace/dist/index.cjs:74:13330
+2026-02-22 02:00:20.02
+22473883
+User
+at async n._asyncQuery (/home/runner/workspace/dist/index.cjs:96:7451) {
+2026-02-22 02:00:20.02
+22473883
+User
+Failed to prune sessions: Error: Connection terminated due to connection timeout
+2026-02-22 02:00:20.02
+22473883
+User
+at Socket.emit (node:events:536:35)
+2026-02-22 02:00:20.02
+22473883
+User
+at Socket. (/home/runner/workspace/dist/index.cjs:73:176588)
+2026-02-22 02:00:20.02
+22473883
+User
+}
+2026-02-22 02:00:20.02
+22473883
+User
+at TCP. (node:net:343:12)
+2026-02-22 02:00:20.02
+22473883
+User
+at cw.emit (node:events:524:28)
+2026-02-22 02:00:20.02
+22473883
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2026-02-22 02:00:20.02
+22473883
+User
+at Object.onceWrapper (node:events:638:28)
+2026-02-22 02:00:20.02
+22473883
+User
+[cause]: Error: Connection terminated unexpectedly
+2026-02-22 04:08:14.88
+22473883
+User
+[API] Fetching subscription for user: 54492b85-ffd6-4042-b75a-b05d60a38482
+2026-02-22 10:22:47.57
+22473883
+User
+[API] Fetching subscription for user: 683696ac-35e7-4f42-bcb9-27a8214f68bb
+2026-02-22 10:32:04.63
+22473883
+User
+[API] Fetching subscription for user: 683696ac-35e7-4f42-bcb9-27a8214f68bb
+2026-02-22 15:04:57.19
+22473883
+User
+[API] Fetching subscription for user: 825f4a6e-f950-4c07-a9a9-94ac5a1ff069
+2026-02-22 15:11:00.41
+22473883
+User
+[API] Fetching usage for user: 825f4a6e-f950-4c07-a9a9-94a

@@ -371,7 +371,6 @@ export default function ResumeBuilder() {
         logging: false,
         backgroundColor: "#ffffff",
         width: 816, // Fixed width for 8.5in at 96dpi
-        height: Math.ceil(temporaryContainer.scrollHeight),
         windowWidth: 816,
         onclone: (clonedDoc) => {
           const root = clonedDoc.querySelector('[data-resume-preview-root="true"]') as HTMLElement;
@@ -380,6 +379,11 @@ export default function ResumeBuilder() {
             root.style.minHeight = '1056px';
             root.style.margin = '0';
             root.style.padding = '0';
+          }
+          // Ensure all images are loaded
+          const imgs = clonedDoc.getElementsByTagName('img');
+          for (let i = 0; i < imgs.length; i++) {
+            imgs[i].style.display = 'block';
           }
         }
       });
