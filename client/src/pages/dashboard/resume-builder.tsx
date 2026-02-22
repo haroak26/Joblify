@@ -334,48 +334,42 @@ export default function ResumeBuilder() {
   };
 
   const handleDownloadPDF = async () => {
-    let temporaryContainer: HTMLDivElement | null = null;
     try {
-      const visiblePreview = visiblePreviewRef.current;
       const fallbackPreview = printRef.current;
-      const sourcePreview = visiblePreview || fallbackPreview;
+      const sourcePreview = fallbackPreview;
 
       if (!sourcePreview) {
         throw new Error("Print container not found");
       }
 
-      const sourceWidth = Math.ceil(sourcePreview.getBoundingClientRect().width || sourcePreview.scrollWidth);
+      // Ensure web fonts are ready before capture so text metrics stay aligned.
+      if ("fonts" in document) {
+        await document.fonts.ready;
+      }
 
-      temporaryContainer = document.createElement("div");
-      temporaryContainer.style.position = "fixed";
-      temporaryContainer.style.left = "-99999px";
-      temporaryContainer.style.top = "0";
-      temporaryContainer.style.width = `${sourceWidth}px`;
-      temporaryContainer.style.backgroundColor = "#ffffff";
-      temporaryContainer.style.zIndex = "-1";
-
-      const previewClone = sourcePreview.cloneNode(true) as HTMLDivElement;
-      previewClone.style.width = "100%";
-      previewClone.style.maxWidth = "none";
-      temporaryContainer.appendChild(previewClone);
-      document.body.appendChild(temporaryContainer);
+      const sourceWidth = Math.ceil(sourcePreview.getBoundingClientRect().width || sourcePreview.scrollWidth || 816);
+      const sourceHeight = Math.ceil(sourcePreview.scrollHeight || sourcePreview.getBoundingClientRect().height || 1056);
 
       // Dynamically import html2canvas and jsPDF for client-side PDF generation
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
       // Capture the resume preview at high resolution
-      const canvas = await html2canvas(temporaryContainer, {
+      const canvas = await html2canvas(sourcePreview, {
         scale: 2, // Standardize scale for consistency
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        width: 816, // Fixed width for 8.5in at 96dpi
-        windowWidth: 816,
+        width: sourceWidth,
+        height: sourceHeight,
+        windowWidth: sourceWidth,
+        windowHeight: sourceHeight,
+        scrollX: 0,
+        scrollY: 0,
         onclone: (clonedDoc) => {
           const root = clonedDoc.querySelector('[data-resume-preview-root="true"]') as HTMLElement;
           if (root) {
-            root.style.width = '816px';
+            root.style.width = `${sourceWidth}px`;
             root.style.minHeight = '1056px';
             root.style.margin = '0';
             root.style.padding = '0';
@@ -454,10 +448,6 @@ export default function ResumeBuilder() {
         description: "Failed to download PDF. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      if (temporaryContainer && temporaryContainer.parentNode) {
-        temporaryContainer.parentNode.removeChild(temporaryContainer);
-      }
     }
   };
 
