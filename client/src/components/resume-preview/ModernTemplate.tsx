@@ -19,33 +19,33 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
         </h1>
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
           {personalInfo.email && (
-            <div className="flex items-center gap-1.5 leading-none">
+            <div className="flex items-center gap-1.5 leading-tight">
               <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="inline-block align-middle">{personalInfo.email}</span>
+              <span className="leading-tight">{personalInfo.email}</span>
             </div>
           )}
           {personalInfo.phone && (
-            <div className="flex items-center gap-1.5 leading-none">
+            <div className="flex items-center gap-1.5 leading-tight">
               <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="inline-block align-middle">{personalInfo.phone}</span>
+              <span className="leading-tight">{personalInfo.phone}</span>
             </div>
           )}
           {personalInfo.location && (
-            <div className="flex items-center gap-1.5 leading-none">
+            <div className="flex items-center gap-1.5 leading-tight">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="inline-block align-middle">{personalInfo.location}</span>
+              <span className="leading-tight">{personalInfo.location}</span>
             </div>
           )}
           {personalInfo.linkedin && (
-            <div className="flex items-center gap-1.5 leading-none">
+            <div className="flex items-center gap-1.5 leading-tight">
               <Linkedin className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="break-all inline-block align-middle">{personalInfo.linkedin}</span>
+              <span className="break-all leading-tight">{personalInfo.linkedin}</span>
             </div>
           )}
           {personalInfo.website && (
-            <div className="flex items-center gap-1.5 leading-none">
+            <div className="flex items-center gap-1.5 leading-tight">
               <Globe className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="break-all inline-block align-middle">{personalInfo.website}</span>
+              <span className="break-all leading-tight">{personalInfo.website}</span>
             </div>
           )}
         </div>
