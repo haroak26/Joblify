@@ -11,13 +11,13 @@ const MinimalTemplate = memo(function MinimalTemplate({ data }: MinimalTemplateP
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
-    <div className="p-8 print:p-8 h-full">
+    <div className="p-8 print:p-8 h-full min-h-[1122px] bg-white flex flex-col" data-resume-preview-root="true">
       {/* Header with Name and Contact */}
-      <div className="flex justify-between items-start mb-8 pb-4 border-b-2 border-black" data-section="personal">
+      <div className="flex justify-between items-start mb-10 pb-6 border-b-2 border-black shrink-0" data-section="personal">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight">{personalInfo.name || "Your Name"}</h1>
+          <h1 className="text-4xl font-semibold tracking-tight leading-tight">{personalInfo.name || "Your Name"}</h1>
         </div>
-        <div className="text-right text-sm space-y-1">
+        <div className="text-right text-sm space-y-1.5">
           {personalInfo.email && (
             <div className="flex items-center justify-end gap-1.5 leading-none">
               <Mail className="w-3.5 h-3.5 flex-shrink-0" />

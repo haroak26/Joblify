@@ -11,13 +11,13 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
-    <div className="p-8 print:p-8 font-sans text-black h-full">
+    <div className="p-8 print:p-8 font-sans text-black h-full min-h-[1122px] bg-white flex flex-col" data-resume-preview-root="true">
       {/* Header */}
-      <div className="mb-4" data-section="personal">
-        <h1 className="text-3xl font-semibold mb-2 tracking-tight">
+      <div className="mb-6 shrink-0" data-section="personal">
+        <h1 className="text-3xl font-semibold mb-3 tracking-tight">
           {personalInfo.name || "Your Name"}
         </h1>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
           {personalInfo.email && (
             <div className="flex items-center gap-1.5 leading-none">
               <Mail className="w-3.5 h-3.5 flex-shrink-0" />

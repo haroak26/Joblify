@@ -11,11 +11,11 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
-    <div className="p-8 print:p-8 text-black h-full">
+    <div className="p-8 print:p-8 text-black h-full min-h-[1122px] bg-white flex flex-col" data-resume-preview-root="true">
       {/* Centered Header */}
-      <div className="mb-6 text-center border-b-2 border-black pb-4" data-section="personal">
-        <h1 className="text-3xl font-serif font-semibold mb-3">{personalInfo.name || "Your Name"}</h1>
-        <div className="inline-flex flex-col items-start gap-1 text-sm font-sans text-left">
+      <div className="mb-8 text-center border-b-2 border-black pb-6 shrink-0" data-section="personal">
+        <h1 className="text-3xl font-serif font-semibold mb-4">{personalInfo.name || "Your Name"}</h1>
+        <div className="inline-flex flex-col items-start gap-1.5 text-sm font-sans text-left">
           {personalInfo.email && (
             <div className="flex items-center gap-1.5 leading-none">
               <Mail className="w-3.5 h-3.5 flex-shrink-0" />

@@ -356,28 +356,28 @@ export default function ResumeBuilder() {
 
       // Capture the resume preview at high resolution
       const canvas = await html2canvas(sourcePreview, {
-        scale: 2, // Standardize scale for consistency
+        scale: 2, // High-quality rendering
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        width: sourceWidth,
-        height: sourceHeight,
-        windowWidth: sourceWidth,
-        windowHeight: sourceHeight,
-        scrollX: 0,
-        scrollY: 0,
+        width: 816, // Fixed A4 width at 96 DPI
+        windowWidth: 816, // Ensure font rendering matches fixed width
         onclone: (clonedDoc) => {
           const root = clonedDoc.querySelector('[data-resume-preview-root="true"]') as HTMLElement;
           if (root) {
-            root.style.width = `${sourceWidth}px`;
-            root.style.minHeight = '1056px';
+            root.style.width = '816px';
+            root.style.minHeight = '1122px'; // A4 Height at 96 DPI
             root.style.margin = '0';
             root.style.padding = '0';
+            root.style.display = 'block';
+            root.style.visibility = 'visible';
+            root.style.position = 'relative';
           }
-          // Ensure all images are loaded
-          const imgs = clonedDoc.getElementsByTagName('img');
-          for (let i = 0; i < imgs.length; i++) {
-            imgs[i].style.display = 'block';
+          // Fix for text moving up: ensure line-height and vertical-align are preserved
+          const allElements = clonedDoc.getElementsByTagName('*');
+          for (let i = 0; i < allElements.length; i++) {
+            const el = allElements[i] as HTMLElement;
+            el.style.wordBreak = 'break-word';
           }
         }
       });

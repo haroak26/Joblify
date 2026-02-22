@@ -11,41 +11,41 @@ const AcademicTemplate = memo(function AcademicTemplate({ data }: AcademicTempla
   const { personalInfo, summary, experience, education, skills, certifications, projects, awards, leadership, research, publications } = data;
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-h-[1122px] bg-white items-stretch" data-resume-preview-root="true">
       {/* Left Sidebar - Gray background */}
-      <div className="w-[35%] bg-gray-100 p-6 print:p-6">
-        <div className="mb-6" data-section="personal">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-3 pb-2 border-b border-gray-400">
+      <div className="w-[35%] bg-gray-100 p-8 print:p-8 flex flex-col shrink-0">
+        <div className="mb-8" data-section="personal">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-600 mb-4 pb-2 border-b border-gray-400">
             Contact
           </h2>
-          <div className="space-y-2 text-xs">
+          <div className="space-y-3 text-xs flex-1">
             {personalInfo.email && (
-              <div className="flex items-center gap-2 leading-none">
-                <Mail className="w-3 h-3 flex-shrink-0 text-gray-600" />
+              <div className="flex items-center gap-2 leading-none py-0.5">
+                <Mail className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
                 <span className="break-all">{personalInfo.email}</span>
               </div>
             )}
             {personalInfo.phone && (
-              <div className="flex items-center gap-2 leading-none">
-                <Phone className="w-3 h-3 flex-shrink-0 text-gray-600" />
+              <div className="flex items-center gap-2 leading-none py-0.5">
+                <Phone className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
                 <span>{personalInfo.phone}</span>
               </div>
             )}
             {personalInfo.location && (
-              <div className="flex items-center gap-2 leading-none">
-                <MapPin className="w-3 h-3 flex-shrink-0 text-gray-600" />
+              <div className="flex items-center gap-2 leading-none py-0.5">
+                <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
                 <span>{personalInfo.location}</span>
               </div>
             )}
             {personalInfo.linkedin && (
-              <div className="flex items-center gap-2 leading-none">
-                <Linkedin className="w-3 h-3 flex-shrink-0 text-gray-600" />
+              <div className="flex items-center gap-2 leading-none py-0.5">
+                <Linkedin className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
                 <span className="break-all">{personalInfo.linkedin}</span>
               </div>
             )}
             {personalInfo.website && (
-              <div className="flex items-center gap-2 leading-none">
-                <Globe className="w-3 h-3 flex-shrink-0 text-gray-600" />
+              <div className="flex items-center gap-2 leading-none py-0.5">
+                <Globe className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
                 <span className="break-all">{personalInfo.website}</span>
               </div>
             )}
