@@ -19,33 +19,33 @@ const ModernTemplate = memo(function ModernTemplate({ data }: ModernTemplateProp
         </h1>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
           {personalInfo.email && (
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{personalInfo.email}</span>
+              <span className="leading-none">{personalInfo.email}</span>
             </div>
           )}
           {personalInfo.phone && (
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-center gap-1.5">
               <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{personalInfo.phone}</span>
+              <span className="leading-none">{personalInfo.phone}</span>
             </div>
           )}
           {personalInfo.location && (
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{personalInfo.location}</span>
+              <span className="leading-none">{personalInfo.location}</span>
             </div>
           )}
           {personalInfo.linkedin && (
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-center gap-1.5">
               <Linkedin className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="break-all">{personalInfo.linkedin}</span>
+              <span className="break-all leading-none">{personalInfo.linkedin}</span>
             </div>
           )}
           {personalInfo.website && (
-            <div className="flex items-baseline gap-1.5">
+            <div className="flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="break-all">{personalInfo.website}</span>
+              <span className="break-all leading-none">{personalInfo.website}</span>
             </div>
           )}
         </div>

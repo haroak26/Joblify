@@ -366,13 +366,22 @@ export default function ResumeBuilder() {
 
       // Capture the resume preview at high resolution
       const canvas = await html2canvas(temporaryContainer, {
-        scale: Math.min(3, window.devicePixelRatio * 2),
+        scale: 2, // Standardize scale for consistency
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        width: sourceWidth,
+        width: 816, // Fixed width for 8.5in at 96dpi
         height: Math.ceil(temporaryContainer.scrollHeight),
-        windowWidth: sourceWidth,
+        windowWidth: 816,
+        onclone: (clonedDoc) => {
+          const root = clonedDoc.querySelector('[data-resume-preview-root="true"]') as HTMLElement;
+          if (root) {
+            root.style.width = '816px';
+            root.style.minHeight = '1056px';
+            root.style.margin = '0';
+            root.style.padding = '0';
+          }
+        }
       });
 
       const imgData = canvas.toDataURL("image/png");
