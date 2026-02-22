@@ -66,6 +66,7 @@ import ResumeCompiling from "@/components/ResumeCompiling";
 
 // Loading skeleton
 import { ResumeEditorSkeleton } from "@/components/loading-skeleton";
+import { exportResumeToPdf } from "@/lib/resume-pdf";
 
 type ResumeSection = {
   id: string;
@@ -335,113 +336,23 @@ export default function ResumeBuilder() {
 
   const handleDownloadPDF = async () => {
     try {
-      const fallbackPreview = printRef.current;
-      const sourcePreview = fallbackPreview;
+      const sourcePreview = visiblePreviewRef.current || printRef.current;
 
       if (!sourcePreview) {
-        throw new Error("Print container not found");
-      }
-
-      // Ensure web fonts are ready before capture so text metrics stay aligned.
-      if ("fonts" in document) {
-        await document.fonts.ready;
-      }
-
-      const sourceWidth = Math.ceil(sourcePreview.getBoundingClientRect().width || sourcePreview.scrollWidth || 816);
-      const sourceHeight = Math.ceil(sourcePreview.scrollHeight || sourcePreview.getBoundingClientRect().height || 1056);
-
-      // Dynamically import html2canvas and jsPDF for client-side PDF generation
-      const html2canvas = (await import("html2canvas")).default;
-      const { jsPDF } = await import("jspdf");
-
-      // Capture the resume preview at high resolution
-      const canvas = await html2canvas(sourcePreview, {
-        scale: 2, // High-quality rendering
-        useCORS: true,
-        foreignObjectRendering: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        width: sourceWidth,
-        height: sourceHeight,
-        windowWidth: sourceWidth,
-        windowHeight: sourceHeight,
-        scrollX: 0,
-        scrollY: 0,
-        onclone: (clonedDoc) => {
-          const root = clonedDoc.querySelector('[data-resume-preview-root="true"]') as HTMLElement;
-          if (root) {
-            root.style.width = '816px';
-            root.style.maxWidth = 'none';
-            root.style.minHeight = '1122px'; // A4 Height at 96 DPI
-            root.style.margin = '0';
-            root.style.boxShadow = 'none';
-          }
-
-          const previewWrapper = clonedDoc.querySelector('[data-resume-preview-root="true"]')?.parentElement as HTMLElement | null;
-          if (previewWrapper) {
-            previewWrapper.style.width = '816px';
-            previewWrapper.style.maxWidth = 'none';
-            previewWrapper.style.margin = '0';
-          }
-        }
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdfWidth = 8.5;
-      const pdfHeight = 11;
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "in",
-        format: "letter",
-      });
-
-      // Scale the canvas image to fit the PDF page
-      const canvasAspect = canvas.height / canvas.width;
-
-      let renderWidth = pdfWidth;
-      let renderHeight = pdfWidth * canvasAspect;
-
-      // If content is taller than one page, scale to fit width and add pages
-      if (renderHeight <= pdfHeight) {
-        pdf.addImage(imgData, "PNG", 0, 0, renderWidth, renderHeight);
-      } else {
-        // For multi-page content, split across pages
-        const pageHeightInCanvasPixels = (pdfHeight / pdfWidth) * canvas.width;
-        let yOffset = 0;
-        let pageIndex = 0;
-
-        while (yOffset < canvas.height) {
-          if (pageIndex > 0) {
-            pdf.addPage();
-          }
-
-          // Create a temporary canvas for this page slice
-          const pageCanvas = document.createElement("canvas");
-          pageCanvas.width = canvas.width;
-          const sliceHeight = Math.min(pageHeightInCanvasPixels, canvas.height - yOffset);
-          pageCanvas.height = sliceHeight;
-          const ctx = pageCanvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-            const pageImgData = pageCanvas.toDataURL("image/png");
-            const imgHeight = (sliceHeight / canvas.width) * pdfWidth;
-            pdf.addImage(pageImgData, "PNG", 0, 0, pdfWidth, imgHeight);
-          } else {
-            console.warn("[PDF] Failed to get canvas context for page", pageIndex + 1);
-          }
-
-          yOffset += pageHeightInCanvasPixels;
-          pageIndex++;
-        }
+        throw new Error("Resume preview not found");
       }
 
       const filename = `${resumeData?.personalInfo?.name || resumeTitle}_resume.pdf`
-        .replace(/[^a-z0-9\s-]/gi, '_')
-        .replace(/\s+/g, '_')
-        .replace(/_+/g, '_')
+        .replace(/[^a-z0-9\s-]/gi, "_")
+        .replace(/\s+/g, "_")
+        .replace(/_+/g, "_")
         .toLowerCase();
-      pdf.save(filename);
-      
+
+      await exportResumeToPdf({
+        sourceElement: sourcePreview,
+        fileName: filename,
+      });
+
       toast({
         title: "PDF Downloaded",
         description: "Your resume has been downloaded successfully.",
