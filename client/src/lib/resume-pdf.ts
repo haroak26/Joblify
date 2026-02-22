@@ -88,7 +88,9 @@ export const exportResumeToPdf = async ({
       scale: Math.min(window.devicePixelRatio || 2, 2),
       useCORS: true,
       backgroundColor: "#ffffff",
-      foreignObjectRendering: false,
+      // Use native browser rendering to preserve exact text baseline/alignment in export.
+      // This avoids the vertical text drift users were seeing in downloaded PDFs.
+      foreignObjectRendering: true,
       logging: false,
       width: EXPORT_WIDTH_PX,
       windowWidth: EXPORT_WIDTH_PX,
