@@ -382,39 +382,116 @@ function convertResumeDataToText(resumeData: ResumeData): string {
 }
 
 /**
+ * Extract important keywords from text
+ */
+function extractKeywords(text: string): string[] {
+  const commonKeywords = new Set<string>();
+  const normalizedText = text.toLowerCase();
+  
+  // Technical skills patterns
+  const techPatterns = [
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|Ruby|PHP|Swift|Kotlin|Go|Rust|SQL|NoSQL)\b/gi,
+    /\b(React|Angular|Vue|Node\.js|Express|Django|Flask|Spring|\.NET|ASP\.NET|Laravel|Symfony|Rails|FastAPI)\b/gi,
+    /\b(PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Cassandra|DynamoDB|Oracle|MariaDB)\b/gi,
+    /\b(AWS|Azure|GCP|Docker|Kubernetes|CI\/CD|DevOps|Terraform|Ansible|Jenkins|CircleCI)\b/gi,
+    /\b(Git|Agile|Scrum|Jira|REST API|GraphQL|Microservices|Serverless|TDD|BDD)\b/gi,
+    /\b(HTML5?|CSS3?|Sass|Less|Tailwind|Bootstrap|Material UI|Chakra UI)\b/gi,
+    /\b(Redux|MobX|Zustand|Recoil|React Query|SWR)\b/gi,
+    /\b(Jest|Cypress|Selenium|Puppeteer|Mocha|Chai|Vitest)\b/gi,
+    /\b(Webpack|Vite|Rollup|Parcel|Babel|ESLint|Prettier)\b/gi,
+    /\b(Linux|Unix|Windows|macOS|Android|iOS)\b/gi,
+  ];
+
+  // Soft skills and professional concepts
+  const professionalPatterns = [
+    /\b(leadership|management|communication|collaboration|teamwork|mentoring|coaching)\b/gi,
+    /\b(analytical|problem-solving|critical thinking|strategic|innovation|creativity)\b/gi,
+    /\b(project management|product management|agile methodology|scrum master|kanban)\b/gi,
+    /\b(customer service|client relations|stakeholder management|sales|marketing)\b/gi,
+    /\b(data analysis|machine learning|artificial intelligence|deep learning|data science)\b/gi,
+    /\b(security|cybersecurity|compliance|risk management|quality assurance)\b/gi,
+  ];
+
+  // Extract technical keywords
+  techPatterns.forEach(pattern => {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        // Only add if not already present (case-insensitive check)
+        const exists = Array.from(commonKeywords).some(k => k.toLowerCase() === match.toLowerCase());
+        if (!exists) commonKeywords.add(match);
+      });
+    }
+  });
+
+  // Extract professional concepts
+  professionalPatterns.forEach(pattern => {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        const exists = Array.from(commonKeywords).some(k => k.toLowerCase() === match.toLowerCase());
+        if (!exists) commonKeywords.add(match);
+      });
+    }
+  });
+
+  // Extract action verbs
+  const actionVerbs = text.match(/\b(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved|optimized|built|launched|delivered|coordinated|analyzed|established|drove|executed|facilitated|generated|initiated|mentored|negotiated|organized|planned|resolved|spearheaded|streamlined|supervised|trained|pioneered|transformed|accelerated|maximized|minimized|revitalized)\b/gi);
+  if (actionVerbs) {
+    actionVerbs.forEach(verb => {
+      const exists = Array.from(commonKeywords).some(k => k.toLowerCase() === verb.toLowerCase());
+      if (!exists) commonKeywords.add(verb.toLowerCase());
+    });
+  }
+
+  return Array.from(commonKeywords);
+}
+
+/**
  * Perform real data-driven ATS analysis
  */
 async function performATSAnalysis(resumeText: string, jobDescription: string): Promise<any> {
+  const normalizedResume = resumeText.toLowerCase().replace(/[\s\n\r]+/g, ' ');
+  
   // Extract keywords from job description if provided
   const jobKeywords = jobDescription 
     ? extractKeywords(jobDescription)
     : [];
 
-  // Extract keywords from resume
-  const resumeKeywords = extractKeywords(resumeText);
+  // Identify found and missing keywords with improved matching
+  const foundKeywords: string[] = [];
+  const missingKeywords: string[] = [];
 
-  // Identify found and missing keywords
-  const foundKeywords = jobKeywords.filter(keyword => 
-    resumeText.toLowerCase().includes(keyword.toLowerCase())
-  );
-  
-  const missingKeywords = jobKeywords.filter(keyword => 
-    !resumeText.toLowerCase().includes(keyword.toLowerCase())
-  );
+  jobKeywords.forEach(keyword => {
+    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Match whole words or common variations (e.g., "React" matches "React.js")
+    const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
+    
+    if (regex.test(normalizedResume) || normalizedResume.includes(keyword.toLowerCase())) {
+      foundKeywords.push(keyword);
+    } else {
+      missingKeywords.push(keyword);
+    }
+  });
 
-  // Analyze resume structure
-  const hasContactInfo = /email|phone|linkedin/i.test(resumeText);
-  const hasExperienceSection = /experience|work history|employment/i.test(resumeText);
-  const hasEducationSection = /education|academic|degree/i.test(resumeText);
-  const hasSkillsSection = /skills|competencies|expertise/i.test(resumeText);
-  const hasBulletPoints = /•|·|\*|-\s/.test(resumeText);
-  const hasActionVerbs = /(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved)/i.test(resumeText);
+  // Analyze resume structure with improved detection
+  const hasContactInfo = /email|phone|linkedin|github|address|location|@/i.test(normalizedResume);
+  const hasExperienceSection = /experience|work history|employment|professional background|career/i.test(normalizedResume);
+  const hasEducationSection = /education|academic|degree|university|college|school/i.test(normalizedResume);
+  const hasSkillsSection = /skills|competencies|expertise|technologies|technical proficiencies/i.test(normalizedResume);
+  const hasBulletPoints = /[•·\*■\-\u2022\u2023\u25E6\u2043\u2219]/.test(resumeText);
+  const hasActionVerbs = /(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved|pioneered|transformed|accelerated|maximized|minimized|revitalized)/i.test(normalizedResume);
   
   // Calculate scores for each category
   const formatScore = calculateFormatScore(resumeText);
-  const keywordScore = jobDescription 
-    ? (foundKeywords.length / Math.max(jobKeywords.length, 1)) * 100
-    : calculateGeneralKeywordScore(resumeText);
+  
+  let keywordScore = 0;
+  if (jobDescription && jobKeywords.length > 0) {
+    // Weighted keyword score: focus on technical skills if they are present
+    keywordScore = (foundKeywords.length / jobKeywords.length) * 100;
+  } else {
+    keywordScore = calculateGeneralKeywordScore(resumeText);
+  }
   
   const structureScore = calculateStructureScore({
     hasContactInfo,
@@ -429,40 +506,48 @@ async function performATSAnalysis(resumeText: string, jobDescription: string): P
     wordCount: resumeText.split(/\s+/).length,
   });
 
-  // Calculate overall score
+  // Calculate overall score with adjusted weights
   const overallScore = Math.round(
-    (formatScore * 0.25 + keywordScore * 0.35 + structureScore * 0.25 + contentScore * 0.15)
+    (formatScore * 0.20 + keywordScore * 0.40 + structureScore * 0.20 + contentScore * 0.20)
   );
 
-  // Generate suggestions
+  // Generate intelligent suggestions
   const suggestions: string[] = [];
   
   if (formatScore < 80) {
-    suggestions.push("Use a simple, clean format without tables or complex layouts for better ATS parsing.");
+    suggestions.push("Simplify your resume format. Avoid complex layouts, tables, or excessive graphics which can confuse ATS parsers.");
   }
   
   if (!hasContactInfo) {
-    suggestions.push("Add clear contact information (email, phone, LinkedIn) at the top of your resume.");
+    suggestions.push("Add clear contact information (email, phone, LinkedIn) at the top. Ensure your email is professional.");
+  }
+  
+  if (!hasExperienceSection) {
+    suggestions.push("Clearly label your professional experience section using standard headers like 'Work Experience' or 'Professional Experience'.");
   }
   
   if (!hasSkillsSection) {
-    suggestions.push("Add a dedicated Skills section with relevant keywords from your field.");
+    suggestions.push("Create a dedicated Skills section. This helps both recruiters and ATS systems quickly identify your core proficiencies.");
   }
   
   if (!hasBulletPoints) {
-    suggestions.push("Use bullet points to list achievements and responsibilities for better readability.");
+    suggestions.push("Use standard bullet points to describe your achievements. This significantly improves readability for both humans and machines.");
   }
   
   if (!hasActionVerbs) {
-    suggestions.push("Start bullet points with strong action verbs (e.g., 'Managed', 'Developed', 'Led').");
+    suggestions.push("Start your bullet points with strong action verbs (e.g., 'Spearheaded', 'Optimized', 'Delivered') rather than passive language.");
   }
   
   if (jobDescription && missingKeywords.length > 0) {
-    suggestions.push(`Include more keywords from the job description: ${missingKeywords.slice(0, 5).join(', ')}`);
+    const topMissing = missingKeywords.slice(0, 5);
+    suggestions.push(`Tailor your content by naturally incorporating these key terms from the job description: ${topMissing.join(', ')}.`);
   }
   
-  if (resumeText.split(/\s+/).length < 200) {
-    suggestions.push("Expand your resume with more detailed descriptions of your experience and achievements.");
+  const wordCount = resumeText.split(/\s+/).length;
+  if (wordCount < 300) {
+    suggestions.push("Your resume is quite short. Expand on your accomplishments using the STAR method (Situation, Task, Action, Result) to provide more context.");
+  } else if (wordCount > 1000) {
+    suggestions.push("Your resume is very long. Consider condensing your content to focus on your most relevant and recent achievements.");
   }
 
   // Build category breakdown
@@ -471,88 +556,41 @@ async function performATSAnalysis(resumeText: string, jobDescription: string): P
       name: "Format Compatibility",
       score: formatScore,
       feedback: formatScore >= 80 
-        ? "Your resume format is ATS-friendly" 
-        : "Consider simplifying your resume format for better ATS compatibility",
+        ? "Excellent! Your resume uses a clean, ATS-friendly layout." 
+        : "Warning: Your formatting might be difficult for some ATS systems to parse correctly.",
     },
     {
       name: "Keyword Optimization",
       score: Math.round(keywordScore),
-      feedback: keywordScore >= 80
-        ? "Strong keyword alignment with industry standards"
+      feedback: keywordScore >= 75
+        ? "Great job! Your resume contains a strong set of industry-relevant keywords."
         : jobDescription
-        ? "Add more relevant keywords from the job description"
-        : "Include more industry-specific keywords",
+        ? "Moderate alignment. Try to incorporate more specific terminology from the job posting."
+        : "Improvement needed. Add more industry-specific technical and soft skills.",
     },
     {
       name: "Section Structure",
       score: structureScore,
       feedback: structureScore >= 80
-        ? "Resume has all essential sections"
-        : "Add missing key sections (Experience, Education, Skills)",
+        ? "Your resume is well-organized with all essential sections present."
+        : "Missing sections. Ensure you have clear headers for Experience, Education, and Skills.",
     },
     {
       name: "Content Quality",
       score: contentScore,
       feedback: contentScore >= 80
-        ? "Content is well-formatted with action verbs and achievements"
-        : "Use more bullet points and action verbs to describe achievements",
+        ? "High quality! You use strong action verbs and clear bullet points to highlight achievements."
+        : "Focus on impact. Use more action-oriented language and quantifiable results in your bullet points.",
     },
   ];
 
   return {
     score: overallScore,
-    keywords: foundKeywords.slice(0, 20), // Top 20 found keywords
-    missingKeywords: missingKeywords.slice(0, 10), // Top 10 missing keywords
+    keywords: foundKeywords.slice(0, 20),
+    missingKeywords: missingKeywords.slice(0, 15),
     suggestions,
     categories,
   };
-}
-
-/**
- * Extract important keywords from text
- */
-function extractKeywords(text: string): string[] {
-  // Common technical and professional keywords
-  const commonKeywords = new Set<string>();
-  
-  // Technical skills patterns
-  const techPatterns = [
-    /\b(JavaScript|TypeScript|Python|Java|C\+\+|Ruby|PHP|Swift|Kotlin|Go|Rust)\b/gi,
-    /\b(React|Angular|Vue|Node\.js|Express|Django|Flask|Spring|\.NET)\b/gi,
-    /\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch)\b/gi,
-    /\b(AWS|Azure|GCP|Docker|Kubernetes|CI\/CD|DevOps)\b/gi,
-    /\b(Git|Agile|Scrum|Jira|REST API|GraphQL)\b/gi,
-  ];
-
-  // Soft skills patterns
-  const softSkillPatterns = [
-    /\b(leadership|management|communication|collaboration|teamwork)\b/gi,
-    /\b(analytical|problem-solving|critical thinking|strategic)\b/gi,
-  ];
-
-  // Extract technical keywords
-  techPatterns.forEach(pattern => {
-    const matches = text.match(pattern);
-    if (matches) {
-      matches.forEach(match => commonKeywords.add(match));
-    }
-  });
-
-  // Extract soft skills
-  softSkillPatterns.forEach(pattern => {
-    const matches = text.match(pattern);
-    if (matches) {
-      matches.forEach(match => commonKeywords.add(match.toLowerCase()));
-    }
-  });
-
-  // Extract action verbs
-  const actionVerbs = text.match(/\b(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved|optimized|built|launched|delivered|coordinated|analyzed|established|drove|executed|facilitated|generated|initiated|mentored|negotiated|organized|planned|resolved|spearheaded|streamlined|supervised|trained)\b/gi);
-  if (actionVerbs) {
-    actionVerbs.forEach(verb => commonKeywords.add(verb.toLowerCase()));
-  }
-
-  return Array.from(commonKeywords);
 }
 
 /**
