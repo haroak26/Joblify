@@ -283,7 +283,7 @@ export default function ResumeBuilder() {
     },
   });
 
-  // Auto-save every 30 seconds if there are unsaved changes
+  // Auto-save every 5 seconds if there are unsaved changes
   useEffect(() => {
     if (!hasUnsavedChanges || !resumeData) return;
     
@@ -294,7 +294,7 @@ export default function ResumeBuilder() {
         resumeData,
         template: selectedTemplate,
       });
-    }, 30000); // 30 seconds
+    }, 5000); // 5 seconds
 
     return () => clearTimeout(autoSaveTimer);
   }, [hasUnsavedChanges, resumeData, resumeTitle, selectedTemplate]);
@@ -575,6 +575,22 @@ export default function ResumeBuilder() {
     experience: "Reuse quantifiable impact bullets from your original experience.",
     education: "Cross-check school names, majors, and dates.",
     skills: "Pull exact keywords and tools from your uploaded resume.",
+  };
+
+  const handleTemplateChange = (template: string) => {
+    if (!resumeData) return;
+    
+    // Immediate save before switching to prevent data loss
+    setIsSaving(true);
+    saveResumeMutation.mutate({
+      title: resumeTitle,
+      resumeData,
+      template: template,
+    }, {
+      onSuccess: () => {
+        setSelectedTemplate(template);
+      }
+    });
   };
 
   const renderPreviewPane = () => (
