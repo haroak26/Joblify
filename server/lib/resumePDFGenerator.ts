@@ -155,7 +155,7 @@ export class ResumePDFGenerator {
           align: 'center',
           width: this.contentWidth,
         });
-      this.currentY += 35;
+      this.currentY = this.doc.y + 10;
     }
 
     // Contact info - Small, centered, one line
@@ -165,11 +165,11 @@ export class ResumePDFGenerator {
         .font('Helvetica')
         .fontSize(10)
         .fillColor(this.colors.lightGray)
-        .text(contactParts.join(' • '), this.pageMargin, this.currentY, {
+        .text(contactParts.join('  •  '), this.pageMargin, this.currentY, {
           align: 'center',
           width: this.contentWidth,
         });
-      this.currentY += 25;
+      this.currentY = this.doc.y + 15;
     }
 
     // Horizontal line separator
@@ -337,19 +337,48 @@ export class ResumePDFGenerator {
   private generateSkills(skills: string[]): void {
     this.addSectionHeader('SKILLS');
 
-    // Join skills with bullets for clean, ATS-friendly format
-    const skillsText = skills.join(' • ');
+    const skillPadding = 8;
+    const skillMargin = 6;
+    const fontSize = 10;
+    let startX = this.pageMargin;
     
-    this.doc
-      .font('Helvetica')
-      .fontSize(10)
-      .fillColor(this.colors.text)
-      .text(skillsText, this.pageMargin, this.currentY, {
-        width: this.contentWidth,
-        lineGap: 2,
-      });
+    this.doc.font('Helvetica').fontSize(fontSize);
 
-    this.currentY = this.doc.y + 15;
+    skills.forEach((skill) => {
+      const textWidth = this.doc.widthOfString(skill);
+      const boxWidth = textWidth + (skillPadding * 2);
+      const boxHeight = fontSize + (skillPadding);
+
+      // Wrap to next line if needed
+      if (startX + boxWidth > this.pageMargin + this.contentWidth) {
+        startX = this.pageMargin;
+        this.currentY += boxHeight + skillMargin;
+      }
+
+      // Check for page break
+      if (this.currentY > 750) {
+        this.doc.addPage();
+        this.currentY = this.pageMargin;
+        startX = this.pageMargin;
+      }
+
+      // Draw background box (light gray)
+      this.doc
+        .roundedRect(startX, this.currentY, boxWidth, boxHeight, 4)
+        .fillAndStroke('#f3f4f6', '#e5e7eb');
+
+      // Draw text
+      this.doc
+        .fillColor(this.colors.text)
+        .text(skill, startX + skillPadding, this.currentY + (skillPadding / 2), {
+          width: textWidth,
+          align: 'center'
+        });
+
+      startX += boxWidth + skillMargin;
+    });
+
+    this.currentY = this.doc.y + 25;
   }
 
   /**
