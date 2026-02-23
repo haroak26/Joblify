@@ -20,7 +20,8 @@ interface AIResumeChatProps {
   selectedComponents?: string[];
   onEditComponents?: () => void;
   onAutoSave?: () => void;
-  mode?: "builder" | "enhancement"; // New prop to distinguish between modes
+  mode?: "builder" | "enhancement" | "tailor";
+  tailoringJobDescription?: string;
 }
 
 interface ChatMessage {
@@ -32,6 +33,7 @@ interface ChatMessage {
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_MESSAGES = 10;
 const ENHANCEMENT_WELCOME_MESSAGE = "I'm your AI assistant ready to help improve and polish your existing resume. You can ask me to refine any section, suggest improvements, or enhance specific parts of your content. What would you like to work on?";
+const TAILOR_WELCOME_MESSAGE = "I'm your AI Tailor assistant. I'll optimize each section for your target role while keeping your real experience intact and sounding natural.";
 
 const COMPONENT_LABELS: Record<string, string> = {
   personal: "Personal Info",
@@ -75,6 +77,7 @@ export default function AIResumeChat({
   onEditComponents,
   onAutoSave,
   mode = "enhancement", // Default to enhancement mode
+  tailoringJobDescription,
 }: AIResumeChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -99,7 +102,8 @@ export default function AIResumeChat({
   });
   const userPlan = subscriptionData?.subscription?.plan || "free";
   const isFreePlan = userPlan === "free";
-  const isGuidedBuilder = mode === "builder" || (activeComponents.length > 0 && !focusedComponent);
+  const isTailorMode = mode === "tailor";
+  const isGuidedBuilder = mode === "builder" || (activeComponents.length > 0 && !focusedComponent && !isTailorMode);
 
   // Save a single message to the database live (mode-specific)
   const saveMessageToDb = useCallback(async (role: "user" | "ai", content: string) => {
@@ -228,13 +232,15 @@ export default function AIResumeChat({
       ? `Welcome ${firstName}! I'm here to help you polish and improve your ${COMPONENT_LABELS[focusedComponent] || focusedComponent}. Let me know what changes you'd like to make, or I can suggest improvements!`
       : mode === "builder"
       ? `Hey ${firstName}! 👋 I'm your **AI Resume Builder**. I'll help you build your resume section by section through conversation. We'll start with your **${COMPONENT_LABELS[firstSection] || firstSection}**.\n\n${firstQuestion}`
+      : isTailorMode
+      ? `Welcome ${firstName}! I'm your **AI Tailor** assistant. ${TAILOR_WELCOME_MESSAGE}${tailoringJobDescription ? `\n\nTarget role context: ${tailoringJobDescription.slice(0, 240)}...` : ""}`
       : `Welcome ${firstName}! I'm your **AI Enhancement** assistant. ${ENHANCEMENT_WELCOME_MESSAGE}`;
     
     const greetingMsg: ChatMessage = { role: "ai", content: greeting, id: `greeting-${Date.now()}` };
     setMessages([greetingMsg]);
     // Save greeting to DB
     saveMessageToDb("ai", greeting);
-  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, onAutoSave, saveMessageToDb, activeComponents]);
+  }, [isLoadingConversation, messages.length, resumeData, user, focusedComponent, mode, onUpdate, onAutoSave, saveMessageToDb, activeComponents, isTailorMode, tailoringJobDescription]);
 
   // Core function to send a message to AI (used by both handleSendMessage and handleRewrite)
   const sendMessageToAI = useCallback(async (messageText: string) => {
@@ -278,6 +284,7 @@ export default function AIResumeChat({
             role: m.role,
             content: m.content,
           })),
+          tailoringJobDescription: isTailorMode ? tailoringJobDescription : undefined,
         }),
         credentials: "include",
         signal: controller.signal,
@@ -403,7 +410,7 @@ export default function AIResumeChat({
       setIsStreaming(false);
       abortControllerRef.current = null;
     }
-  }, [isStreaming, resumeId, editingSection, activeComponents, resumeData, messages, hasInteracted, onUpdate, onAutoSave, onComplete, toast, saveMessageToDb]);
+  }, [isStreaming, resumeId, editingSection, activeComponents, resumeData, messages, hasInteracted, onUpdate, onAutoSave, onComplete, toast, saveMessageToDb, isTailorMode, tailoringJobDescription]);
 
   // Wrapper function for user input from text field
   const handleSendMessage = useCallback(async () => {
@@ -538,7 +545,7 @@ export default function AIResumeChat({
             </div>
             <div>
               <h3 className="font-semibold">
-                {isGuidedBuilder ? "AI Resume Builder" : "AI Resume Enhancement"}
+                {isTailorMode ? "AI Resume Tailor" : isGuidedBuilder ? "AI Resume Builder" : "AI Resume Enhancement"}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {editingSection && isGuidedBuilder
@@ -547,6 +554,8 @@ export default function AIResumeChat({
                   ? `Editing: ${COMPONENT_LABELS[editingSection] || editingSection}` 
                   : isGuidedBuilder
                   ? "Building your resume step-by-step"
+                  : isTailorMode
+                  ? "Tailor each section to your target job"
                   : "Polish and improve your resume"}
               </p>
             </div>

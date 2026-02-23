@@ -96,13 +96,15 @@ export default function ResumeBuilder() {
   const [, params] = useRoute("/dashboard/resume-builder/:id");
   const resumeId = params?.id;
   const search = useSearch();
+  const searchParams = new URLSearchParams(search);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   
   // Check if AI mode is enabled via query parameter
-  const isAIMode = search.includes("mode=ai");
-  const isCompiling = search.includes("compiling=true");
+  const isAIMode = searchParams.get("mode") === "ai";
+  const isCompiling = searchParams.get("compiling") === "true";
+  const requestedAIMode = searchParams.get("aiMode");
   
   const [activeSection, setActiveSection] = useState<string>("personal");
   const [resumeTitle, setResumeTitle] = useState<string>("");
@@ -114,7 +116,8 @@ export default function ResumeBuilder() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [userDataPrefilled, setUserDataPrefilled] = useState(false);
   const [aiEditingComponent, setAiEditingComponent] = useState<string | undefined>(undefined);
-  const [aiMode, setAiMode] = useState<"enhancement" | "builder">("enhancement"); // Track which AI mode is active
+  const [aiMode, setAiMode] = useState<"enhancement" | "builder" | "tailor">("enhancement"); // Track which AI mode is active
+  const [tailorJobDescription, setTailorJobDescription] = useState<string>("");
   const [showComponentSelector, setShowComponentSelector] = useState(false);
   const [hasShownAISelector, setHasShownAISelector] = useState(false);
   const [selectedComponents, setSelectedComponents] = useState<string[]>(
@@ -146,6 +149,26 @@ export default function ResumeBuilder() {
     }
   }, [resume]);
   
+
+  useEffect(() => {
+    if (!isAIMode) return;
+
+    if (requestedAIMode === "tailor") {
+      setAiMode("tailor");
+      setActiveSection("ai-chat");
+      if (resumeId) {
+        const storedDescription = sessionStorage.getItem(`joblify:tailor:${resumeId}`) || "";
+        setTailorJobDescription(storedDescription);
+      }
+      return;
+    }
+
+    if (requestedAIMode === "builder") {
+      setAiMode("builder");
+      setActiveSection("ai-chat");
+    }
+  }, [isAIMode, requestedAIMode, resumeId]);
+
   // Fetch user subscription for plan-based restrictions
   const { data: subscriptionData } = useQuery<{ subscription: { plan: string } }>({
     queryKey: ["/api/subscription"],
@@ -792,7 +815,8 @@ export default function ResumeBuilder() {
                   selectedComponents={selectedComponents}
                   onEditComponents={handleEditComponents}
                   onAutoSave={handleSave}
-                  mode="builder"
+                  mode={aiMode === "tailor" ? "tailor" : "builder"}
+                  tailoringJobDescription={aiMode === "tailor" ? tailorJobDescription : undefined}
                 />
               </div>
               {/* Preview in AI mode - hidden on mobile, shown from tablet landscape and up */}
@@ -811,6 +835,7 @@ export default function ResumeBuilder() {
                     focusedComponent={aiEditingComponent}
                     selectedComponents={aiMode === "builder" ? incompleteBuilderSections : []}
                     mode={aiMode}
+                    tailoringJobDescription={aiMode === "tailor" ? tailorJobDescription : undefined}
                     onAutoSave={handleSave}
                   />
                 ) : ActiveSectionComponent ? (
