@@ -1,67 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://joblify.com/</loc>
+    <loc>https://joblifyai.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://joblify.com/pricing</loc>
+    <loc>https://joblifyai.com/pricing</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://joblify.com/about</loc>
+    <loc>https://joblifyai.com/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://joblify.com/students</loc>
+    <loc>https://joblifyai.com/students</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://joblify.com/why-us</loc>
+    <loc>https://joblifyai.com/why-us</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://joblify.com/features/ats-scanner</loc>
+    <loc>https://joblifyai.com/features/ats-scanner</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://joblify.com/features/cover-letter</loc>
+    <loc>https://joblifyai.com/features/cover-letter</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://joblify.com/blog</loc>
+    <loc>https://joblifyai.com/blog</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://joblify.com/contact</loc>
+    <loc>https://joblifyai.com/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://joblify.com/login</loc>
+    <loc>https://joblifyai.com/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://joblify.com/register</loc>
+    <loc>https://joblifyai.com/register</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://joblify.com/privacy-policy</loc>
+    <loc>https://joblifyai.com/privacy-policy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://joblify.com/terms-and-conditions</loc>
+    <loc>https://joblifyai.com/terms-and-conditions</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
