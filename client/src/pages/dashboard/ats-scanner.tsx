@@ -122,12 +122,6 @@ export default function AtsScanner() {
     return "text-red-600";
   };
 
-  const getScoreBgColor = (score: number) => {
-    if (score >= 80) return "bg-green-50 border-green-200";
-    if (score >= 60) return "bg-yellow-50 border-yellow-200";
-    return "bg-red-50 border-red-200";
-  };
-
   const getScoreLabel = (score: number) => {
     if (score >= 90) return "Excellent – Highly ATS Optimized";
     if (score >= 80) return "Very Good – ATS Friendly";
@@ -139,9 +133,9 @@ export default function AtsScanner() {
 
   const getCategoryScore = (category: any) => {
     const score = category?.score || 0;
-    if (score >= 80) return { color: "text-green-600", bg: "bg-green-100", icon: CheckCircle };
-    if (score >= 60) return { color: "text-yellow-600", bg: "bg-yellow-100", icon: AlertCircle };
-    return { color: "text-red-600", bg: "bg-red-100", icon: XCircle };
+    if (score >= 80) return { color: "text-foreground", status: "Strong", icon: CheckCircle };
+    if (score >= 60) return { color: "text-foreground", status: "Moderate", icon: AlertCircle };
+    return { color: "text-foreground", status: "Needs Work", icon: XCircle };
   };
 
   const isScanning = scanJoblifyResumeMutation.isPending || scanMutation.isPending;
@@ -318,11 +312,11 @@ export default function AtsScanner() {
       {result && (
         <div className="space-y-6">
           {/* Overall Score Card */}
-          <Card className={`border ${getScoreBgColor(result.score)}`}>
+          <Card className="border-border">
             <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="flex flex-col md:flex-row items-start gap-8">
                 <div className="text-center">
-                  <div className={`text-7xl font-bold ${getScoreColor(result.score)}`}>
+                  <div className={`text-7xl font-bold tracking-tight ${getScoreColor(result.score)}`}>
                     {result.score}
                   </div>
                   <p className="text-small text-muted-foreground mt-1">out of 100</p>
@@ -330,7 +324,7 @@ export default function AtsScanner() {
                 <div className="flex-1 space-y-3">
                   <h3 className="text-large font-medium">{getScoreLabel(result.score)}</h3>
                   <Progress value={result.score} className="h-3" />
-                  <div className="grid grid-cols-3 gap-4 text-center text-small">
+                  <div className="grid grid-cols-3 gap-4 text-center text-small border border-border rounded-md p-3">
                     <div>
                       <div className="font-medium text-green-600">{result.keywords?.length || 0}</div>
                       <div className="text-muted-foreground">Keywords Found</div>
@@ -372,7 +366,10 @@ export default function AtsScanner() {
                           <Icon className={`w-4 h-4 ${style.color}`} />
                           <span className="font-medium text-small">{cat.name}</span>
                         </div>
-                        <span className={`font-medium text-small ${style.color}`}>{cat.score}/100</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[11px]">{style.status}</Badge>
+                          <span className={`font-medium text-small ${style.color}`}>{cat.score}/100</span>
+                        </div>
                       </div>
                       <Progress value={cat.score} className="h-2" />
                       {cat.feedback && (
@@ -402,7 +399,7 @@ export default function AtsScanner() {
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {result.keywords.map((keyword: string, i: number) => (
-                      <Badge key={i} variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Badge key={i} variant="outline" className="border-border">
                         {keyword}
                       </Badge>
                     ))}
@@ -425,7 +422,7 @@ export default function AtsScanner() {
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {result.missingKeywords.map((keyword: string, i: number) => (
-                      <Badge key={i} variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                      <Badge key={i} variant="outline" className="border-border">
                         + {keyword}
                       </Badge>
                     ))}
@@ -450,8 +447,8 @@ export default function AtsScanner() {
               <CardContent>
                 <div className="space-y-3">
                   {result.suggestions.map((suggestion: string, i: number) => (
-                    <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 mt-0.5 text-small font-medium">
+                    <div key={i} className="flex items-start gap-3 p-3 rounded-md border border-border">
+                      <div className="w-6 h-6 rounded-sm bg-muted text-foreground flex items-center justify-center flex-shrink-0 mt-0.5 text-small font-medium">
                         {i + 1}
                       </div>
                       <p className="flex-1 text-small">{suggestion}</p>
@@ -463,7 +460,7 @@ export default function AtsScanner() {
           )}
 
           {/* Quick Tips */}
-          <Card className="bg-primary/5 border-primary/20">
+          <Card className="border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-body flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />

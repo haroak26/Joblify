@@ -452,7 +452,15 @@ function extractKeywords(text: string): string[] {
 /**
  * Perform real data-driven ATS analysis
  */
-async function performATSAnalysis(resumeText: string, jobDescription: string): Promise<any> {
+type ATSStructuredSignals = {
+  hasContactInfo?: boolean;
+  hasExperienceSection?: boolean;
+  hasEducationSection?: boolean;
+  hasSkillsSection?: boolean;
+  hasBulletPoints?: boolean;
+};
+
+async function performATSAnalysis(resumeText: string, jobDescription: string, structuredSignals?: ATSStructuredSignals): Promise<any> {
   const normalizedResume = resumeText.toLowerCase().replace(/[\s\n\r]+/g, ' ');
   
   // Extract keywords from job description if provided
@@ -477,11 +485,11 @@ async function performATSAnalysis(resumeText: string, jobDescription: string): P
   });
 
   // Analyze resume structure with improved detection
-  const hasContactInfo = /email|phone|linkedin|github|address|location|@/i.test(normalizedResume);
-  const hasExperienceSection = /experience|work history|employment|professional background|career/i.test(normalizedResume);
-  const hasEducationSection = /education|academic|degree|university|college|school/i.test(normalizedResume);
-  const hasSkillsSection = /skills|competencies|expertise|technologies|technical proficiencies/i.test(normalizedResume);
-  const hasBulletPoints = /[•·\*■\-\u2022\u2023\u25E6\u2043\u2219]/.test(resumeText);
+  const hasContactInfo = structuredSignals?.hasContactInfo ?? /email|phone|linkedin|github|address|location|@/i.test(normalizedResume);
+  const hasExperienceSection = structuredSignals?.hasExperienceSection ?? /experience|work history|employment|professional background|career/i.test(normalizedResume);
+  const hasEducationSection = structuredSignals?.hasEducationSection ?? /education|academic|degree|university|college|school/i.test(normalizedResume);
+  const hasSkillsSection = structuredSignals?.hasSkillsSection ?? /skills|competencies|expertise|technologies|technical proficiencies/i.test(normalizedResume);
+  const hasBulletPoints = structuredSignals?.hasBulletPoints ?? /[•·\*■\-\u2022\u2023\u25E6\u2043\u2219]/.test(resumeText);
   const hasActionVerbs = /(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved|pioneered|transformed|accelerated|maximized|minimized|revitalized)/i.test(normalizedResume);
   
   // Calculate scores for each category
@@ -918,7 +926,8 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Resume not found" });
       }
 
-      const resumeText = convertResumeDataToText(getNormalizedResumeData(resume.resumeData));
+      const normalizedResumeData = getNormalizedResumeData(resume.resumeData);
+      const resumeText = convertResumeDataToText(normalizedResumeData);
 
       const toneInstructions = {
         professional: "Write in a formal, business-appropriate tone. Be confident but not overly enthusiastic.",
@@ -1977,6 +1986,8 @@ Rules:
 - Preserve factual integrity; do not invent employers, dates, credentials, or outcomes.
 - Keep edits ATS-friendly and keyword-relevant.
 - Prioritize summary, skills, and bullet phrasing to match role requirements.
+- Keep writing natural and human, professional but not stiff.
+- Avoid AI-sounding phrases, empty buzzwords, and repetitive wording.
 - Keep structure valid for our resume schema.`,
           },
           {
@@ -2088,7 +2099,7 @@ Rules:
       }
 
       const rawMode = typeof req.body?.mode === "string" ? req.body.mode : "builder";
-      const requestedMode = rawMode === "enhancement" ? "enhancement" : "builder";
+      const requestedMode = ["builder", "enhancement", "tailor"].includes(rawMode) ? rawMode as "builder" | "enhancement" | "tailor" : "builder";
 
       // Check AI edit usage limits
       const aiUsage = await storage.checkAndResetMonthlyUsage(userId);
@@ -2150,10 +2161,11 @@ Rules:
         })).optional(),
         selectedComponents: z.array(z.string()).optional(),
         focusedComponent: z.string().optional(),
-        mode: z.enum(["builder", "enhancement"]).optional().default("builder"),
+        mode: z.enum(["builder", "enhancement", "tailor"]).optional().default("builder"),
+        tailoringJobDescription: z.string().max(12000).optional(),
       });
 
-      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent, mode: chatMode } = chatSchema.parse({ ...req.body, mode: requestedMode });
+      const { message, currentData: clientData, conversationHistory = [], selectedComponents = [], focusedComponent, mode: chatMode, tailoringJobDescription } = chatSchema.parse({ ...req.body, mode: requestedMode });
 
       // Sanitize inputs by limiting size and truncating if needed
       const sanitizedMessage = message.slice(0, 1000); // Limit message to 1000 chars
@@ -2221,6 +2233,22 @@ You are helping with **AI Resume Enhancement** for an existing resume.
 - If the user asks for a rewrite (for example, "make this sound more human"), ask 1-2 clarifying questions first, then provide an improved draft.
 - If you say you will ask questions, ask them immediately in the same reply.
 - Only update the section currently being edited when focusedComponent is provided.
+- Keep updatedData cumulative and include unchanged existing sections as-is.
+`;
+
+      const tailorInstructions = `
+You are helping with **AI Resume Tailor** mode for an existing Joblify resume.
+
+TARGET JOB DESCRIPTION:
+${(tailoringJobDescription || "").slice(0, 12000) || "Not provided"}
+
+**CRITICAL TAILOR RULES:**
+- Tailor each section so it aligns to the target job description and remains truthful.
+- Preserve factual integrity; do not invent companies, titles, dates, credentials, or metrics.
+- Rewrite to sound polished, confident, and human, never generic or robotic.
+- Keep wording professional but conversational: avoid stiff corporate jargon and AI-sounding cliches.
+- Prioritize role alignment in summary, experience bullets, and skills keywords.
+- When the user asks for section edits, return concrete rewritten lines or bullets in that section immediately.
 - Keep updatedData cumulative and include unchanged existing sections as-is.
 `;
 
@@ -2337,7 +2365,13 @@ Step 2: "What were they about and where were they published?"
 Set isComplete to true when ALL selected sections (${activeSections.join(', ')}) have meaningful data in updatedData.
 `;
 
-      const systemPrompt = `${chatMode === "enhancement" ? enhancementInstructions : builderInstructions}
+      const selectedModeInstructions = chatMode === "tailor"
+        ? tailorInstructions
+        : chatMode === "enhancement"
+        ? enhancementInstructions
+        : builderInstructions;
+
+      const systemPrompt = `${selectedModeInstructions}
 
 ${baseStyleRules}
 
@@ -2614,13 +2648,13 @@ Respond ONLY with valid JSON (no text before or after):
     }
   });
 
-  // Get saved conversation for a resume (supports mode query param: "builder" or "enhancement")
+  // Get saved conversation for a resume (supports mode query param: "builder", "enhancement", or "tailor")
   app.get("/api/resumes/:id/conversation", requireAuth, async (req: Request, res) => {
     try {
       const userId = req.session.userId!;
       const { id } = req.params;
       const rawMode = (req.query.mode as string) || "builder";
-      const chatMode = ["builder", "enhancement"].includes(rawMode) ? rawMode : "builder";
+      const chatMode = ["builder", "enhancement", "tailor"].includes(rawMode) ? rawMode : "builder";
 
       if (!id || Array.isArray(id)) {
         return res.status(400).json({ error: "Resume ID is required" });
@@ -2661,7 +2695,8 @@ Respond ONLY with valid JSON (no text before or after):
       const messageSchema = z.object({
         role: z.enum(["user", "ai"]),
         content: z.string().min(1),
-        mode: z.enum(["builder", "enhancement"]).optional().default("builder"),
+        mode: z.enum(["builder", "enhancement", "tailor"]).optional().default("builder"),
+        tailoringJobDescription: z.string().max(12000).optional(),
       });
 
       const { role, content, mode: chatMode } = messageSchema.parse(req.body);
@@ -3043,13 +3078,28 @@ Respond ONLY with valid JSON (no text before or after):
       }
 
       // Convert resume data to text
-      const resumeText = convertResumeDataToText(getNormalizedResumeData(resume.resumeData));
+      const normalizedResumeData = getNormalizedResumeData(resume.resumeData);
+      const resumeText = convertResumeDataToText(normalizedResumeData);
 
       // Get job description from request if provided
       const { jobDescription = "" } = jobDescriptionSchema.parse(req.body || {});
 
       // Perform ATS analysis
-      const analysis = await performATSAnalysis(resumeText, jobDescription);
+      const structuredSignals: ATSStructuredSignals = {
+        hasContactInfo: Boolean(
+          normalizedResumeData.personalInfo?.email ||
+          normalizedResumeData.personalInfo?.phone ||
+          normalizedResumeData.personalInfo?.location ||
+          normalizedResumeData.personalInfo?.linkedIn ||
+          normalizedResumeData.personalInfo?.github
+        ),
+        hasExperienceSection: Boolean(normalizedResumeData.experience?.length),
+        hasEducationSection: Boolean(normalizedResumeData.education?.length),
+        hasSkillsSection: Boolean(normalizedResumeData.skills?.length),
+        hasBulletPoints: (normalizedResumeData.experience || []).some((exp) => Array.isArray(exp.description) && exp.description.some((line) => typeof line === "string" && line.trim().length > 0)),
+      };
+
+      const analysis = await performATSAnalysis(resumeText, jobDescription, structuredSignals);
 
       // Update usage counter atomically
       await db
@@ -3597,7 +3647,8 @@ Guidelines:
         });
       }
 
-      const resumeText = convertResumeDataToText(getNormalizedResumeData(resume.resumeData));
+      const normalizedResumeData = getNormalizedResumeData(resume.resumeData);
+      const resumeText = convertResumeDataToText(normalizedResumeData);
       const poe = getPoeClient();
 
       const analysis = await Promise.all(allJobDescriptions.map(async (jobDescription) => {
