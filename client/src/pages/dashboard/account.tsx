@@ -135,10 +135,10 @@ const plans = [
     billingSuffix: "",
     features: [
       `${freeLimits.maxResumes} resume`,
-      `${freeLimits.maxAIEditsPerMonth} AI edits/mo`,
-      `${freeLimits.maxAIBuilderActionsPerMonth} AI builder actions/mo`,
-      `${freeLimits.maxATSScansPerMonth} ATS scans/mo`,
-      `${freeLimits.maxCoverLettersPerMonth} cover letters/mo`
+      `${freeLimits.maxJobImportsPerMonth} downloads/mo`,
+      `${freeLimits.maxATSScansPerMonth} ATS scan/mo`,
+      "All resume sections",
+      "No AI features"
     ],
     limits: { skills: freeLimits.maxSkills, jobs: freeLimits.maxJobImportsPerMonth },
   },
@@ -150,10 +150,11 @@ const plans = [
     billingSuffix: "/mo",
     features: [
       `${studentLimits.maxResumes} resumes`,
-      `${studentLimits.maxAIEditsPerMonth} AI edits/mo`,
-      `${studentLimits.maxAIBuilderActionsPerMonth} AI builder actions/mo`,
-      `Unlimited ATS scans`,
-      `${studentLimits.maxCoverLettersPerMonth} cover letters/mo`
+      "Unlimited downloads",
+      `${studentLimits.maxATSScansPerMonth} ATS scans/mo`,
+      `${studentLimits.maxCoverLettersPerMonth} cover letters/mo`,
+      `${studentLimits.maxResumeReviewsPerMonth} resume reviews/mo`,
+      `${studentLimits.maxAIBuilderActionsPerMonth} resume tailors/mo`
     ],
     limits: { skills: studentLimits.maxSkills, jobs: studentLimits.maxJobImportsPerMonth },
     popular: true,
@@ -166,11 +167,13 @@ const plans = [
     billingSuffix: "/mo",
     features: [
       `${plusLimits.maxResumes} resumes`,
-      `${plusLimits.maxAIEditsPerMonth} AI edits/mo`,
-      `${plusLimits.maxAIBuilderActionsPerMonth} AI builder actions/mo`,
-      `${plusLimits.maxATSScansPerMonth} ATS scans/mo`,
-      `${plusLimits.maxCoverLettersPerMonth} cover letters/mo`
+      "Unlimited downloads",
+      "Unlimited ATS scans",
+      `${plusLimits.maxCoverLettersPerMonth} cover letters/mo`,
+      `${plusLimits.maxResumeReviewsPerMonth} resume reviews/mo`,
+      `${plusLimits.maxAIBuilderActionsPerMonth} resume tailors/mo`
     ],
+    trialLabel: "2 days free",
     limits: { skills: -1, jobs: plusLimits.maxJobImportsPerMonth },
   },
   {
@@ -181,11 +184,13 @@ const plans = [
     billingSuffix: "/mo",
     features: [
       `${formatLimitValue(ultraLimits.maxResumes)} resumes`,
-      `${formatLimitValue(ultraLimits.maxAIEditsPerMonth)} AI edits`,
-      `${formatLimitValue(ultraLimits.maxAIBuilderActionsPerMonth)} AI builder actions`,
-      `${formatLimitValue(ultraLimits.maxATSScansPerMonth)} ATS scans`,
-      `${formatLimitValue(ultraLimits.maxCoverLettersPerMonth)} cover letters`
+      "Unlimited downloads",
+      "Unlimited ATS scans",
+      `${formatLimitValue(ultraLimits.maxCoverLettersPerMonth)} cover letters/mo`,
+      `${formatLimitValue(ultraLimits.maxResumeReviewsPerMonth)} resume reviews/mo`,
+      `${formatLimitValue(ultraLimits.maxAIBuilderActionsPerMonth)} resume tailors/mo`
     ],
+    trialLabel: "2 days free",
     limits: { skills: -1, jobs: -1 },
   },
 ];
@@ -734,6 +739,9 @@ export default function Account() {
                         {plan.popular && (
                           <Badge variant="outline" className="text-xs">Popular</Badge>
                         )}
+                        {plan.trialLabel && (
+                          <Badge className="text-xs">{plan.trialLabel}</Badge>
+                        )}
                       </div>
 
                       <ul className="space-y-2 text-sm text-muted-foreground">
@@ -757,7 +765,7 @@ export default function Account() {
                           }
                         >
                           {isPlanActionPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                          {isDowngradeAction ? "Downgrade" : "Upgrade"}
+                          {isDowngradeAction ? "Downgrade" : plan.trialLabel ? `Start ${plan.trialLabel}` : "Upgrade"}
                         </Button>
                       ) : (
                         <div className="h-9" />
@@ -894,7 +902,7 @@ export default function Account() {
                     Resume scans completed this month
                   </p>
                   <p className="text-small text-muted-foreground">
-                    Jobs analyzed in Job Match: {usageData?.usage.jobMatchJobsThisMonth || 0}
+                    Downloads this month: {usageData?.usage.importedResumesThisMonth || 0}
                   </p>
                 </div>
               </div>

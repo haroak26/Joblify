@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, User, Briefcase, Moon, Sun, FileText, Target, Search, FileEdit, Shield, Sparkles, Mic } from "lucide-react";
+import { Home, User, Briefcase, Moon, Sun, FileText, Search, FileEdit, Shield, Sparkles, Mic } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -46,11 +46,6 @@ const toolsMenuItems = [
     title: "Tailor Resume",
     url: "/dashboard/job-tailor",
     icon: Sparkles,
-  },
-  {
-    title: "Job Match",
-    url: "/dashboard/job-match",
-    icon: Target,
   },
   {
     title: "Resume Review",

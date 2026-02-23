@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, FileText, Plus, Sparkles, CheckCircle2, Circle, Target, Search, FileEdit } from "lucide-react";
+import { ArrowRight, FileText, Plus, Sparkles, CheckCircle2, Circle, Search, FileEdit, Target } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import ResumePreview from "@/components/resume-preview/ResumePreview";
@@ -252,24 +252,6 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        <Card className="border">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-              <Target className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium">Job Match</h3>
-              <p className="text-xs text-muted-foreground">Find perfect job matches</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/dashboard/job-match")}
-            >
-              Explore
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Recent Resumes */}
