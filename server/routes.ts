@@ -310,7 +310,9 @@ Review page images and return strict JSON only:
   });
 
   const content = aiResponse.choices[0]?.message?.content || "{}";
-  return JSON.parse(content) as ResumeDesignReview;
+  // Clean content of control characters that might break JSON.parse
+  const cleanedContent = content.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+  return JSON.parse(cleanedContent) as ResumeDesignReview;
 }
 
 

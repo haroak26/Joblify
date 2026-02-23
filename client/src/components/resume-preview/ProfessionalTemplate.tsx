@@ -19,31 +19,31 @@ const ProfessionalTemplate = memo(function ProfessionalTemplate({ data }: Profes
           {personalInfo.email && (
             <div className="flex items-center gap-1.5 leading-none">
               <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="break-all inline-block align-middle">{personalInfo.email}</span>
+              <span className="break-all inline-block align-middle pb-[1px]">{personalInfo.email}</span>
             </div>
           )}
           {personalInfo.phone && (
             <div className="flex items-center gap-1.5 leading-none">
               <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="inline-block align-middle">{personalInfo.phone}</span>
+              <span className="inline-block align-middle pb-[1px]">{personalInfo.phone}</span>
             </div>
           )}
           {personalInfo.location && (
             <div className="flex items-center gap-1.5 leading-none">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="inline-block align-middle">{personalInfo.location}</span>
+              <span className="inline-block align-middle pb-[1px]">{personalInfo.location}</span>
             </div>
           )}
           {personalInfo.linkedin && (
             <div className="flex items-center gap-1.5 leading-none">
               <Linkedin className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="break-all inline-block align-middle">{personalInfo.linkedin}</span>
+              <span className="break-all inline-block align-middle pb-[1px]">{personalInfo.linkedin}</span>
             </div>
           )}
           {personalInfo.website && (
             <div className="flex items-center gap-1.5 leading-none">
               <Globe className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="break-all inline-block align-middle">{personalInfo.website}</span>
+              <span className="break-all inline-block align-middle pb-[1px]">{personalInfo.website}</span>
             </div>
           )}
         </div>
