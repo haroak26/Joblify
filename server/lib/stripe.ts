@@ -134,6 +134,7 @@ export async function createCheckoutSession(params: {
   promotionCodeId?: string | null;
 }) {
   const priceId = getPriceIdForPlan(params.plan);
+  const trialPeriodDays = params.plan === "plus" || params.plan === "ultra" ? 2 : undefined;
   const body: Record<string, unknown> = {
     mode: "subscription",
     customer: params.customerId,
@@ -149,6 +150,7 @@ export async function createCheckoutSession(params: {
       plan: params.plan,
     },
     subscription_data: {
+      trial_period_days: trialPeriodDays,
       metadata: {
         userId: params.userId,
         plan: params.plan,

@@ -1966,6 +1966,23 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Resume not found", message: "Resume not found" });
       }
 
+      const usageStats = await storage.checkAndResetMonthlyUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+
+      if (usageStats.aiBuilderActionsThisMonth >= limits.maxAIBuilderActionsPerMonth) {
+        return res.status(403).json({
+          error: "Resume tailor limit reached for this month",
+          code: "RESUME_TAILOR_LIMIT",
+          limit: limits.maxAIBuilderActionsPerMonth,
+          current: usageStats.aiBuilderActionsThisMonth,
+          message: limits.maxAIBuilderActionsPerMonth === Infinity
+            ? "Resume tailor limit reached for this month"
+            : `Your plan allows up to ${limits.maxAIBuilderActionsPerMonth} resume tailor actions per month.`,
+        });
+      }
+
       const baseData = getNormalizedResumeData(resume.resumeData);
       const baseResumeText = convertResumeDataToText(baseData).slice(0, 18000);
       const poe = getPoeClient();
@@ -2021,6 +2038,11 @@ Rules:
         })
         .where(and(eq(resumes.id, id), eq(resumes.userId, userId)))
         .returning();
+
+      await db
+        .update(usageTable)
+        .set({ aiBuilderActionsThisMonth: sql`${usageTable.aiBuilderActionsThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
       res.json({
         success: true,
@@ -2762,6 +2784,23 @@ Respond ONLY with valid JSON (no text before or after):
         return res.status(403).json({ error: "You do not have permission to access this resume" });
       }
 
+      const usageStats = await storage.checkAndResetMonthlyUsage(userId);
+      const subscription = await storage.getSubscription(userId);
+      const plan = normalizePlan(subscription?.plan);
+      const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+
+      if (usageStats.importedResumesThisMonth >= limits.maxJobImportsPerMonth) {
+        return res.status(403).json({
+          error: "Download limit reached for this month",
+          code: "DOWNLOAD_LIMIT",
+          limit: limits.maxJobImportsPerMonth,
+          current: usageStats.importedResumesThisMonth,
+          message: limits.maxJobImportsPerMonth === Infinity
+            ? "Download limit reached for this month"
+            : `Your plan allows up to ${limits.maxJobImportsPerMonth} downloads per month. Upgrade for unlimited downloads.`,
+        });
+      }
+
       // Parse resume data
       const resumeData = getNormalizedResumeData(resume.resumeData);
 
@@ -2799,6 +2838,11 @@ Respond ONLY with valid JSON (no text before or after):
 
       // Generate the PDF content
       pdfGenerator.generate(resumeData, resume.title);
+
+      await db
+        .update(usageTable)
+        .set({ importedResumesThisMonth: sql`${usageTable.importedResumesThisMonth} + 1` })
+        .where(eq(usageTable.userId, userId));
 
     } catch (error) {
       console.error('[API] Error generating PDF:', error);
@@ -3591,134 +3635,8 @@ Guidelines:
   // Job Match Endpoints
   // ============================================
 
-  app.post("/api/job-match/analyze", requireAuth, requireAIAccess, upload.array('files', 20), async (req: Request, res) => {
-    try {
-      const userId = req.session.userId!;
-
-      const schema = z.object({
-        resumeId: z.string().min(1, "Resume ID is required"),
-        jobDescriptions: z.array(z.string().min(20)).min(1).max(50),
-      });
-
-      const rawJobDescriptions = typeof req.body.jobDescriptions === "string"
-        ? JSON.parse(req.body.jobDescriptions)
-        : req.body.jobDescriptions;
-
-      const { resumeId, jobDescriptions } = schema.parse({
-        resumeId: req.body.resumeId,
-        jobDescriptions: rawJobDescriptions,
-      });
-
-      const files = Array.isArray(req.files) ? req.files : [];
-      const parsedFromFiles = await Promise.all(files.map(async (file) => {
-        const text = await extractTextFromUpload(file);
-        if (!text || text.length < 20) {
-          throw new Error(`Uploaded file ${file.originalname} does not contain enough readable job content`);
-        }
-        return text.slice(0, 10000);
-      }));
-
-      const allJobDescriptions = [...jobDescriptions, ...parsedFromFiles].slice(0, 50);
-
-      const [resume] = await db.select().from(resumes).where(eq(resumes.id, resumeId)).limit(1);
-      if (!resume || resume.userId !== userId) {
-        return res.status(404).json({ error: "Resume not found" });
-      }
-
-      const userUsage = await storage.getUsage(userId);
-      const subscription = await storage.getSubscription(userId);
-      const plan = normalizePlan(subscription?.plan);
-      const limits = PLAN_LIMITS[plan];
-
-      if (userUsage.jobAnalysesThisMonth >= limits.maxJobAnalysesPerMonth) {
-        return res.status(403).json({
-          error: "Job match scan limit reached for this month",
-          limit: limits.maxJobAnalysesPerMonth,
-          current: userUsage.jobAnalysesThisMonth,
-        });
-      }
-
-      const maxJobsPerScan = limits.maxJobsPerJobMatchScan ?? 5;
-      if (allJobDescriptions.length > maxJobsPerScan) {
-        return res.status(403).json({
-          error: `Your plan allows up to ${maxJobsPerScan} jobs per scan`,
-          limit: maxJobsPerScan,
-          current: allJobDescriptions.length,
-        });
-      }
-
-      const normalizedResumeData = getNormalizedResumeData(resume.resumeData);
-      const resumeText = convertResumeDataToText(normalizedResumeData);
-      const poe = getPoeClient();
-
-      const analysis = await Promise.all(allJobDescriptions.map(async (jobDescription) => {
-        const aiResponse = await poe.chat.completions.create({
-          model: "GPT-4o",
-          messages: [
-            {
-              role: "system",
-              content: `You are a senior recruiter and career strategist. Analyze the match between one resume and one job description with tactical depth.
-Return strict JSON only with this shape:
-{
-  "matchScore": <number 0-100>,
-  "summary": "<clear executive summary>",
-  "matchedSkills": ["<skill>"],
-  "missingSkills": ["<skill>"],
-  "strengths": ["<strength>"],
-  "improvements": ["<improvement>"],
-  "keywordMatches": ["<keyword>"],
-  "experienceMatch": "<assessment>",
-  "educationMatch": "<assessment>",
-  "quickTweaks": [{"change":"<small tweak>","impact":"<what improves>","roles":["<role>"]}],
-  "recommendedRoles": ["<role>"]
-}`
-            },
-            {
-              role: "user",
-              content: `RESUME:
-${resumeText}
-
-JOB DESCRIPTION:
-${jobDescription}`,
-            }
-          ],
-          temperature: 0.2,
-          max_tokens: 2200,
-        });
-
-        const aiContent = aiResponse.choices[0]?.message?.content || "{}";
-        try {
-          return JSON.parse(aiContent);
-        } catch {
-          return {
-            matchScore: 50,
-            summary: aiContent,
-            matchedSkills: [],
-            missingSkills: [],
-            strengths: [],
-            improvements: [],
-            keywordMatches: [],
-            experienceMatch: "Unable to determine",
-            educationMatch: "Unable to determine",
-            quickTweaks: [],
-            recommendedRoles: [],
-          };
-        }
-      }));
-
-      await db.update(usageTable).set({
-        jobAnalysesThisMonth: sql`${usageTable.jobAnalysesThisMonth} + 1`,
-        jobMatchJobsThisMonth: sql`${usageTable.jobMatchJobsThisMonth} + ${allJobDescriptions.length}`,
-      }).where(eq(usageTable.userId, userId));
-
-      res.json({
-        jobsAnalyzed: allJobDescriptions.length,
-        results: analysis,
-      });
-    } catch (error) {
-      console.error('[API] Error analyzing job match:', error);
-      res.status(500).json({ error: "Failed to analyze job match" });
-    }
+  app.post("/api/job-match/analyze", requireAuth, async (_req: Request, res) => {
+    return res.status(410).json({ error: "Job Match has been removed" });
   });
 
   app.post("/api/resume-review", requireAuth, requireAIAccess, upload.single('file'), async (req: Request, res) => {

@@ -14,7 +14,6 @@ const dashboardTitles: Record<string, string> = {
   "/dashboard/account": "Account Settings",
   "/dashboard/resumes": "My Resumes",
   "/dashboard/resumes/create": "Create Resume",
-  "/dashboard/job-match": "Job Match",
   "/dashboard/job-tailor": "AI Job Tailor",
   "/dashboard/resume-review": "Resume Review",
   "/dashboard/ats-scanner": "ATS Scanner",
