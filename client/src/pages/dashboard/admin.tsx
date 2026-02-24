@@ -1,14 +1,26 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Shield, TrendingUp, BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Users, ShieldAlert, UserCheck, Sparkles, BarChart3, TrendingUp } from "lucide-react";
 import { AdminUserManagement } from "./admin-user-management";
+import { AdminPerksManagement } from "./admin-perks-management";
+import { AdminAuditLogs } from "./admin-audit-logs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
+
+interface DashboardStatsResponse {
+  totalUsers: number;
+  stats: {
+    usersToday: number;
+    activeUsers: number;
+    blockedAccounts: number;
+  };
+  aiUsageByDay: Array<{ name: string; usage: number; date: string }>;
+}
 
 export default function AdminDashboard() {
-  // Fetch dashboard stats
-  const { data: stats, isLoading } = useQuery<{ aiUsageByDay?: Array<{ name: string; usage: number; date: string }> }>({
+  const { data: stats, isLoading } = useQuery<DashboardStatsResponse>({
     queryKey: ["/api/admin/dashboard/stats"],
   });
 
@@ -19,38 +31,83 @@ export default function AdminDashboard() {
     },
   };
 
+  const totalWeeklyUsage = useMemo(
+    () => stats?.aiUsageByDay?.reduce((total, day) => total + day.usage, 0) ?? 0,
+    [stats?.aiUsageByDay],
+  );
+
   if (isLoading) {
-    return <div className="container mx-auto p-6">Loading dashboard stats...</div>;
+    return <div className="py-10 text-muted-foreground">Loading admin analytics...</div>;
   }
 
-  // Use real data from API, fallback to empty array if not available
-  const aiUsageData = stats?.aiUsageByDay || [];
+  const usageData = stats?.aiUsageByDay ?? [];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
-          <Shield className="w-6 h-6 text-primary" />
-          Admin Dashboard
-        </h2>
+    <div className="space-y-6">
+      <section className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-muted-foreground">
-          Manage users and monitor AI platform activity
+          Monitor platform health, control user access, and manage perks from one place.
         </p>
-      </div>
+      </section>
 
-      {/* AI Usage Graphs */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Users</CardDescription>
+            <CardTitle className="text-3xl">{stats?.totalUsers ?? 0}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2 text-muted-foreground">
+            <Users className="w-4 h-4" />
+            <span className="text-sm">Registered accounts</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>New Today</CardDescription>
+            <CardTitle className="text-3xl">{stats?.stats.usersToday ?? 0}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2 text-muted-foreground">
+            <UserCheck className="w-4 h-4" />
+            <span className="text-sm">Fresh signups today</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Active in 7 Days</CardDescription>
+            <CardTitle className="text-3xl">{stats?.stats.activeUsers ?? 0}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2 text-muted-foreground">
+            <TrendingUp className="w-4 h-4" />
+            <span className="text-sm">Recently engaged users</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Blocked Accounts</CardDescription>
+            <CardTitle className="text-3xl">{stats?.stats.blockedAccounts ?? 0}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2 text-muted-foreground">
+            <ShieldAlert className="w-4 h-4" />
+            <span className="text-sm">Restricted from sign-in</span>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              AI Usage This Week
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BarChart3 className="w-4 h-4" /> Weekly AI Usage
             </CardTitle>
-            <CardDescription>Daily AI feature interactions</CardDescription>
+            <CardDescription>{totalWeeklyUsage} AI actions in the last 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[200px]">
-              <BarChart data={aiUsageData}>
+            <ChartContainer config={chartConfig} className="h-[220px] w-full">
+              <BarChart data={usageData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -63,15 +120,14 @@ export default function AdminDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              AI Usage Trend
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="w-4 h-4" /> Engagement Trend
             </CardTitle>
-            <CardDescription>Weekly AI engagement pattern</CardDescription>
+            <CardDescription>Daily engagement direction over the past week</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig} className="h-[200px]">
-              <LineChart data={aiUsageData}>
+            <ChartContainer config={chartConfig} className="h-[220px] w-full">
+              <LineChart data={usageData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -81,23 +137,37 @@ export default function AdminDashboard() {
             </ChartContainer>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      {/* User Management Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            User Management
-          </CardTitle>
-          <CardDescription>
-            Manage users, view details, and award perks
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AdminUserManagement />
-        </CardContent>
-      </Card>
+      <section>
+        <Tabs defaultValue="users" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="perks">Perks</TabsTrigger>
+            <TabsTrigger value="logs">Audit Logs</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>Search users, review status, and apply account restrictions.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AdminUserManagement />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="perks" id="perks">
+            <AdminPerksManagement />
+          </TabsContent>
+
+          <TabsContent value="logs" id="logs">
+            <AdminAuditLogs />
+          </TabsContent>
+        </Tabs>
+      </section>
     </div>
   );
 }
