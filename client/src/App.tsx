@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/components/protected-route";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { AdminLayout } from "@/components/admin-layout";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -141,16 +142,16 @@ function Router() {
       </Route>
       <Route path="/dashboard/admin">
         <ProtectedRoute requireAdmin={true}>
-          <DashboardLayout>
+          <AdminLayout>
             <AdminDashboard />
-          </DashboardLayout>
+          </AdminLayout>
         </ProtectedRoute>
       </Route>
       <Route path="/dashboard/admin/users/:userId">
         <ProtectedRoute requireAdmin={true}>
-          <DashboardLayout>
+          <AdminLayout>
             <AdminUserDetails />
-          </DashboardLayout>
+          </AdminLayout>
         </ProtectedRoute>
       </Route>
       <Route path="/features/cover-letter" component={FeatureCoverLetter} />
