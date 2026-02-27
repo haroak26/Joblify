@@ -313,31 +313,36 @@ export default function AtsScanner() {
         <div className="space-y-6">
           {/* Overall Score Card */}
           <Card className="border-border">
-            <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row items-start gap-8">
-                <div className="text-center">
-                  <div className={`text-7xl font-bold tracking-tight ${getScoreColor(result.score)}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-body">Overall ATS Match</CardTitle>
+              <CardDescription>{getScoreLabel(result.score)}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex items-end justify-between gap-4 border-b border-border pb-4">
+                <div>
+                  <p className="text-small text-muted-foreground">Current score</p>
+                  <div className={`text-5xl font-semibold leading-none ${getScoreColor(result.score)}`}>
                     {result.score}
+                    <span className="ml-1 text-base text-muted-foreground">/100</span>
                   </div>
-                  <p className="text-small text-muted-foreground mt-1">out of 100</p>
                 </div>
-                <div className="flex-1 space-y-3">
-                  <h3 className="text-large font-medium">{getScoreLabel(result.score)}</h3>
-                  <Progress value={result.score} className="h-3" />
-                  <div className="grid grid-cols-3 gap-4 text-center text-small border border-border rounded-md p-3">
-                    <div>
-                      <div className="font-medium text-green-600">{result.keywords?.length || 0}</div>
-                      <div className="text-muted-foreground">Keywords Found</div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-red-600">{result.missingKeywords?.length || 0}</div>
-                      <div className="text-muted-foreground">Missing Keywords</div>
-                    </div>
-                    <div>
-                      <div className="font-medium text-yellow-600">{result.suggestions?.length || 0}</div>
-                      <div className="text-muted-foreground">Improvements</div>
-                    </div>
-                  </div>
+                <Badge variant="outline" className="text-small">
+                  ATS readiness
+                </Badge>
+              </div>
+              <Progress value={result.score} className="h-2" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-small text-muted-foreground">Keywords found</p>
+                  <p className="mt-1 text-xl font-semibold">{result.keywords?.length || 0}</p>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-small text-muted-foreground">Missing keywords</p>
+                  <p className="mt-1 text-xl font-semibold">{result.missingKeywords?.length || 0}</p>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="text-small text-muted-foreground">Priority fixes</p>
+                  <p className="mt-1 text-xl font-semibold">{result.suggestions?.length || 0}</p>
                 </div>
               </div>
             </CardContent>

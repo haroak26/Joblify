@@ -1,396 +1,126 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, FileText, Briefcase, Loader2, Download, Copy, AlertCircle } from "lucide-react";
+import { Sparkles, FileText, Briefcase, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getCsrfToken } from "@/lib/queryClient";
 import type { Resume } from "@shared/schema";
 import { useFeatureTracking, FEATURES } from "@/hooks/use-feature-tracking";
 
 export default function TailorPage() {
-  // Track feature usage
   useFeatureTracking(FEATURES.TAILOR);
-  
-  const [selectedJobId, setSelectedJobId] = useState("");
+
   const [selectedResumeId, setSelectedResumeId] = useState("");
-  const [tailoredResume, setTailoredResume] = useState<any>(null);
-  const [tailoredCoverLetter, setTailoredCoverLetter] = useState<any>(null);
+  const [jobDescription, setJobDescription] = useState("");
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Fetch user's jobs
-  const { data: jobsData, isLoading: jobsLoading } = useQuery<{ jobs: any[] }>({
-    queryKey: ["/api/jobs"],
-  });
-  const jobs = jobsData?.jobs ?? [];
-
-  // Fetch user's resumes
   const { data: resumesData, isLoading: resumesLoading } = useQuery<Resume[]>({
     queryKey: ["/api/resumes"],
   });
-  
-  // Ensure resumes is always an array
+
   const resumes = Array.isArray(resumesData) ? resumesData : [];
 
-  // Get selected job details
-  const selectedJob = jobs.find((j: any) => j.id === selectedJobId);
-
-  // Tailor resume mutation
-  const tailorResumeMutation = useMutation({
-    mutationFn: async () => {
-      const csrfToken = getCsrfToken();
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (csrfToken) {
-        headers["x-csrf-token"] = csrfToken;
-      }
-      const res = await fetch(`/api/resumes/${selectedResumeId}/tailor`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ jobId: selectedJobId }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to tailor resume");
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setTailoredResume(data.resume);
+  const handleContinueToEditor = () => {
+    if (!selectedResumeId) {
       toast({
-        title: "Resume Tailored!",
-        description: "Your resume has been optimized for this job.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Tailoring Failed",
-        description: error.message || "Could not tailor resume. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Tailor cover letter mutation
-  const tailorCoverLetterMutation = useMutation({
-    mutationFn: async () => {
-      const csrfToken = getCsrfToken();
-      const headers: HeadersInit = { "Content-Type": "application/json" };
-      if (csrfToken) {
-        headers["x-csrf-token"] = csrfToken;
-      }
-      const res = await fetch("/api/cover-letter/tailor", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          resumeId: selectedResumeId,
-          jobId: selectedJobId,
-          tone: "professional",
-        }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to tailor cover letter");
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setTailoredCoverLetter(data);
-      toast({
-        title: "Cover Letter Created!",
-        description: "Your cover letter has been tailored for this job.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Tailoring Failed",
-        description: error.message || "Could not create cover letter. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleTailorBoth = async () => {
-    if (!selectedJobId || !selectedResumeId) {
-      toast({
-        title: "Missing Information",
-        description: "Please select both a job and a resume.",
+        title: "Resume required",
+        description: "Select one of your Joblify resumes to continue.",
         variant: "destructive",
       });
       return;
     }
 
-    await tailorResumeMutation.mutateAsync();
-    await tailorCoverLetterMutation.mutateAsync();
-  };
-
-  const copyResumeToClipboard = () => {
-    if (tailoredResume?.resumeData) {
-      const text = formatResumeAsText(tailoredResume.resumeData);
-      navigator.clipboard.writeText(text).then(() => {
-        toast({
-          title: "Copied!",
-          description: "Tailored resume copied to clipboard",
-        });
-      }).catch(() => {
-        toast({
-          title: "Copy failed",
-          description: "Unable to copy to clipboard. Please select and copy manually.",
-          variant: "destructive",
-        });
+    if (!jobDescription.trim()) {
+      toast({
+        title: "Job description required",
+        description: "Paste the job description so AI can tailor each resume section.",
+        variant: "destructive",
       });
+      return;
     }
-  };
 
-  const copyCoverLetterToClipboard = () => {
-    if (tailoredCoverLetter?.content) {
-      navigator.clipboard.writeText(tailoredCoverLetter.content).then(() => {
-        toast({
-          title: "Copied!",
-          description: "Cover letter copied to clipboard",
-        });
-      }).catch(() => {
-        toast({
-          title: "Copy failed",
-          description: "Unable to copy to clipboard. Please select and copy manually.",
-          variant: "destructive",
-        });
-      });
-    }
+    sessionStorage.setItem(`joblify:tailor:${selectedResumeId}`, jobDescription.trim());
+    setLocation(`/dashboard/resume-builder/${selectedResumeId}?mode=ai&aiMode=tailor`);
   };
-
-  const formatResumeAsText = (resumeData: any) => {
-    let text = `${resumeData.personalInfo?.name || ""}\n`;
-    text += `${resumeData.personalInfo?.email || ""} | ${resumeData.personalInfo?.phone || ""}\n`;
-    text += `${resumeData.personalInfo?.location || ""}\n\n`;
-    
-    if (resumeData.summary) {
-      text += `SUMMARY\n${resumeData.summary}\n\n`;
-    }
-    
-    if (resumeData.experience?.length > 0) {
-      text += `EXPERIENCE\n`;
-      resumeData.experience.forEach((exp: any) => {
-        text += `${exp.title} at ${exp.company}\n`;
-        text += `${exp.location} | ${exp.startDate} - ${exp.endDate || "Present"}\n`;
-        exp.description?.forEach((desc: string) => {
-          text += `• ${desc}\n`;
-        });
-        text += `\n`;
-      });
-    }
-    
-    return text;
-  };
-
-  const isLoading = tailorResumeMutation.isPending || tailorCoverLetterMutation.isPending;
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      {/* Header Section */}
+    <div className="container mx-auto max-w-4xl space-y-6 p-6">
       <div>
-        <h2 className="text-subheader font-bold mb-1 flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-primary" />
-          AI Resume & Cover Letter Tailor
+        <h2 className="text-subheader mb-1 flex items-center gap-2 font-bold">
+          <Sparkles className="h-6 w-6 text-primary" />
+          AI Resume Tailor
         </h2>
-        <p className="text-muted-foreground">Customize your application for specific job requirements</p>
-      </div>
-      
-      <Alert className="mb-6">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          This feature is available for Ultra subscribers. It uses AI to tailor your resume and cover letter to match specific job requirements.
-        </AlertDescription>
-      </Alert>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Job Selection */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-large font-semibold flex items-center gap-2 mb-1">
-              <Briefcase className="w-5 h-5" />
-              Select Job
-            </h3>
-            <p className="text-small text-muted-foreground">
-              Choose the job you want to tailor your application for
-            </p>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="job-select">Job Posting</Label>
-              <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-                <SelectTrigger id="job-select">
-                  <SelectValue placeholder="Select a job" />
-                </SelectTrigger>
-                <SelectContent>
-                  {jobsLoading ? (
-                    <div className="p-2 text-small text-muted-foreground">Loading jobs...</div>
-                  ) : jobs.length === 0 ? (
-                    <div className="p-2 text-small text-muted-foreground">
-                      No jobs found. Save some jobs first.
-                    </div>
-                  ) : (
-                    jobs
-                      .filter((j: any) => j.saved || j.applied)
-                      .map((job: any) => (
-                        <SelectItem key={job.id} value={job.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{job.title}</span>
-                            <span className="text-small text-muted-foreground">
-                              {job.company || job.author}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedJob && (
-              <div className="p-4 border rounded-lg bg-muted/50 space-y-2">
-                <h4 className="font-semibold">{selectedJob.title}</h4>
-                <p className="text-small text-muted-foreground line-clamp-3">
-                  {selectedJob.description}
-                </p>
-                {selectedJob.budget && (
-                  <Badge variant="secondary">{selectedJob.budget}</Badge>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Resume Selection */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-large font-semibold flex items-center gap-2 mb-1">
-              <FileText className="w-5 h-5" />
-              Select Resume
-            </h3>
-            <p className="text-small text-muted-foreground">
-              Choose the resume you want to tailor
-            </p>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="resume-select">Base Resume</Label>
-              <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
-                <SelectTrigger id="resume-select">
-                  <SelectValue placeholder="Select a resume" />
-                </SelectTrigger>
-                <SelectContent>
-                  {resumesLoading ? (
-                    <div className="p-2 text-small text-muted-foreground">Loading resumes...</div>
-                  ) : resumes.length === 0 ? (
-                    <div className="p-2 text-small text-muted-foreground">
-                      No resumes found. Create one first.
-                    </div>
-                  ) : (
-                    resumes.map((resume: any) => (
-                      <SelectItem key={resume.id} value={resume.id}>
-                        {resume.title}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              onClick={handleTailorBoth}
-              disabled={!selectedJobId || !selectedResumeId || isLoading}
-              className="w-full"
-              size="lg"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Tailoring...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Tailor Resume & Cover Letter
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        <p className="text-muted-foreground">
+          Add one job description, choose a Joblify resume, and continue to the editor where AI tailors each section directly.
+        </p>
       </div>
 
-      {/* Results */}
-      {(tailoredResume || tailoredCoverLetter) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tailored Results</CardTitle>
-            <CardDescription>
-              Your optimized resume and cover letter for this specific job
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="resume">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="resume">Resume</TabsTrigger>
-                <TabsTrigger value="cover-letter">Cover Letter</TabsTrigger>
-              </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-body">Tailoring setup</CardTitle>
+          <CardDescription>
+            This tool only works with resumes created in Joblify so edits can be applied section-by-section in the editor.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="tailor-job-description" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Job description
+            </Label>
+            <Textarea
+              id="tailor-job-description"
+              rows={8}
+              value={jobDescription}
+              onChange={(event) => setJobDescription(event.target.value)}
+              placeholder="Paste the full job description. AI will use this to adjust your summary, experience, skills, and other sections to match the role naturally."
+              className="resize-none"
+            />
+            <p className="text-small text-muted-foreground">
+              Tip: Include responsibilities, required skills, and preferred qualifications for the strongest tailoring.
+            </p>
+          </div>
 
-              <TabsContent value="resume" className="space-y-4">
-                {tailoredResume ? (
-                  <>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={copyResumeToClipboard}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy
-                      </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={`/dashboard/resume-builder/${tailoredResume.id}`}>
-                          <FileText className="w-4 h-4 mr-2" />
-                          View Full Resume
-                        </a>
-                      </Button>
-                    </div>
-                    <div className="p-4 border rounded-lg bg-muted/50">
-                      <h3 className="font-semibold mb-2">{tailoredResume.title}</h3>
-                      <p className="text-small text-muted-foreground">
-                        This resume has been optimized with keywords and relevant experience highlighted for the selected job.
-                      </p>
-                    </div>
-                  </>
+          <div className="space-y-2">
+            <Label htmlFor="tailor-resume-select" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Joblify resume
+            </Label>
+            <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
+              <SelectTrigger id="tailor-resume-select">
+                <SelectValue placeholder="Select a Joblify resume" />
+              </SelectTrigger>
+              <SelectContent>
+                {resumesLoading ? (
+                  <div className="p-2 text-small text-muted-foreground">Loading resumes...</div>
+                ) : resumes.length === 0 ? (
+                  <div className="p-2 text-small text-muted-foreground">No Joblify resumes found. Create one first.</div>
                 ) : (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No tailored resume yet. Click "Tailor Resume & Cover Letter" above.
-                  </div>
+                  resumes.map((resume) => (
+                    <SelectItem key={resume.id} value={resume.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{resume.title}</span>
+                        <Badge variant="outline">Joblify</Badge>
+                      </div>
+                    </SelectItem>
+                  ))
                 )}
-              </TabsContent>
+              </SelectContent>
+            </Select>
+          </div>
 
-              <TabsContent value="cover-letter" className="space-y-4">
-                {tailoredCoverLetter ? (
-                  <>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={copyCoverLetterToClipboard}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy
-                      </Button>
-                    </div>
-                    <div className="p-4 border rounded-lg bg-muted/50 whitespace-pre-wrap">
-                      {tailoredCoverLetter.content}
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No cover letter yet. Click "Tailor Resume & Cover Letter" above.
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
+          <Button onClick={handleContinueToEditor} className="w-full" size="lg">
+            Continue to Tailor Editor
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

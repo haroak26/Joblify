@@ -460,6 +460,53 @@ type ATSStructuredSignals = {
   hasBulletPoints?: boolean;
 };
 
+function detectStructuredSignalsFromText(resumeText: string): ATSStructuredSignals {
+  const normalizedResume = resumeText.toLowerCase();
+  const lines = resumeText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const headingMatchers = {
+    experience: [
+      /^professional\s+experience$/i,
+      /^work\s+experience$/i,
+      /^experience$/i,
+      /^employment\s+history$/i,
+      /^career\s+history$/i,
+      /^professional\s+background$/i,
+    ],
+    education: [
+      /^education$/i,
+      /^academic\s+background$/i,
+      /^academic\s+history$/i,
+      /^education\s+and\s+certifications?$/i,
+    ],
+    skills: [
+      /^skills$/i,
+      /^technical\s+skills$/i,
+      /^core\s+skills$/i,
+      /^competencies$/i,
+      /^technical\s+proficiencies$/i,
+      /^areas\s+of\s+expertise$/i,
+    ],
+  };
+
+  const hasHeading = (patterns: RegExp[]) =>
+    lines.some((line) => {
+      const cleanLine = line.replace(/[:|]/g, '').trim();
+      return patterns.some((pattern) => pattern.test(cleanLine));
+    });
+
+  return {
+    hasContactInfo: /email|phone|linkedin|github|address|location|@/i.test(normalizedResume),
+    hasExperienceSection: hasHeading(headingMatchers.experience) || /\bexperience\b|\bemployment\b/.test(normalizedResume),
+    hasEducationSection: hasHeading(headingMatchers.education) || /\beducation\b|\bdegree\b|\buniversity\b|\bcollege\b/.test(normalizedResume),
+    hasSkillsSection: hasHeading(headingMatchers.skills) || /\bskills\b|\bcompetencies\b|\btechnical\b/.test(normalizedResume),
+    hasBulletPoints: /[•·*■\-\u2022\u2023\u25E6\u2043\u2219]/.test(resumeText),
+  };
+}
+
 async function performATSAnalysis(resumeText: string, jobDescription: string, structuredSignals?: ATSStructuredSignals): Promise<any> {
   const normalizedResume = resumeText.toLowerCase().replace(/[\s\n\r]+/g, ' ');
   
@@ -485,11 +532,12 @@ async function performATSAnalysis(resumeText: string, jobDescription: string, st
   });
 
   // Analyze resume structure with improved detection
-  const hasContactInfo = structuredSignals?.hasContactInfo ?? /email|phone|linkedin|github|address|location|@/i.test(normalizedResume);
-  const hasExperienceSection = structuredSignals?.hasExperienceSection ?? /experience|work history|employment|professional background|career/i.test(normalizedResume);
-  const hasEducationSection = structuredSignals?.hasEducationSection ?? /education|academic|degree|university|college|school/i.test(normalizedResume);
-  const hasSkillsSection = structuredSignals?.hasSkillsSection ?? /skills|competencies|expertise|technologies|technical proficiencies/i.test(normalizedResume);
-  const hasBulletPoints = structuredSignals?.hasBulletPoints ?? /[•·\*■\-\u2022\u2023\u25E6\u2043\u2219]/.test(resumeText);
+  const inferredSignals = detectStructuredSignalsFromText(resumeText);
+  const hasContactInfo = structuredSignals?.hasContactInfo ?? inferredSignals.hasContactInfo ?? /email|phone|linkedin|github|address|location|@/i.test(normalizedResume);
+  const hasExperienceSection = structuredSignals?.hasExperienceSection ?? inferredSignals.hasExperienceSection ?? /experience|work history|employment|professional background|career/i.test(normalizedResume);
+  const hasEducationSection = structuredSignals?.hasEducationSection ?? inferredSignals.hasEducationSection ?? /education|academic|degree|university|college|school/i.test(normalizedResume);
+  const hasSkillsSection = structuredSignals?.hasSkillsSection ?? inferredSignals.hasSkillsSection ?? /skills|competencies|expertise|technologies|technical proficiencies/i.test(normalizedResume);
+  const hasBulletPoints = structuredSignals?.hasBulletPoints ?? inferredSignals.hasBulletPoints ?? /[•·\*■\-•‣◦⁃∙]/.test(resumeText);
   const hasActionVerbs = /(managed|led|developed|created|implemented|designed|achieved|increased|reduced|improved|pioneered|transformed|accelerated|maximized|minimized|revitalized)/i.test(normalizedResume);
   
   // Calculate scores for each category
@@ -2269,6 +2317,7 @@ ${(tailoringJobDescription || "").slice(0, 12000) || "Not provided"}
 - Preserve factual integrity; do not invent companies, titles, dates, credentials, or metrics.
 - Rewrite to sound polished, confident, and human, never generic or robotic.
 - Keep wording professional but conversational: avoid stiff corporate jargon and AI-sounding cliches.
+- Prefer straightforward language, clear sentence structure, and realistic phrasing a hiring manager expects from a real candidate.
 - Prioritize role alignment in summary, experience bullets, and skills keywords.
 - When the user asks for section edits, return concrete rewritten lines or bullets in that section immediately.
 - Keep updatedData cumulative and include unchanged existing sections as-is.
