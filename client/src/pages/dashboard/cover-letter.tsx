@@ -151,12 +151,12 @@ export default function CoverLetterGenerator() {
         </h2>
         <p className="text-muted-foreground">Presentation flow: answer your style questions, move next, add job details, then generate.</p>
         {usageData?.thresholds?.coverLetters?.stage === "notice_70" && (
-          <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <div className="mt-3 rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
             You’re getting close to your monthly limit.
           </div>
         )}
         {usageData?.thresholds?.coverLetters?.stage === "cta_90" && (
-          <div className="mt-3 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-900">
+          <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             You’re almost out of cover letters this month. Compare plans to avoid interruptions.
           </div>
         )}

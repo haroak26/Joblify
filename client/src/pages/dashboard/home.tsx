@@ -216,8 +216,8 @@ export default function DashboardHome() {
 
         <Card className="border">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-              <FileEdit className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <FileEdit className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium">Cover Letter</h3>
@@ -235,8 +235,8 @@ export default function DashboardHome() {
 
         <Card className="border">
           <CardContent className="p-5 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-              <Search className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Search className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium">ATS Scanner</h3>

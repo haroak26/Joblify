@@ -112,7 +112,7 @@ function CustomCalendar({
           day_range_end: "day-range-end",
           day_selected: cn(
             "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-            "focus:bg-primary focus:text-primary-foreground font-semibold shadow-sm"
+            "focus:bg-primary focus:text-primary-foreground font-semibold"
           ),
           day_today: cn(
             "bg-accent text-accent-foreground font-semibold",

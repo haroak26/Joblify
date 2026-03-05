@@ -163,7 +163,7 @@ export default function BlogPost() {
             <div className="grid md:grid-cols-3 gap-6">
               {relatedPosts.map((relatedPost) => (
                 <Link key={relatedPost.slug} href={`/blog/${relatedPost.slug}`}>
-                  <div className="bg-background border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <div className="bg-background border rounded-lg p-6 hover:bg-muted/50 transition-colors cursor-pointer h-full">
                     <Badge variant="secondary" className="mb-3 text-xs">
                       {relatedPost.category}
                     </Badge>

@@ -100,7 +100,7 @@ export default function Pricing() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {plans.map((plan) => (
-              <Card key={plan.id} className={`relative ${plan.popular ? "border-primary shadow-lg" : ""}`}>
+              <Card key={plan.id} className={`relative ${plan.popular ? "border-primary" : ""}`}>
                 {plan.popular && <div className="absolute -top-3 left-0 right-0 flex justify-center"><Badge className="bg-primary text-primary-foreground px-3 py-1">Best Value</Badge></div>}
                 <CardHeader>
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>

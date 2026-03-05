@@ -57,7 +57,7 @@ export function SearchLoadingOverlay({ isSearching, onComplete }: SearchLoadingO
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <Card className="w-full max-w-md mx-4 shadow-2xl border">
+      <Card className="w-full max-w-md mx-4 border">
         <CardContent className="pt-8 pb-8 px-8">
           <div className="flex flex-col items-center text-center space-y-6">
             {/* Animated Icon */}
@@ -112,8 +112,8 @@ export function SearchLoadingOverlay({ isSearching, onComplete }: SearchLoadingO
             </div>
 
             {/* Info Message */}
-            <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-              <p className="text-xs text-blue-700 dark:text-blue-300">
+            <div className="mt-4 p-3 rounded-lg bg-muted border">
+              <p className="text-xs text-muted-foreground">
                 💡 You can switch tabs - the search continues on the server and results will appear when you return.
               </p>
             </div>

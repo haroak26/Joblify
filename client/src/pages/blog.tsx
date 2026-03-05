@@ -123,7 +123,7 @@ export default function Blog() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPosts.map((post) => (
                 <Link key={post.slug} href={`/blog/${post.slug}`}>
-                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  <Card className="h-full cursor-pointer transition-colors hover:bg-muted/50">
                     <div className="aspect-video bg-muted rounded-t-lg overflow-hidden">
                       <img 
                         src={post.image} 
