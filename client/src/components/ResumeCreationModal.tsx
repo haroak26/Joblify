@@ -96,13 +96,13 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
             <Card className="border hover:border-primary/50 transition-colors cursor-pointer group overflow-hidden">
               <CardContent className="p-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 group-hover:from-purple-600 group-hover:to-pink-600 transition-colors">
-                    <Sparkles className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <Sparkles className="w-6 h-6 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
                       AI Resume Builder
-                      <span className="text-[10px] uppercase tracking-wider bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] uppercase tracking-wider bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-bold">
                         New
                       </span>
                     </h3>
@@ -112,7 +112,7 @@ export default function ResumeCreationModal({ open, onOpenChange }: ResumeCreati
                     <Button 
                       onClick={handleAIBuilder}
                       disabled={createResumeMutation.isPending}
-                      className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                      className="w-full sm:w-auto"
                     >
                       Start Chat
                       <ArrowRight className="w-4 h-4 ml-2" />

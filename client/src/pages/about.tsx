@@ -101,7 +101,7 @@ export default function About() {
                 </p>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-8 border">
+            <div className="bg-accent rounded-lg p-8 border">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
                   <Target className="w-6 h-6 text-primary-foreground" />

@@ -497,7 +497,7 @@ export default function Account() {
                 {getUserInitials()}
               </div>
               {user?.emailVerified && (
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-md bg-green-500 border border-background flex items-center justify-center">
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-md bg-primary border border-background flex items-center justify-center">
                   <Check className="w-4 h-4 text-white" />
                 </div>
               )}
@@ -549,8 +549,6 @@ export default function Account() {
         {/* Tabs Section */}
         <CleanTabs defaultValue="settings" className="space-y-6">
           <div className="relative -mx-1 sm:mx-0">
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent z-10 sm:hidden" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" />
             <CleanTabsList className="h-auto w-full gap-2 overflow-x-auto px-2 pb-2 pt-1 snap-x snap-mandatory whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:gap-0 sm:overflow-visible sm:whitespace-normal sm:px-0 sm:pb-0 sm:pt-0">
             <CleanTabsTrigger value="settings" className="flex shrink-0 snap-start items-center gap-2 rounded-full border-0 bg-transparent px-4 py-2.5 text-sm sm:rounded-none sm:px-4 sm:py-3">
               <Settings className="w-4 h-4" />
@@ -803,8 +801,8 @@ export default function Account() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-2.5 bg-purple-500/10 rounded-lg">
-                        <Sparkles className="w-5 h-5 text-purple-500" />
+                      <div className="p-2.5 bg-primary/10 rounded-lg">
+                        <Sparkles className="w-5 h-5 text-primary" />
                       </div>
                       <h3 className="text-body font-semibold">AI Edits</h3>
                     </div>
@@ -825,8 +823,8 @@ export default function Account() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="p-2.5 bg-green-500/10 rounded-lg">
-                        <FileText className="w-5 h-5 text-green-500" />
+                      <div className="p-2.5 bg-primary/10 rounded-lg">
+                        <FileText className="w-5 h-5 text-primary" />
                       </div>
                       <h3 className="text-body font-semibold">Cover Letters</h3>
                     </div>
@@ -918,19 +916,19 @@ export default function Account() {
                   </div>
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div className="flex items-center gap-2 text-small">
-                      <Check className="w-4 h-4 text-green-500" />
+                      <Check className="w-4 h-4 text-primary" />
                       <span>Extended usage limits</span>
                     </div>
                     <div className="flex items-center gap-2 text-small">
-                      <Check className="w-4 h-4 text-green-500" />
+                      <Check className="w-4 h-4 text-primary" />
                       <span>Priority support</span>
                     </div>
                     <div className="flex items-center gap-2 text-small">
-                      <Check className="w-4 h-4 text-green-500" />
+                      <Check className="w-4 h-4 text-primary" />
                       <span>Advanced AI features</span>
                     </div>
                     <div className="flex items-center gap-2 text-small">
-                      <Check className="w-4 h-4 text-green-500" />
+                      <Check className="w-4 h-4 text-primary" />
                       <span>All export formats</span>
                     </div>
                   </div>

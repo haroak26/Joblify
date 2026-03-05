@@ -31,7 +31,7 @@ export function BackToTop() {
     <Button
       onClick={scrollToTop}
       size="icon"
-      className="fixed bottom-20 right-4 sm:right-8 z-40 rounded-full shadow-lg"
+      className="fixed bottom-20 right-4 sm:right-8 z-40 rounded-full"
       aria-label="Back to top"
     >
       <ArrowUp className="h-4 w-4" />

@@ -22,8 +22,8 @@ export default function ResumeCompiling({ resumeId }: ResumeCompilingProps) {
     <div className="flex items-center justify-center h-screen bg-background">
       <div className="text-center space-y-6 max-w-md px-4">
         <div className="relative">
-          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center animate-pulse">
-            <Sparkles className="w-10 h-10 text-white" />
+          <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+            <Sparkles className="w-10 h-10 text-primary" />
           </div>
           <Loader2 className="w-8 h-8 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-spin" />
         </div>
