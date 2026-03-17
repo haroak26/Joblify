@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, Target, FileText, Loader2, Wand2, CheckCircle, ArrowRight } from "lucide-react";
+import { Target, FileText, Loader2, Wand2, CheckCircle, ArrowRight, CopyPlus } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { UpgradeDialog } from "@/components/UpgradeDialog";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function JobTailor() {
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
@@ -29,18 +30,21 @@ export default function JobTailor() {
         throw new Error("Select a resume and add a fuller job description before continuing.");
       }
 
-      sessionStorage.setItem(`joblify:tailor:${selectedResumeId}`, description);
-      return { resumeId: selectedResumeId };
+      const response = await apiRequest("POST", `/api/resumes/${selectedResumeId}/tailor`, {
+        jobDescription: description,
+      });
+      const payload = await response.json();
+      return { resumeId: payload?.resume?.id };
     },
     onSuccess: (data) => {
       toast({
-        title: "Tailor workspace ready",
-        description: "Opening your resume editor with AI Tailor mode.",
+        title: "Tailored resume created",
+        description: "Opening your new tailored resume in the editor.",
       });
-      setLocation(`/dashboard/resume-builder/${data.resumeId}?mode=ai&aiMode=tailor`);
+      setLocation(`/dashboard/resume-builder/${data.resumeId}`);
     },
     onError: (error: any) => {
-      if (error.code === "USAGE_LIMIT_REACHED") {
+      if (error.code === "RESUME_TAILOR_LIMIT") {
         setShowUpgradeDialog(true);
         return;
       }
@@ -58,7 +62,7 @@ export default function JobTailor() {
           AI Job Tailor
         </h2>
         <p className="text-muted-foreground">
-          Tailor your resume to a specific role, then fine-tune it in the editor.
+          Pick one of your resumes, add a job description, and Joblify will generate a new tailored resume.
         </p>
       </div>
 
@@ -70,7 +74,7 @@ export default function JobTailor() {
               Choose Base Resume
             </CardTitle>
             <CardDescription>
-              Select your Joblify resume. Tailoring now works directly inside the resume editor.
+              Select the resume you want to use as the base for a newly tailored version.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -116,12 +120,12 @@ export default function JobTailor() {
         {tailorMutation.isPending ? (
           <>
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Tailoring Resume...
+            Creating Tailored Resume...
           </>
         ) : (
           <>
-            <Sparkles className="w-4 h-4 mr-2" />
-            Start AI Tailor in Editor
+            <CopyPlus className="w-4 h-4 mr-2" />
+            Create New Tailored Resume
           </>
         )}
       </Button>
@@ -136,10 +140,10 @@ export default function JobTailor() {
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>1. Add one job description.</p>
           <p>2. Pick your Joblify resume.</p>
-          <p>3. AI Tailor opens in the editor and improves each section with targeted rewrites.</p>
+          <p>3. AI creates a brand-new resume with human-sounding, role-targeted improvements across every section.</p>
           <p className="flex items-center gap-2 text-foreground font-medium pt-2">
             <ArrowRight className="w-4 h-4" />
-            You stay in control and can accept edits section-by-section.
+            Your original resume is preserved. The new tailored resume opens pre-filled in the editor.
           </p>
         </CardContent>
       </Card>
