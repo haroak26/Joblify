@@ -203,6 +203,54 @@ async function extractTextFromUpload(file: Express.Multer.File): Promise<string>
   throw new Error("Unsupported file format");
 }
 
+async function extractTextWithMistralOCR(file: Express.Multer.File): Promise<string> {
+  const apiKey = process.env.MISTRAL_API_KEY;
+  if (!apiKey) {
+    throw new Error("MISTRAL_API_KEY is not configured");
+  }
+
+  const documentDataUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+
+  const response = await fetch("https://api.mistral.ai/v1/ocr", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: process.env.MISTRAL_OCR_MODEL || "mistral-ocr-latest",
+      document: {
+        type: "document_url",
+        document_url: documentDataUrl,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Mistral OCR request failed (${response.status}): ${errorText}`);
+  }
+
+  const payload: any = await response.json();
+  const pageText = Array.isArray(payload?.pages)
+    ? payload.pages
+        .map((page: any) => page?.markdown || page?.text || "")
+        .filter((value: string) => Boolean(value && value.trim()))
+        .join("\n\n")
+    : "";
+
+  const topLevelText = [payload?.text, payload?.markdown]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join("\n\n");
+
+  const extractedText = (pageText || topLevelText || "").trim();
+  if (!extractedText) {
+    throw new Error("Mistral OCR returned empty text");
+  }
+
+  return extractedText;
+}
+
 type ResumeDesignReview = {
   summary: string;
   overallVisualScore: number;
@@ -2077,14 +2125,14 @@ Rules:
         ? parsed.titleSuffix.trim().slice(0, 40)
         : "Tailored";
 
-      const [updatedResume] = await db
-        .update(resumes)
-        .set({
+      const [tailoredResume] = await db
+        .insert(resumes)
+        .values({
+          userId,
+          title: `${resume.title} (${titleSuffix})`,
+          template: resume.template,
           resumeData: tailoredResumeData,
-          title: resume.title.includes("Tailored") ? resume.title : `${resume.title} (${titleSuffix})`,
-          updatedAt: new Date(),
         })
-        .where(and(eq(resumes.id, id), eq(resumes.userId, userId)))
         .returning();
 
       await db
@@ -2094,7 +2142,7 @@ Rules:
 
       res.json({
         success: true,
-        resume: updatedResume,
+        resume: tailoredResume,
         enhancements,
       });
     } catch (error) {
@@ -2964,17 +3012,20 @@ Respond ONLY with valid JSON (no text before or after):
         });
       }
 
-      // Extract text
+      // Extract text with Mistral OCR and fallback parser for resilience
       let resumeText = "";
       try {
-        if (req.file.mimetype === 'application/pdf') {
-          const pdfData = await pdfParse(req.file.buffer);
-          resumeText = pdfData.text || "";
-        } else if (req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-          const result = await mammoth.extractRawText({ buffer: req.file.buffer });
-          resumeText = result.value || "";
+        resumeText = await extractTextWithMistralOCR(req.file);
+      } catch (ocrError) {
+        console.error("[API] Mistral OCR failed, falling back to local parser:", ocrError);
+        try {
+          resumeText = await extractTextFromUpload(req.file);
+        } catch {
+          return res.status(400).json({ error: "Could not parse file" });
         }
-      } catch (parseError) {
+      }
+
+      if (!resumeText.trim()) {
         return res.status(400).json({ error: "Could not parse file" });
       }
 
@@ -2999,12 +3050,18 @@ Respond ONLY with valid JSON (no text before or after):
       });
 
       const extracted = JSON.parse(aiResponse.choices[0]?.message?.content || "{}");
+      const normalizedResumeData = resumeDataSchema.safeParse(extracted.resumeData);
+      const safeResumeData = normalizedResumeData.success ? normalizedResumeData.data : createEmptyResumeData();
+      const allowedTemplates = new Set(["modern", "professional", "academic", "minimal"]);
+      const recommendedTemplate = typeof extracted.recommendedTemplate === "string" && allowedTemplates.has(extracted.recommendedTemplate)
+        ? extracted.recommendedTemplate
+        : "modern";
       
       const [newResume] = await db.insert(resumes).values({
         userId,
         title: extracted.suggestedTitle || req.file.originalname.replace(/\.[^/.]+$/, ""),
-        template: extracted.recommendedTemplate || "modern",
-        resumeData: extracted.resumeData || createEmptyResumeData(),
+        template: recommendedTemplate,
+        resumeData: safeResumeData,
         originalFilename: req.file.originalname,
         originalMimeType: req.file.mimetype,
         importedAt: new Date(),
@@ -3015,7 +3072,7 @@ Respond ONLY with valid JSON (no text before or after):
         .set({ importedResumesThisMonth: sql`${usageTable.importedResumesThisMonth} + 1` })
         .where(eq(usageTable.userId, userId));
 
-      res.json(newResume);
+      res.json({ success: true, resume: newResume });
     } catch (error) {
       console.error('[API] Error importing resume:', error);
       res.status(500).json({ error: "Failed to import resume" });
