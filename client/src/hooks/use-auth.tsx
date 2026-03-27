@@ -60,16 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
-  useEffect(() => {
-    if (user) {
-      window.statfolio?.identify({
-        userId: user.id,
-        email: user.email,
-        username: user.username,
-      });
-    }
-  }, [user]);
-
 
   const login = async (username: string, password: string) => {
     try {
