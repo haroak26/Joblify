@@ -23,6 +23,10 @@ export function useFeatureTracking(featureName: string) {
     if (!tracked.current) {
       tracked.current = true;
       
+      window.statfolio?.track("feature_used", {
+        feature_name: featureName,
+      });
+
       // Track feature usage in background
       apiRequest("POST", "/api/track-feature", { featureName })
         .catch(err => {
